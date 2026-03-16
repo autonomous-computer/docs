@@ -1,0 +1,262 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Omni Datastream API",
+    "version": "2026-03-13",
+    "description": "Agent-native SEC data plane API skeleton."
+  },
+  "paths": {
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "summary": "Return OAuth protected resource metadata for hosted MCP and API clients"
+      }
+    },
+    "/.well-known/oauth-authorization-server": {
+      "get": {
+        "summary": "Return or proxy OAuth authorization server metadata for the configured WorkOS tenant"
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "summary": "Return the current authenticated principal and organization context"
+      }
+    },
+    "/v1/org": {
+      "get": {
+        "summary": "Return the current organization profile"
+      }
+    },
+    "/v1/admin/orgs": {
+      "get": {
+        "summary": "List operator-visible organizations with support-safe plan, usage, and recent activity summaries"
+      }
+    },
+    "/v1/admin/orgs/{org_id}": {
+      "get": {
+        "summary": "Return an operator-facing organization snapshot with API keys, billing, usage, events, webhooks, streams, and delivery state"
+      }
+    },
+    "/v1/admin/orgs/{org_id}/requests/{request_id}": {
+      "get": {
+        "summary": "Return operator-scoped request diagnostics for a tenant request identifier"
+      }
+    },
+    "/v1/admin/orgs/{org_id}/deliveries/summary": {
+      "get": {
+        "summary": "Return operator-scoped delivery aggregates for webhook and stream activity within a tenant"
+      }
+    },
+    "/v1/billing/webhooks/stripe": {
+      "post": {
+        "summary": "Receive and process signed Stripe subscription lifecycle webhooks"
+      }
+    },
+    "/v1/billing": {
+      "get": {
+        "summary": "Return the current organization's Stripe customer, subscription, and effective plan state"
+      }
+    },
+    "/v1/billing/checkout": {
+      "post": {
+        "summary": "Create a Stripe Checkout session for a billable Omni Datastream plan"
+      }
+    },
+    "/v1/billing/portal": {
+      "post": {
+        "summary": "Create a Stripe Billing Portal session for the current organization"
+      }
+    },
+    "/v1/api_keys": {
+      "get": {
+        "summary": "List API keys for the current organization"
+      },
+      "post": {
+        "summary": "Create a new API key for the current organization"
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "summary": "List canonical event, webhook delivery, and stream records for the current organization"
+      }
+    },
+    "/v1/events/export": {
+      "get": {
+        "summary": "Export filtered canonical events as JSON or NDJSON for support and operations"
+      }
+    },
+    "/v1/diagnostics/requests/{request_id}": {
+      "get": {
+        "summary": "Return request-id scoped diagnostics across usage, events, deliveries, streams, and artifacts"
+      }
+    },
+    "/v1/diagnostics/deliveries/summary": {
+      "get": {
+        "summary": "Return aggregated webhook and stream delivery summaries for support workflows"
+      }
+    },
+    "/v1/observability": {
+      "get": {
+        "summary": "Return support-safe observability configuration and provider seam status"
+      }
+    },
+    "/v1/observability/export": {
+      "get": {
+        "summary": "Return a support-safe observability export with config, usage, and recent events"
+      }
+    },
+    "/v1/webhook_endpoints": {
+      "get": {
+        "summary": "List webhook endpoints for the current organization"
+      },
+      "post": {
+        "summary": "Create a signed webhook endpoint for artifact and stream events"
+      }
+    },
+    "/v1/webhook_endpoints/{webhook_id}/rotate_secret": {
+      "post": {
+        "summary": "Rotate the signing secret for a webhook endpoint"
+      }
+    },
+    "/v1/webhook_endpoints/{webhook_id}/deliveries": {
+      "get": {
+        "summary": "List canonical delivery attempts for a webhook endpoint"
+      }
+    },
+    "/v1/webhook_endpoints/{webhook_id}/deliveries/{delivery_id}/replay": {
+      "post": {
+        "summary": "Replay a stored webhook delivery attempt by re-emitting its source event to the endpoint"
+      }
+    },
+    "/v1/stream_subscriptions": {
+      "get": {
+        "summary": "List stream subscriptions for the current organization"
+      },
+      "post": {
+        "summary": "Create a stream subscription for event polling and replay"
+      }
+    },
+    "/v1/stream_subscriptions/{stream_id}/events": {
+      "get": {
+        "summary": "Poll canonical stream events for a subscription with cursor semantics"
+      }
+    },
+    "/v1/entities/resolve": {
+      "get": {
+        "summary": "Resolve an entity by ticker, CIK, or name"
+      }
+    },
+    "/v1/filings": {
+      "get": {
+        "summary": "Search the hot filing index by issuer, form, and free text"
+      }
+    },
+    "/v1/filings/latest": {
+      "get": {
+        "summary": "Retrieve the latest filing for an entity and form"
+      }
+    },
+    "/v1/filings/latest/render": {
+      "get": {
+        "summary": "Render the latest filing into Markdown-like text"
+      }
+    },
+    "/v1/filings/latest/sections/{section_key}": {
+      "get": {
+        "summary": "Extract a section from the latest filing for an entity and form"
+      }
+    },
+    "/v1/sections/search": {
+      "get": {
+        "summary": "Search hot filing sections and snippets by issuer, form, and free text"
+      }
+    },
+    "/v1/facts": {
+      "get": {
+        "summary": "Return normalized SEC company facts for an issuer, concept, and optional form or unit"
+      }
+    },
+    "/v1/statements": {
+      "get": {
+        "summary": "Return a normalized statement bundle backed by SEC company facts"
+      }
+    },
+    "/v1/statements/{statement_key}": {
+      "get": {
+        "summary": "Return a specific normalized statement bundle keyed by statement type"
+      }
+    },
+    "/v1/owners/13f": {
+      "get": {
+        "summary": "Return the latest normalized 13F ownership report for a manager CIK, with optional quarter-specific selection"
+      }
+    },
+    "/v1/owners/13f/filings": {
+      "get": {
+        "summary": "List recent 13F filings, including quarter-end report dates, for a manager CIK"
+      }
+    },
+    "/v1/owners/13f/compare": {
+      "post": {
+        "summary": "Compare the latest two 13F ownership reports for a manager CIK"
+      }
+    },
+    "/v1/insiders": {
+      "get": {
+        "summary": "Return recent normalized insider trading records derived from Form 4 filings"
+      }
+    },
+    "/v1/compensation": {
+      "get": {
+        "summary": "Return normalized executive compensation records derived from the latest DEF 14A filing"
+      }
+    },
+    "/v1/compensation/compare": {
+      "post": {
+        "summary": "Compare the latest two executive compensation disclosures for an issuer"
+      }
+    },
+    "/v1/artifacts": {
+      "get": {
+        "summary": "List canonical artifacts for the current organization"
+      },
+      "post": {
+        "summary": "Create and persist a derived artifact bundle"
+      }
+    },
+    "/v1/artifacts/summary": {
+      "get": {
+        "summary": "Return artifact lifecycle counts by kind, status, and storage mode"
+      }
+    },
+    "/v1/artifacts/{artifact_id}": {
+      "get": {
+        "summary": "Fetch persisted artifact metadata"
+      }
+    },
+    "/v1/artifacts/{artifact_id}/manifest": {
+      "get": {
+        "summary": "Fetch the structured manifest for a persisted artifact"
+      }
+    },
+    "/v1/artifacts/{artifact_id}/export": {
+      "get": {
+        "summary": "Export an artifact as structured JSON or a markdown-oriented download envelope"
+      }
+    },
+    "/v1/artifacts/{artifact_id}/download": {
+      "get": {
+        "summary": "Download or redirect to the persisted artifact payload"
+      }
+    },
+    "/v1/artifacts/{artifact_id}/reconcile": {
+      "post": {
+        "summary": "Reconcile artifact metadata with object storage and upload if needed"
+      }
+    },
+    "/mcp": {
+      "post": {
+        "summary": "Hosted MCP transport endpoint"
+      }
+    }
+  }
+}

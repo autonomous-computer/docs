@@ -1,0 +1,43 @@
+# Sandbox and live posture
+
+## Environments
+
+- live API base URL: `https://api.secapi.ai`
+- public docs base URL: `https://secapi.ai`
+- current Railway environment: `production`
+- current Stripe catalog is wired in the temporary live account and will be cut over later if billing ownership changes
+
+## Live-mode rules
+
+- live bootstrap admin keys are scoped to production orgs only
+- operator keys are separate from tenant admin keys
+- production verification must hit both `api.secapi.ai` and `secapi.ai`
+- production rollout must verify Stripe, WorkOS discovery, Typesense search, and PostHog ingestion together
+
+## Sandbox posture
+
+- local validation uses seeded bootstrap keys and a local Postgres instance
+- local validation does not require public-domain docs routing
+- WorkOS authorization-server discovery remains optional locally and explicit in failure mode when not configured
+- Stripe test mode should use `STRIPE_TEST_SECRET_KEY` and `STRIPE_TEST_WEBHOOK_SECRET`
+
+## Stripe split
+
+- live mode:
+  - `STRIPE_LIVE_SECRET_KEY`
+  - `STRIPE_LIVE_WEBHOOK_SECRET`
+  - `infra/stripe/current-live-account.json`
+- test mode:
+  - `STRIPE_TEST_SECRET_KEY`
+  - `STRIPE_TEST_WEBHOOK_SECRET`
+  - `infra/stripe/current-test-account.json`
+- compatibility fallback:
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - supported for live mode, but the audit will treat it as degraded until the explicit split is configured
+
+## Rollout controls
+
+- Railway deploys are detached but must be verified against live health and target routes
+- Cloudflare edge deploys must be verified on `secapi.ai`, `www.secapi.ai`, and `api.secapi.ai`
+- no public launch expansion without operator route verification and billing verification in the same deploy window

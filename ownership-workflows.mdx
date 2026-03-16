@@ -1,0 +1,56 @@
+# Ownership workflows
+
+## Latest 13F ownership report
+
+### API
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "$OMNI_DATASTREAM_BASE_URL/v1/owners/13f?cik=0001067983&limit=10"
+```
+
+For quarter-specific retrieval, add `reportDate=YYYY-MM-DD`, for example
+`/v1/owners/13f?cik=0001067983&reportDate=2024-12-31`.
+
+### SDK
+
+```ts
+const client = new OmniDatastreamClient({ apiKey: process.env.OMNI_DATASTREAM_API_KEY })
+const report = await client.latest13F({ cik: "0001067983", limit: 10 })
+```
+
+### CLI
+
+```bash
+omni-sec owners 13f --cik 0001067983 --limit 10
+```
+
+## Compare the latest two 13F reports
+
+### API
+
+```bash
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -d '{"cik":"0001067983","limit":10}' \
+  "$OMNI_DATASTREAM_BASE_URL/v1/owners/13f/compare"
+```
+
+### SDK
+
+```ts
+const comparison = await client.compare13F({ cik: "0001067983", limit: 10 })
+```
+
+### CLI
+
+```bash
+omni-sec owners compare-13f --cik 0001067983 --limit 10
+```
+
+## Recent insider trades
+
+```bash
+omni-sec insiders list --ticker AAPL --limit 10
+```

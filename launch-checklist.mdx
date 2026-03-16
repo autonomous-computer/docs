@@ -1,0 +1,41 @@
+# Launch checklist
+
+## Rollout stages
+
+- internal-only verification on `api.secapi.ai`
+- design-partner onboarding with org-scoped live API keys
+- low-volume external access with operator monitoring on every request path
+- broader public launch once billing, support, and replay workflows stay stable under live traffic
+
+## Pre-launch gates
+
+- `https://api.secapi.ai/healthz` returns `200`
+- `https://api.secapi.ai/readyz` returns `200`
+- `https://api.secapi.ai/.well-known/oauth-protected-resource` returns `200`
+- `https://secapi.ai/status` and `https://secapi.ai/changelog` are live
+- Stripe checkout and portal routes respond in production
+- PostHog and Sentry are receiving production events
+- operator admin routes work with the operator key
+- rollout and rollback runbooks are current
+
+## Rollback rules
+
+- rollback immediately on sustained 5xx responses from `api.secapi.ai`
+- rollback immediately on auth or billing regressions that block existing tenants
+- pause onboarding if search, compensation, or statement workflows regress below the benchmark floor
+- document every rollback with the deploy request id, Railway deployment id, and affected request ids
+
+## Launch-day checklist
+
+- verify current Railway deployment id
+- run the production release verification script
+- confirm PostHog ingestion for `datastream_api_request_completed`
+- confirm Sentry receives fresh request traffic
+- verify one builder checkout flow and one billing portal flow
+- verify one API quickstart and one MCP quickstart end to end
+
+## Support expectations
+
+- every external issue must include `Request-Id`
+- operator support uses `/v1/admin/*` before database access
+- delivery replay is the default first response for webhook incidents

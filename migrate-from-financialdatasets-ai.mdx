@@ -1,0 +1,56 @@
+# Migrate from financialdatasets.ai
+
+This guide maps the major `financialdatasets.ai` workflows onto Omni Datastream.
+
+## High-level differences
+
+- Omni Datastream ships primary-source filing, section, ownership, compensation, webhook, and MCP surfaces in one API
+- statements, facts, and filing provenance are exposed with SEC lineage instead of only normalized financial rows
+- pricing and quota signals are visible on every response through meter and plan headers
+
+## Route mapping
+
+- `/financials/income-statement` -> `/v1/statements/income_statement`
+- `/financials/balance-sheet` -> `/v1/statements/balance_sheet`
+- `/financials/cash-flow-statement` -> `/v1/statements/cash_flow_statement`
+- `/financial-metrics` -> `/v1/facts` plus statement endpoints
+- `/sec-filings` -> `/v1/filings` and `/v1/filings/latest`
+- `/insider-trades` -> `/v1/insiders`
+
+## Request translation examples
+
+### Income statement
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/statements/income_statement?ticker=AAPL&period=annual&limit=4"
+```
+
+### Balance sheet
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/statements/balance_sheet?ticker=AAPL&period=annual&limit=4"
+```
+
+### Filing retrieval
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
+```
+
+## Migration notes
+
+- Pin `omni-version` and compare statement-level fields before swapping production dashboards
+- Use `/v1/facts` when you need tag-level primary-source values instead of a pre-aggregated metrics bundle
+- Expect larger payloads than financialdatasets.ai on some statement calls because Omni includes provenance and richer structure
+- If you only need a token-efficient machine summary, prefer compact section mode and the statement-specific endpoints instead of full rendered filings
+
+## Recommended cutover order
+
+1. statements
+2. facts
+3. filing search and latest filing retrieval
+4. insider and compensation workflows
+5. MCP or artifact workflows if you are consolidating tool surfaces

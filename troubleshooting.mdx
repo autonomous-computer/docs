@@ -1,0 +1,62 @@
+# Troubleshooting
+
+## API failures
+
+- `401` with `missing_api_key`:
+  - send `x-api-key`
+  - verify the key is active with `GET /v1/api_keys`
+- `403` with `operator_scope_required`:
+  - use an operator-scoped key with `admin:operator`
+- `429`:
+  - inspect `Omni-Meter-Class`, `Omni-Plan-Key`, and `Omni-Quota-Limit`
+  - verify `GET /v1/limits`
+
+## MCP failures
+
+- authorization-server discovery returns `503`:
+  - confirm `WORKOS_CLIENT_ID` and `WORKOS_AUTHKIT_DOMAIN`
+- `tools/call` returns `Unknown tool`:
+  - re-run `tools/list` and use the exact published tool name
+- a tool call succeeds but lacks useful context:
+  - capture the `Request-Id`
+  - fetch the equivalent REST route for comparison
+
+## Billing failures
+
+- checkout fails:
+  - verify `GET /v1/billing`
+  - confirm the plan is `checkoutEnabled`
+  - inspect `infra/stripe/current-live-account.json`
+- billing portal fails:
+  - confirm the org has a Stripe customer
+  - verify the live secret and webhook secret posture with `bun run ops:stripe-audit`
+- entitlement mismatch:
+  - confirm the latest billing webhook event processed
+  - inspect `/v1/billing` and `/v1/limits`
+
+## Support and operator failures
+
+- `/v1/admin/*` returns `403 operator_scope_required`:
+  - use an API key with `admin:operator`
+  - keys with wildcard scope `*` are also accepted in production
+- `bun run ops:support-bundle` fails:
+  - verify the key passed through `OMNI_DATASTREAM_OPERATOR_API_KEY` or `OMNI_DATASTREAM_API_KEY`
+  - confirm the org id and request id are valid before escalating
+
+## Search failures
+
+- wrong filing in top result:
+  - rerun the query through the search-quality benchmark fixtures
+  - warm the corpus with `bun run scripts/ops/warm_search_corpus.ts`
+- relevant section missing:
+  - check `benchmarks/search-quality/results/latest.json`
+  - verify the filing was warmed from a rendered filing path
+
+## Pipeline failures
+
+- Dagster confidence regression:
+  - inspect `benchmarks/dagster/results/latest.json`
+  - follow `/runbooks/pipeline-reconciliation.md`
+- replay/backfill mismatch:
+  - rerun the seeded replay job
+  - compare hot-index contents to the SEC source payload

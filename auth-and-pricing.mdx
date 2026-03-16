@@ -1,0 +1,61 @@
+# Auth, Onboarding, and Pricing
+
+## Current auth model
+
+- machine access uses `x-api-key`
+- hosted MCP uses WorkOS OAuth discovery through `api.secapi.ai`
+- all current responses include `Request-Id` for support and audit workflows
+
+## First-success onboarding
+
+1. create or receive an org-scoped API key
+2. verify health at `https://api.secapi.ai/healthz`
+3. verify readiness at `https://api.secapi.ai/readyz`
+4. verify OAuth discovery at `https://api.secapi.ai/.well-known/oauth-authorization-server`
+5. confirm `GET /v1/billing` and `GET /v1/limits`
+6. resolve an issuer with `/v1/entities/resolve`
+7. fetch a latest filing or statement
+8. check `/v1/limits` to confirm plan and quota state
+
+## Current plans
+
+- `free`
+  - best for evaluation and single-user testing
+  - paid-only features like compare workflows, artifact generation, webhooks, and stream subscriptions are restricted
+- `builder`
+  - intended for developer workflows and internal tools
+- `team`
+  - intended for shared operational use with higher usage limits
+- `platform`
+  - intended for higher-volume or redistributed usage with custom commercial handling
+
+## Billing entry points
+
+- `GET /v1/billing`
+- `POST /v1/billing/checkout`
+- `POST /v1/billing/portal`
+
+## Verified production checkout posture
+
+- builder checkout session creation is live in production
+- billing portal session creation is live in production
+- the bootstrap org currently resolves to a live Stripe customer and a `free` effective plan after the earlier canceled builder subscription
+
+## Environment posture
+
+- live billing should use `STRIPE_LIVE_SECRET_KEY` and `STRIPE_LIVE_WEBHOOK_SECRET`
+- test billing should use `STRIPE_TEST_SECRET_KEY` and `STRIPE_TEST_WEBHOOK_SECRET`
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` remain supported as a live fallback for compatibility
+- the Stripe posture audit will report the environment as degraded until the explicit live/test split is configured
+
+## WorkOS endpoints
+
+- protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
+- authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
+
+## Support signals
+
+- `Request-Id`
+- `Omni-Meter-Class`
+- `Omni-Plan-Key`
+- `Omni-Billing-Status`

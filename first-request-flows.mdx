@@ -1,0 +1,59 @@
+# First request flows
+
+This page is the shortest path from a new org to a verified first workflow.
+
+## API first request
+
+1. Confirm health:
+
+```bash
+curl "https://api.secapi.ai/healthz"
+```
+
+2. Resolve an issuer:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
+```
+
+3. Pull one structured workflow:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/statements/balance_sheet?ticker=AAPL&period=annual&limit=3"
+```
+
+## CLI first request
+
+```bash
+omni-sec entities resolve --ticker AAPL --json
+omni-sec filings latest --ticker AAPL --form 10-K --json
+omni-sec sections get --ticker AAPL --form 10-K --section item_1a --json
+```
+
+## MCP first request
+
+Point your client at:
+
+- MCP server: `https://api.secapi.ai/mcp`
+- Protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
+- Authorization metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
+
+Then confirm these calls work:
+
+1. `entities.resolve`
+2. `filings.latest`
+3. `sections.get`
+
+## First support payload
+
+If anything fails, capture:
+
+- `Request-Id`
+- interface used: API / CLI / MCP
+- endpoint or tool name
+- expected outcome
+- actual outcome
+
+That is the minimum support packet needed for Omni Datastream triage.

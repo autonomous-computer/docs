@@ -1,0 +1,46 @@
+# Request diagnostics
+
+Omni Datastream exposes request-scoped diagnostics so support can investigate a single workflow without database access.
+
+## Endpoints
+
+- `GET /v1/diagnostics/requests/{request_id}`
+- `GET /v1/diagnostics/deliveries/summary`
+
+## Request drilldown
+
+```bash
+curl "$OMNI_DATASTREAM_URL/v1/diagnostics/requests/req_123" \
+  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+```
+
+The drilldown includes:
+
+- usage events for the request
+- canonical events emitted for the request
+- related webhook deliveries
+- related stream events
+- related artifacts
+- grouped meter-class and event-type counts
+
+Use this first when support has a `Request-Id` from an API response.
+
+## Delivery summary
+
+```bash
+curl "$OMNI_DATASTREAM_URL/v1/diagnostics/deliveries/summary?since=2026-03-14T00:00:00Z&limit=200" \
+  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+```
+
+This returns grouped webhook and stream delivery activity so support can answer:
+
+- which destinations are failing
+- which event types are replaying frequently
+- whether stream polling activity is flowing as expected
+
+## CLI
+
+```bash
+omni-sec diagnostics request --request-id req_123
+omni-sec diagnostics deliveries-summary --since 2026-03-14T00:00:00Z --limit 200
+```

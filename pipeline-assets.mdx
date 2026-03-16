@@ -1,0 +1,45 @@
+# Pipeline assets
+
+The SEC pipeline exposes a live Dagster asset graph with both ingestion and post-ingestion refresh steps.
+
+## Assets
+
+- `sec_bulk_snapshot_manifest`
+- `seeded_issuer_replay_manifest`
+- `hot_filing_backfill_summary`
+- `sec_storage_replay_report`
+- `facts_statement_refresh_manifest`
+- `ownership_insider_compensation_refresh_manifest`
+- `artifact_materialization_manifest`
+
+## Jobs
+
+- `sec_bulk_snapshot_job`
+- `sec_hot_index_refresh_job`
+- `sec_seeded_replay_job`
+- `sec_storage_replay_job`
+- `sec_facts_statement_refresh_job`
+- `sec_ownership_refresh_job`
+- `sec_artifact_materialization_job`
+
+## Schedules
+
+All pipeline schedules execute in `UTC`:
+
+- `sec_bulk_snapshot_job` — daily at `01:00 UTC`
+- `sec_hot_index_refresh_job` — weekdays at `05:15 UTC`
+- `sec_seeded_replay_job` — weekdays at `05:30 UTC`
+- `sec_facts_statement_refresh_job` — weekdays at `05:45 UTC`
+- `sec_ownership_refresh_job` — weekdays at `06:00 UTC`
+- `sec_artifact_materialization_job` — weekdays at `06:15 UTC`
+- `sec_storage_replay_job` — Mondays at `06:00 UTC`
+
+## Sensors
+
+The bulk snapshot also drives dependent refresh jobs through Dagster asset sensors:
+
+- `sec_bulk_snapshot_to_hot_index_sensor`
+- `sec_bulk_snapshot_to_facts_sensor`
+- `sec_bulk_snapshot_to_ownership_sensor`
+
+These sensors are used to trigger downstream refreshes when a fresh bulk snapshot lands, instead of waiting only for the next cron boundary.

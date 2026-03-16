@@ -1,0 +1,58 @@
+# Migrate from sec-api.io
+
+This guide maps the common `sec-api.io` workflows onto Omni Datastream.
+
+## High-level differences
+
+- Omni Datastream keeps a normalized object model with provenance on every response
+- `Request-Id` is first-class across every REST response for support and diagnostics
+- hosted MCP and the REST API share the same underlying workflow surface
+- compact section mode is available for machine-first extraction payloads
+
+## Route mapping
+
+- `/mapping/ticker/{ticker}` -> `/v1/entities/resolve?ticker={ticker}`
+- `/mapping/cik/{cik}` -> `/v1/entities/resolve?cik={cik}`
+- `/` filing search POST body -> `/v1/filings` query params
+- `/extractor?url=...&item=1A&type=text` -> `/v1/filings/latest/sections/item_1a?...&mode=compact` when latest filing mapping is sufficient
+- `/xbrl-to-json` -> `/v1/statements/{statement_key}` or `/v1/facts`
+- `/insider-trading` -> `/v1/insiders`
+- `/compensation/{ticker}` -> `/v1/compensation?ticker={ticker}`
+
+## Request translation examples
+
+### Ticker mapping
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
+```
+
+### Filing search
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10"
+```
+
+### Machine-first section extraction
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact"
+```
+
+## Migration notes
+
+- Pin `omni-version` in production clients before cutover
+- Keep recording `Request-Id` during dual-run testing so request diagnostics stay comparable
+- If you depend on arbitrary historical filing URLs for extractor-style requests, keep that path on a temporary fallback until the historical lookup backlog lands
+- If you depend on HTML extractor output, treat that as a current gap and stay on the temporary fallback path
+
+## Recommended cutover order
+
+1. issuer resolution
+2. filing search
+3. statements and facts
+4. section extraction in `compact` mode
+5. compare and artifact flows once the target plan is enabled

@@ -1,0 +1,30 @@
+# Python SDK workflows
+
+The Python SDK mirrors the current Omni Datastream REST surface.
+
+## Core usage
+
+```python
+from omni_datastream_py import OmniDatastreamClient
+
+client = OmniDatastreamClient(api_key="ods_test_...", base_url="http://localhost:8787")
+
+entity = client.resolve_entity(ticker="AAPL")
+filing = client.latest_filing(ticker="AAPL", form="10-K")
+facts = client.facts(ticker="AAPL", taxonomy="us-gaap", tag="Assets", limit=5)
+ownership = client.latest_13f(cik="0001067983", limit=10)
+```
+
+## Operator workflows
+
+```python
+artifact = client.create_artifact({
+    "ticker": "AAPL",
+    "form": "10-K",
+    "sectionKey": "item_1a",
+    "kind": "markdown_bundle",
+})
+manifest = client.artifact_manifest(artifact["id"])
+export = client.export_artifact(artifact["id"], format="json")
+observability = client.observability()
+```

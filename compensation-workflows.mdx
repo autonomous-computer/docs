@@ -1,0 +1,47 @@
+# Compensation workflows
+
+## Latest compensation records
+
+### API
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "$OMNI_DATASTREAM_BASE_URL/v1/compensation?ticker=AAPL&limit=10"
+```
+
+### SDK
+
+```ts
+const client = new OmniDatastreamClient({ apiKey: process.env.OMNI_DATASTREAM_API_KEY })
+const records = await client.compensation({ ticker: "AAPL", limit: 10 })
+```
+
+### CLI
+
+```bash
+omni-sec compensation list --ticker AAPL --limit 10
+```
+
+## Compare the latest two compensation disclosures
+
+### API
+
+```bash
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -d '{"ticker":"AAPL","limit":10}' \
+  "$OMNI_DATASTREAM_BASE_URL/v1/compensation/compare"
+```
+
+### SDK
+
+```ts
+const comparison = await client.compareCompensation({ ticker: "AAPL", limit: 10 })
+```
+
+### CLI
+
+```bash
+omni-sec compensation compare --ticker AAPL --limit 10
+```

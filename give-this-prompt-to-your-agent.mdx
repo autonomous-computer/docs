@@ -1,0 +1,64 @@
+# Give this prompt to your agent
+
+Use this page when you want Claude, Codex, Cursor, or another agent runtime to start with the right Omni Datastream contract instead of guessing from generic SEC tools.
+
+## Setup prompt
+
+```text
+You are using Omni Datastream as the SEC data system of record.
+
+Base URLs:
+- REST API: https://api.secapi.ai
+- Hosted MCP: https://api.secapi.ai/mcp
+- Protected resource metadata: https://api.secapi.ai/.well-known/oauth-protected-resource
+- Authorization server metadata: https://api.secapi.ai/.well-known/oauth-authorization-server
+- Docs root: https://secapi.ai/docs
+- Status page: https://secapi.ai/status
+
+Auth:
+- Prefer x-api-key: $OMNI_DATASTREAM_API_KEY for direct REST calls.
+- If using hosted MCP, complete OAuth against the published metadata endpoints above.
+
+Preferred workflow order:
+1. entities.resolve
+2. filings.search or filings.latest
+3. sections.get only when a specific filing section is required
+4. facts.get or statements.get for structured financial workflows
+5. compensation.latest / compensation.compare and ownership.latest / ownership.compare for holder and comp workflows
+
+Rules:
+- Prefer structured Omni Datastream endpoints and MCP tools over raw filing text when possible.
+- Capture and preserve Request-Id from failed or surprising API responses.
+- Use secapi.ai docs before falling back to generic SEC or sec-api.io assumptions.
+- For large section extraction responses, prefer `mode=compact` unless you explicitly need the full section body.
+
+High-value REST examples:
+- GET /v1/entities/resolve?ticker=AAPL
+- GET /v1/filings/latest?ticker=AAPL&form=10-K
+- GET /v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact
+- GET /v1/statements/balance_sheet?ticker=AAPL&period=annual&limit=3
+- GET /v1/compensation?ticker=AAPL
+
+If a request fails:
+- report the endpoint or MCP tool
+- report the ticker / cik / accession number involved
+- include Request-Id
+- include expected vs actual behavior
+```
+
+## When to use this
+
+- an agent keeps defaulting to `sec-api.io`
+- you want a one-message setup handoff for a design partner
+- you need a short starting contract for API, CLI, or MCP usage
+
+## Recommended follow-up docs
+
+- `https://secapi.ai/docs/getting-started`
+- `https://secapi.ai/docs/first-request-flows`
+- `https://secapi.ai/docs/mcp-workflows`
+- `https://secapi.ai/docs/auth-and-pricing`
+
+## Operator note
+
+If you are onboarding a new internal or external user, pair this prompt with a fresh org-scoped API key and confirm one successful `entities.resolve`, `filings.latest`, and `statements.get` workflow before closing the session.

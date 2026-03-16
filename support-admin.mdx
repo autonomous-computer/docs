@@ -1,0 +1,40 @@
+# Support and admin workflows
+
+## Admin endpoints
+
+- `GET /v1/admin/orgs`
+- `GET /v1/admin/orgs/{org_id}`
+- `GET /v1/admin/orgs/{org_id}/requests/{request_id}`
+- `GET /v1/admin/orgs/{org_id}/deliveries/summary`
+- `GET /v1/events/export`
+- `GET /v1/observability/export`
+
+## Required scope
+
+- operator workflows require an API key with `admin:operator`
+- wildcard bootstrap keys with `*` also work for operator flows
+
+## Recommended support sequence
+
+1. capture `Request-Id`
+2. fetch org summary
+3. fetch request diagnostics
+4. fetch delivery summary
+5. export event and observability context
+
+## Automation
+
+- `bun run ops:support-bundle -- --org-id <org> --request-id <request>`
+- `bun run ops:alert-matrix`
+
+## Verified production support posture
+
+- `GET /v1/observability` and `GET /v1/observability/export` are live
+- `bun run ops:launch-readiness` returns `status: ready` against production
+- support bundles now work with operator-scoped keys and wildcard bootstrap keys
+
+## Output expectations
+
+- support bundles land in `tmp/support-bundles/`
+- alert mapping lands in `ops/alert-matrix/latest.json`
+- workflow escalations create Linear issues with runbook metadata

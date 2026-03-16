@@ -1,0 +1,72 @@
+# JavaScript SDK workflows
+
+The JavaScript SDK is now publish-ready for Node and Bun consumers and mirrors the current Omni Datastream REST surface.
+
+## Install
+
+```bash
+npm install @omni-datastream/sdk-js
+```
+
+## Core usage
+
+```ts
+import { OmniDatastreamClient } from "@omni-datastream/sdk-js"
+
+const client = new OmniDatastreamClient({
+  apiKey: process.env.OMNI_DATASTREAM_API_KEY,
+})
+
+const entity = await client.resolveEntity({ ticker: "AAPL" })
+const filing = await client.latestFiling({ ticker: "AAPL", form: "10-K" })
+const facts = await client.facts({
+  ticker: "AAPL",
+  taxonomy: "us-gaap",
+  tag: "Assets",
+  limit: 5,
+})
+
+console.log(entity, filing, facts)
+```
+
+## Typed failure handling
+
+```ts
+import { OmniDatastreamClient, OmniDatastreamError } from "@omni-datastream/sdk-js"
+
+const client = new OmniDatastreamClient({
+  apiKey: process.env.OMNI_DATASTREAM_API_KEY,
+})
+
+try {
+  await client.requestDiagnostics("missing-request-id")
+} catch (error) {
+  if (error instanceof OmniDatastreamError) {
+    console.error(error.status, error.requestId, error.body)
+  }
+}
+```
+
+## MCP-adjacent setup
+
+```ts
+const mcpInfo = await client.mcpInfo()
+
+const result = await client.mcp({
+  jsonrpc: "2.0",
+  id: "1",
+  method: "tools/call",
+  params: {
+    name: "entities.resolve",
+    arguments: { ticker: "AAPL" },
+  },
+})
+
+console.log(mcpInfo, result)
+```
+
+## Examples in repo
+
+- `packages/sdk-js/examples/basic.ts`
+- `packages/sdk-js/examples/mcp.ts`
+- `scripts/smoke/sdk_js_smoke.ts`

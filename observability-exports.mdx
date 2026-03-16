@@ -1,0 +1,45 @@
+# Observability exports
+
+Omni Datastream exposes support-safe observability configuration and export surfaces so operators can confirm provider seams before live credentials are wired.
+
+## Endpoints
+
+- `GET /v1/observability`
+- `GET /v1/observability/export`
+
+## Observability config
+
+```bash
+curl "$OMNI_DATASTREAM_URL/v1/observability" \
+  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+```
+
+This reports:
+
+- which providers are configured at the environment level
+- whether usage and webhook event logs are enabled
+- the current quota table used by the API layer
+
+No secrets are returned.
+
+## Observability export
+
+```bash
+curl "$OMNI_DATASTREAM_URL/v1/observability/export?limit=20" \
+  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+```
+
+The export bundles:
+
+- observability config
+- current usage summary
+- recent canonical events
+
+Use this when preparing a support ticket or validating pre-production environments.
+
+## CLI
+
+```bash
+omni-sec observability show
+omni-sec observability export --limit 20
+```

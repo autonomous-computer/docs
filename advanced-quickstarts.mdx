@@ -1,0 +1,71 @@
+# Advanced quickstarts
+
+Use these once the basic issuer-resolution and filing-fetch flows are already working.
+
+## API: compare 13F positions
+
+```bash
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  https://api.secapi.ai/v1/owners/13f/compare \
+  -d '{"cik":"0001067983","limit":25}'
+```
+
+## API: executive compensation comparison
+
+```bash
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  https://api.secapi.ai/v1/compensation/compare \
+  -d '{"ticker":"NVDA","limit":10}'
+```
+
+## CLI: onboarding a webhook and polling a stream
+
+```bash
+omni-sec webhooks create \
+  --destination-url https://example.com/omni-datastream \
+  --event-types artifact.created,stream_subscription.created
+
+omni-sec streams create \
+  --description ops-audit \
+  --event-types artifact.created,webhook_endpoint.created
+```
+
+## API: create billing and portal sessions
+
+```bash
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  https://api.secapi.ai/v1/billing/checkout \
+  -d '{"planKey":"builder","successUrl":"https://secapi.ai/onboarding?checkout=success","cancelUrl":"https://secapi.ai/onboarding?checkout=cancel"}'
+
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  https://api.secapi.ai/v1/billing/portal \
+  -d '{"returnUrl":"https://secapi.ai/onboarding"}'
+```
+
+## MCP: first structured tool chain
+
+1. call `tools/list`
+2. call `entities.resolve` for a ticker or CIK
+3. call `filings.latest`
+4. call `statements.get`
+5. call `artifacts.bundle` if the plan enables artifact generation
+
+## Operations: export a support bundle
+
+```bash
+bun run ops:support-bundle -- --org-id org_omni_datastream --request-id req_example
+```
+
+## Billing: posture audit
+
+```bash
+bun run ops:stripe-audit
+```

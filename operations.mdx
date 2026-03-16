@@ -1,0 +1,34 @@
+# Operations
+
+## Health and readiness
+
+- `GET /healthz` returns liveness metadata for the API process
+- `GET /readyz` returns readiness metadata and fails closed when database, memory, or event-loop thresholds fail
+
+## Trace propagation
+
+- every response includes `Request-Id`
+- every response includes `traceparent`
+- OMNI Datastream forwards request correlation headers on downstream SEC fetches so ingest and serving traces can be tied together
+
+## Deploy verification
+
+Run:
+
+```bash
+OMNI_DATASTREAM_BASE_URL=https://your-api.example.com \
+OMNI_DATASTREAM_API_KEY=... \
+bun run verify:release
+```
+
+The verification script checks:
+- `/healthz`
+- `/readyz`
+- OAuth discovery endpoints
+- `/v1/limits` when an API key is supplied
+
+## Current production posture
+
+- WorkOS discovery is live and returns `200`
+- release verification should treat `/.well-known/oauth-authorization-server` as a required `200`
+- launch readiness is currently `ready`

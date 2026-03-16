@@ -1,0 +1,36 @@
+# Webhook and stream workflows
+
+## Webhook lifecycle
+
+1. Create an org-scoped webhook endpoint with `POST /v1/webhook_endpoints`
+2. Store the returned `signingSecret` at creation time or after a secret rotation
+3. Verify inbound signatures using the raw request body plus `x-omni-signature-timestamp`
+4. Use `POST /v1/webhook_endpoints/{webhook_id}/rotate_secret` when a secret is exposed or stale
+
+## Stream lifecycle
+
+1. Create a stream subscription with `POST /v1/stream_subscriptions`
+2. Subscribe to the smallest event set that supports the workflow
+3. Track the returned `cursor` and `lastEventAt` fields for replay and polling
+4. Use webhook replay tooling if a downstream consumer falls behind during the scaffold phase
+
+## Current event types
+
+- `artifact.created`
+- `artifact.reconciled`
+- `webhook_endpoint.created`
+- `stream_subscription.created`
+
+## Example CLI usage
+
+```bash
+omni-sec webhooks create \
+  --destination-url https://example.com/hooks/omni-sec \
+  --event-types artifact.created,artifact.reconciled
+
+omni-sec streams create \
+  --event-types artifact.created,artifact.reconciled \
+  --transport poll
+
+omni-sec webhooks rotate-secret --webhook-id wh_123
+```

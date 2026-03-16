@@ -1,0 +1,40 @@
+# API conventions
+
+## Request correlation
+
+- every response includes `Request-Id`
+- callers can provide `x-request-id` to make local benchmarking and smoke output deterministic
+
+## Metering
+
+- API responses include `Omni-Meter-Class`
+- this is the canonical hint for billing/quota classification in logs, smoke output, and reconciliation jobs
+
+## Versioning
+
+- production clients should send `omni-version` and pin to a dated release
+- additive fields can ship within a pinned version without requiring a client rebuild
+- breaking behavior changes should land behind a new dated version and be called out in `/docs/changelog`
+- migration guides should be updated in the same change when a compatibility seam is moved or removed
+
+## Error model
+
+Error responses use a stable JSON shape:
+
+```json
+{
+  "object": "error",
+  "id": "err_...",
+  "code": "ownership_lookup_failed",
+  "type": "api_error",
+  "message": "Human-readable explanation",
+  "requestId": "req_...",
+  "details": {}
+}
+```
+
+## Auth conventions
+
+- machine access uses `x-api-key`
+- MCP protected-resource metadata is available before WorkOS is fully configured
+- OAuth authorization-server metadata intentionally returns an explicit `503 workos_authorization_server_unavailable` until real WorkOS values are present

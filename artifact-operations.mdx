@@ -1,0 +1,55 @@
+# Artifact operations
+
+Omni Datastream exposes artifact inventory and lifecycle summaries so operators can inspect generated bundles without going through object storage directly.
+
+## Endpoints
+
+- `GET /v1/artifacts`
+- `GET /v1/artifacts/summary`
+- `POST /v1/artifacts`
+- `POST /v1/artifacts/{artifact_id}/reconcile`
+- `GET /v1/artifacts/{artifact_id}`
+- `GET /v1/artifacts/{artifact_id}/download`
+
+## List artifacts
+
+Filter by artifact kind, current status, and result count:
+
+```bash
+curl "$OMNI_DATASTREAM_URL/v1/artifacts?kind=section_compare&status=ready&limit=10" \
+  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+```
+
+Use the inventory endpoint to answer:
+
+- which artifacts are available for a tenant
+- whether an artifact is still metadata-only or backed by object storage
+- which object key and download URL are associated with a generated bundle
+
+## Summarize lifecycle state
+
+The summary endpoint returns grouped counts by artifact kind and status:
+
+```bash
+curl "$OMNI_DATASTREAM_URL/v1/artifacts/summary" \
+  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+```
+
+Use this for support and operator workflows such as:
+
+- confirming whether reconcile jobs are promoting artifacts into storage
+- spotting an accumulation of `pending` or `failed` artifacts
+- validating tenant-specific generation volume during beta
+
+## CLI
+
+```bash
+omni-sec artifacts list --kind section_compare --status ready --limit 10
+omni-sec artifacts summary
+```
+
+## Operational notes
+
+- `storageMode` distinguishes metadata-only artifacts from object-backed artifacts
+- `downloadUrl` is present only when a bundle is ready to fetch
+- artifact lifecycle state is org-scoped; operators should always inspect with the correct tenant key

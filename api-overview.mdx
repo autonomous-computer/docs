@@ -1,0 +1,29 @@
+# API Overview
+
+## Design rules
+
+- Versioned requests via `Omni-Version`
+- Request correlation via `Request-Id`
+- Idempotent mutation support via `Idempotency-Key`
+- Cursor pagination on lists
+- Explicit `expand[]` and `include[]`
+- Provenance on all derived resources
+
+## Event delivery rules
+
+- Webhook delivery uses signed `POST` requests with `x-omni-signature`
+- Signature format is `t=<unix_timestamp>,v1=<hex_hmac_sha256>`
+- Delivery headers include `x-omni-event-id`, `x-omni-event-type`, and `x-request-id`
+- Supported event types in the current vertical slice:
+  - `artifact.created`
+  - `artifact.reconciled`
+  - `webhook_endpoint.created`
+  - `stream_subscription.created`
+
+## Current management endpoints
+
+- `GET /v1/webhook_endpoints`
+- `POST /v1/webhook_endpoints`
+- `POST /v1/webhook_endpoints/{webhook_id}/rotate_secret`
+- `GET /v1/stream_subscriptions`
+- `POST /v1/stream_subscriptions`

@@ -1,0 +1,57 @@
+# Benchmark workflows
+
+This page summarizes the current benchmark methodology and the latest published benchmark snapshot.
+
+## Methodology
+
+The benchmark posture currently combines:
+
+- competitive workflow benchmarks in `benchmarks/competitive/results/omni_apps_sec_workflows_latest.json`
+- rollup scoring in `benchmarks/competitive/results/scorecard.json`
+- the human-readable report in `benchmarks/competitive/latest-report.md`
+
+The current competitive workflow artifact was generated at `2026-03-16T07:00:17.745659+00:00`.
+
+## Current snapshot vs sec-api.io
+
+- `mapping_lookup`: Omni p50=`264.52ms` vs sec-api.io p50=`392.33ms`
+- `filing_search`: Omni p50=`264.83ms` vs sec-api.io p50=`441.72ms`
+- `section_extract`: Omni p50=`655.76ms` vs sec-api.io p50=`526.99ms`
+- `xbrl_to_json`: Omni p50=`268.3ms` vs sec-api.io p50=`545.39ms`
+
+## Current snapshot vs financialdatasets.ai
+
+- `income_statement`: Omni p50=`263.22ms` vs financialdatasets.ai p50=`396.24ms`
+- `balance_sheet`: Omni p50=`263.22ms` vs financialdatasets.ai p50=`360.7ms`
+- `cash_flow`: Omni p50=`263.22ms` vs financialdatasets.ai p50=`328.26ms`
+- `financial_metrics`: Omni p50=`268.3ms` vs financialdatasets.ai p50=`321.99ms`
+- `sec_filings`: Omni p50=`264.83ms` vs financialdatasets.ai p50=`379.96ms`
+- `insider_trades`: Omni p50=`258.2ms` vs financialdatasets.ai p50=`330.97ms`
+
+## Current quality posture
+
+- API eval baseline: 75 questions, 72 passed, 3 gated, scored pass rate 100.0%
+- agent eval sample: 5 questions, 5 passed, scored pass rate 100.0%
+- search quality: filings top-1=`1.00`, filings top-3=`1.00`, sections top-3=`1.00`
+
+## Heaviest current cases
+
+- `filing_search_text_googl`: p95=`1389.03ms`
+- `latest_section`: p95=`867.45ms`, payload=`69070 B`
+- `section_search_jpm`: p95=`734.3ms`
+- `insiders_amzn`: p95=`570.23ms`
+- `compensation_amzn`: p95=`524.47ms`, payload=`3567 B`
+
+## Run locally
+
+```bash
+OMNI_DATASTREAM_BASE_URL=http://127.0.0.1:8787 \
+OMNI_DATASTREAM_API_KEY=ods_test_smoke_local \
+bun run bench:search
+```
+
+## Source artifacts
+
+- `benchmarks/competitive/latest-report.md`
+- `benchmarks/competitive/results/scorecard.json`
+- `benchmarks/competitive/results/omni_apps_sec_workflows_latest.json`

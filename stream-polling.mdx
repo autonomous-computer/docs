@@ -1,0 +1,48 @@
+# Stream polling
+
+Hosted webhooks are not the only delivery mechanism. Omni Datastream also exposes cursor-based stream polling for operator and agent workflows that want deterministic replay.
+
+## Endpoints
+
+- `GET /v1/stream_subscriptions`
+- `POST /v1/stream_subscriptions`
+- `GET /v1/stream_subscriptions/{stream_id}/events`
+
+## Poll the feed
+
+```bash
+curl "$OMNI_DATASTREAM_URL/v1/stream_subscriptions/str_123/events?limit=25" \
+  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+```
+
+The response includes:
+
+- `data`: ordered stream events
+- `nextCursor`: the cursor to use on the next poll
+- `replayCursor`: the last durable cursor the client can checkpoint
+
+## Resume from a checkpoint
+
+```bash
+curl "$OMNI_DATASTREAM_URL/v1/stream_subscriptions/str_123/events?cursor=evt_987" \
+  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+```
+
+Use cursor polling when:
+
+- a tenant cannot expose a public webhook endpoint
+- an agent runtime wants explicit checkpoint control
+- support needs to replay a recent stream window without replaying the entire subscription
+
+## CLI
+
+```bash
+omni-sec streams events --stream-id str_123 --limit 25
+omni-sec streams events --stream-id str_123 --cursor evt_987 --limit 25
+```
+
+## Operational notes
+
+- stream events are filtered to the current org
+- `cursor` ordering is based on recorded event order, not the original SEC filing timestamp
+- replay should advance from `replayCursor`, not from the last array element a client happened to inspect
