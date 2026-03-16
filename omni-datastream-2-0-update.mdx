@@ -1,0 +1,73 @@
+# Omni Datastream 2.0 update
+
+This page tracks the current `2.0` execution lane: what is already shipped, what is still in flight, and what remains to reach the final product bar.
+
+## Shipped so far
+
+- live Mintlify docs on `docs.secapi.ai`
+- compact and full section response modes across REST, MCP, CLI, and SDK flows
+- hosted MCP install metadata and publish-ready JavaScript SDK
+- benchmark, freshness, coverage, and migration documentation
+- section extraction stage profiling and autoresearch control wiring
+- historical ownership and insider backfill expansion:
+  - EDGAR-derived universe discovery
+  - filing-level issuer resolution for insider forms
+  - truthful provenance reporting in backfill summaries
+- fast-follow fixes for:
+  - statement alias normalization
+  - ticker/cache normalization
+  - replay retry and DB pool hardening
+  - PR 23 and PR 28 review findings
+
+## Current open gap
+
+The last material competitive gap is still the live section-extraction path.
+
+Current benchmark posture:
+
+- Omni leads on `mapping_lookup`
+- Omni leads on `filing_search`
+- Omni leads on `xbrl_to_json`
+- Omni leads on the current benchmarked `financialdatasets.ai` structured statement and filings paths
+- Omni still trails `sec-api.io` on the main `section_extract` path
+
+## Current plan of record
+
+### 1. Manifest-first extraction
+
+- generate section manifests at ingest or warm time for hot filing families:
+  - `10-K`
+  - `10-Q`
+  - `8-K`
+- persist:
+  - canonical section key
+  - offsets
+  - normalized text
+  - confidence
+  - parser version
+- serve section requests from the manifest-backed cache first
+- use dynamic extraction only as fallback
+
+### 2. Narrow Rust extraction engine
+
+- keep scope tight:
+  - normalize SEC HTML
+  - identify section boundaries
+  - emit manifests and normalized section text
+- current prototype lane is benchmarking a Rust extractor against the TS/Bun path on the real problematic corpus
+- the current TS/Bun extractor remains the fallback until the Rust path wins on the live benchmark
+
+### 3. Acceptance gate
+
+`2.0` is not complete until the live omni-apps section workflow meets or beats `sec-api.io` on the target set:
+
+- `section_item_1a_aapl`
+- `Item 7`
+- at least one `10-Q` section case
+- at least one noisy issuer case
+
+## Operator notes
+
+- same-space extraction autoresearch is intentionally paused
+- it will only be reopened after the manifest-backed path is live and the architecture has materially changed
+- benchmark, freshness, and coverage claims should continue to come only from tracked source-of-truth artifacts
