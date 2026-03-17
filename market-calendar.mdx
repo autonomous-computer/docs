@@ -1,0 +1,55 @@
+# Market Calendar
+
+## What it returns
+
+- market session status for supported exchanges
+- timezone and session hours
+- coverage metadata showing whether the calendar is weekend-only or holiday-configured
+- confidence and status notes so callers can see when a session is only tentatively inferred
+- source URL provenance for each market
+
+## Coverage model
+
+- `configured_holidays` means OMNI has an explicit holiday map and weekend rules for the exchange
+- `weekend_only` means OMNI currently knows the exchange weekend pattern and regular hours but may not yet reflect every local holiday closure
+- `confidence=tentative` is returned when OMNI is inferring an open session from weekend-only coverage
+
+## Source inventory
+
+- `XNYS`: NYSE hours and holiday calendar
+- `XNAS`: Nasdaq holiday schedule
+- `XLON`: London Stock Exchange market hours
+- `XTKS`: Japan Exchange Group market calendar
+- `XHKG`: Hong Kong Exchanges trading hours
+- `XTAE`: Tel Aviv Stock Exchange trading hours
+- `XSAU`: Saudi Exchange trading hours
+
+## Rights and sync rules
+
+- `public_source_documented` means the exchange page and current usage posture have been reviewed and recorded in the source inventory
+- `public_source_review_required` means OMNI has the public source mapped, but local holiday coverage still needs explicit hardening before callers should assume full certainty
+- `daily_midnight_local` means the market should be regenerated automatically every local-market midnight
+- `daily_manual_review` means the public source is tracked, but holiday coverage still needs operator review or hardening before full automation
+
+## Sync posture
+
+- the endpoint is generated from OMNI's exchange-source inventory
+- inventory export for ops: `bun run ops:market-calendar-inventory`
+- weekend-only exchanges are intentionally labeled as tentative on non-weekend weekdays until holiday coverage is hardened
+
+## Supported markets
+
+- `XNYS`
+- `XNAS`
+- `XLON`
+- `XTKS`
+- `XHKG`
+- `XTAE`
+- `XSAU`
+
+## Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/calendar?market=XNYS&duration=5"
+```

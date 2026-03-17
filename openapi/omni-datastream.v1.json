@@ -145,9 +145,14 @@
         "summary": "Resolve an entity by ticker, CIK, or name"
       }
     },
+    "/v1/entities": {
+      "get": {
+        "summary": "Search canonical SEC entities across issuers, managers, insiders, and funds"
+      }
+    },
     "/v1/filings": {
       "get": {
-        "summary": "Search the hot filing index by issuer, form, and free text"
+        "summary": "Search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination"
       }
     },
     "/v1/filings/latest": {
@@ -165,9 +170,49 @@
         "summary": "Extract a section from the latest filing for an entity and form"
       }
     },
+    "/v1/filings/{accession_number}": {
+      "get": {
+        "summary": "Retrieve a filing manifest by accession number from the materialized filing corpus"
+      }
+    },
+    "/v1/filings/{accession_number}/sections/{section_key}": {
+      "get": {
+        "summary": "Extract a filing item or section from a specific accession-number filing"
+      }
+    },
+    "/v1/statements/segmented-revenues": {
+      "get": {
+        "summary": "Return filing-derived segmented revenue history with XBRL product or geography dimensions when issuers disclose them"
+      }
+    },
     "/v1/sections/search": {
       "get": {
-        "summary": "Search hot filing sections and snippets by issuer, form, and free text"
+        "summary": "Search filing sections and snippets with filing-scoped filters and cursor pagination"
+      }
+    },
+    "/v1/offerings": {
+      "get": {
+        "summary": "Return recent S-1 and 424B prospectus records with cursor pagination and date filters"
+      }
+    },
+    "/v1/market/calendar": {
+      "get": {
+        "summary": "Return market calendar sessions for supported exchanges with source coverage metadata"
+      }
+    },
+    "/v1/market/indices": {
+      "get": {
+        "summary": "Return the supported public index roster inventory and optionally include the broader rights-tracked index source catalog"
+      }
+    },
+    "/v1/market/indices/constituents": {
+      "get": {
+        "summary": "Return rights-safe index constituents for supported benchmark families with canonical entity mapping when available"
+      }
+    },
+    "/v1/signals/volatility": {
+      "get": {
+        "summary": "Return the OMNI volatility score with transparent factor breakdown and freshness metadata"
       }
     },
     "/v1/facts": {
@@ -180,6 +225,11 @@
         "summary": "Return a normalized statement bundle backed by SEC company facts"
       }
     },
+    "/v1/statements/all": {
+      "get": {
+        "summary": "Return the balance sheet, income statement, and cash flow statement as one normalized bundle"
+      }
+    },
     "/v1/statements/{statement_key}": {
       "get": {
         "summary": "Return a specific normalized statement bundle keyed by statement type"
@@ -188,6 +238,16 @@
     "/v1/owners/13f": {
       "get": {
         "summary": "Return the latest normalized 13F ownership report for a manager CIK, with optional quarter-specific selection"
+      }
+    },
+    "/v1/owners/institutional/investor": {
+      "get": {
+        "summary": "Return an investor-centric institutional ownership graph for a manager CIK, including ranked holdings and quarter-over-quarter changes"
+      }
+    },
+    "/v1/owners/institutional/ticker": {
+      "get": {
+        "summary": "Return a ticker-centric institutional holder graph for the latest materialized 13F cohort, ranked by disclosed position value"
       }
     },
     "/v1/owners/13f/filings": {
@@ -202,7 +262,7 @@
     },
     "/v1/insiders": {
       "get": {
-        "summary": "Return recent normalized insider trading records derived from Form 4 filings"
+        "summary": "Return recent normalized insider trading records derived from Forms 3, 4, and 5 with date filters and cursor pagination"
       }
     },
     "/v1/compensation": {

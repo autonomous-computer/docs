@@ -1,29 +1,40 @@
 # API Overview
 
-## Design rules
+## What the API is optimized for
 
-- Versioned requests via `Omni-Version`
-- Request correlation via `Request-Id`
-- Idempotent mutation support via `Idempotency-Key`
-- Cursor pagination on lists
-- Explicit `expand[]` and `include[]`
-- Provenance on all derived resources
+- grounded investor workflows
+- compact payloads that work well in agents
+- explicit provenance and freshness
+- predictable wire contracts across REST, SDKs, CLI, and hosted MCP
+
+## Core design rules
+
+- version requests with `Omni-Version`
+- correlate requests with `Request-Id`
+- use cursor pagination on list endpoints
+- expose provenance, freshness, and materialization metadata on public market intelligence paths
+- prefer structured contracts over raw passthroughs
+
+## What makes the contract different
+
+- `provenance`: where the data came from
+- `freshness`: how current the data is
+- `materialization`: how the current output was produced
+
+These fields matter because investor agents need more than a value. They need the trail behind the value.
 
 ## Event delivery rules
 
-- Webhook delivery uses signed `POST` requests with `x-omni-signature`
-- Signature format is `t=<unix_timestamp>,v1=<hex_hmac_sha256>`
-- Delivery headers include `x-omni-event-id`, `x-omni-event-type`, and `x-request-id`
-- Supported event types in the current vertical slice:
-  - `artifact.created`
-  - `artifact.reconciled`
-  - `webhook_endpoint.created`
-  - `stream_subscription.created`
+- webhook delivery uses signed `POST` requests with `x-omni-signature`
+- delivery headers include `x-omni-event-id`, `x-omni-event-type`, and `x-request-id`
+- current event families include artifacts, webhooks, and stream subscriptions
 
-## Current management endpoints
+## Product posture
 
-- `GET /v1/webhook_endpoints`
-- `POST /v1/webhook_endpoints`
-- `POST /v1/webhook_endpoints/{webhook_id}/rotate_secret`
-- `GET /v1/stream_subscriptions`
-- `POST /v1/stream_subscriptions`
+Datastream is not trying to be a generic raw filing tunnel. The product is designed around the workflows serious investors and investor agents actually repeat.
+
+## Read next
+
+- `/api-conventions`
+- `/api-reference`
+- `/freshness-and-trust`

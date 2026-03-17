@@ -1,21 +1,30 @@
-# Python SDK workflows
+# Python SDK
 
-The Python SDK mirrors the current Omni Datastream REST surface.
+## What it is good for
 
-## Core usage
+- notebooks
+- research pipelines
+- ETL and enrichment services
+- backend jobs that want compact REST parity without hand-rolling requests
+
+## First useful calls
 
 ```python
 from omni_datastream_py import OmniDatastreamClient
 
-client = OmniDatastreamClient(api_key="ods_test_...", base_url="http://localhost:8787")
+client = OmniDatastreamClient(
+    api_key="ods_test_...",
+    base_url="https://api.secapi.ai",
+)
 
-entity = client.resolve_entity(ticker="AAPL")
+issuer = client.resolve_entity(ticker="AAPL")
 filing = client.latest_filing(ticker="AAPL", form="10-K")
-facts = client.facts(ticker="AAPL", taxonomy="us-gaap", tag="Assets", limit=5)
-ownership = client.latest_13f(cik="0001067983", limit=10)
+statements = client.all_statements(ticker="AAPL", period="annual", limit=1)
+calendar = client.market_calendar(market="XNYS", duration=5)
+volatility = client.volatility_signal(ticker="AAPL")
 ```
 
-## Operator workflows
+## Operator paths
 
 ```python
 artifact = client.create_artifact({
@@ -25,6 +34,11 @@ artifact = client.create_artifact({
     "kind": "markdown_bundle",
 })
 manifest = client.artifact_manifest(artifact["id"])
-export = client.export_artifact(artifact["id"], format="json")
 observability = client.observability()
 ```
+
+## Good next reads
+
+- `/api-reference`
+- `/libraries-and-sdks`
+- `/benchmark-workflows`

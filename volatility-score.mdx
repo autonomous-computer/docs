@@ -1,0 +1,32 @@
+# OMNI Volatility Score
+
+## Methodology
+
+- disclosure intensity from recent high-signal filings
+- insider imbalance from recent Forms 3, 4, and 5
+- risk-factor intensity from Item 1A language
+- filing recency as a simple proxy for current information flow
+- stale after `45` days without a fresh primary-source filing in the signal cohort
+
+## Quality controls
+
+- methodology version is returned in every payload
+- confidence drops when OMNI has to fall back because recent filings, insider data, or risk-factor extraction are unavailable
+- degraded reasons are surfaced explicitly instead of pretending the score is full-confidence
+- validation runner: `bun run validate:derived-signals`
+- release evidence artifact: `bun run bench:derived-signals`
+
+## Output
+
+- score on a `0-100` scale
+- band: `low`, `moderate`, `elevated`, or `high`
+- confidence: `high`, `medium`, or `low`
+- factor-level breakdown with weights and explanations
+- freshness metadata, degraded reasons, and provenance
+
+## Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/signals/volatility?ticker=AAPL"
+```

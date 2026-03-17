@@ -1,6 +1,4 @@
-# JavaScript SDK workflows
-
-The JavaScript SDK is now publish-ready for Node and Bun consumers and mirrors the current Omni Datastream REST surface.
+# JavaScript SDK
 
 ## Install
 
@@ -8,35 +6,32 @@ The JavaScript SDK is now publish-ready for Node and Bun consumers and mirrors t
 npm install @omni-datastream/sdk-js
 ```
 
-## Core usage
+## What it is good for
+
+- application backends
+- data enrichment jobs
+- internal tools
+- scripts that need the same contract shape as the public API
+
+## First useful calls
 
 ```ts
 import { OmniDatastreamClient } from "@omni-datastream/sdk-js"
 
 const client = new OmniDatastreamClient({
-  apiKey: process.env.OMNI_DATASTREAM_API_KEY,
+  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
 })
 
-const entity = await client.resolveEntity({ ticker: "AAPL" })
-const filing = await client.latestFiling({ ticker: "AAPL", form: "10-K" })
-const facts = await client.facts({
-  ticker: "AAPL",
-  taxonomy: "us-gaap",
-  tag: "Assets",
-  limit: 5,
-})
-
-console.log(entity, filing, facts)
+const issuer = await client.resolveEntity({ ticker: "AAPL" })
+const filings = await client.searchFilings({ ticker: "AAPL", form: "10-K", limit: 3 })
+const statements = await client.allStatements({ ticker: "AAPL", period: "annual", limit: 1 })
+const volatility = await client.volatilitySignal({ ticker: "AAPL" })
 ```
 
-## Typed failure handling
+## Error handling
 
 ```ts
 import { OmniDatastreamClient, OmniDatastreamError } from "@omni-datastream/sdk-js"
-
-const client = new OmniDatastreamClient({
-  apiKey: process.env.OMNI_DATASTREAM_API_KEY,
-})
 
 try {
   await client.requestDiagnostics("missing-request-id")
@@ -47,26 +42,8 @@ try {
 }
 ```
 
-## MCP-adjacent setup
+## Good next reads
 
-```ts
-const mcpInfo = await client.mcpInfo()
-
-const result = await client.mcp({
-  jsonrpc: "2.0",
-  id: "1",
-  method: "tools/call",
-  params: {
-    name: "entities.resolve",
-    arguments: { ticker: "AAPL" },
-  },
-})
-
-console.log(mcpInfo, result)
-```
-
-## Examples in repo
-
-- `packages/sdk-js/examples/basic.ts`
-- `packages/sdk-js/examples/mcp.ts`
-- `scripts/smoke/sdk_js_smoke.ts`
+- `/api-reference`
+- `/mcp-workflows`
+- `/give-this-prompt-to-your-agent`

@@ -1,21 +1,17 @@
 # Getting Started
 
-Omni Datastream exposes the same SEC workflows over REST, CLI, JS, Python, and hosted MCP.
+## The shortest useful path
 
-## First production checks
+Get one issuer, one filing, and one structured statement working first. Do that before you chase a broader integration.
 
-1. Verify API health:
+## Before you make a request
 
-```bash
-curl https://api.secapi.ai/healthz
-curl https://api.secapi.ai/readyz
-```
+1. Export `OMNI_DATASTREAM_API_KEY`
+2. Verify health at `https://api.secapi.ai/healthz`
+3. Verify readiness at `https://api.secapi.ai/readyz`
+4. Decide whether you are starting with REST, SDK, CLI, or MCP
 
-2. Export your API key as `OMNI_DATASTREAM_API_KEY`
-3. Make one issuer-resolution request, one filing request, and one statement request
-4. Record the `Request-Id` header from the first successful response so support can trace the session if needed
-
-## API quickstart
+## REST quickstart
 
 ```bash
 curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
@@ -25,7 +21,7 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 
 curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  "https://api.secapi.ai/v1/statements/balance_sheet?ticker=AAPL&period=annual&limit=1"
+  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
 ```
 
 ## JavaScript quickstart
@@ -41,8 +37,9 @@ const client = new OmniDatastreamClient({
   apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
 })
 
+const issuer = await client.resolveEntity({ ticker: "AAPL" })
 const filing = await client.latestFiling({ ticker: "AAPL", form: "10-K" })
-console.log(filing.id, filing.provenance.accessionNumber)
+const statements = await client.allStatements({ ticker: "AAPL", period: "annual", limit: 1 })
 ```
 
 ## Python quickstart
@@ -55,47 +52,40 @@ client = OmniDatastreamClient(
     base_url="https://api.secapi.ai",
 )
 
+issuer = client.resolve_entity(ticker="AAPL")
 filing = client.latest_filing(ticker="AAPL", form="10-K")
-print(filing["id"], filing["provenance"]["accessionNumber"])
+statements = client.all_statements(ticker="AAPL", period="annual", limit=1)
 ```
 
 ## CLI quickstart
 
 ```bash
-omni-sec me --json
+omni-sec entities resolve --ticker AAPL --json
 omni-sec filings latest --ticker AAPL --form 10-K --json
-omni-sec statements get --ticker AAPL --statement income-statement --period annual --json
+omni-sec statements get --ticker AAPL --statement all --period annual --json
 ```
 
 ## MCP quickstart
 
 - MCP server: `https://api.secapi.ai/mcp`
-- install metadata: `https://api.secapi.ai/mcp`
 - Protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
 - Authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
 
-### First tools to call
+### First MCP tools to call
 
 - `entities.resolve`
-- `filings.search`
 - `filings.latest`
-- `sections.get`
-- `facts.get`
 - `statements.get`
 
-## Next docs to read
+## What to keep from your first success
 
-- `/give-this-prompt-to-your-agent`
+- the `Request-Id`
+- the exact endpoint or tool you called
+- the provenance and freshness metadata from the response
+
+## Next pages
+
 - `/first-request-flows`
-- `/advanced-quickstarts`
-- `/auth-and-pricing`
-- `/migrate-from-sec-api`
-- `/migrate-from-financialdatasets-ai`
-- `/troubleshooting`
-- `/javascript-sdk`
-- `/benchmark-workflows`
-- `/coverage-and-depth`
-- `/freshness-and-trust`
-- `/enterprise-commercial`
-- `/design-partner-support-packet`
-- `/support-admin`
+- `/datastream-docs`
+- `/libraries-and-sdks`
+- `/give-this-prompt-to-your-agent`

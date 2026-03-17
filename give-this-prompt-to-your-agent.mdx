@@ -1,6 +1,6 @@
 # Give this prompt to your agent
 
-Use this page when you want Claude, Codex, Cursor, or another agent runtime to start with the right Omni Datastream contract instead of guessing from generic SEC tools.
+Generated from the Omni Datastream contract and prompt asset registry.
 
 ## Setup prompt
 
@@ -12,53 +12,63 @@ Base URLs:
 - Hosted MCP: https://api.secapi.ai/mcp
 - Protected resource metadata: https://api.secapi.ai/.well-known/oauth-protected-resource
 - Authorization server metadata: https://api.secapi.ai/.well-known/oauth-authorization-server
-- Docs root: https://docs.secapi.ai
-- Status page: https://docs.secapi.ai/status
-
-Auth:
-- Prefer x-api-key: $OMNI_DATASTREAM_API_KEY for direct REST calls.
-- If using hosted MCP, complete OAuth against the published metadata endpoints above.
-
-Preferred workflow order:
-1. entities.resolve
-2. filings.search or filings.latest
-3. sections.get only when a specific filing section is required
-4. facts.get or statements.get for structured financial workflows
-5. compensation.latest / compensation.compare and ownership.latest / ownership.compare for holder and comp workflows
+- Docs root: https://secapi.ai/docs
 
 Rules:
 - Prefer structured Omni Datastream endpoints and MCP tools over raw filing text when possible.
-- Capture and preserve Request-Id from failed or surprising API responses.
-- Use secapi.ai docs before falling back to generic SEC or sec-api.io assumptions.
-- For large section extraction responses, prefer `mode=compact` unless you explicitly need the full section body.
-
-High-value REST examples:
-- GET /v1/entities/resolve?ticker=AAPL
-- GET /v1/filings/latest?ticker=AAPL&form=10-K
-- GET /v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact
-- GET /v1/statements/balance_sheet?ticker=AAPL&period=annual&limit=3
-- GET /v1/compensation?ticker=AAPL
-
-If a request fails:
-- report the endpoint or MCP tool
-- report the ticker / cik / accession number involved
-- include Request-Id
-- include expected vs actual behavior
+- Preserve requestId, traceparent, provenance, freshness, and materialization metadata on every downstream artifact.
+- Use the generated prompt snippets below before improvising generic SEC workflows.
 ```
 
-## When to use this
+## Generated snippets
 
-- an agent keeps defaulting to `sec-api.io`
-- you want a one-message setup handoff for a design partner
-- you need a short starting contract for API, CLI, or MCP usage
+### Issuer Research
 
-## Recommended follow-up docs
+- Endpoint focus: `/v1/filings/latest`
+- Summary: Resolve an issuer, pull the latest 10-K, and extract the risk sections.
 
-- `https://docs.secapi.ai/getting-started`
-- `https://docs.secapi.ai/first-request-flows`
-- `https://docs.secapi.ai/mcp-workflows`
-- `https://docs.secapi.ai/auth-and-pricing`
+```text
+Use Omni Datastream to resolve AAPL, fetch the latest 10-K, extract Item 1A and Item 7, and return a concise markdown research brief with provenance and freshness metadata for every section.
+```
 
-## Operator note
+### Statement Workflow
 
-If you are onboarding a new internal or external user, pair this prompt with a fresh org-scoped API key and confirm one successful `entities.resolve`, `filings.latest`, and `statements.get` workflow before closing the session.
+- Endpoint focus: `/v1/statements/all`
+- Summary: Fetch the all-statements bundle and segmented revenue history.
+
+```text
+Use Omni Datastream to fetch the annual all-statements bundle and segmented revenue history for AAPL, then summarize the last three periods with the key changes and the source accession numbers.
+```
+
+### Ownership Workflow
+
+- Endpoint focus: `/v1/owners/institutional/investor`
+- Summary: Inspect a manager portfolio and the latest holder graph for an issuer.
+
+```text
+Use Omni Datastream to pull Berkshire Hathaway's latest institutional investor portfolio, then fetch the ticker-centric institutional holder graph for AAPL and highlight the biggest positions with quarter-over-quarter changes.
+```
+
+### Offerings Workflow
+
+- Endpoint focus: `/v1/offerings`
+- Summary: Monitor recent S-1 and 424B activity.
+
+```text
+Use Omni Datastream to search recent S-1 and 424B4 filings, then return the newest issuers, accession numbers, offering family, and prospectus URLs in a sortable markdown table.
+```
+
+## Contract coverage
+
+- `/v1/entities/resolve` — Resolve an entity by ticker, CIK, or name
+- `/v1/entities` — Search canonical SEC entities across issuers, managers, insiders, and funds
+- `/v1/filings` — Search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination
+- `/v1/filings/latest` — Retrieve the latest filing for an entity and form
+- `/v1/filings/latest/render` — Render the latest filing into Markdown-like text
+- `/v1/filings/latest/sections/{section_key}` — Extract a section from the latest filing for an entity and form
+- `/v1/filings/{accession_number}` — Retrieve a filing manifest by accession number from the materialized filing corpus
+- `/v1/filings/{accession_number}/sections/{section_key}` — Extract a filing item or section from a specific accession-number filing
+- `/v1/sections/search` — Search filing sections and snippets with filing-scoped filters and cursor pagination
+- `/v1/statements/segmented-revenues` — Return filing-derived segmented revenue history with XBRL product or geography dimensions when issuers disclose them
+- `/v1/statements` — Return a normalized statement bundle backed by SEC company facts
+- `/v1/statements/all` — Return the balance sheet, income statement, and cash flow statement as one normalized bundle

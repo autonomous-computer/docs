@@ -1,0 +1,39 @@
+# OMNI Sentiment Score Gate
+
+## Current posture
+
+- OMNI Sentiment Score is intentionally not public yet
+- there is no `/v1/signals/sentiment` endpoint in the 3.0 surface
+- the score remains gated until it clears explicit research, backtest, and stale-data thresholds
+
+## Why the gate exists
+
+- volatility can be grounded directly in primary-source disclosure cadence and insider activity
+- sentiment is easier to overfit, easier to make opaque, and easier to mislead users with if the methodology is not strict
+- 3.0 ships the launch criteria and the operator evidence, not a premature production score
+
+## Required launch thresholds
+
+- primary-source coverage:
+  the model must be driven primarily by first-party or primary-source investor inputs, not social chatter or opaque vendor feeds
+- directional precision:
+  the score must beat a naive baseline on held-out forward-return sign classification
+- calibration:
+  score buckets must stay monotonic against forward realized volatility and downside risk
+- false-positive control:
+  the highest-risk bucket cannot trigger too often without corresponding realized stress
+- freshness:
+  stale inputs must degrade or block the score instead of silently reusing old sentiment
+- methodology transparency:
+  every public score must expose factor provenance, model version, and degraded-state reasons
+
+## Validation commands
+
+- export the current gate artifact with `bun run ops:sentiment-gate`
+- validate the gate with `bun run validate:sentiment-gate`
+
+## What changes when the gate passes
+
+- a public endpoint can be added
+- docs can move from this gate page to a live methodology page
+- SDK and prompt assets can expose the score

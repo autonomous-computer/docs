@@ -1,10 +1,10 @@
-# Hosted MCP workflows
+# Hosted MCP Workflows
 
-Omni Datastream exposes a hosted MCP server at `/mcp` with SEC-focused tools and `sec://` resources.
+## Why use hosted MCP
 
-## Native installation flow
+Hosted MCP lets coding agents call the same Datastream workflows directly instead of forcing you to wrap every path yourself.
 
-Start with the install metadata:
+## Install metadata
 
 ```bash
 curl https://api.secapi.ai/mcp
@@ -14,9 +14,10 @@ That payload includes:
 
 - the canonical SSE transport URL
 - auth metadata links
-- Claude Code install command
-- Cursor-ready remote config
-- the current tool and resource template summary
+- install hints
+- current tool and resource summaries
+
+## Common clients
 
 ### Claude Code
 
@@ -24,11 +25,7 @@ That payload includes:
 claude mcp add --transport sse omni-datastream https://api.secapi.ai/mcp
 ```
 
-If OAuth discovery is not configured yet in your environment, use an org-scoped API key and attach it as `x-api-key` where your MCP client supports static headers.
-
 ### Cursor
-
-Add this remote server config in Cursor Settings > MCP or `mcp.json`:
 
 ```json
 {
@@ -41,29 +38,13 @@ Add this remote server config in Cursor Settings > MCP or `mcp.json`:
 }
 ```
 
-### Generic remote SSE clients
-
-- URL: `https://api.secapi.ai/mcp`
-- Header: `x-api-key: $OMNI_DATASTREAM_API_KEY`
-- Protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
-- Authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
-
-## Supported tools
+## Good first tools
 
 - `entities.resolve`
 - `filings.search`
 - `filings.latest`
-- `filings.render`
 - `sections.get`
-- `sections.search`
-- `facts.get`
 - `statements.get`
-- `owners.get_13f`
-- `owners.compare_13f`
-- `insiders.list`
-- `comp.list`
-- `comp.compare`
-- `artifacts.bundle`
 
 ## Example tool call
 
@@ -81,30 +62,3 @@ Add this remote server config in Cursor Settings > MCP or `mcp.json`:
   }
 }
 ```
-
-## Supported resource templates
-
-- `sec://entities/{ticker_or_cik}`
-- `sec://filings/latest/{ticker_or_cik}/{form}`
-- `sec://sections/latest/{ticker_or_cik}/{form}/{section_key}`
-- `sec://statements/{ticker_or_cik}/{statement_key}/{period}`
-- `sec://13f/{cik}`
-
-## Example resource read
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "resources/read",
-  "params": {
-    "uri": "sec://filings/latest/AAPL/10-K"
-  }
-}
-```
-
-## Auth behavior
-
-- API-key access works today through `x-api-key`
-- OAuth authorization-server discovery returns `503 workos_authorization_server_unavailable` until real WorkOS metadata is configured
-- protected-resource metadata remains available so clients can discover the MCP resource endpoint early

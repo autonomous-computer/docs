@@ -1,0 +1,38 @@
+# Index Constituents
+
+## What this utility is for
+
+- expose index rosters only when OMNI has a documented public-source right to share them
+- map constituent symbols into OMNI's canonical entity graph when local coverage exists
+- keep the broader index universe visible in the source inventory without pretending unsupported families are production-ready
+
+## Current support posture
+
+- `NDX` is the first fully supported index roster
+- OMNI parses the public Nasdaq-100 companies page published by Nasdaq
+- OMNI returns company name, ticker, rank order, rights metadata, provenance, and any canonical entity match already available in the local graph
+- OMNI does not return weights for `NDX` because the public source page does not publish them
+
+## Inventory-only indices
+
+- `SPX` is tracked, but constituent export remains blocked pending index licensing
+- `UKX` and `SX5E` are tracked in the source inventory, but rights and extraction posture are still under review
+- inventory-only indices are intentionally visible in ops artifacts before they are exposed through the public API
+
+## Rights model
+
+- `public_source_documented` means the source page and public-shareability posture are documented
+- `public_source_review_required` means OMNI tracks the official source but has not yet cleared public constituent export
+- `licensed_index_not_supported` means OMNI will not expose the constituent roster until explicit licensing is in place
+
+## Sync posture
+
+- supported index rosters refresh from the documented source on a daily cadence
+- export the current inventory with `bun run ops:index-source-inventory`
+
+## Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/indices/constituents?index=NDX&limit=10"
+```
