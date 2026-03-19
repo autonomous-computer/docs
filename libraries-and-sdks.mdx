@@ -1,34 +1,83 @@
 # Libraries & SDKs
 
-## Choose the closest surface to your runtime
+<Info>
+Pick the surface that matches your runtime. Then prove it with one real entity lookup, one filing workflow, one structured result, and one traceable source-backed read before you call the integration done.
+</Info>
 
-- REST API: when you want exact HTTP control
-- JavaScript SDK: for TypeScript services, apps, and scripts
-- Python SDK: for research notebooks, pipelines, and services
-- Go SDK: for lightweight backend integrations
-- Rust SDK: for async and performance-sensitive services
-- CLI: for terminal-first inspection and operator workflows
-- hosted MCP: for coding agents and agent runtimes
+## Choose your surface
+
+<CardGroup cols={2}>
+  <Card title="JavaScript SDK" icon="file-code-2" href="/javascript-sdk">
+    Best for TypeScript services, apps, scripts, and product integrations.
+  </Card>
+  <Card title="Python SDK" icon="file-code" href="/python-sdk">
+    Best for research notebooks, data workflows, and backend services.
+  </Card>
+  <Card title="Go SDK" icon="binary" href="/go-sdk">
+    Best for lightweight backend services and strongly typed API wrappers.
+  </Card>
+  <Card title="Rust SDK" icon="cpu" href="/rust-sdk">
+    Best for async and performance-sensitive services.
+  </Card>
+  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
+    Best for coding agents and MCP-aware runtimes that need grounded investor workflows.
+  </Card>
+  <Card title="OMNI Agent CLI" icon="terminal" href="#omni-agent-cli">
+    Best when you want agent workflows from the terminal without opening a browser or wiring up an SDK.
+  </Card>
+  <Card title="REST API" icon="globe" href="/api-reference">
+    Best when you want exact HTTP control or your own runtime wrapper.
+  </Card>
+</CardGroup>
 
 ## Recommended sequence
 
-1. Set `OMNI_DATASTREAM_API_KEY`
-2. Verify one entity lookup
-3. Verify one filing workflow
-4. Verify one structured workflow such as `all-statements` or `insider trades`
-5. Keep `Request-Id`, provenance, and freshness metadata in your logs
+<Steps>
+  <Step title="Set the API key">
+    Export `OMNI_DATASTREAM_API_KEY` first. Every other surface will fail in ways that look less clear if auth is not in place.
+  </Step>
+  <Step title="Verify one entity lookup">
+    Confirm the surface can resolve a company or filer you already know, ideally through the identifier type you expect to use in production.
+  </Step>
+  <Step title="Verify one filing or structured workflow">
+    Pull a filing, statements bundle, insider trade set, ownership workflow, or governance surface so you are testing the real contract shape.
+  </Step>
+  <Step title="Preserve the metadata">
+    Keep `requestId`, provenance, freshness, materialization metadata, and trace references in your logs or downstream artifacts.
+  </Step>
+</Steps>
 
-## Surface parity
+## Give this prompt to your agent
 
-- JavaScript and Python are the most complete client surfaces today
-- Go and Rust intentionally mirror the canonical REST surface with a lighter bootstrap posture
-- MCP exposes the same investor workflows to coding agents
+<Prompt>
+Install the right Omni Datastream integration surface for this project. Prefer the native SDK if the runtime matches, otherwise use the REST API. Then verify one entity lookup, one filing workflow, one structured workflow such as all-statements or insider trades, and one trace lookup while preserving requestId, provenance, freshness, materialization metadata, and trace references.
+</Prompt>
+
+## OMNI Agent CLI
+
+The CLI connects to the same agent backend as OMNI Pulse. It speaks the same WebSocket protocol, uses the same auth token, and has access to the same skills, tools, and data.
+
+```bash
+omni auth login            # Store your auth token
+omni chat "hello"          # One-shot query
+omni chat                  # Interactive REPL
+omni sessions list         # View session history
+omni config set thinking-level max
+```
+
+Best when you want agent workflows from the terminal without opening a browser or wiring up an SDK. Streaming, permission prompts, plan approval, and session persistence all carry over from the product.
 
 ## Read next
 
-- `/javascript-sdk`
-- `/python-sdk`
-- `/go-sdk`
-- `/rust-sdk`
-- `/mcp-workflows`
-- `/auth-and-pricing`
+<CardGroup cols={3}>
+  <Card title="Auth and pricing" icon="key-round" href="/auth-and-pricing">
+    The auth model, version header, and plan posture.
+  </Card>
+  <Card title="MCP workflows" icon="plug-zap" href="/mcp-workflows">
+    Hosted MCP setup and agent-facing usage patterns.
+  </Card>
+  <Card title="API Reference" icon="square-terminal" href="/api-reference">
+    Exact endpoint behavior when you need wire-level precision.
+  </Card>
+</CardGroup>
+

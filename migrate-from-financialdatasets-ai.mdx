@@ -1,12 +1,25 @@
 # Migrate from financialdatasets.ai
 
-This guide maps the major `financialdatasets.ai` workflows onto Omni Datastream.
+<Info>
+This guide helps you swap `financialdatasets.ai` workflows onto Datastream without losing the normalized statement views you already depend on.
+</Info>
 
-## High-level differences
+## What changes when you switch
 
-- Omni Datastream ships primary-source filing, section, ownership, compensation, webhook, and MCP surfaces in one API
-- statements, facts, and filing provenance are exposed with SEC lineage instead of only normalized financial rows
-- pricing and quota signals are visible on every response through meter and plan headers
+<CardGroup cols={2}>
+  <Card title="Primary-source lineage" icon="badge-info" href="/freshness-and-trust">
+    Datastream exposes SEC-backed provenance and freshness alongside normalized rows.
+  </Card>
+  <Card title="More than statements" icon="layers-3" href="/datastream-docs">
+    Filings, sections, ownership, compensation, webhooks, streams, and MCP all live in the same product.
+  </Card>
+  <Card title="Usage signals in every response" icon="gauge" href="/auth-and-pricing">
+    Meter and plan headers stay visible while you migrate and benchmark.
+  </Card>
+  <Card title="Better section and filing context" icon="file-search" href="/api-reference/filings">
+    Datastream gives you normalized financials plus the filing context that produced them.
+  </Card>
+</CardGroup>
 
 ## Route mapping
 
@@ -40,6 +53,10 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 ```
 
+<Prompt>
+Translate this financialdatasets.ai integration to Omni Datastream. Replace statement calls with the matching statement endpoints, use /v1/facts when tag-level values matter, move filing retrieval to /v1/filings, and preserve requestId, provenance, freshness, and plan headers in the integration layer.
+</Prompt>
+
 ## Migration notes
 
 - Pin `omni-version` and compare statement-level fields before swapping production dashboards
@@ -54,3 +71,18 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
 3. filing search and latest filing retrieval
 4. insider and compensation workflows
 5. MCP or artifact workflows if you are consolidating tool surfaces
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Statements reference" icon="table-properties" href="/api-reference/statements">
+    Open the exact normalized statement and bundle endpoints.
+  </Card>
+  <Card title="Ownership workflows" icon="users" href="/ownership-workflows">
+    See the institutional and beneficial ownership flows that sit beyond standard financials APIs.
+  </Card>
+  <Card title="Auth and pricing" icon="key-round" href="/auth-and-pricing">
+    Understand plan headers, usage posture, and onboarding before cutover.
+  </Card>
+</CardGroup>
+

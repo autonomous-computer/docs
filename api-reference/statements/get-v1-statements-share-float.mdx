@@ -1,0 +1,104 @@
+# GET /v1/statements/share-float
+
+Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+- `provenance`
+- `freshness`
+- `materialization`
+- `capability`
+- `sourceMode`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/statements/share-float?ticker=MSFT"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "share_float",
+  "id": "share_float_ent_msft",
+  "createdAt": "2026-03-18T16:00:00.000Z",
+  "livemode": false,
+  "entityId": "ent_msft",
+  "ticker": "MSFT",
+  "cik": "0000789019",
+  "companyName": "Microsoft Corporation",
+  "asOf": "2026-01-28",
+  "form": "10-Q",
+  "filingDate": "2026-01-28",
+  "reportDate": "2025-12-31",
+  "capability": "degraded",
+  "sourceMode": "shares_outstanding_proxy",
+  "statusNote": "The latest SEC company-facts coverage exposes shares outstanding but not a same-surface public-float dollar fact, so Datastream is returning the shares-outstanding proxy.",
+  "publicFloatUsd": null,
+  "sharesOutstanding": 7433000000,
+  "xbrlData": {
+    "EntityCommonStockSharesOutstanding": 7433000000
+  },
+  "facts": {
+    "publicFloatUsd": null,
+    "sharesOutstanding": {
+      "taxonomy": "dei",
+      "tag": "EntityCommonStockSharesOutstanding",
+      "label": "Entity Common Stock, Shares Outstanding",
+      "unit": "shares",
+      "value": 7433000000,
+      "periodEnd": "2025-12-31",
+      "filedAt": "2026-01-28",
+      "form": "10-Q"
+    }
+  },
+  "summaryMd": "## Share float coverage for Microsoft Corporation\n\nDatastream found 7,433,000,000 shares outstanding, but the issuer does not expose a same-surface public-float dollar fact in the latest company-facts coverage, so this response stays in degraded proxy mode.",
+  "provenance": {
+    "source": "sec",
+    "accessionNumber": null,
+    "filingUrl": "https://www.sec.gov/edgar/searchedgar/companysearch",
+    "retrievedAt": "2026-03-18T16:00:00.000Z",
+    "parserVersion": "2026-03-18.1"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-03-18T16:00:00.000Z",
+    "sourcePublishedAt": "2026-01-28",
+    "lagMs": 0
+  },
+  "materialization": {
+    "parserVersion": "2026-03-18.1",
+    "materializationVersion": "2026-03-18.1"
+  },
+  "requestId": "req_example_123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use Omni Datastream GET /v1/statements/share-float to return a share-float wrapper backed by sec company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `capability`, `sourceMode` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+

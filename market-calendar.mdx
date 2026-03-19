@@ -13,6 +13,7 @@
 - `configured_holidays` means OMNI has an explicit holiday map and weekend rules for the exchange
 - `weekend_only` means OMNI currently knows the exchange weekend pattern and regular hours but may not yet reflect every local holiday closure
 - `confidence=tentative` is returned when OMNI is inferring an open session from weekend-only coverage
+- this surface is intentionally explicit about partiality so downstream tools do not silently treat all exchanges as equally hardened
 
 ## Source inventory
 
@@ -28,13 +29,13 @@
 
 - `public_source_documented` means the exchange page and current usage posture have been reviewed and recorded in the source inventory
 - `public_source_review_required` means OMNI has the public source mapped, but local holiday coverage still needs explicit hardening before callers should assume full certainty
-- `daily_midnight_local` means the market should be regenerated automatically every local-market midnight
-- `daily_manual_review` means the public source is tracked, but holiday coverage still needs operator review or hardening before full automation
+- `daily_midnight_local`, `daily_manual_review`, and `manual_review_only` are source-review posture values exported from the checked-in market definitions
+- the current repo does not prove external sync jobs for every inventory row; the inventory artifacts are generated from in-repo source definitions
 
 ## Sync posture
 
-- the endpoint is generated from OMNI's exchange-source inventory
-- inventory export for ops: `bun run ops:market-calendar-inventory`
+- Datastream serves `/v1/market/calendar` from checked-in market definitions in `services/datastream-api/src/lib/market-calendar.ts`
+- ops artifacts are exported from that checked-in source inventory with `bun run ops:market-calendar-inventory` and `bun run ops:market-calendar-sources`
 - weekend-only exchanges are intentionally labeled as tentative on non-weekend weekdays until holiday coverage is hardened
 
 ## Supported markets
@@ -47,9 +48,16 @@
 - `XTAE`
 - `XSAU`
 
+## What is safe to assume today
+
+- `XNYS` and `XNAS` are safe for production assumptions about holiday-aware session state
+- the other listed exchanges are useful, but should be treated as documented public-hour utilities rather than fully holiday-complete calendars
+- omni-apps and downstream agents should read `coverage`, `confidence`, and `statusNote` before making trade-window assumptions
+
 ## Example
 
 ```bash
 curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   "https://api.secapi.ai/v1/market/calendar?market=XNYS&duration=5"
 ```
+

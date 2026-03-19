@@ -1,15 +1,33 @@
 # Operations
 
+<Info>
+Operations pages are for the people who have to prove the system is healthy, explain what happened, and ship without guessing.
+</Info>
+
 ## Health and readiness
 
-- `GET /healthz` returns liveness metadata for the API process
-- `GET /readyz` returns readiness metadata and fails closed when database, memory, or event-loop thresholds fail
+<CardGroup cols={2}>
+  <Card title="Liveness" icon="heart-pulse" href="/launch-checklist">
+    `GET /healthz` is part of release verification and should stay green before you treat the API as ship-ready.
+  </Card>
+  <Card title="Readiness" icon="shield-check" href="/launch-checklist">
+    `GET /readyz` is part of release verification and fails closed when the platform cannot safely serve traffic.
+  </Card>
+</CardGroup>
 
 ## Trace propagation
 
-- every response includes `Request-Id`
-- every response includes `traceparent`
-- OMNI Datastream forwards request correlation headers on downstream SEC fetches so ingest and serving traces can be tied together
+<Steps>
+  <Step title="Request entry">
+    Every response includes `Request-Id` and `traceparent`.
+  </Step>
+  <Step title="Downstream fetches">
+    Datastream forwards request correlation headers on downstream SEC fetches so ingest and serving traces stay tied together.
+  </Step>
+  <Step title="Operator follow-up">
+    Use those IDs in request diagnostics, replay tools, and support workflows before trying to reproduce blindly.
+  </Step>
+</Steps>
 
 ## Deploy verification
 
@@ -27,8 +45,31 @@ The verification script checks:
 - OAuth discovery endpoints
 - `/v1/limits` when an API key is supplied
 
+<Prompt>
+Run the Datastream release verification flow against the target environment. Check health, readiness, OAuth discovery, and limits. If any step fails, report the failing endpoint, requestId, and likely blast radius before attempting rollout.
+</Prompt>
+
 ## Current production posture
 
 - WorkOS discovery is live and returns `200`
 - release verification should treat `/.well-known/oauth-authorization-server` as a required `200`
-- launch readiness is currently `ready`
+- launch-readiness should be read from the current release-verification artifact rather than assumed from this page alone
+
+<Warning>
+If readiness is green but a workflow still looks stale, check freshness metadata and request diagnostics before assuming ingestion is healthy. Serving health and content freshness are related, but they are not the same signal.
+</Warning>
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Freshness and trust" icon="clock-3" href="/freshness-and-trust">
+    Read how freshness and provenance are measured and published.
+  </Card>
+  <Card title="Benchmark workflows" icon="gauge" href="/benchmark-workflows">
+    Review the current performance and parity methodology.
+  </Card>
+  <Card title="Auth and pricing" icon="key-round" href="/auth-and-pricing">
+    Check auth, limits, billing, and onboarding posture.
+  </Card>
+</CardGroup>
+

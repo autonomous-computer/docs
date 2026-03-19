@@ -157,6 +157,7 @@ This page describes the current derivation, source posture, and capability state
 ### How it works in OMNI
 
 - Datastream serves `/v1/events/enforcement`
+- each enforcement action now carries a shared `trace` reference, and `/v1/traces` can hydrate that reference back to the SEC release document plus any attached source-ingest lineage
 - omni-apps does not currently expose a dedicated enforcement UI, but the Datastream surface is now live as a direct contract for future alert and investigation flows
 
 ## Filing traceability
@@ -166,17 +167,21 @@ This page describes the current derivation, source posture, and capability state
 - status field: `supported` when OMNI can materialize a filing page, otherwise `degraded`
 - `viewerUrl`: SEC inline viewer URL for the filing document
 - `page`: resolved filing page when available
+- `region`: optional HTML-first anchor metadata when OMNI can prove either the exact inline XBRL fact region or the exact rendered filing-section text range on a supported filing document
 - `nodes`: disclosed and derived lineage nodes for the traced datapoint
 
 ### How it is derived
 
-- trace IDs encode filing-derived payload metadata
+- trace IDs now encode either filing-derived payload metadata or supported non-filing source-record metadata
 - Datastream resolves the filing document, inspects SEC inline XBRL HTML, matches the fact against its context and nearby text, then maps that hit to the nearest filing page footer
+- when the inline fact or supported section-excerpt match is strong enough, Datastream preserves a region-level HTML text range alongside the filing trace instead of collapsing everything to page-only metadata
 
 ### First-party status
 
 - first-party SEC-derived traceability
-- current implementation is lazy hydration, not yet ingest-time precomputation or region-level highlighting
+- current implementation is lazy hydration, not yet ingest-time precomputation
+- region support is HTML / SEC inline-viewer first and falls back explicitly to page-only or degraded when region proof is unavailable
+- non-filing trace support is currently live for SEC enforcement source documents; broader prices, analyst targets, and mixed-source derived traces remain deferred
 
 ### How it works in OMNI
 

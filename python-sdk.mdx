@@ -1,11 +1,43 @@
 # Python SDK
 
+<Info>
+The Python SDK is built for research, ETL, notebooks, and backend services that want REST parity without turning every request into a small framework project.
+</Info>
+
+## Start here
+
+<Steps>
+  <Step title="Install the SDK">
+    Add the package to the environment where your notebook, worker, or service will run.
+  </Step>
+  <Step title="Set the API key and base URL">
+    Default to `https://api.secapi.ai` unless you are testing a local or staging environment.
+  </Step>
+  <Step title="Run one issuer workflow and one operator workflow">
+    Prove both the investor path and the metadata or artifact path before you move on.
+  </Step>
+</Steps>
+
+```bash
+pip install omni-datastream-py
+```
+
 ## What it is good for
 
-- notebooks
-- research pipelines
-- ETL and enrichment services
-- backend jobs that want compact REST parity without hand-rolling requests
+<CardGroup cols={2}>
+  <Card title="Notebooks" icon="flask-conical" href="/first-request-flows">
+    Good for research sessions where you need entity resolution, filings, statements, and compact extracted sections quickly.
+  </Card>
+  <Card title="Research pipelines" icon="workflow" href="/benchmark-workflows">
+    Useful when you need benchmarkable workflows with explicit freshness and provenance metadata.
+  </Card>
+  <Card title="ETL and enrichment" icon="database" href="/api-reference/artifacts">
+    Fit for downstream enrichment services that need Datastream payloads and artifact workflows.
+  </Card>
+  <Card title="Backend jobs" icon="server" href="/operations">
+    Works well in recurring workers that need the same contract shape as the public API.
+  </Card>
+</CardGroup>
 
 ## First useful calls
 
@@ -24,6 +56,10 @@ calendar = client.market_calendar(market="XNYS", duration=5)
 volatility = client.volatility_signal(ticker="AAPL")
 ```
 
+<Prompt>
+Use the Python SDK to build a research workflow around AAPL. Resolve the issuer, fetch the latest 10-K, pull the all-statements bundle, check the market calendar for XNYS, and write the results into a markdown brief that preserves requestId, provenance, freshness, and materialization metadata.
+</Prompt>
+
 ## Operator paths
 
 ```python
@@ -37,8 +73,21 @@ manifest = client.artifact_manifest(artifact["id"])
 observability = client.observability()
 ```
 
-## Good next reads
+<Warning>
+If you are caching responses in a notebook or long-running worker, keep the freshness block next to the payload. Otherwise you lose the context that tells you whether a result is still safe to trust.
+</Warning>
 
-- `/api-reference`
-- `/libraries-and-sdks`
-- `/benchmark-workflows`
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="API Reference" icon="square-terminal" href="/api-reference">
+    Open the exact wire format behind the Python methods you are using.
+  </Card>
+  <Card title="Libraries & SDKs" icon="blocks" href="/libraries-and-sdks">
+    Compare Python with the other runtime surfaces before standardizing.
+  </Card>
+  <Card title="Benchmark workflows" icon="gauge" href="/benchmark-workflows">
+    See how OMNI measures latency, freshness, and workflow parity.
+  </Card>
+</CardGroup>
+

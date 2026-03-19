@@ -10,6 +10,7 @@ Get one issuer, one filing, and one structured statement working first. Do that 
 2. Verify health at `https://api.secapi.ai/healthz`
 3. Verify readiness at `https://api.secapi.ai/readyz`
 4. Decide whether you are starting with REST, SDK, CLI, or MCP
+5. Pick one identifier you already trust such as ticker, CIK, FIGI, ISIN, or CUSIP
 
 ## REST quickstart
 
@@ -65,6 +66,19 @@ omni-sec filings latest --ticker AAPL --form 10-K --json
 omni-sec statements get --ticker AAPL --statement all --period annual --json
 ```
 
+## Trace hydration quickstart
+
+When a filing-derived response includes trace references, hydrate them by trace id.
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/traces/<trace_id>"
+```
+
+```ts
+const trace = await client.getTrace("<trace_id>")
+```
+
 ## MCP quickstart
 
 - MCP server: `https://api.secapi.ai/mcp`
@@ -81,11 +95,12 @@ omni-sec statements get --ticker AAPL --statement all --period annual --json
 
 - the `Request-Id`
 - the exact endpoint or tool you called
-- the provenance and freshness metadata from the response
+- the provenance, freshness, and trace metadata from the response
 
 ## Next pages
 
-- `/first-request-flows`
-- `/datastream-docs`
-- `/libraries-and-sdks`
-- `/give-this-prompt-to-your-agent`
+- [First request flows](/first-request-flows)
+- [Datastream Docs](/datastream-docs)
+- [Libraries & SDKs](/libraries-and-sdks)
+- [Give this prompt to your agent](/give-this-prompt-to-your-agent)
+

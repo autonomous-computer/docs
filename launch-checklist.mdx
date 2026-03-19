@@ -7,16 +7,24 @@
 - low-volume external access with operator monitoring on every request path
 - broader public launch once billing, support, and replay workflows stay stable under live traffic
 
+## Current posture
+
+- production launch-readiness verifies the public API, auth metadata, key site routes, and security headers
+- benchmark, freshness, mapping, and launch-readiness gates are all part of the checked-in trust story, but they should be read from their current artifacts rather than assumed green by default
+- non-launch items such as gated sentiment or deferred backlog do not belong in the launch-ready surface area
+
 ## Pre-launch gates
 
 - `https://api.secapi.ai/healthz` returns `200`
 - `https://api.secapi.ai/readyz` returns `200`
 - `https://api.secapi.ai/.well-known/oauth-protected-resource` returns `200`
-- `https://docs.secapi.ai/status` and `https://docs.secapi.ai/changelog` are live
-- Stripe checkout and portal routes respond in production
-- PostHog and Sentry are receiving production events
-- operator admin routes work with the operator key
+- `https://api.secapi.ai/.well-known/oauth-authorization-server` returns the expected hosted status
+- `https://api.secapi.ai/v1/billing/rates` returns `200` and reflects the current public catalog
+- `https://api.secapi.ai/v1/limits` returns `200` with an API key and includes `Request-Id`, `traceparent`, `Strict-Transport-Security`, and `X-Content-Type-Options: nosniff`
+- `https://secapi.ai/pricing`, `https://secapi.ai/login`, `https://secapi.ai/status`, `https://secapi.ai/changelog`, `https://secapi.ai/launch-checklist`, and `https://secapi.ai/onboarding` are live with `200` responses and `Strict-Transport-Security`
+- benchmark gates pass when `OMNI_VERIFY_RELEASE_WITH_BENCHMARKS=true`
 - rollout and rollback runbooks are current
+- the latest Stripe posture audit identifies no unexplained catalog drift before rollout
 
 ## Rollback rules
 
@@ -29,13 +37,18 @@
 
 - verify current Railway deployment id
 - run the production release verification script
+- run the production launch-readiness export
+- confirm `/pricing` renders the shared public catalog and `/login` renders the WorkOS entrypoint
 - confirm PostHog ingestion for `datastream_api_request_completed`
 - confirm Sentry receives fresh request traffic
 - verify one builder checkout flow and one billing portal flow
+- verify one starter-grant org can reach `payg_pending_card` and then recover through PAYG activation
 - verify one API quickstart and one MCP quickstart end to end
+- if Dagster is in scope for the release, confirm the configured Dagster URL remains reachable
 
 ## Support expectations
 
 - every external issue must include `Request-Id`
 - operator support uses `/v1/admin/*` before database access
 - delivery replay is the default first response for webhook incidents
+

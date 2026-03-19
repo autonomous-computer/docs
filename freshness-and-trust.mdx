@@ -1,49 +1,63 @@
 # Freshness and trust
 
-This page publishes the current freshness methodology and the latest tracked public trust claims.
+<Info>
+Trust is not a slogan here. It is the combination of source-backed answers, explicit freshness, stable contracts, and enough metadata to keep the trail intact after the data leaves the API.
+</Info>
+
+The current checked-in trust artifacts support strong scoped claims around benchmark performance, provenance-first contracts, and filing-page traceability. They do not support minute-level freshness, universal real-time coverage, or universal benchmark leadership on every path. Freshness is still an explicitly measured posture, not a hand-waved marketing claim.
 
 ## Measurement policy
 
-The current freshness telemetry artifact uses:
+<Steps>
+  <Step title="Source publish time">
+    Use the upstream SEC publish timestamp, such as `acceptanceDateTime`, as the source-side clock.
+  </Step>
+  <Step title="API availability">
+    Measure the first successful Datastream resolution of the workflow being benchmarked.
+  </Step>
+  <Step title="Normalized availability">
+    Track when the rendered or normalized artifact is ready, not just when a raw fetch succeeds.
+  </Step>
+</Steps>
 
-- source timestamp: SEC `acceptanceDateTime`
-- API availability: first successful Datastream `latestFiling` resolution in the measurement run
-- normalization availability: completion of rendered filing normalization in the same run
-- manifest availability: completion of section manifest derivation in the same run
+## Current trust posture
 
-The latest freshness artifact was generated at `2026-03-16T07:56:27.115Z`.
+- freshness dashboard status is currently `monitor`, with form-level telemetry and alert counts published in the checked-in artifact
+- benchmark validation passes for the current dated investor-agent suite
+- FIGI-aware company-resolution inputs are live, while canonical-store completeness proof is tracked separately from the public claim set
+- page-level filing traceability is live for filing-derived datapoints, with HTML-first exact fact-region anchors now available on supported segmented revenue traces
+- non-filing trace hydration now extends to SEC enforcement source records through the same `/v1/traces` surface
+- sentiment remains intentionally gated and is not part of the public 3.0 surface
 
-## Current measured forms
+## What makes a response trustworthy
 
-- `10-K`
-- `10-Q`
-- `8-K`
-- `4`
-- `DEF 14A`
-- `13F-HR`
+<CardGroup cols={2}>
+  <Card title="Provenance" icon="badge-info">
+    If OMNI gives you a structured answer, it should also tell you which filing or source object it came from.
+  </Card>
+  <Card title="Freshness" icon="clock-3">
+    If OMNI gives you a current answer, it should also tell you when the source was published and when OMNI last refreshed it.
+  </Card>
+  <Card title="Materialization" icon="layers-2">
+    If a parser or normalization pass shaped the output, the version should be visible.
+  </Card>
+  <Card title="Failure posture" icon="shield-alert">
+    If a workflow is stale or degraded, the response should say so instead of pretending nothing is wrong.
+  </Card>
+</CardGroup>
 
-## Current public trust claims
+## Current health posture
 
-These claims are copied directly from the tracked freshness dashboard artifact:
-
-- `10-K` publish-to-Datastream lag p50=`3387618.72s`, p95=`19741477.01s`, sample count=`12`
-- `10-Q` publish-to-Datastream lag p50=`11455838.34s`, p95=`12484417.71s`, sample count=`12`
-- `13F-HR` publish-to-Datastream lag p50=`2285482.68s`, p95=`2310894.92s`, sample count=`2`
-- `4` publish-to-Datastream lag p50=`394741.82s`, p95=`1516926.5s`, sample count=`6`
-- `8-K` publish-to-Datastream lag p50=`1713317.2s`, p95=`4013521.51s`, sample count=`11`
-- `DEF 14A` publish-to-Datastream lag p50=`26479523.21s`, p95=`29413062.35s`, sample count=`6`
-
-## Freshness health checks
-
-The latest dashboard also reports:
-
-- freshness telemetry freshness: `ok`
-- workflow benchmark freshness: `ok`
-- replay summary freshness: `ok`
-- Dagster confidence freshness: `ok`
+- freshness dashboard status: `monitor`
+- freshness claim posture: use the dashboard artifact and form-level telemetry, not generic real-time language
+- benchmark scorecard posture: `18 wins`, `0 losses`, `2 ties` on the current dated suite
+- traceability posture: filing-derived datapoints can resolve to the correct filing document and page, supported segmented revenue traces can preserve exact HTML fact ranges, and SEC enforcement releases now expose shared non-filing trace records
+- remaining advisory caveat: some freshness signals still publish warnings instead of silently disappearing from the trust story
 
 ## Source artifacts
 
 - `ops/freshness-telemetry/latest.json`
 - `ops/freshness-dashboard/latest.json`
-- `benchmarks/dagster/results/latest.json`
+- `benchmarks/competitive/results/scorecard.json`
+- `docs/strategy/omni-datastream-v3-evidence-matrix.md`
+

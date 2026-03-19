@@ -12,12 +12,21 @@
 - OMNI parses the public Nasdaq-100 companies page published by Nasdaq
 - OMNI returns company name, ticker, rank order, rights metadata, provenance, and any canonical entity match already available in the local graph
 - OMNI does not return weights for `NDX` because the public source page does not publish them
+- internal entity mapping now covers `NDX`, `SPX`, `DJIA`, and `RUT` through the canonical remote API even though public constituent export remains narrower
 
 ## Inventory-only indices
 
 - `SPX` is tracked, but constituent export remains blocked pending index licensing
+- `DJIA` is tracked, but constituent export remains blocked pending index licensing
+- `RUT` is tracked for internal mapping audit work, but public constituent export still requires documented shareability review
 - `UKX` and `SX5E` are tracked in the source inventory, but rights and extraction posture are still under review
 - inventory-only indices are intentionally visible in ops artifacts before they are exposed through the public API
+
+## Internal mapping versus public export
+
+- these are separate decisions on purpose
+- Datastream can prove strong internal mapping coverage for `SPX`, `NDX`, `DJIA`, and `RUT` without implying that every one of those rosters is public
+- public export remains constrained by rights posture, not by the current quality of the entity graph
 
 ## Rights model
 
@@ -27,8 +36,9 @@
 
 ## Sync posture
 
-- supported index rosters refresh from the documented source on a daily cadence
-- export the current inventory with `bun run ops:index-source-inventory`
+- `NDX` is the only public constituent roster today, and its export is generated from Datastream's checked-in source definition
+- inventory exports are generated from `services/datastream-api/src/lib/index-constituents.ts` with `bun run ops:index-source-inventory`
+- `syncCadence` values describe source-review posture and intended refresh cadence; they do not imply that every inventory-only benchmark family is already auto-synced into a public roster
 
 ## Example
 
@@ -36,3 +46,4 @@
 curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   "https://api.secapi.ai/v1/market/indices/constituents?index=NDX&limit=10"
 ```
+

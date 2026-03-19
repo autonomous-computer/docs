@@ -1,10 +1,36 @@
 # Rust SDK
 
+<Info>
+The Rust SDK is for async, performance-sensitive services that still want the Datastream contract to look like Datastream, not like a bespoke Rust dialect.
+</Info>
+
 ## Status
 
-- bootstrap client available in `packages/sdk-rust`
-- built for async workloads with `reqwest` and `serde`
-- mirrors the canonical REST surface instead of inventing Rust-only semantics
+<CardGroup cols={3}>
+  <Card title="Bootstrap client" icon="package" href="/libraries-and-sdks">
+    A starter Rust client is available in `packages/sdk-rust`.
+  </Card>
+  <Card title="Async-first" icon="zap" href="/api-reference">
+    Built around `reqwest` and `serde` for async service workloads.
+  </Card>
+  <Card title="REST parity" icon="equal" href="/freshness-and-trust">
+    It mirrors the canonical API so freshness, provenance, and materialization stay visible.
+  </Card>
+</CardGroup>
+
+## Recommended setup
+
+<Steps>
+  <Step title="Add the client">
+    Bring the Rust package into your service and set the Datastream API key through the environment.
+  </Step>
+  <Step title="Exercise one fast path">
+    Start with a volatility or entity lookup to confirm the runtime wiring.
+  </Step>
+  <Step title="Exercise one structured workflow">
+    Move to filings, statements, or ownership so you are validating the real contract shape.
+  </Step>
+</Steps>
 
 ## Example
 
@@ -15,8 +41,24 @@ let client = omni_datastream_sdk_rust::OmniDatastreamClient::new(
 let signal = client.volatility_signal(&[("ticker", "AAPL")]).await?;
 ```
 
+<Prompt>
+Integrate the Rust SDK with this service. Verify the base auth path with a volatility or entity call, then add one filing or statement workflow and preserve requestId, traceparent, freshness, and provenance in the service logs.
+</Prompt>
+
 ## Smoke path
 
 ```bash
 bun run smoke:sdk-rust
 ```
+
+## Read next
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="square-terminal" href="/api-reference">
+    Open the underlying REST calls for exact request and response details.
+  </Card>
+  <Card title="Libraries & SDKs" icon="blocks" href="/libraries-and-sdks">
+    Compare the Rust surface with the other runtime options.
+  </Card>
+</CardGroup>
+

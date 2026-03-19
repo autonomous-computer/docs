@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Omni Datastream API",
-    "version": "2026-03-13",
-    "description": "Agent-native SEC data plane API skeleton."
+    "version": "2026-03-19",
+    "description": "Agent-native SEC data plane with pricing, billing, dashboard, and WorkOS-backed auth surfaces."
   },
   "paths": {
     "/.well-known/oauth-protected-resource": {
@@ -46,6 +46,36 @@
         "summary": "Return operator-scoped delivery aggregates for webhook and stream activity within a tenant"
       }
     },
+    "/v1/admin/maintenance/hot-lane": {
+      "post": {
+        "summary": "Run operator-scoped hot-lane polling to enqueue fresh SEC publication observations"
+      }
+    },
+    "/v1/admin/maintenance/reconcile-hot": {
+      "post": {
+        "summary": "Run operator-scoped reconcile work to enqueue missing live hot-lane filings"
+      }
+    },
+    "/v1/admin/maintenance/ingest-worker": {
+      "post": {
+        "summary": "Run operator-scoped ingest worker passes to materialize queued filing artifacts and sections"
+      }
+    },
+    "/v1/admin/maintenance/ingest-queue": {
+      "post": {
+        "summary": "Export an operator-scoped ingest queue and checkpoint summary from the running Datastream service"
+      }
+    },
+    "/v1/admin/maintenance/warm-market-latest": {
+      "post": {
+        "summary": "Warm search-visible manifests for the latest market-wide SEC filings by core form"
+      }
+    },
+    "/v1/admin/maintenance/company-mapping-identifiers": {
+      "post": {
+        "summary": "Backfill FIGI-family and security identifier coverage into the canonical entity store from operator-supplied universe rows"
+      }
+    },
     "/v1/billing/webhooks/stripe": {
       "post": {
         "summary": "Receive and process signed Stripe subscription lifecycle webhooks"
@@ -53,12 +83,22 @@
     },
     "/v1/billing": {
       "get": {
-        "summary": "Return the current organization's Stripe customer, subscription, and effective plan state"
+        "summary": "Return the current organization's Stripe customer, billing state, free-grant posture, and effective pricing context"
+      }
+    },
+    "/v1/billing/rates": {
+      "get": {
+        "summary": "Return the public pricing catalog, plan metadata, and meter-family launch rates"
+      }
+    },
+    "/v1/billing/payg/activate": {
+      "post": {
+        "summary": "Create a Stripe Checkout setup session that activates Pay As You Go card-on-file billing"
       }
     },
     "/v1/billing/checkout": {
       "post": {
-        "summary": "Create a Stripe Checkout session for a billable Omni Datastream plan"
+        "summary": "Create a Stripe Checkout session for a self-serve Personal or Team Omni Datastream plan"
       }
     },
     "/v1/billing/portal": {
@@ -72,6 +112,11 @@
       },
       "post": {
         "summary": "Create a new API key for the current organization"
+      }
+    },
+    "/v1/dashboard/overview": {
+      "get": {
+        "summary": "Return the thin logged-in dashboard overview with principal, org, billing, usage, and API key context"
       }
     },
     "/v1/events": {
@@ -142,12 +187,27 @@
     },
     "/v1/entities/resolve": {
       "get": {
-        "summary": "Resolve an entity by ticker, CIK, or name"
+        "summary": "Resolve an entity by ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name with confidence and match-basis metadata"
       }
     },
     "/v1/entities": {
       "get": {
         "summary": "Search canonical SEC entities across issuers, managers, insiders, and funds"
+      }
+    },
+    "/v1/traces": {
+      "get": {
+        "summary": "Batch resolve shared trace records by trace identifier across filing-derived and supported non-filing datasets"
+      }
+    },
+    "/v1/traces/{trace_id}": {
+      "get": {
+        "summary": "Resolve a single shared trace record by trace identifier across filing-derived and supported non-filing datasets"
+      }
+    },
+    "/v1/analytics/query": {
+      "post": {
+        "summary": "Run a tenant-safe analytical query over supported Datastream history datasets without exposing raw SQL"
       }
     },
     "/v1/filings": {
@@ -170,6 +230,21 @@
         "summary": "Extract a section from the latest filing for an entity and form"
       }
     },
+    "/v1/filings/latest/risk-categories": {
+      "get": {
+        "summary": "Return deterministic Item 1A risk-category coverage for the latest covered filing of an issuer"
+      }
+    },
+    "/v1/board": {
+      "get": {
+        "summary": "Return the latest board composition derived from definitive proxy filings with director roster and committee coverage semantics"
+      }
+    },
+    "/v1/funds/nport/holdings": {
+      "get": {
+        "summary": "Return the latest SEC N-PORT holdings roster with explicit capability semantics and balance-unit metadata"
+      }
+    },
     "/v1/filings/{accession_number}": {
       "get": {
         "summary": "Retrieve a filing manifest by accession number from the materialized filing corpus"
@@ -182,7 +257,12 @@
     },
     "/v1/statements/segmented-revenues": {
       "get": {
-        "summary": "Return filing-derived segmented revenue history with XBRL product or geography dimensions when issuers disclose them"
+        "summary": "Return filing-derived segmented revenue history with XBRL product or geography dimensions, capability state, and trace references when issuers disclose them"
+      }
+    },
+    "/v1/statements/share-float": {
+      "get": {
+        "summary": "Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise"
       }
     },
     "/v1/sections/search": {
@@ -193,6 +273,21 @@
     "/v1/offerings": {
       "get": {
         "summary": "Return recent S-1 and 424B prospectus records with cursor pagination and date filters"
+      }
+    },
+    "/v1/events/ma": {
+      "get": {
+        "summary": "Return SEC-native M&A events inferred from public-company filings and relevant exhibits"
+      }
+    },
+    "/v1/events/enforcement": {
+      "get": {
+        "summary": "Return official SEC litigation releases and administrative proceedings with explicit release-source semantics and shared trace references"
+      }
+    },
+    "/v1/earnings/transcripts": {
+      "get": {
+        "summary": "Return SEC-furnished earnings materials from 8-K filings with release, remarks, and transcript coverage states"
       }
     },
     "/v1/market/calendar": {
@@ -245,6 +340,11 @@
         "summary": "Return an investor-centric institutional ownership graph for a manager CIK, including ranked holdings and quarter-over-quarter changes"
       }
     },
+    "/v1/owners/institutional/extract": {
+      "get": {
+        "summary": "Return a quarter-specific historical institutional ownership extract for a manager CIK over the SEC-native 13F family"
+      }
+    },
     "/v1/owners/institutional/ticker": {
       "get": {
         "summary": "Return a ticker-centric institutional holder graph for the latest materialized 13F cohort, ranked by disclosed position value"
@@ -253,6 +353,11 @@
     "/v1/owners/13f/filings": {
       "get": {
         "summary": "List recent 13F filings, including quarter-end report dates, for a manager CIK"
+      }
+    },
+    "/v1/owners/13d-13g": {
+      "get": {
+        "summary": "List beneficial ownership reports across the SEC-native 13D and 13G filing families"
       }
     },
     "/v1/owners/13f/compare": {

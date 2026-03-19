@@ -1,48 +1,59 @@
 # Coverage and historical depth
 
-This page summarizes the current public coverage posture using the tracked corpus inventory artifacts.
+This page summarizes the current public coverage posture without overstating what Datastream has not yet shipped. The right mental model is:
+
+- a broad public workflow surface built around SEC and adjacent market utilities
+- a 10-year searchable history floor for filings and section workflows
+- a 30-year cold-storage policy target that remains intentionally deferred from the hot path
+- explicit partial and gated semantics where a surface is not fully generalized yet
 
 ## Current snapshot
 
-As of `2026-03-16T07:49:42.753Z` the current tracked inventory reports:
-
-- 47 seeded replay filings
-- 12 issuers
-- 3 seeded replay form families in the corpus inventory snapshot
-- earliest filing date: `2025-05-05`
-- latest filing date: `2026-03-13`
+- filing and section history validations currently pass across the 10-year searchable floor
+- historical coverage is proven through checked-in validation artifacts, not a generic “full archive is always hot” claim
+- current v3 public workflow coverage includes:
+  - entities and canonical resolution
+  - filings, latest filing retrieval, and section extraction
+  - normalized statements, facts, segmented revenues, and share float
+  - ownership, insiders, historical institutional extract, and compensation
+  - SEC-native M&A events, SEC-furnished earnings materials, enforcement events, and board composition
+  - market calendar, rights-scoped indices, and OMNI Volatility Score
 
 ## Measurement coverage
 
-The freshness dashboard adds broader measured-form coverage on top of the seeded replay inventory:
+- the freshness dashboard tracks current measured forms for launch-critical SEC workflows
+- the history inventory tracks the searchable filings plus sections floor separately from freshness
+- the benchmark suite tracks repeated investor-agent workloads separately from freshness so speed claims do not blur into freshness claims
 
-- 49 measured freshness targets
-- 6 measured forms: `10-K`, `10-Q`, `8-K`, `4`, `DEF 14A`, and `13F-HR`
-- 16 seeded historical paths with measured cold and warm section timings
-- 100% historical section manifest coverage in the latest replay-backed dashboard
+## Partial or intentionally scoped surfaces
 
-## Important caveat
+- market calendar:
+  `XNYS` and `XNAS` are holiday-configured; other covered exchanges remain `weekend_only`
+- index constituents:
+  `NDX` is public; `SPX`, `DJIA`, and `RUT` remain rights-scoped for public export even though internal mapping coverage is strong
+- offerings:
+  public filing records are live, but the richer parsed offering payload remains deferred
+- sentiment:
+  intentionally gated; not public
+- traceability:
+  filing-derived document-plus-page support is live, HTML-first exact region anchors now ship for supported segmented revenue facts and supported section excerpts, and the shared trace surface now also covers SEC enforcement source records; broader PDF/cell parity and richer non-filing families remain deferred
+- analytics:
+  a narrow tenant-safe query surface is live across filings, sections, segmented revenues, SEC enforcement actions, and quarter-specific institutional ownership extracts; raw SQL and broader warehouse-style coverage remain deferred
 
-The current corpus inventory artifact is still in `artifact_fallback` mode:
+## Historical depth posture
 
-- `databaseConfigured: false`
-- `databaseStatus: unavailable`
-- observed scope: `seeded_replay_artifacts`
+- searchable hot posture today:
+  10-year filings and sections floor
+- cold posture target:
+  30-year archive
+- non-goal for v3:
+  full 30-year hot normalization
 
-That means these coverage claims are intentionally scoped to the replay-backed truth we can verify from tracked artifacts in this environment, not a live production database census.
-
-## Storage posture
-
-The current storage lifecycle snapshot reports:
-
-- hot policy target: 1 year
-- warm policy target: 5 years
-- cold policy target: 30 years
-- current implementation stage: `seeded_artifact_only`
-- current observed residency: 100% hot, 0% warm, 0% cold
+The repo still keeps warm and cold tiering as an explicit backlog item rather than pretending that policy targets are already the same thing as current production implementation.
 
 ## Source artifacts
 
-- `ops/corpus-inventory/latest.json`
+- `ops/history-inventory/latest.json`
 - `ops/freshness-dashboard/latest.json`
-- `evals/artifacts/latest-replay-summary.json`
+- `docs/strategy/omni-datastream-v3-evidence-matrix.md`
+

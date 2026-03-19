@@ -1,0 +1,96 @@
+# GET /v1/owners/13d-13g
+
+List beneficial ownership reports across the SEC-native 13D and 13G filing families
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+- `provenance`
+- `freshness`
+- `materialization`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/owners/13d-13g"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "beneficial_ownership_report",
+      "id": "benown_aapl_0000320193-25-000079",
+      "createdAt": "2026-03-18T16:00:00.000Z",
+      "livemode": false,
+      "entityId": "ent_aapl",
+      "ticker": "AAPL",
+      "issuerName": "Apple Inc.",
+      "filerName": "Example Capital Management, L.P.",
+      "form": "SC 13D/A",
+      "filingFamily": "13D",
+      "isAmendment": true,
+      "ownershipChangeType": "amendment",
+      "filingDate": "2025-10-31",
+      "accessionNumber": "0000320193-25-000079",
+      "eventDate": "2025-10-30",
+      "sharesBeneficiallyOwned": 12500000,
+      "ownershipPercent": 5.4,
+      "sourceOfFunds": "WC",
+      "purposeSummary": "The filer reported updated beneficial ownership following open-market purchases and ongoing engagement with the issuer.",
+      "summaryMd": "## Beneficial ownership update for Apple Inc.\n\nExample Capital Management, L.P. disclosed beneficial ownership of 12.5 million shares, or 5.4% of the class, via an amended Schedule 13D filing.",
+      "provenance": {
+        "source": "sec",
+        "accessionNumber": "0000320193-25-000079",
+        "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20251031xsc13da.htm",
+        "retrievedAt": "2026-03-18T16:00:00.000Z",
+        "parserVersion": "2026-03-18.1",
+        "rawSourceKey": "0000320193-25-000079"
+      },
+      "freshness": {
+        "status": "fresh",
+        "asOf": "2026-03-18T16:00:00.000Z",
+        "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
+        "lagMs": 0
+      },
+      "materialization": {
+        "parserVersion": "2026-03-18.1",
+        "materializationVersion": "2026-03-18.1"
+      }
+    }
+  ],
+  "hasMore": true,
+  "nextCursor": "cursor_example_13d13g_next",
+  "requestId": "req_example_123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use Omni Datastream GET /v1/owners/13d-13g to list beneficial ownership reports across the sec-native 13d and 13g filing families. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+

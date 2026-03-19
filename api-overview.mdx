@@ -1,25 +1,55 @@
 # API Overview
 
+<Info>
+The API is built for real investor work. It keeps the contract compact, the source trail visible, partial-state behavior explicit, and the surface consistent across REST, SDKs, CLI, and hosted MCP.
+</Info>
+
 ## What the API is optimized for
 
-- grounded investor workflows
-- compact payloads that work well in agents
-- explicit provenance and freshness
-- predictable wire contracts across REST, SDKs, CLI, and hosted MCP
+<CardGroup cols={2}>
+  <Card title="Investor workflows" icon="line-chart" href="/first-request-flows">
+    The API is optimized for repeated issuer, filing, section, statements, ownership, governance, fund, and signal workflows.
+  </Card>
+  <Card title="Compact payloads" icon="shrink" href="/api-reference">
+    The payloads stay useful for applications and agents without turning into raw filing dumps.
+  </Card>
+  <Card title="Visible provenance" icon="badge-info" href="/freshness-and-trust">
+    Provenance, freshness, and trace references stay explicit instead of being pushed into side channels.
+  </Card>
+  <Card title="Stable interfaces" icon="cable" href="/libraries-and-sdks">
+    REST, SDKs, CLI, and hosted MCP follow the same contract model.
+  </Card>
+</CardGroup>
 
 ## Core design rules
 
-- version requests with `Omni-Version`
-- correlate requests with `Request-Id`
-- use cursor pagination on list endpoints
-- expose provenance, freshness, and materialization metadata on public market intelligence paths
-- prefer structured contracts over raw passthroughs
+<Steps>
+  <Step title="Version requests">
+    Use `Omni-Version` so production behavior does not shift underneath you.
+  </Step>
+  <Step title="Correlate requests">
+    Keep `Request-Id` in logs and downstream artifacts.
+  </Step>
+  <Step title="Use cursor pagination">
+    List endpoints paginate with cursors instead of offset math.
+  </Step>
+  <Step title="Keep metadata with the payload">
+    Provenance, freshness, materialization, and trace references belong with the data.
+  </Step>
+  <Step title="Prefer structured contracts">
+    Datastream favors useful structured workflows over raw passthroughs.
+  </Step>
+  <Step title="Respect explicit partial states">
+    Treat values like `supported`, `degraded`, `unavailable`, and rights-scoped coverage flags as part of the contract, not edge-case trivia.
+  </Step>
+</Steps>
 
 ## What makes the contract different
 
 - `provenance`: where the data came from
 - `freshness`: how current the data is
 - `materialization`: how the current output was produced
+- `trace`: how to get from a filing-derived value back to the source filing and page when available
 
 These fields matter because investor agents need more than a value. They need the trail behind the value.
 
@@ -29,12 +59,21 @@ These fields matter because investor agents need more than a value. They need th
 - delivery headers include `x-omni-event-id`, `x-omni-event-type`, and `x-request-id`
 - current event families include artifacts, webhooks, and stream subscriptions
 
-## Product posture
-
-Datastream is not trying to be a generic raw filing tunnel. The product is designed around the workflows serious investors and investor agents actually repeat.
+<Warning>
+Datastream is not trying to be a generic raw filing tunnel. It is designed around the workflows serious investors and investor agents actually repeat.
+</Warning>
 
 ## Read next
 
-- `/api-conventions`
-- `/api-reference`
-- `/freshness-and-trust`
+<CardGroup cols={3}>
+  <Card title="API conventions" icon="book-text" href="/api-conventions">
+    Read the wire-level defaults and shared rules.
+  </Card>
+  <Card title="API Reference" icon="square-terminal" href="/api-reference">
+    Jump to the exact call you need.
+  </Card>
+  <Card title="Freshness and trust" icon="shield-check" href="/freshness-and-trust">
+    See how the source trail and freshness posture stay visible.
+  </Card>
+</CardGroup>
+

@@ -1,19 +1,39 @@
 # Migrate from sec-api.io
 
-This guide maps the common `sec-api.io` workflows onto Omni Datastream.
+<Info>
+This guide translates common `sec-api.io` jobs onto Datastream without forcing you to relearn the whole product in one sitting.
+</Info>
 
-## High-level differences
+## What changes when you switch
 
-- Omni Datastream keeps a normalized object model with provenance on every response
-- `Request-Id` is first-class across every REST response for support and diagnostics
-- hosted MCP and the REST API share the same underlying workflow surface
-- compact section mode is available for machine-first extraction payloads
+<CardGroup cols={2}>
+  <Card title="One normalized object model" icon="layers-2" href="/freshness-and-trust">
+    Datastream keeps provenance, freshness, and materialization visible instead of treating them like optional extras.
+  </Card>
+  <Card title="Filing types and exhibits map" icon="files" href="/filing-types-and-exhibits">
+    Check which filing families Datastream retrieves generically, normalizes directly, or only supports inside workflow-specific parsers.
+  </Card>
+  <Card title="Request diagnostics" icon="search-code" href="/operations">
+    `Request-Id` is first-class across the REST surface so support and debugging workflows stay sane.
+  </Card>
+  <Card title="Shared REST and MCP surface" icon="bot" href="/mcp-workflows">
+    Hosted MCP and REST share the same underlying workflows rather than diverging into two products.
+  </Card>
+  <Card title="Compact extraction mode" icon="braces" href="/api-reference/sections">
+    Section extraction can return machine-first payloads when you want token efficiency instead of rendered prose.
+  </Card>
+</CardGroup>
 
 ## Route mapping
+
+<Warning>
+If you depend on arbitrary historical filing URLs or HTML extractor output, keep a temporary fallback path while you finish historical filing-target support. Datastream is stronger on normalized workflows than on raw URL-style extractor parity.
+</Warning>
 
 - `/mapping/ticker/{ticker}` -> `/v1/entities/resolve?ticker={ticker}`
 - `/mapping/cik/{cik}` -> `/v1/entities/resolve?cik={cik}`
 - `/` filing search POST body -> `/v1/filings` query params
+- `list of filing types and exhibits` -> [SEC Filing Types and Exhibits](/filing-types-and-exhibits)
 - `/extractor?url=...&item=1A&type=text` -> `/v1/filings/latest/sections/item_1a?...&mode=compact` when latest filing mapping is sufficient
 - `/xbrl-to-json` -> `/v1/statements/{statement_key}` or `/v1/facts`
 - `/insider-trading` -> `/v1/insiders`
@@ -42,6 +62,10 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact"
 ```
 
+<Prompt>
+Migrate this sec-api.io workflow to Omni Datastream. Replace mapping calls with entity resolution, replace filing search with /v1/filings query params, and replace extractor workflows with Datastream section endpoints where possible. Keep requestId, freshness, provenance, and any current fallback gaps in the final implementation notes.
+</Prompt>
+
 ## Migration notes
 
 - Pin `omni-version` in production clients before cutover
@@ -56,3 +80,18 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
 3. statements and facts
 4. section extraction in `compact` mode
 5. compare and artifact flows once the target plan is enabled
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Migrate from financialdatasets.ai" icon="git-compare-arrows" href="/migrate-from-financialdatasets-ai">
+    Compare the second major migration path.
+  </Card>
+  <Card title="Benchmark workflows" icon="gauge" href="/benchmark-workflows">
+    See the current latency, freshness, and workflow proof.
+  </Card>
+  <Card title="API Reference" icon="square-terminal" href="/api-reference">
+    Open the exact operation pages once you are ready to wire the calls.
+  </Card>
+</CardGroup>
+

@@ -12,11 +12,13 @@ Base URLs:
 - Hosted MCP: https://api.secapi.ai/mcp
 - Protected resource metadata: https://api.secapi.ai/.well-known/oauth-protected-resource
 - Authorization server metadata: https://api.secapi.ai/.well-known/oauth-authorization-server
-- Docs root: https://secapi.ai/docs
+- Docs root: https://docs.secapi.ai
 
 Rules:
 - Prefer structured Omni Datastream endpoints and MCP tools over raw filing text when possible.
-- Preserve requestId, traceparent, provenance, freshness, and materialization metadata on every downstream artifact.
+- Check GET /v1/billing and GET /v1/limits before expensive or repeated workflows.
+- Preserve requestId, traceparent, Omni-Plan-Key, Omni-Billing-State, Omni-Free-Grant-Remaining, provenance, freshness, and materialization metadata on every downstream artifact.
+- Warn before repeated loops when the org is close to exhausting the starter grant or is in payg_pending_card.
 - Use the generated prompt snippets below before improvising generic SEC workflows.
 ```
 
@@ -28,7 +30,7 @@ Rules:
 - Summary: Resolve an issuer, pull the latest 10-K, and extract the risk sections.
 
 ```text
-Use Omni Datastream to resolve AAPL, fetch the latest 10-K, extract Item 1A and Item 7, and return a concise markdown research brief with provenance and freshness metadata for every section.
+Use Omni Datastream to resolve AAPL, fetch the latest 10-K, extract Item 1A and Item 7, and return a concise markdown research brief with requestId, billing headers, provenance, and freshness metadata for every section.
 ```
 
 ### Statement Workflow
@@ -37,7 +39,7 @@ Use Omni Datastream to resolve AAPL, fetch the latest 10-K, extract Item 1A and 
 - Summary: Fetch the all-statements bundle and segmented revenue history.
 
 ```text
-Use Omni Datastream to fetch the annual all-statements bundle and segmented revenue history for AAPL, then summarize the last three periods with the key changes and the source accession numbers.
+Use Omni Datastream to fetch the annual all-statements bundle and segmented revenue history for AAPL, then summarize the last three periods with the key changes, source accession numbers, and the billing posture used during the workflow.
 ```
 
 ### Ownership Workflow
@@ -46,7 +48,7 @@ Use Omni Datastream to fetch the annual all-statements bundle and segmented reve
 - Summary: Inspect a manager portfolio and the latest holder graph for an issuer.
 
 ```text
-Use Omni Datastream to pull Berkshire Hathaway's latest institutional investor portfolio, then fetch the ticker-centric institutional holder graph for AAPL and highlight the biggest positions with quarter-over-quarter changes.
+Use Omni Datastream to pull Berkshire Hathaway's latest institutional investor portfolio, then fetch the ticker-centric institutional holder graph for AAPL and highlight the biggest positions with quarter-over-quarter changes while preserving requestId and plan metadata.
 ```
 
 ### Offerings Workflow
@@ -55,20 +57,30 @@ Use Omni Datastream to pull Berkshire Hathaway's latest institutional investor p
 - Summary: Monitor recent S-1 and 424B activity.
 
 ```text
-Use Omni Datastream to search recent S-1 and 424B4 filings, then return the newest issuers, accession numbers, offering family, and prospectus URLs in a sortable markdown table.
+Use Omni Datastream to search recent S-1 and 424B4 filings, then return the newest issuers, accession numbers, offering family, prospectus URLs, and billing headers from the request sequence in a sortable markdown table.
+```
+
+### Corporate Actions Workflow
+
+- Endpoint focus: `/v1/events/ma`
+- Summary: Inspect recent SEC-native M&A events and SEC-furnished earnings materials.
+
+```text
+Use Omni Datastream to fetch recent M&A events and SEC-furnished earnings materials for AAPL, then return the latest filings, event or coverage classification, accession numbers, concise traceable summaries, and any billing posture warnings encountered.
 ```
 
 ## Contract coverage
 
-- `/v1/entities/resolve` — Resolve an entity by ticker, CIK, or name
+- `/v1/entities/resolve` — Resolve an entity by ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name with confidence and match-basis metadata
 - `/v1/entities` — Search canonical SEC entities across issuers, managers, insiders, and funds
 - `/v1/filings` — Search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination
 - `/v1/filings/latest` — Retrieve the latest filing for an entity and form
 - `/v1/filings/latest/render` — Render the latest filing into Markdown-like text
 - `/v1/filings/latest/sections/{section_key}` — Extract a section from the latest filing for an entity and form
+- `/v1/filings/latest/risk-categories` — Return deterministic Item 1A risk-category coverage for the latest covered filing of an issuer
 - `/v1/filings/{accession_number}` — Retrieve a filing manifest by accession number from the materialized filing corpus
 - `/v1/filings/{accession_number}/sections/{section_key}` — Extract a filing item or section from a specific accession-number filing
 - `/v1/sections/search` — Search filing sections and snippets with filing-scoped filters and cursor pagination
-- `/v1/statements/segmented-revenues` — Return filing-derived segmented revenue history with XBRL product or geography dimensions when issuers disclose them
-- `/v1/statements` — Return a normalized statement bundle backed by SEC company facts
-- `/v1/statements/all` — Return the balance sheet, income statement, and cash flow statement as one normalized bundle
+- `/v1/statements/segmented-revenues` — Return filing-derived segmented revenue history with XBRL product or geography dimensions, capability state, and trace references when issuers disclose them
+- `/v1/statements/share-float` — Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise
+

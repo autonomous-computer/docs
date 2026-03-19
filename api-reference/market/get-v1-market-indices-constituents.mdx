@@ -1,0 +1,130 @@
+# GET /v1/market/indices/constituents
+
+Return rights-safe index constituents for supported benchmark families with canonical entity mapping when available
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+- `index object`
+- `per-row provenance`
+- `per-row freshness`
+- `per-row materialization`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/market/indices/constituents?index=NDX&limit=2"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "index_constituent",
+      "id": "idxc_ndx_aapl",
+      "createdAt": "2026-03-18T16:00:00.000Z",
+      "livemode": false,
+      "indexCode": "NDX",
+      "indexName": "Nasdaq-100 Index",
+      "entityId": "ent_aapl",
+      "ticker": "AAPL",
+      "cik": "0000320193",
+      "companyName": "APPLE INC.",
+      "market": "XNAS",
+      "positionRank": 1,
+      "weightBps": null,
+      "weightMethod": null,
+      "legalShareability": "public_source_table",
+      "rightsStatus": "public_source_documented",
+      "asOf": "2026-03-18T16:00:00.000Z",
+      "sourceUrl": "https://www.nasdaq.com/solutions/global-indexes/nasdaq-100/companies",
+      "provenance": {
+        "source": "index_provider",
+        "accessionNumber": null,
+        "filingUrl": "https://www.nasdaq.com/solutions/global-indexes/nasdaq-100/companies",
+        "retrievedAt": "2026-03-18T16:00:00.000Z",
+        "parserVersion": "2026-03-17.1"
+      },
+      "freshness": {
+        "status": "fresh",
+        "updatedAt": "2026-03-18T16:00:00.000Z",
+        "reason": null
+      },
+      "materialization": {
+        "materializationVersion": "2026-03-17.1",
+        "parserVersion": "2026-03-17.1",
+        "sourceDataset": "index_constituents"
+      }
+    }
+  ],
+  "hasMore": true,
+  "nextCursor": "2",
+  "index": {
+    "object": "index",
+    "id": "idx_ndx",
+    "createdAt": "2026-03-18T16:00:00.000Z",
+    "livemode": false,
+    "code": "NDX",
+    "name": "Nasdaq-100 Index",
+    "family": "large_cap_growth",
+    "provider": "Nasdaq",
+    "region": "North America",
+    "market": "XNAS",
+    "status": "supported",
+    "rightsStatus": "public_source_documented",
+    "legalShareability": "public_source_table",
+    "constituentCount": 101,
+    "sourceUrl": "https://indexes.nasdaqomx.com/Index/overview/NDX",
+    "constituentSourceUrl": "https://www.nasdaq.com/solutions/global-indexes/nasdaq-100/companies",
+    "syncCadence": "daily_midnight_local",
+    "lastReviewedAt": "2026-03-17",
+    "notes": "Constituent roster is parsed from Nasdaq's public Nasdaq-100 companies table. Weights are not published on the source page, so OMNI returns rank order and symbol-level golden-record mapping only.",
+    "provenance": {
+      "source": "index_provider",
+      "accessionNumber": null,
+      "filingUrl": "https://www.nasdaq.com/solutions/global-indexes/nasdaq-100/companies",
+      "retrievedAt": "2026-03-18T16:00:00.000Z",
+      "parserVersion": "2026-03-17.1"
+    }
+  },
+  "supportedIndices": [
+    {
+      "object": "index",
+      "code": "NDX",
+      "name": "Nasdaq-100 Index",
+      "status": "supported"
+    }
+  ],
+  "requestId": "req_example_123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use Omni Datastream GET /v1/market/indices/constituents to return rights-safe index constituents for supported benchmark families with canonical entity mapping when available. Preserve `requestId`, `traceparent`, `index object`, `per-row provenance`, `per-row freshness`, `per-row materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+

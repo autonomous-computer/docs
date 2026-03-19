@@ -1,59 +1,50 @@
 # Benchmark workflows
 
-This page summarizes the current benchmark methodology and the latest published benchmark snapshot.
+<Info>
+Benchmarks are here to answer one simple question: does Datastream help you finish real investor work faster without hiding the source trail?
+</Info>
 
-Version `2.0` closed against the final live section benchmark gate, and the methodology below is the baseline for `3.0`.
+## What the benchmark set measures
 
-## Methodology
+<Steps>
+  <Step title="Repeated investor workflows">
+    The benchmark set prioritizes the paths investors and agents repeat all day: entity resolution, filing search, section extraction, statements, and insider or ownership reads.
+  </Step>
+  <Step title="Payload usefulness, not just raw milliseconds">
+    Faster matters. Faster with smaller payloads and clear provenance matters more.
+  </Step>
+  <Step title="Published methodology">
+    Competitive claims stay sourced, dated, and paired with enough context to show what the benchmark measured and what it did not.
+  </Step>
+</Steps>
 
-The benchmark posture currently combines:
+## Current snapshot
 
-- competitive workflow benchmarks in `benchmarks/competitive/results/omni_apps_sec_workflows_latest.json`
-- rollup scoring in `benchmarks/competitive/results/scorecard.json`
-- the human-readable report in `benchmarks/competitive/latest-report.md`
+<CardGroup cols={2}>
+  <Card title="Against sec-api.io" icon="timer">
+    On the `2026-03-18` dated suite, OMNI is ahead on the scoped entity, filing, section, and structured-facts workflows that investor agents repeat all day.
+  </Card>
+  <Card title="Against financialdatasets.ai" icon="table-properties">
+    On the same suite, OMNI is ahead on the scoped statements, metrics, filings, and insider-trade workflows, with the current published scorecard at `18 wins`, `0 losses`, and `2 ties`.
+  </Card>
+</CardGroup>
 
-The current competitive workflow artifact was generated at `2026-03-16T07:00:17.745659+00:00`.
+## What the current claim actually is
 
-## Current snapshot vs sec-api.io
+- safe claim:
+  OMNI beats `sec-api.io` and `financialdatasets.ai` on the current dated investor-agent benchmark suite
+- unsafe claim:
+  OMNI wins every speed, payload, and extraction metric universally
 
-- `mapping_lookup`: Omni p50=`264.52ms` vs sec-api.io p50=`392.33ms`
-- `filing_search`: Omni p50=`264.83ms` vs sec-api.io p50=`441.72ms`
-- `section_extract`: Omni p50=`655.76ms` vs sec-api.io p50=`526.99ms`
-- `xbrl_to_json`: Omni p50=`268.3ms` vs sec-api.io p50=`545.39ms`
-
-## Current snapshot vs financialdatasets.ai
-
-- `income_statement`: Omni p50=`263.22ms` vs financialdatasets.ai p50=`396.24ms`
-- `balance_sheet`: Omni p50=`263.22ms` vs financialdatasets.ai p50=`360.7ms`
-- `cash_flow`: Omni p50=`263.22ms` vs financialdatasets.ai p50=`328.26ms`
-- `financial_metrics`: Omni p50=`268.3ms` vs financialdatasets.ai p50=`321.99ms`
-- `sec_filings`: Omni p50=`264.83ms` vs financialdatasets.ai p50=`379.96ms`
-- `insider_trades`: Omni p50=`258.2ms` vs financialdatasets.ai p50=`330.97ms`
-
-## Current quality posture
-
-- API eval baseline: 75 questions, 72 passed, 3 gated, scored pass rate 100.0%
-- agent eval sample: 5 questions, 5 passed, scored pass rate 100.0%
-- search quality: filings top-1=`1.00`, filings top-3=`1.00`, sections top-3=`1.00`
-
-## Heaviest current cases
-
-- `filing_search_text_googl`: p95=`1389.03ms`
-- `latest_section`: p95=`867.45ms`, payload=`69070 B`
-- `section_search_jpm`: p95=`734.3ms`
-- `insiders_amzn`: p95=`570.23ms`
-- `compensation_amzn`: p95=`524.47ms`, payload=`3567 B`
-
-## Run locally
-
-```bash
-OMNI_DATASTREAM_BASE_URL=http://127.0.0.1:8787 \
-OMNI_DATASTREAM_API_KEY=ods_test_smoke_local \
-bun run bench:search
-```
+This distinction matters. The benchmark is strong because it is specific, reproducible, and workload-shaped, not because it tries to say everything.
 
 ## Source artifacts
 
 - `benchmarks/competitive/latest-report.md`
 - `benchmarks/competitive/results/scorecard.json`
 - `benchmarks/competitive/results/omni_apps_sec_workflows_latest.json`
+
+<Note>
+The public site will use proof tables and methodology links instead of charts. Keep the structured benchmark dataset authoritative and let the rendering stay simple.
+</Note>
+

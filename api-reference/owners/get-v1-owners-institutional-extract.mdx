@@ -1,0 +1,112 @@
+# GET /v1/owners/institutional/extract
+
+Return a quarter-specific historical institutional ownership extract for a manager CIK over the SEC-native 13F family
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+- `provenance`
+- `freshness`
+- `materialization`
+- `comparisonCoverage`
+- `statusNote`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/owners/institutional/extract"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "institutional_ownership_extract",
+  "id": "instown_0001067983_20251231",
+  "createdAt": "2026-03-18T16:00:00.000Z",
+  "livemode": false,
+  "entityId": "ent_berkshire_hathaway",
+  "ticker": "BRK.B",
+  "managerEntityId": "ent_berkshire_hathaway",
+  "managerName": "Berkshire Hathaway Inc.",
+  "managerCik": "0001067983",
+  "managerTicker": "BRK.B",
+  "year": 2025,
+  "quarter": 4,
+  "reportDate": "2025-12-31",
+  "filingDate": "2026-02-14",
+  "accessionNumber": "0000950123-26-001234",
+  "comparisonCoverage": "with_prior_quarter_delta",
+  "statusNote": null,
+  "holdingsCount": 2,
+  "totalValueUsdThousands": 365000000,
+  "holdings": [
+    {
+      "issuer": "Apple Inc.",
+      "issuerEntityId": "ent_aapl",
+      "issuerTicker": "AAPL",
+      "classTitle": "COM",
+      "cusip": "037833100",
+      "valueUsdThousands": 250000000,
+      "shares": 900000000,
+      "shareType": "SH",
+      "putCall": null,
+      "investmentDiscretion": "SOLE",
+      "weightBps": 6849,
+      "positionRank": 1,
+      "changeStatus": "changed",
+      "previousValueUsdThousands": 240000000,
+      "previousShares": 890000000,
+      "deltaValueUsdThousands": 10000000,
+      "deltaShares": 10000000
+    }
+  ],
+  "summaryMd": "## Historical institutional ownership extract for Berkshire Hathaway Inc.\n\nThis extract returns 2 normalized 13F holdings for the quarter ended 2025-12-31. Quarter-over-quarter deltas are populated from the immediately preceding parsable 13F.",
+  "provenance": {
+    "source": "sec",
+    "accessionNumber": "0000950123-26-001234",
+    "filingUrl": "https://www.sec.gov/Archives/example-13f.htm",
+    "acceptedAt": "2026-02-14T21:00:00.000Z",
+    "retrievedAt": "2026-03-18T16:00:00.000Z",
+    "parserVersion": "2026-03-18.1"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-03-18T16:00:00.000Z",
+    "sourcePublishedAt": "2026-02-14T21:00:00.000Z",
+    "lagMs": 0
+  },
+  "materialization": {
+    "parserVersion": "2026-03-18.1",
+    "materializationVersion": "2026-03-18.1"
+  },
+  "requestId": "req_example_123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use Omni Datastream GET /v1/owners/institutional/extract to return a quarter-specific historical institutional ownership extract for a manager cik over the sec-native 13f family. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `comparisonCoverage`, `statusNote` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+
