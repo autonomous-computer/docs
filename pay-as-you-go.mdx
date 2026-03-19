@@ -1,0 +1,29 @@
+# Pay As You Go
+
+## Why PAYG is the default
+
+PAYG keeps the path from signup to first utility short:
+
+- no fixed monthly fee
+- card attachment only when the starter grant is exhausted
+- public per-call pricing that maps cleanly to API usage
+
+## Activation flow
+
+1. sign in with WorkOS
+2. use the starter grant
+3. call `POST /v1/billing/payg/activate`
+4. attach a card in Stripe Checkout
+5. continue in `payg_active`
+
+## Relevant endpoints
+
+- `GET /v1/billing`
+- `GET /v1/billing/rates`
+- `POST /v1/billing/payg/activate`
+- `POST /v1/billing/portal`
+
+## Failure posture
+
+If the starter grant is exhausted and no card is attached, billable routes return `402 billing_required` with the current plan, billing state, and quota details.
+

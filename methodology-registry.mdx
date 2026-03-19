@@ -1,0 +1,358 @@
+# Methodology Registry
+
+This page describes the current derivation, source posture, and capability states for the major v3 surfaces that changed the public contract.
+
+## Market schedule
+
+### What the values mean
+
+- `market`: exchange MIC or OMNI market code such as `XNYS` or `XNAS`
+- `sessionStatus`: the current implementation returns `open` or `closed`; the public schema reserves `early_close` for future explicit shortened-session support
+- `opensAt` and `closesAt`: local-session timestamps for open sessions
+- `holidayName`: configured exchange holiday when the day is closed for a known holiday
+- `coverage`: `configured_holidays` or `weekend_only`
+- `confidence`: `confirmed` or `tentative`
+- `statusNote`: explicit warning when OMNI only has weekend coverage and has not yet configured local holidays
+
+### How it is derived
+
+- `XNYS` and `XNAS` are built from public exchange trading-hours calendars plus explicit holiday maps checked into Datastream
+- `XLON`, `XTKS`, `XHKG`, `XTAE`, and `XSAU` currently use documented public hours plus weekend closures only
+- the inventory artifacts are exported from those checked-in market definitions, not fetched from a separate sync system at read time
+
+### First-party status
+
+- first-party public-source utility, but only `XNYS` and `XNAS` are fully holiday-configured today
+- the other covered exchanges remain partial and intentionally return `weekend_only` plus `tentative` when OMNI cannot confirm holiday status
+
+### How it works in OMNI
+
+- Datastream serves `/v1/market/calendar`
+- omni-apps can rely on the `coverage`, `confidence`, and `statusNote` fields instead of assuming every market is fully holiday-aware
+
+## Indices and constituents
+
+### What the values mean
+
+- status field: `supported` or `inventory_only`
+- `rightsStatus`: `public_source_documented`, `public_source_review_required`, or `licensed_index_not_supported`
+- `legalShareability`: `public_source_table`, `public_source_review_required`, or `license_required`
+- `constituentCount`: current known roster size when OMNI has a usable source
+- `positionRank`: roster order when weights are unavailable
+- `weightBps` and `weightMethod`: explicit when published, otherwise null and `unpublished`
+
+### How it is derived
+
+- `NDX` comes from Nasdaq's public company roster and is the only rights-safe public constituent surface today
+- `SPX`, `DJIA`, `RUT`, `UKX`, and `SX5E` are tracked in the source inventory with explicit rights posture
+- internal company-mapping audit artifacts currently use:
+  - Nasdaq public roster for `NDX`
+  - Wikipedia constituent tables for `SPX` and `DJIA`
+  - iShares IWM holdings as an internal Russell 2000 proxy corpus for mapping QA
+
+### First-party status
+
+- `NDX` public constituent export is first-party and documented
+- `SPX`, `DJIA`, and `RUT` are not publicly exposed as constituent APIs today
+- internal mapping QA is intentionally decoupled from public shareability
+
+### How it works in OMNI
+
+- Datastream serves `/v1/market/indices` and `/v1/market/indices/constituents`
+- the current company-mapping audit artifact lives at `ops/company-mapping-audit/latest.json`
+- FIGI-family lookup inputs are accepted in `/v1/entities/resolve`, and the audit surface now covers `SPX`, `NDX`, `DJIA`, and `RUT`; canonical-store completeness should still be read from the current audit artifact rather than assumed
+
+## Segmented revenues
+
+### What the values mean
+
+- `segmentAxis`, `segmentMember`, `segmentLabel`: XBRL dimension identity and human-readable label
+- `segmentType`: `geographic`, `product`, or `other`
+- `capability`: `supported` or `not_disclosed`
+- `trace`: lightweight filing-derived trace reference for later hydration
+
+### How it is derived
+
+- OMNI scans issuer filing history, finds the XBRL instance for 10-K and 10-Q filings, and extracts segment facts from the disclosed XBRL contexts and members
+- traces now hydrate to filing-page anchors through `/v1/traces` and `/v1/traces/{trace_id}`
+
+### First-party status
+
+- first-party SEC-derived surface
+- page anchors are now materialized lazily during trace hydration rather than precomputed at ingest time
+
+### How it works in OMNI
+
+- Datastream serves `/v1/statements/segmented-revenues`
+- omni-apps revenue-segmentation flows now point at Datastream-backed SEC routes instead of the prior MASSIVE/FMP path
+
+## M&A events
+
+### What the values mean
+
+- `eventType`: `merger`, `acquisition`, `tender_offer`, or `divestiture`
+- status field: `announced`, `pending`, `shareholder_vote`, `completed`, or `terminated`
+- `considerationType`: `cash`, `stock`, `mixed`, or `unspecified`
+- `capability`: explicit quality state for the extracted record
+
+### How it is derived
+
+- OMNI classifies 8-K, S-4, F-4, 425, M14A, and tender-offer filing text plus selected exhibits
+- the current implementation is heuristic and filing-text driven, not a fully persisted event graph yet
+
+### First-party status
+
+- first-party SEC-derived surface
+- suitable for announced public-company deal intelligence, but still needs broader corpus proof before launch copy can overstate completeness
+
+### How it works in OMNI
+
+- Datastream serves `/v1/events/ma`
+- downstream product usage is still early; the endpoint exists before the omni-apps UX is fully wired
+
+## Earnings materials
+
+### What the values mean
+
+- `sourceScope`: always `sec_furnished`
+- `coverage`: `release_only`, `prepared_remarks`, `transcript_text`, or `unusable`
+- `capability`: explicit quality state for the extracted material
+- `contentMd`: normalized markdown when usable content exists
+
+### How it is derived
+
+- OMNI scans 8-K and 8-K/A filings for Item 2.02 and related exhibits
+- the extraction classifies whether the issuer furnished only a release, prepared remarks, fuller transcript-like text, or unusable material
+
+### First-party status
+
+- first-party SEC-derived surface
+- OMNI does not yet claim full earnings-transcript coverage outside SEC-furnished materials
+
+### How it works in OMNI
+
+- Datastream serves `/v1/earnings/transcripts`
+- omni-apps now has Datastream-backed earnings-material client paths, but broader transcript parity remains deferred
+
+## Enforcement actions
+
+### What the values mean
+
+- `sourceType`: `litigation_release` or `administrative_proceeding`
+- `releaseNumber`: SEC release identifier from the official feed, such as `LR-26502` or `34-104994`
+- `capability`: `supported` when Datastream can enrich a release beyond feed metadata, otherwise `degraded`
+- `documentUrl`: canonical SEC release or PDF link
+
+### How it is derived
+
+- OMNI reads the official SEC RSS feeds for litigation releases and administrative proceedings
+- litigation releases are enriched from the linked SEC detail page when available
+- administrative proceedings currently rely on SEC RSS metadata plus the published PDF link rather than PDF body extraction
+
+### First-party status
+
+- first-party SEC-derived release surface
+- this is an official SEC enforcement feed wrapper, not an EDGAR filing parser and not a third-party alert vendor dependency
+
+### How it works in OMNI
+
+- Datastream serves `/v1/events/enforcement`
+- omni-apps does not currently expose a dedicated enforcement UI, but the Datastream surface is now live as a direct contract for future alert and investigation flows
+
+## Filing traceability
+
+### What the values mean
+
+- status field: `supported` when OMNI can materialize a filing page, otherwise `degraded`
+- `viewerUrl`: SEC inline viewer URL for the filing document
+- `page`: resolved filing page when available
+- `nodes`: disclosed and derived lineage nodes for the traced datapoint
+
+### How it is derived
+
+- trace IDs encode filing-derived payload metadata
+- Datastream resolves the filing document, inspects SEC inline XBRL HTML, matches the fact against its context and nearby text, then maps that hit to the nearest filing page footer
+
+### First-party status
+
+- first-party SEC-derived traceability
+- current implementation is lazy hydration, not yet ingest-time precomputation or region-level highlighting
+
+### How it works in OMNI
+
+- Datastream serves `/v1/traces` and `/v1/traces/{trace_id}`
+- omni-apps SEC workflows now hydrate traces and open filing pages directly from the SEC tab
+
+## Share float
+
+### What the values mean
+
+- `capability`: `supported`, `degraded`, `not_disclosed`, or `unavailable`
+- `sourceMode`: `company_facts` when SEC company facts expose public float, `shares_outstanding_proxy` when only shares outstanding are available, `not_disclosed` when the latest covered filing exists but the facts are absent, and `unavailable` when there is no recent covered filing
+- `publicFloatUsd`: disclosed public-float dollar value from SEC company facts when available
+- `sharesOutstanding`: latest disclosed shares-outstanding fact from SEC company facts
+- `xbrlData`: raw tag-to-value map for the disclosed facts used in the response
+- `facts`: normalized fact excerpts with taxonomy, tag, unit, period end, filing date, and form
+
+### How it is derived
+
+- first preference: `dei:EntityPublicFloat`
+- shares-outstanding fallback: `dei:EntityCommonStockSharesOutstanding` and `us-gaap:CommonStockSharesOutstanding`
+- current-filing posture comes from the latest covered `10-Q` or `10-K`
+- Datastream marks the response `degraded` when only shares outstanding are available because the SEC company-facts surface often does not expose true float shares directly
+
+### First-party status
+
+- first-party wrapper over SEC company facts and the latest filing substrate
+- honest degraded-state semantics are part of the contract; OMNI does not pretend shares outstanding are the same thing as true float shares
+
+### How it works in OMNI
+
+- Datastream serves `/v1/statements/share-float`
+- omni-apps, agent-backend, and Merlin can cut over from legacy float helpers to this wrapper without re-implementing fact-tag precedence
+
+## Board composition
+
+### What the values mean
+
+- `capability`: `supported`, `degraded`, or `unavailable`
+- `committeeCoverage`: `complete`, `partial`, or `none`
+- `directors[*].nominationStatus`: whether the latest proxy table presents the director as a `nominee`, `continuing`, `departing`, or `unknown`
+- `directors[*].independence`: `independent`, `non_independent`, or `unknown` based on explicit proxy markers
+- `directors[*].committees` and `chairCommittees`: canonical committee labels extracted from the latest stable proxy table shape
+
+### How it is derived
+
+- Datastream resolves the issuer, searches recent `DEF 14A` filings, and scans the latest parsable definitive proxy for a stable board-composition table
+- the parser prefers tables with director-roster, committee-membership, independence, and tenure signals and rejects compensation-style tables
+- the response explicitly degrades when Datastream can parse the board roster but committee coverage is incomplete in the latest stable table shape
+
+### First-party status
+
+- first-party SEC-derived surface built directly on the definitive proxy substrate
+- OMNI is intentionally conservative here: if the filing does not expose a stable board table, the response degrades or returns `unavailable` instead of fabricating governance structure
+
+### How it works in OMNI
+
+- Datastream serves `/v1/board`
+- omni-apps can replace the legacy `/api/sec/board/{ticker}` compatibility surface with this latest-proxy board roster
+
+## N-PORT holdings
+
+### What the values mean
+
+- `capability`: `supported`, `degraded`, or `unavailable`
+- `holdings[*].balance`: reported position amount from the filing
+- `holdings[*].balanceUnit`: explicit SEC filing unit such as `Shares` or `Principal amount`
+- `holdings[*].valueUsd`: reported U.S. dollar value from the filing
+- `holdings[*].pctNetAssets`: reported percentage of fund net assets for the holding
+- `assetType`, `issuerType`, `country`, and `currency`: normalized values lifted from the transformed N-PORT filing sections
+
+### How it is derived
+
+- Datastream resolves the fund, searches recent `NPORT-P` and `NPORT-EX` filings, and parses the latest transformed SEC filing output that yields a stable holdings roster
+- the parser extracts repeated `Item C.1` holding blocks and normalizes issuer, identifier, amount, value, asset-type, issuer-type, country, and currency fields
+- the response explicitly degrades when Datastream finds holdings but one or more rows are missing stable title or value fields in the transformed filing output
+
+### First-party status
+
+- first-party SEC-derived holdings surface over the published N-PORT filing output
+- OMNI keeps the contract honest by preserving balance units instead of pretending every reported amount is a share count
+
+### How it works in OMNI
+
+- Datastream serves `/v1/funds/nport/holdings`
+- omni-apps, agent-backend, and Merlin can now replace the prior blocked N-PORT holdings path with a direct Datastream surface
+
+## Historical institutional ownership extract
+
+### What the values mean
+
+- `year` and `quarter`: requested quarter reference for the historical extract
+- `reportDate`: quarter-end date used to resolve the 13F cohort
+- `comparisonCoverage`: `with_prior_quarter_delta` when Datastream can also resolve the immediately preceding parsable 13F, otherwise `current_only`
+- `statusNote`: explicit explanation when the current quarter is available but prior-quarter deltas could not be populated from the current SEC-backed search window
+- `holdings`: normalized 13F rows with issuer mapping, value, shares, `weightBps`, `positionRank`, and change fields
+
+### How it is derived
+
+- Datastream resolves the requested manager CIK, computes the target quarter-end `reportDate`, and searches the SEC-native 13F family with elevated submissions-file depth rather than the shallow recent-only path
+- the current quarter is parsed from the matching 13F information table exhibit
+- when available, the immediately prior parsable quarter is loaded as well so `changeStatus`, `previous*`, and `delta*` fields can be computed on the normalized holdings
+
+### First-party status
+
+- first-party SEC-derived surface over the existing 13F family
+- explicit `current_only` semantics are part of the contract so OMNI does not fabricate quarter-over-quarter deltas when the prior parsable quarter is absent
+
+### How it works in OMNI
+
+- Datastream serves `/v1/owners/institutional/extract`
+- omni-apps and Merlin can use this as the direct Datastream replacement for the historical institutional ownership extract path without depending on FMP
+
+## Risk-category labeling
+
+### What the values mean
+
+- `capability`: `supported`, `degraded`, or `unavailable`
+- `categoryCount`: number of stable risk categories that matched the current deterministic taxonomy
+- `categories[*].key`: normalized theme key such as `cybersecurity_privacy` or `regulatory_legal`
+- `confidence`: deterministic confidence derived from keyword density and supporting-signal breadth
+- `signals`: matched keywords that explain why the category fired
+- `snippets`: supporting Item 1A excerpts for the assigned category
+
+### How it is derived
+
+- Datastream extracts the latest covered Item 1A risk-factor section using the same section substrate that powers `/v1/filings/latest/sections/item_1a`
+- the classifier then assigns deterministic categories based on a transparent keyword taxonomy over the extracted Item 1A prose
+- the response degrades explicitly when extraction succeeds but too few stable categories match the taxonomy
+
+### First-party status
+
+- first-party SEC-derived wrapper over the Item 1A section substrate
+- this is intentionally deterministic and transparent; OMNI is not using a hidden model or undisclosed category taxonomy here
+
+### How it works in OMNI
+
+- Datastream serves `/v1/filings/latest/risk-categories`
+- omni-apps and agent-backend can now replace the prior MASSIVE risk-category workflow with a native Datastream surface
+
+## Volatility score
+
+### What the values mean
+
+- `score`: 0-100 aggregate score
+- `band`: `low`, `moderate`, `elevated`, or `high`
+- `confidence`: `high`, `medium`, or `low`
+- `factors`: weighted factor breakdown with explanations
+- `freshness`: explicit freshness state and degradation reason
+
+### How it is derived
+
+- recent disclosure intensity from high-signal filings
+- insider imbalance from recent Forms 4 and 5
+- risk-factor intensity from Item 1A extraction
+- filing recency as a proxy for how current the disclosure set is
+
+### First-party status
+
+- first-party derived utility built from first-party SEC inputs
+- methodology versioning and degraded reasons are part of the public response
+
+### How it works in OMNI
+
+- Datastream serves `/v1/signals/volatility`
+- omni-apps can treat it as a derived, provenance-first signal rather than a raw market feed
+
+## Sentiment score
+
+### Current posture
+
+- there is no `/v1/signals/sentiment` endpoint in the 3.0 public surface today
+- OMNI intentionally keeps sentiment behind a methodology gate until backtests, stale-input handling, and public explanations meet the launch bar
+
+### Where to look
+
+- docs posture: `apps/docs/content/sentiment-gate.md`
+- ops artifact: `ops/sentiment-gate/latest.json`
+

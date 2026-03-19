@@ -1,61 +1,131 @@
-# Auth, Onboarding, and Pricing
+# Auth, Billing, and First Utility
 
-## Current auth model
+<Info>
+The launch posture is deliberate: sign in with WorkOS, receive a starter org and key, make a real request, then attach billing only when the workflow proves itself.
+</Info>
 
-- machine access uses `x-api-key`
-- hosted MCP uses WorkOS OAuth discovery through `api.secapi.ai`
-- all current responses include `Request-Id` for support and audit workflows
+## Auth model
 
-## First-success onboarding
+<CardGroup cols={3}>
+  <Card title="WorkOS user login" icon="shield-check">
+    Human access to the dashboard uses WorkOS-hosted login and bearer tokens.
+  </Card>
+  <Card title="API keys" icon="key-round" href="/api-reference/platform">
+    REST and SDK clients use org-scoped `x-api-key` credentials.
+  </Card>
+  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
+    MCP uses WorkOS OAuth discovery through `api.secapi.ai`.
+  </Card>
+</CardGroup>
 
-1. create or receive an org-scoped API key
-2. verify health at `https://api.secapi.ai/healthz`
-3. verify readiness at `https://api.secapi.ai/readyz`
-4. verify OAuth discovery at `https://api.secapi.ai/.well-known/oauth-authorization-server`
-5. confirm `GET /v1/billing` and `GET /v1/limits`
-6. resolve an issuer with `/v1/entities/resolve`
-7. fetch a latest filing or statement
-8. check `/v1/limits` to confirm plan and quota state
+## Default onboarding motion
 
-## Current plans
+<Steps>
+  <Step title="Log in with WorkOS">
+    Start at the marketing-site `Log in` button or the `/login` route.
+  </Step>
+  <Step title="Receive the starter grant">
+    Every new org starts with `100` included calls and one API key.
+  </Step>
+  <Step title="Make one real request">
+    Resolve an issuer, fetch a filing, or run one statement workflow before you think about plan changes.
+  </Step>
+  <Step title="Attach billing only when the work is real">
+    After the starter grant is exhausted, activate Pay As You Go or move directly to a commit plan.
+  </Step>
+</Steps>
 
-- `free`
-  - best for evaluation and single-user testing
-  - paid-only features like compare workflows, artifact generation, webhooks, and stream subscriptions are restricted
-- `builder`
-  - intended for developer workflows and internal tools
-- `team`
-  - intended for shared operational use with higher usage limits
-- `platform`
-  - intended for higher-volume or redistributed usage with custom commercial handling
+## Billing states
+
+- `sandbox_grant`
+- `payg_pending_card`
+- `payg_active`
+- `personal_active`
+- `team_active`
+- `commercial_active`
+- `payment_failed`
+- `restricted_read_only`
+
+## Public plans
+
+<CardGroup cols={2}>
+  <Card title="Pay As You Go" icon="gauge" href="/plans-and-pricing">
+    Default paid motion. No fixed monthly fee. Higher per-call pricing in exchange for the lowest signup friction.
+  </Card>
+  <Card title="Personal" icon="user" href="/plans-and-pricing">
+    Monthly or annual commit plan for individual developers and analysts who want lower unit pricing.
+  </Card>
+  <Card title="Team" icon="users" href="/plans-and-pricing">
+    Shared-org plan with higher throughput, more keys, and better economics for small teams.
+  </Card>
+  <Card title="Commercial" icon="building-2" href="/plans-and-pricing">
+    Annual contract plan for redistribution rights, commercial embedding, and deeper support.
+  </Card>
+</CardGroup>
+
+## Launch pricing posture
+
+- every new org gets `100` included calls
+- Pay As You Go is the default paid path
+- annual billing defaults on commit plans
+- Team and Commercial are for shared or externalized usage, not just more requests
+- redistribution, embedding, resale, and broader commercial rights begin at `Commercial`
+
+## WebSocket rate posture
+
+Chat messages sent through the OMNI Agent WebSocket runtime are rate-limited per user at a configurable requests-per-minute ceiling (default: 30 RPM). Non-chat messages — permission responses, plan approvals, label and source operations — are exempt because they are responses to server-initiated prompts, not user-initiated load.
+
+Rate-limited requests receive a clear error message with a retry-after interval. The WebSocket connection stays open. This posture protects shared infrastructure without punishing interactive workflows.
+
+- `RATE_LIMIT_CHAT_RPM`: per-user ceiling (default 30)
+- `RATE_LIMIT_ENABLED`: feature flag (default true in production)
 
 ## Billing entry points
 
 - `GET /v1/billing`
+- `GET /v1/billing/rates`
+- `POST /v1/billing/payg/activate`
 - `POST /v1/billing/checkout`
 - `POST /v1/billing/portal`
+- `GET /v1/limits`
+- `GET /v1/dashboard/overview`
 
-## Verified production checkout posture
+## What to log
 
-- builder checkout session creation is live in production
-- billing portal session creation is live in production
-- the bootstrap org currently resolves to a live Stripe customer and a `free` effective plan after the earlier canceled builder subscription
+<Warning>
+Do not treat billing and plan headers as decorative. Preserve them in logs, traces, and downstream artifacts so degraded entitlement posture is visible before it becomes a production incident.
+</Warning>
 
-## Environment posture
+- `Request-Id`
+- `traceparent`
+- `Omni-Meter-Class`
+- `Omni-Plan-Key`
+- `Omni-Billing-Status`
+- `Omni-Billing-State`
+- `Omni-Free-Grant-Remaining`
 
-- live billing should use `STRIPE_LIVE_SECRET_KEY` and `STRIPE_LIVE_WEBHOOK_SECRET`
-- test billing should use `STRIPE_TEST_SECRET_KEY` and `STRIPE_TEST_WEBHOOK_SECRET`
-- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` remain supported as a live fallback for compatibility
-- the Stripe posture audit will report the environment as degraded until the explicit live/test split is configured
-
-## WorkOS endpoints
+## WorkOS discovery endpoints
 
 - protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
 - authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
 
-## Support signals
+## Recommended first-success flow
 
-- `Request-Id`
-- `Omni-Meter-Class`
-- `Omni-Plan-Key`
-- `Omni-Billing-Status`
+<Prompt>
+Set up Omni Datastream auth with WorkOS or an org-scoped API key. Verify health, readiness, OAuth discovery, billing, rates, and limits first. Then run one real issuer workflow while preserving `requestId`, `traceparent`, `Omni-Plan-Key`, `Omni-Billing-State`, `Omni-Free-Grant-Remaining`, provenance, and freshness metadata.
+</Prompt>
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Plans and Pricing" icon="gauge" href="/plans-and-pricing">
+    Review the starter grant, PAYG, commit plans, and rights boundaries.
+  </Card>
+  <Card title="Agent Billing" icon="bot" href="/agent-billing">
+    Learn how agents should reason about billing posture before expensive loops.
+  </Card>
+  <Card title="Pay As You Go" icon="credit-card" href="/pay-as-you-go">
+    See the PAYG activation flow and the billing state transition after the grant is exhausted.
+  </Card>
+</CardGroup>
+
