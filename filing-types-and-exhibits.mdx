@@ -1,0 +1,120 @@
+# SEC Filing Types and Exhibits
+
+<Info>
+This page is the Datastream-specific answer to "which SEC EDGAR filing types and exhibits do you actually support?" It is grounded in the current API surface and SEC primary sources, not a copied master list of every historical EDGAR submission code.
+</Info>
+
+## How to read this page
+
+- `generic retrieval` means Datastream can search or fetch the filing through the [Filings reference](/api-reference/filings)
+- `workflow support` means Datastream has a purpose-built surface that parses or classifies a filing family into a structured output
+- `selected exhibits` means Datastream reads specific exhibit documents inside a workflow, not that it exposes a generic public exhibit-enumeration endpoint
+- `not public today` means the filing or exhibit may be visible in SEC source documents but does not yet have a dedicated normalized Datastream contract
+
+## Current Datastream support by filing family
+
+- `Most EDGAR filing families`: Datastream supports generic search and retrieval through [filing search](/api-reference/filings/get-v1-filings), [latest filing](/api-reference/filings/get-v1-filings-latest), [filing by accession](/api-reference/filings/get-v1-filings-accession-number), and the corresponding render routes. This is the broadest support class.
+- `10-K`, `10-Q`: strongest named section support through [latest section extraction](/api-reference/filings/get-v1-filings-latest-sections-section-key) and [accession-scoped section extraction](/api-reference/filings/get-v1-filings-accession-number-sections-section-key). The current public section keys are `item_1a`, `item_2`, and `item_7`.
+- `10-K`, `10-Q`, `20-F`, `40-F`: statement and fact workflows are supported through the [Statements reference](/api-reference/statements), the [Facts reference](/api-reference/facts), and [share float](/api-reference/statements/get-v1-statements-share-float). This support is company-facts and XBRL driven, not generic filing rendering.
+- `S-1`, `S-1/A`, `424B1`, `424B2`, `424B3`, `424B4`, `424B5`: offering and prospectus workflows are supported through [offerings](/api-reference/offerings/get-v1-offerings).
+- `13F-HR`, `13F-HR/A`: institutional ownership workflows are supported through [latest 13F](/api-reference/owners/get-v1-owners-13f), [13F filings](/api-reference/owners/get-v1-owners-13f-filings), [13F compare](/api-reference/owners/post-v1-owners-13f-compare), and [historical institutional extract](/api-reference/owners/get-v1-owners-institutional-extract). Datastream parses the information-table exhibit when it is available.
+- `SC 13D`, `SC 13D/A`, `SC 13G`, `SC 13G/A`, `13D`, `13D/A`, `13G`, `13G/A`: beneficial ownership workflow support is exposed through [13D/13G reports](/api-reference/owners/get-v1-owners-13d-13g).
+- `3`, `4`, `5`: insider ownership workflow support is exposed through [insiders](/api-reference/insiders/get-v1-insiders).
+- `DEF 14A`: proxy-derived board and compensation workflows are supported through [board composition](/api-reference/board/get-v1-board), [compensation](/api-reference/compensation/get-v1-compensation), and [compensation compare](/api-reference/compensation/post-v1-compensation-compare).
+- `8-K`, `8-K/A`: SEC-furnished earnings-material workflows are supported through [earnings materials](/api-reference/earnings/get-v1-earnings-transcripts). Datastream reads the filing body plus selected exhibits, typically the furnished `99` family.
+- `8-K`, `8-K/A`, `S-4`, `S-4/A`, `F-4`, `F-4/A`, `425`, `DEFM14A`, `PREM14A`, `DEFA14A`, `SC TO-T`, `SC TO-I`, `SC TO-C`: filing-derived M&A workflows are supported through [M&A events](/api-reference/events/get-v1-events-ma). Selected exhibits are loaded for `8-K` and tender-offer paths where they materially improve classification.
+- `NPORT-P`, `NPORT-EX`: fund holdings workflow support is exposed through [N-PORT holdings](/api-reference/funds/get-v1-funds-nport-holdings).
+
+## Common SEC filing types relevant to Datastream
+
+### Periodic and current reports
+
+- `10-K`: annual report. Used heavily across filing retrieval, section extraction, statements, risk categories, and volatility workflows.
+- `10-Q`: quarterly report. Used across filing retrieval, section extraction, statements, share-float support, and volatility workflows.
+- `8-K`: current report for material events. Used for generic filing retrieval, earnings-material workflows, M&A classification, and volatility inputs.
+- `8-K/A`: amended current report. Supported in the same workflow families as `8-K` where the parser can use the amended filing.
+- `20-F`: annual report for foreign private issuers. Supported today through generic filing retrieval and statement-company-facts workflows.
+- `40-F`: annual report for certain Canadian issuers. Supported today through generic filing retrieval and statement-company-facts workflows.
+- `6-K`: foreign issuer report. Supported today through generic filing retrieval. There is no dedicated normalized `6-K` workflow surface yet.
+
+### Ownership and governance filings
+
+- `3`: initial beneficial ownership statement. Supported through the insider-trading workflow surface.
+- `4`: statement of changes in beneficial ownership. Supported through the insider-trading workflow surface and contributes to volatility inputs.
+- `5`: annual statement of changes in beneficial ownership. Supported through the insider-trading workflow surface and contributes to volatility inputs.
+- `13F-HR`, `13F-HR/A`: institutional holdings reports. Supported through the ownership surfaces that parse the information-table exhibit.
+- `SC 13D`, `SC 13G` and amendments: beneficial-ownership reports. Supported through the `13d-13g` ownership surface.
+- `DEF 14A`: definitive proxy statement. Supported through board-composition and executive-compensation workflows.
+
+### Registration statements, prospectuses, and deal documents
+
+- `S-1`, `S-1/A`: registration statements. Supported through the offerings workflow and generic filing retrieval.
+- `424B1` through `424B5`: prospectus filings. Supported through the offerings workflow and generic filing retrieval.
+- `S-4`, `F-4`, `425`, `DEFM14A`, `PREM14A`, `DEFA14A`, `SC TO-*`: supported today inside the M&A workflow surface, not as a generic deal-document normalization layer.
+
+### Fund and adjacent filing families
+
+- `NPORT-P`, `NPORT-EX`: fund holdings support is available through the N-PORT holdings surface.
+- `ABS-EE`, `10-D`, `N-CSR`, `N-CEN`, `N-PX`, `N-MFP*`, `D`, `144`, `1-A`, `C`: these filing families can still appear in generic filing retrieval when the SEC submissions history exposes them, but Datastream does not currently publish dedicated normalized workflow endpoints for them.
+
+## Exhibit handling in Datastream today
+
+- `13F information-table exhibit`: Datastream loads the 13F XML exhibit inside the institutional ownership workflows rather than exposing it as a standalone exhibit object.
+- `EX-99.*` in earnings materials: Datastream scans selected earnings-related exhibits from `8-K` and `8-K/A` filings to classify release-only, prepared-remarks, and transcript-like coverage.
+- `selected merger and tender-offer exhibits`: Datastream loads a narrow exhibit subset for the M&A workflow when the filing family makes exhibit text materially useful.
+- `XBRL and inline XBRL exhibits`: Datastream uses SEC structured-data surfaces and filing-linked XBRL context for statements, facts, segmented revenues, and share-float workflows. This is workflow support, not a public raw-exhibit endpoint.
+
+## Core exhibit taxonomy relevant to Datastream
+
+- `2`: plans of acquisition, reorganization, arrangement, liquidation, or succession. Often relevant to deal workflows, but Datastream does not yet expose a generic `EX-2.*` parser.
+- `3`: articles of incorporation and bylaws, including `3(i)` and `3(ii)`. Relevant to governance and security-rights context, but not normalized into a dedicated Datastream surface today.
+- `4`: instruments defining the rights of security holders, including indentures. Relevant to security-rights analysis, but not yet a public dedicated Datastream endpoint.
+- `10`: material contracts. Important to issuer analysis, but currently available only through generic filing retrieval or filing rendering.
+- `14`: code of ethics. Not currently normalized into a dedicated Datastream endpoint.
+- `19`: insider trading policies and procedures. The SEC made this exhibit family relevant to Item 408(b) disclosures, but Datastream does not yet publish a dedicated parser for it.
+- `21`: subsidiaries of the registrant. Important to legal-entity mapping, but not yet a public dedicated Datastream endpoint.
+- `23`: consents of experts and counsel. Visible in filings, not normalized into a dedicated Datastream surface.
+- `31`: Rule 13a-14(a) and 15d-14(a) certifications. Visible in filings, not normalized into a dedicated Datastream surface.
+- `32`: Section 1350 certifications. Visible in filings, not normalized into a dedicated Datastream surface.
+- `95`: mine safety disclosures. Visible in covered filings, not normalized into a dedicated Datastream surface.
+- `97`: clawback or recovery policy exhibits. Required by the SEC's recovery-policy rules, but not yet exposed as a dedicated Datastream parser.
+- `99`: miscellaneous and form-specific supporting exhibits. This is the most important exhibit family for Datastream today because earnings and selected event workflows rely on it.
+- `101`: XBRL interactive data exhibit family, including `101.INS`, `101.SCH`, `101.CAL`, `101.DEF`, `101.LAB`, and `101.PRE`. Datastream uses this data indirectly in structured financial workflows.
+- `104`: cover page interactive data file. Relevant to inline XBRL filing packages and linked SEC structured data, but not exposed as a standalone Datastream endpoint.
+- `106`: asset-backed issuer asset data. Not currently a dedicated Datastream surface.
+- `107`: filing-fee exhibit or `EX-FILING FEES`. Not currently a dedicated Datastream surface.
+
+## What Datastream does not expose yet
+
+- there is no public Datastream endpoint that lists every exhibit attached to a filing and returns a normalized exhibit manifest
+- there is no public Datastream endpoint that downloads arbitrary exhibit bodies by exhibit code
+- named section extraction is not generalized across every EDGAR filing family; the public section keys today are `item_1a`, `item_2`, and `item_7`
+- this page is intentionally not a 490-row mirror of every historical EDGAR submission code; for exhaustive operational submission-type coverage, use the SEC forms index and the EDGAR Filer Manual
+
+## Primary SEC sources
+
+- [Forms Index](https://www.sec.gov/submit-filings/forms-index)
+- [Know what form I should use](https://www.sec.gov/submit-filings/filer-support-resources/how-do-i-guides/know-what-form-i-should-use)
+- [Understand EDGARLink Online submission types](https://www.sec.gov/submit-filings/filer-support-resources/how-do-i-guides/understand-edgarlink-online-submission-types)
+- [Observe data and process filing limits](https://www.sec.gov/submit-filings/filer-support-resources/how-do-i-guides/observe-data-process-filing-limits)
+- [EDGAR Filer Manual, Volume II, Chapter 3](https://www.sec.gov/files/edgar/filermanual/edgarfilermmanual-vol2-c3.pdf)
+- [EDGAR Filer Manual, Volume II, Appendix C](https://www.sec.gov/files/edgar/filermanual/edgarfilermmanual-vol2-ac.pdf)
+- [Understand automated conformance rules for EDGAR data fields](https://www.sec.gov/submit-filings/filer-support-resources/how-do-i-guides/understand-automated-conformance-rules-edgar-data-fields)
+- [Technical specifications](https://www.sec.gov/submit-filings/technical-specifications)
+- [EDGAR XBRL guide](https://www.sec.gov/files/edgar/filer-information/specifications/xbrl-guide-2024-11-21.pdf)
+- [17 CFR 229.601 (Item 601) Exhibits](https://www.law.cornell.edu/cfr/text/17/229.601)
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Filings API Reference" icon="file-text" href="/api-reference/filings">
+    Search filing manifests, fetch accessions, and render source filings.
+  </Card>
+  <Card title="Ownership API Reference" icon="users" href="/api-reference/owners">
+    Open the 13F, 13D/13G, and institutional ownership workflows.
+  </Card>
+  <Card title="Migrate from sec-api.io" icon="git-compare" href="/migrate-from-sec-api">
+    Map sec-api.io filing and extractor habits onto the Datastream surface.
+  </Card>
+</CardGroup>
+

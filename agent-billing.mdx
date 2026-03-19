@@ -1,0 +1,26 @@
+# Agent Billing
+
+## Principle
+
+Agents should not treat billing as an afterthought. They should inspect billing posture before expensive loops, preserve billing metadata in outputs, and warn before they cross from cheap reads into repeated or heavy workflows.
+
+## Required checks
+
+Before a multi-step workflow:
+
+- `GET /v1/billing`
+- `GET /v1/limits`
+
+## Agent-safe behavior
+
+- prefer one targeted request over a wide fan-out
+- keep `Request-Id`, `traceparent`, `Omni-Meter-Class`, `Omni-Plan-Key`, `Omni-Billing-State`, and `Omni-Free-Grant-Remaining`
+- warn before repeated section extraction, compare workflows, or artifact generation
+- stop and ask for card attachment if the org is in `payg_pending_card`
+
+## Good pattern
+
+```text
+Check billing posture first. If the org is still on the starter grant, use the smallest high-signal request sequence possible. If the org is in payg_pending_card, stop and ask the operator to activate PAYG before continuing.
+```
+
