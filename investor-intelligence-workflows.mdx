@@ -1,0 +1,91 @@
+# Investor Intelligence Workflows
+
+Use OMNI Datastream as one API for investor agents. These are the four fastest paths to the V3.2 surface that matter for allocator workflows.
+
+## 1. Company or security in one call
+
+Use:
+- `GET /v1/intelligence/security` for quote, bars, catalysts, filing traces, and factor context
+- `GET /v1/intelligence/company` for company-level risk, estimates, macro overlay, and hedge context
+- `POST /v1/intelligence/query` when the request is already phrased as an allocator prompt
+
+Good fit:
+- "Why did AAPL move?"
+- "Give me a compact brief on NVDA."
+- "Show me filing-derived risks and hedge ideas for MSFT."
+
+Not the best fit:
+- long portfolio optimizations
+- full-country reports with wide narrative output
+
+## 2. Market reference and estimates
+
+Use:
+- `GET /v1/market/reference`
+- `GET /v1/market/estimates`
+- `GET /v1/intelligence/earnings-preview`
+
+This flow is for canonical identifiers, exchange and listing context, and consensus estimate context without pulling a full company bundle.
+
+Best when:
+- you need a ticker's canonical mapping and listing metadata
+- you need consensus EPS or revenue expectations
+- you want a light-weight earnings setup before moving into a fuller intelligence query
+
+## 3. Factor decomposition, related stocks, and screening
+
+Use:
+- `GET /v1/factors/decomposition`
+- `GET /v1/factors/related-stocks`
+- `GET /v1/factors/screen`
+- `POST /v1/strategies/regime-screen`
+- `POST /v1/strategies/factor-rotation`
+
+This is the right path for:
+- return decomposition
+- related-stock discovery
+- factor-rotation workflows
+- regime-aware screening
+
+Typical sequence:
+1. Pull `decomposition` for one security.
+2. Pull `related-stocks` for peer and hedge discovery.
+3. Use `screen` or `regime-screen` to widen the search.
+
+## 4. Semantic one-call investor prompts
+
+Use `POST /v1/intelligence/query` for bounded allocator prompts like:
+
+```json
+{
+  "query": "Decompose AAPL's last 6M return into factors, macro drivers, filing-specific risks, then suggest hedges.",
+  "entities": ["AAPL"],
+  "lookback": "6m",
+  "response_mode": "compact_json_and_md"
+}
+```
+
+Good fit:
+- return decomposition plus hedge ideas
+- factor-neutral portfolio recommendations
+- regime-aware screens
+- country reports with compact structured evidence
+
+Async behavior:
+- bounded workloads return `200`
+- wide workloads return `202` plus `jobId`, `pollUrl`, and `artifactId`
+- poll with `GET /v1/intelligence/query/{jobId}`
+
+## Metadata to preserve
+
+Always preserve:
+- `requestId`
+- `traceparent`
+- `provenance`
+- `freshness`
+- `materialization`
+- `sourceRights`
+- `methodology`
+- `revision`
+
+Those fields are what make the response auditable and safe to hand off to another agent or product surface.
