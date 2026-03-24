@@ -10,7 +10,7 @@
 ## Current posture
 
 - production launch-readiness verifies the public API, auth metadata, key site routes, and security headers
-- benchmark, freshness, mapping, and launch-readiness gates are all part of the checked-in trust story, but they should be read from their current artifacts rather than assumed green by default
+- benchmark, freshness, mapping, launch-readiness, and final-signoff gates are all part of the checked-in trust story, but they should be read from their current retained artifacts rather than assumed green by default
 - non-launch items such as gated sentiment or deferred backlog do not belong in the launch-ready surface area
 
 ## Pre-launch gates
@@ -24,11 +24,18 @@
 - `https://api.secapi.ai/v1/factors/catalog` returns `200`
 - `https://api.secapi.ai/v1/intelligence/security?ticker=AAPL` returns `200`
 - `https://api.secapi.ai/v1/intelligence/company?ticker=AAPL` returns `200`
+- `https://api.secapi.ai/v1/intelligence/query` returns `200` for the bounded allocator prompts in the gold corpus
 - `https://secapi.ai/pricing`, `https://secapi.ai/login`, `https://secapi.ai/status`, `https://secapi.ai/changelog`, `https://secapi.ai/launch-checklist`, and `https://secapi.ai/onboarding` are live with `200` responses and `Strict-Transport-Security`
 - benchmark gates pass when `OMNI_VERIFY_RELEASE_WITH_BENCHMARKS=true`
 - investor-intelligence corpus artifacts are current:
   - `benchmarks/investor-intelligence/results/latest.json`
   - `ops/investor-intelligence-gold-corpus/latest.json`
+- release artifacts are current:
+  - `ops/release-verification/latest.json`
+  - `ops/launch-readiness/latest.json`
+  - `ops/live-regression/latest.json`
+  - `benchmarks/final/results/latest.json`
+- covered investor-intelligence production routes must not pass launch if they only return `market_data_not_configured`
 - rollout and rollback runbooks are current
 - the latest Stripe posture audit identifies no unexplained catalog drift before rollout
 
@@ -44,6 +51,7 @@
 - verify current Railway deployment id
 - run the production release verification script
 - run the production launch-readiness export
+- run the final signoff export
 - confirm `/pricing` renders the shared public catalog and `/login` renders the WorkOS entrypoint
 - confirm PostHog ingestion for `datastream_api_request_completed`
 - confirm Sentry receives fresh request traffic
