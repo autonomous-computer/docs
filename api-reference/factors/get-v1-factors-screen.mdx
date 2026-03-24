@@ -1,0 +1,53 @@
+# GET /v1/factors/screen
+
+Return factor screens ranked by recent strength so agents can run factor-rotation and cross-factor ranking workflows.
+
+<Info>
+Use this when you want a fast ranked list of factors. If you want securities screened under a macro regime, use `POST /v1/strategies/regime-screen`.
+</Info>
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/screen?category=style&lookback=6m&window=1m&limit=5"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "factorKey": "MOMENTUM",
+      "window": "1m",
+      "scaledReturn": 0.084,
+      "zScore": 1.42
+    },
+    {
+      "factorKey": "QUALITY",
+      "window": "1m",
+      "scaledReturn": 0.061,
+      "zScore": 0.97
+    }
+  ],
+  "requestId": "req_example_123"
+}
+```
+</ResponseExample>
+
+## Use this when
+
+- you want the top factors by recent strength
+- you are building a factor-rotation workflow
+
+## Do not use this when
+
+- you need security-level matches under a macro regime
+- you want one-call prompt compilation through `POST /v1/intelligence/query`

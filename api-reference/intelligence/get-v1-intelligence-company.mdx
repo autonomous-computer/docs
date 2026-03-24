@@ -18,7 +18,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/intelligence/company"
+  "https://api.secapi.ai/v1/intelligence/company?ticker=AAPL"
 ```
 </RequestExample>
 
@@ -27,11 +27,23 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
-  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  "object": "company_intelligence_bundle",
+  "symbol": "AAPL",
+  "reference": { "symbol": "AAPL", "exchange": "XNAS" },
+  "estimates": [{ "metric": "eps", "fiscalPeriod": "Q2", "fiscalYear": 2026, "value": 1.42 }],
+  "macroRegimes": [{ "key": "higher_for_longer", "country": "US" }],
+  "factorExposures": [{ "factorKey": "MKT_US", "beta": 1.18 }],
+  "keyRisks": [{ "key": "regulatory_legal", "severity": "medium" }],
+  "requestId": "req_example_123"
 }
 ```
 </ResponseExample>
+
+## Choose the right surface
+
+- use `company` when you want market, estimates, macro, factor, and filing risk in one read
+- use [`security`](/api-reference/intelligence/get-v1-intelligence-security) when you want a lighter quote-and-catalyst bundle
+- use [`query`](/api-reference/intelligence/post-v1-intelligence-query) when the caller already has a natural-language allocator task
 
 ## Give this prompt to your agent
 
@@ -44,5 +56,4 @@ Use Omni Datastream GET /v1/intelligence/company to return a one-call company bu
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
 

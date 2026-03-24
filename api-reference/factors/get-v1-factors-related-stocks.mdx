@@ -1,0 +1,53 @@
+# GET /v1/factors/related-stocks
+
+Return related stocks ranked by factor-overlap similarity for peer discovery and hedge ideation.
+
+<Info>
+Use this when you already know the anchor symbol and want peer candidates driven by the factor model. For richer thematic output, compare with `GET /v1/factors/similarity-pack`.
+</Info>
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/related-stocks?symbol=AAPL&lookback=6m&limit=5"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "symbol": "MSFT",
+      "score": 0.2251,
+      "similarityScore": 0.2251,
+      "overlapScore": null
+    },
+    {
+      "symbol": "TSLA",
+      "score": 0.2411,
+      "similarityScore": 0.2411,
+      "overlapScore": null
+    }
+  ],
+  "requestId": "req_example_123"
+}
+```
+</ResponseExample>
+
+## Use this when
+
+- you need peers for a factor-driven comps set
+- you need hedge candidates or look-alike names
+
+## Do not use this when
+
+- you need the named theme summary and peer rationale from `similarity-pack`
+- you want a ranked factor leaderboard

@@ -1,0 +1,62 @@
+# GET /v1/factors/decomposition
+
+Return factor-attribution decomposition for one security over a bounded lookback window.
+
+<Info>
+Use this when you already know the symbol and want explained return, alpha, and the top factor contributors. For broad allocator prompts, prefer `POST /v1/intelligence/query`.
+</Info>
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/decomposition?symbol=AAPL&lookback=6m&window=1m"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "factor_decomposition",
+  "symbol": "AAPL",
+  "window": "1m",
+  "lookback": "6m",
+  "totalExplained": 0.3158,
+  "alpha": 0.044,
+  "rSquared": 0.5,
+  "contributions": [
+    {
+      "key": "MKT_US",
+      "label": "MKT_US",
+      "category": "factor",
+      "contributionPercent": 0.2314,
+      "explanation": "AAPL beta to MKT_US is 1.120 over 6m with 20.66% factor move in the requested window."
+    }
+  ],
+  "methodology": {
+    "id": "factor_v1_decomposition",
+    "version": "v1",
+    "validation": {
+      "decompositionModel": "univariate_proxy_sum",
+      "jointModel": false
+    }
+  }
+}
+```
+</ResponseExample>
+
+## Use this when
+
+- you need a deterministic return attribution for one symbol
+- you want the same decomposition that powers hedge suggestions in the semantic query path
+
+## Do not use this when
+
+- you need peer discovery
+- you need a broad factor screen
+- you want the API to choose the workload from a prompt

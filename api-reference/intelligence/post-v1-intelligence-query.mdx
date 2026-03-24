@@ -1,6 +1,6 @@
 # POST /v1/intelligence/query
 
-Compile an allocator prompt into a deterministic one-call intelligence workload with compact traced output
+Compile an allocator prompt into a deterministic one-call intelligence workload with compact traced output.
 
 <Info>
 Audience: application and coding agent.
@@ -19,7 +19,12 @@ curl -X POST \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{
+    "query": "Decompose AAPL'\''s last 6M return into factors, macro drivers, filing-specific risks, then suggest hedges.",
+    "entities": ["AAPL"],
+    "lookback": "6m",
+    "response_mode": "compact_json_and_md"
+  }' \
   "https://api.secapi.ai/v1/intelligence/query"
 ```
 </RequestExample>
@@ -29,11 +34,62 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
-  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  "object": "intelligence_query_result",
+  "intent": "return_decomposition",
+  "answerMd": "Apple Inc. (AAPL) bundle. Recent SEC activity: 8-K, 10-Q, 8-K. Suggested hedges: SPY, TLT.",
+  "data": {
+    "company": {
+      "object": "company_intelligence_bundle",
+      "symbol": "AAPL"
+    },
+    "factorDecomposition": {
+      "symbol": "AAPL",
+      "window": "1m",
+      "totalExplained": 0.3158
+    },
+    "hedgeCandidates": [
+      {
+        "symbol": "SPY",
+        "instrumentType": "etf"
+      }
+    ]
+  },
+  "tracepack": ["trace_filing_0000320193-25-000079"],
+  "sources": [
+    { "kind": "company_bundle", "key": "AAPL", "label": "AAPL" },
+    { "kind": "factor_decomposition", "key": "AAPL", "label": "6m" }
+  ],
+  "cacheStatus": "hit",
+  "requestId": "req_example_123"
 }
 ```
 </ResponseExample>
+
+## Launch prompt patterns
+
+- return decomposition: `"Decompose AAPL's last 6M return into factors, macro drivers, filing-specific risks, then suggest hedges."`
+- factor neutralization: `"Give me a recommendation for how to make this portfolio factor neutral."`
+- regime-aware screen: `"Run a regime-aware quality screen for tightening cycles."`
+- company brief: `"Give me a compact brief on NVDA with filings, factor context, and catalysts."`
+
+## Async lifecycle
+
+- bounded workloads return `200` with the final compact result
+- wide workloads return `202` with `jobId`, `pollUrl`, and `artifactId`
+- poll with [`GET /v1/intelligence/query/{jobId}`](/api-reference/intelligence/get-v1-intelligence-query-jobId)
+
+## Preserve these fields
+
+- `requestId`
+- `traceparent`
+- `tracepack`
+- `sources`
+- `provenance`
+- `freshness`
+- `materialization`
+- `sourceRights`
+- `methodology`
+- `revision`
 
 ## Give this prompt to your agent
 
@@ -46,5 +102,4 @@ Use Omni Datastream POST /v1/intelligence/query to compile an allocator prompt i
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
 
