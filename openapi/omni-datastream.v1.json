@@ -1005,6 +1005,91 @@
         "summary": "Return a specific normalized statement bundle keyed by statement type"
       }
     },
+    "/v1/companies/income-statements": {
+      "get": {
+        "summary": "Return SEC XBRL-derived income statements for a ticker with EBITDA and share-count enrichment",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyIncomeStatements"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/balance-sheets": {
+      "get": {
+        "summary": "Return SEC XBRL-derived balance sheets for a ticker with normalized debt, equity, and cash fields",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyBalanceSheets"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/cash-flow-statements": {
+      "get": {
+        "summary": "Return SEC XBRL-derived cash flow statements for a ticker with free-cash-flow and dividend enrichment",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyCashFlowStatements"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/financials": {
+      "get": {
+        "summary": "Return combined SEC XBRL-derived income, balance-sheet, and cash-flow statements for a ticker",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyFinancials"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/companies/ratios": {
+      "get": {
+        "summary": "Return profitability, return, valuation, dividend, and leverage ratios derived from SEC XBRL statements plus market context",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyRatios"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/owners/13f": {
       "get": {
         "summary": "Return the latest normalized 13F ownership report for a manager CIK, with optional quarter-specific selection"
@@ -2609,6 +2694,1145 @@
           "facts",
           "summaryMd",
           "provenance"
+        ],
+        "additionalProperties": false
+      },
+      "CompanyIncomeStatements": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "nullable": true
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "accessionNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "filingUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "acceptedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "retrievedAt": {
+                "type": "string"
+              },
+              "parserVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "accessionNumber",
+              "filingUrl",
+              "retrievedAt",
+              "parserVersion"
+            ],
+            "additionalProperties": false
+          },
+          "freshness": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "degraded",
+                  "unknown"
+                ]
+              },
+              "asOf": {
+                "type": "string"
+              },
+              "sourcePublishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "lagMs": {
+                "type": "integer",
+                "minimum": 0,
+                "nullable": true
+              }
+            },
+            "required": [
+              "status",
+              "asOf"
+            ],
+            "additionalProperties": false
+          },
+          "materialization": {
+            "type": "object",
+            "properties": {
+              "parserVersion": {
+                "type": "string"
+              },
+              "materializationVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "parserVersion",
+              "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "company_income_statements"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "period_of_report_date": {
+                  "type": "string"
+                },
+                "fiscal_period": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "fiscal_year": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "filing_date": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "revenue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "costOfRevenue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "grossProfit": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "operatingIncome": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "netIncome": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "ebitda": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "eps": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "epsDiluted": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "weightedAverageShares": {
+                  "type": "number",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "period_of_report_date",
+                "fiscal_period",
+                "fiscal_year",
+                "filing_date",
+                "revenue",
+                "costOfRevenue",
+                "grossProfit",
+                "operatingIncome",
+                "netIncome",
+                "ebitda",
+                "eps",
+                "epsDiluted",
+                "weightedAverageShares"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "ticker",
+          "companyName",
+          "period",
+          "provenance",
+          "object",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "CompanyBalanceSheets": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "nullable": true
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "accessionNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "filingUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "acceptedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "retrievedAt": {
+                "type": "string"
+              },
+              "parserVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "accessionNumber",
+              "filingUrl",
+              "retrievedAt",
+              "parserVersion"
+            ],
+            "additionalProperties": false
+          },
+          "freshness": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "degraded",
+                  "unknown"
+                ]
+              },
+              "asOf": {
+                "type": "string"
+              },
+              "sourcePublishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "lagMs": {
+                "type": "integer",
+                "minimum": 0,
+                "nullable": true
+              }
+            },
+            "required": [
+              "status",
+              "asOf"
+            ],
+            "additionalProperties": false
+          },
+          "materialization": {
+            "type": "object",
+            "properties": {
+              "parserVersion": {
+                "type": "string"
+              },
+              "materializationVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "parserVersion",
+              "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "company_balance_sheets"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "period_of_report_date": {
+                  "type": "string"
+                },
+                "fiscal_period": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "fiscal_year": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "filing_date": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "assets": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "currentAssets": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "equity": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "totalLiabilities": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "longTermDebt": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "currentLiabilities": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "retainedEarnings": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "cashAndEquivalents": {
+                  "type": "number",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "period_of_report_date",
+                "fiscal_period",
+                "fiscal_year",
+                "filing_date",
+                "assets",
+                "currentAssets",
+                "equity",
+                "totalLiabilities",
+                "longTermDebt",
+                "currentLiabilities",
+                "retainedEarnings",
+                "cashAndEquivalents"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "ticker",
+          "companyName",
+          "period",
+          "provenance",
+          "object",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "CompanyCashFlowStatements": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "nullable": true
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "accessionNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "filingUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "acceptedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "retrievedAt": {
+                "type": "string"
+              },
+              "parserVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "accessionNumber",
+              "filingUrl",
+              "retrievedAt",
+              "parserVersion"
+            ],
+            "additionalProperties": false
+          },
+          "freshness": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "degraded",
+                  "unknown"
+                ]
+              },
+              "asOf": {
+                "type": "string"
+              },
+              "sourcePublishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "lagMs": {
+                "type": "integer",
+                "minimum": 0,
+                "nullable": true
+              }
+            },
+            "required": [
+              "status",
+              "asOf"
+            ],
+            "additionalProperties": false
+          },
+          "materialization": {
+            "type": "object",
+            "properties": {
+              "parserVersion": {
+                "type": "string"
+              },
+              "materializationVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "parserVersion",
+              "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "company_cash_flow_statements"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "period_of_report_date": {
+                  "type": "string"
+                },
+                "fiscal_period": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "fiscal_year": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "filing_date": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "operatingCashFlow": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "capitalExpenditures": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "freeCashFlow": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "dividendsPaid": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "depreciationAndAmortization": {
+                  "type": "number",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "period_of_report_date",
+                "fiscal_period",
+                "fiscal_year",
+                "filing_date",
+                "operatingCashFlow",
+                "capitalExpenditures",
+                "freeCashFlow",
+                "dividendsPaid",
+                "depreciationAndAmortization"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "ticker",
+          "companyName",
+          "period",
+          "provenance",
+          "object",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "CompanyFinancials": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "nullable": true
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "accessionNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "filingUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "acceptedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "retrievedAt": {
+                "type": "string"
+              },
+              "parserVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "accessionNumber",
+              "filingUrl",
+              "retrievedAt",
+              "parserVersion"
+            ],
+            "additionalProperties": false
+          },
+          "freshness": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "degraded",
+                  "unknown"
+                ]
+              },
+              "asOf": {
+                "type": "string"
+              },
+              "sourcePublishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "lagMs": {
+                "type": "integer",
+                "minimum": 0,
+                "nullable": true
+              }
+            },
+            "required": [
+              "status",
+              "asOf"
+            ],
+            "additionalProperties": false
+          },
+          "materialization": {
+            "type": "object",
+            "properties": {
+              "parserVersion": {
+                "type": "string"
+              },
+              "materializationVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "parserVersion",
+              "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "company_financials"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "period_of_report_date": {
+                  "type": "string"
+                },
+                "fiscal_period": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "fiscal_year": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "filing_date": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "financials": {
+                  "type": "object",
+                  "properties": {
+                    "income_statement": {
+                      "type": "object",
+                      "properties": {
+                        "period_of_report_date": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/period_of_report_date"
+                        },
+                        "fiscal_period": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/fiscal_period"
+                        },
+                        "fiscal_year": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/fiscal_year"
+                        },
+                        "filing_date": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/filing_date"
+                        },
+                        "revenue": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "costOfRevenue": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "grossProfit": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "operatingIncome": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "netIncome": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "ebitda": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "eps": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "epsDiluted": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "weightedAverageShares": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "period_of_report_date",
+                        "fiscal_period",
+                        "fiscal_year",
+                        "filing_date",
+                        "revenue",
+                        "costOfRevenue",
+                        "grossProfit",
+                        "operatingIncome",
+                        "netIncome",
+                        "ebitda",
+                        "eps",
+                        "epsDiluted",
+                        "weightedAverageShares"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "balance_sheet": {
+                      "type": "object",
+                      "properties": {
+                        "period_of_report_date": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/period_of_report_date"
+                        },
+                        "fiscal_period": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/fiscal_period"
+                        },
+                        "fiscal_year": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/fiscal_year"
+                        },
+                        "filing_date": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/filing_date"
+                        },
+                        "assets": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "currentAssets": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "equity": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "totalLiabilities": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "longTermDebt": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "currentLiabilities": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "retainedEarnings": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "cashAndEquivalents": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "period_of_report_date",
+                        "fiscal_period",
+                        "fiscal_year",
+                        "filing_date",
+                        "assets",
+                        "currentAssets",
+                        "equity",
+                        "totalLiabilities",
+                        "longTermDebt",
+                        "currentLiabilities",
+                        "retainedEarnings",
+                        "cashAndEquivalents"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "cash_flow_statement": {
+                      "type": "object",
+                      "properties": {
+                        "period_of_report_date": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/period_of_report_date"
+                        },
+                        "fiscal_period": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/fiscal_period"
+                        },
+                        "fiscal_year": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/fiscal_year"
+                        },
+                        "filing_date": {
+                          "$ref": "#/components/schemas/CompanyFinancials/properties/data/items/properties/filing_date"
+                        },
+                        "operatingCashFlow": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "capitalExpenditures": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "freeCashFlow": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "dividendsPaid": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "depreciationAndAmortization": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "period_of_report_date",
+                        "fiscal_period",
+                        "fiscal_year",
+                        "filing_date",
+                        "operatingCashFlow",
+                        "capitalExpenditures",
+                        "freeCashFlow",
+                        "dividendsPaid",
+                        "depreciationAndAmortization"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "income_statement",
+                    "balance_sheet",
+                    "cash_flow_statement"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "period_of_report_date",
+                "fiscal_period",
+                "fiscal_year",
+                "filing_date",
+                "financials"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "ticker",
+          "companyName",
+          "period",
+          "provenance",
+          "object",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "CompanyRatios": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "nullable": true
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "accessionNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "filingUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "acceptedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "retrievedAt": {
+                "type": "string"
+              },
+              "parserVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "accessionNumber",
+              "filingUrl",
+              "retrievedAt",
+              "parserVersion"
+            ],
+            "additionalProperties": false
+          },
+          "freshness": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "degraded",
+                  "unknown"
+                ]
+              },
+              "asOf": {
+                "type": "string"
+              },
+              "sourcePublishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "lagMs": {
+                "type": "integer",
+                "minimum": 0,
+                "nullable": true
+              }
+            },
+            "required": [
+              "status",
+              "asOf"
+            ],
+            "additionalProperties": false
+          },
+          "materialization": {
+            "type": "object",
+            "properties": {
+              "parserVersion": {
+                "type": "string"
+              },
+              "materializationVersion": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "parserVersion",
+              "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "company_ratios"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "period_of_report_date": {
+                  "type": "string"
+                },
+                "fiscal_period": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "fiscal_year": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "filing_date": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "grossProfitMargin": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "operatingProfitMargin": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "netProfitMargin": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "ebitdaMargin": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "returnOnEquity": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "returnOnAssets": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "returnOnCapitalEmployed": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "priceEarningsRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "priceToBookRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "enterpriseValueMultiple": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "dividendYield": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "dividendPayoutRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "debtEquityRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "currentRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "dividendPerShare": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "dividendPerShareCagr": {
+                  "type": "number",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "period_of_report_date",
+                "fiscal_period",
+                "fiscal_year",
+                "filing_date",
+                "grossProfitMargin",
+                "operatingProfitMargin",
+                "netProfitMargin",
+                "ebitdaMargin",
+                "returnOnEquity",
+                "returnOnAssets",
+                "returnOnCapitalEmployed",
+                "priceEarningsRatio",
+                "priceToBookRatio",
+                "enterpriseValueMultiple",
+                "dividendYield",
+                "dividendPayoutRatio",
+                "debtEquityRatio",
+                "currentRatio",
+                "dividendPerShare",
+                "dividendPerShareCagr"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "ticker",
+          "companyName",
+          "period",
+          "provenance",
+          "object",
+          "data"
         ],
         "additionalProperties": false
       },
@@ -20461,1148 +21685,6 @@
         ],
         "additionalProperties": false
       },
-      "FactorThemeEvidence": {
-        "type": "object",
-        "properties": {
-          "source": {
-            "type": "string",
-            "enum": [
-              "entity_name",
-              "sic_description",
-              "filing_title",
-              "filing_snippet",
-              "news_headline",
-              "news_summary"
-            ]
-          },
-          "text": {
-            "type": "string"
-          },
-          "symbol": {
-            "type": "string",
-            "minLength": 1
-          },
-          "accessionNumber": {
-            "type": "string",
-            "nullable": true
-          },
-          "publishedAt": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "source",
-          "text",
-          "symbol"
-        ],
-        "additionalProperties": false
-      },
-      "FactorThemeLabelCandidate": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": "string"
-          },
-          "score": {
-            "type": "number"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "keyword",
-              "phrase"
-            ]
-          },
-          "evidenceTerms": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": []
-          },
-          "sourceCount": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "label",
-          "score",
-          "kind",
-          "sourceCount"
-        ],
-        "additionalProperties": false
-      },
-      "FactorSemanticSignature": {
-        "type": "object",
-        "properties": {
-          "algorithm": {
-            "type": "string"
-          },
-          "dimensions": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "topTerms": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": []
-          },
-          "sourceKinds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "entity_name",
-                "sic_description",
-                "filing_title",
-                "filing_snippet",
-                "news_headline",
-                "news_summary"
-              ]
-            },
-            "default": []
-          },
-          "sourceCount": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "algorithm",
-          "dimensions",
-          "sourceCount"
-        ],
-        "additionalProperties": false
-      },
-      "FactorSimilarityPackNamingWorkflow": {
-        "type": "object",
-        "properties": {
-          "workflowVersion": {
-            "type": "string"
-          },
-          "selectedLabel": {
-            "type": "string"
-          },
-          "factorKeySuggestion": {
-            "type": "string"
-          },
-          "confidence": {
-            "type": "string",
-            "enum": [
-              "high",
-              "medium",
-              "low"
-            ]
-          },
-          "labelCandidates": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "label": {
-                  "type": "string"
-                },
-                "score": {
-                  "type": "number"
-                },
-                "kind": {
-                  "type": "string",
-                  "enum": [
-                    "keyword",
-                    "phrase"
-                  ]
-                },
-                "evidenceTerms": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "default": []
-                },
-                "sourceCount": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "required": [
-                "label",
-                "score",
-                "kind",
-                "sourceCount"
-              ],
-              "additionalProperties": false
-            },
-            "default": []
-          },
-          "rationale": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "workflowVersion",
-          "selectedLabel",
-          "factorKeySuggestion",
-          "confidence",
-          "rationale"
-        ],
-        "additionalProperties": false
-      },
-      "FactorSimilarityPeer": {
-        "type": "object",
-        "properties": {
-          "object": {
-            "type": "string",
-            "enum": [
-              "related_security"
-            ]
-          },
-          "id": {
-            "type": "string"
-          },
-          "symbol": {
-            "type": "string",
-            "minLength": 1
-          },
-          "similarity": {
-            "type": "number"
-          },
-          "score": {
-            "type": "number"
-          },
-          "factorSimilarity": {
-            "type": "number"
-          },
-          "thematicSimilarity": {
-            "type": "number"
-          },
-          "factorOverlap": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": []
-          },
-          "explanation": {
-            "type": "string"
-          },
-          "themeLabels": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": []
-          },
-          "evidence": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "source": {
-                  "type": "string",
-                  "enum": [
-                    "entity_name",
-                    "sic_description",
-                    "filing_title",
-                    "filing_snippet",
-                    "news_headline",
-                    "news_summary"
-                  ]
-                },
-                "text": {
-                  "type": "string"
-                },
-                "symbol": {
-                  "$ref": "#/components/schemas/FactorSimilarityPeer/properties/symbol"
-                },
-                "accessionNumber": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "publishedAt": {
-                  "type": "string",
-                  "nullable": true
-                }
-              },
-              "required": [
-                "source",
-                "text",
-                "symbol"
-              ],
-              "additionalProperties": false
-            },
-            "default": []
-          },
-          "provenance": {
-            "type": "object",
-            "properties": {
-              "source": {
-                "type": "string"
-              },
-              "accessionNumber": {
-                "type": "string",
-                "nullable": true
-              },
-              "filingUrl": {
-                "type": "string",
-                "format": "uri"
-              },
-              "acceptedAt": {
-                "type": "string",
-                "nullable": true
-              },
-              "retrievedAt": {
-                "type": "string"
-              },
-              "parserVersion": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "source",
-              "accessionNumber",
-              "filingUrl",
-              "retrievedAt",
-              "parserVersion"
-            ],
-            "additionalProperties": false
-          },
-          "freshness": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "enum": [
-                  "fresh",
-                  "stale",
-                  "degraded",
-                  "unknown"
-                ]
-              },
-              "asOf": {
-                "type": "string"
-              },
-              "sourcePublishedAt": {
-                "type": "string",
-                "nullable": true
-              },
-              "lagMs": {
-                "type": "integer",
-                "minimum": 0,
-                "nullable": true
-              }
-            },
-            "required": [
-              "status",
-              "asOf"
-            ],
-            "additionalProperties": false
-          },
-          "materialization": {
-            "type": "object",
-            "properties": {
-              "parserVersion": {
-                "type": "string"
-              },
-              "materializationVersion": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "parserVersion",
-              "materializationVersion"
-            ],
-            "additionalProperties": false
-          },
-          "sourceRights": {
-            "type": "object",
-            "properties": {
-              "source": {
-                "type": "string"
-              },
-              "posture": {
-                "type": "string",
-                "enum": [
-                  "public_safe",
-                  "contract_gated",
-                  "internal_only",
-                  "inventory_only",
-                  "review_required"
-                ]
-              },
-              "publicAvailability": {
-                "type": "string",
-                "enum": [
-                  "public",
-                  "contract_gated",
-                  "internal_only",
-                  "inventory_only"
-                ]
-              },
-              "contractStatus": {
-                "type": "string",
-                "enum": [
-                  "approved",
-                  "review_required",
-                  "restricted",
-                  "prohibited",
-                  "expired"
-                ]
-              },
-              "reviewOwner": {
-                "type": "string",
-                "nullable": true
-              },
-              "reviewedAt": {
-                "type": "string",
-                "nullable": true
-              },
-              "restrictions": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "notes": {
-                "type": "string",
-                "nullable": true
-              }
-            },
-            "required": [
-              "source",
-              "posture",
-              "publicAvailability",
-              "contractStatus"
-            ],
-            "additionalProperties": false
-          },
-          "methodology": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "version": {
-                "type": "string"
-              },
-              "summary": {
-                "type": "string"
-              },
-              "confidence": {
-                "type": "string",
-                "enum": [
-                  "high",
-                  "medium",
-                  "low"
-                ]
-              },
-              "launchState": {
-                "type": "string",
-                "enum": [
-                  "experimental",
-                  "beta",
-                  "ga"
-                ]
-              },
-              "inputs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "validation": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            },
-            "required": [
-              "id",
-              "version",
-              "summary",
-              "confidence",
-              "launchState"
-            ],
-            "additionalProperties": false
-          },
-          "revision": {
-            "type": "object",
-            "properties": {
-              "sourcePublishedAt": {
-                "type": "string",
-                "nullable": true
-              },
-              "retrievedAt": {
-                "type": "string"
-              },
-              "vintageId": {
-                "type": "string",
-                "nullable": true
-              },
-              "revisedFrom": {
-                "type": "string",
-                "nullable": true
-              }
-            },
-            "required": [
-              "retrievedAt"
-            ],
-            "additionalProperties": false
-          },
-          "degradedState": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "minLength": 1
-              },
-              "message": {
-                "type": "string"
-              },
-              "retryable": {
-                "type": "boolean"
-              },
-              "missingCapabilities": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "fallbackUsed": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              }
-            },
-            "required": [
-              "code",
-              "message",
-              "retryable"
-            ],
-            "additionalProperties": false,
-            "nullable": true
-          }
-        },
-        "required": [
-          "object",
-          "id",
-          "symbol",
-          "similarity",
-          "score",
-          "factorSimilarity",
-          "thematicSimilarity",
-          "explanation",
-          "provenance",
-          "sourceRights"
-        ],
-        "additionalProperties": false
-      },
-      "FactorSimilarityPack": {
-        "type": "object",
-        "properties": {
-          "object": {
-            "type": "string",
-            "enum": [
-              "factor_similarity_pack"
-            ]
-          },
-          "id": {
-            "type": "string"
-          },
-          "symbol": {
-            "type": "string",
-            "minLength": 1
-          },
-          "asOf": {
-            "type": "string"
-          },
-          "anchorTheme": {
-            "type": "string"
-          },
-          "themeLabels": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": []
-          },
-          "factorKeySuggestion": {
-            "type": "string"
-          },
-          "discoveryMode": {
-            "type": "string",
-            "enum": [
-              "factor_overlap_plus_filing_news_signature"
-            ]
-          },
-          "semanticSignature": {
-            "type": "object",
-            "properties": {
-              "algorithm": {
-                "type": "string"
-              },
-              "dimensions": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "topTerms": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "sourceKinds": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "entity_name",
-                    "sic_description",
-                    "filing_title",
-                    "filing_snippet",
-                    "news_headline",
-                    "news_summary"
-                  ]
-                },
-                "default": []
-              },
-              "sourceCount": {
-                "type": "integer",
-                "minimum": 0
-              }
-            },
-            "required": [
-              "algorithm",
-              "dimensions",
-              "sourceCount"
-            ],
-            "additionalProperties": false
-          },
-          "namingWorkflow": {
-            "type": "object",
-            "properties": {
-              "workflowVersion": {
-                "type": "string"
-              },
-              "selectedLabel": {
-                "type": "string"
-              },
-              "factorKeySuggestion": {
-                "type": "string"
-              },
-              "confidence": {
-                "type": "string",
-                "enum": [
-                  "high",
-                  "medium",
-                  "low"
-                ]
-              },
-              "labelCandidates": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "score": {
-                      "type": "number"
-                    },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "keyword",
-                        "phrase"
-                      ]
-                    },
-                    "evidenceTerms": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "default": []
-                    },
-                    "sourceCount": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
-                  },
-                  "required": [
-                    "label",
-                    "score",
-                    "kind",
-                    "sourceCount"
-                  ],
-                  "additionalProperties": false
-                },
-                "default": []
-              },
-              "rationale": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "workflowVersion",
-              "selectedLabel",
-              "factorKeySuggestion",
-              "confidence",
-              "rationale"
-            ],
-            "additionalProperties": false
-          },
-          "evidence": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "source": {
-                  "type": "string",
-                  "enum": [
-                    "entity_name",
-                    "sic_description",
-                    "filing_title",
-                    "filing_snippet",
-                    "news_headline",
-                    "news_summary"
-                  ]
-                },
-                "text": {
-                  "type": "string"
-                },
-                "symbol": {
-                  "$ref": "#/components/schemas/FactorSimilarityPack/properties/symbol"
-                },
-                "accessionNumber": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "publishedAt": {
-                  "type": "string",
-                  "nullable": true
-                }
-              },
-              "required": [
-                "source",
-                "text",
-                "symbol"
-              ],
-              "additionalProperties": false
-            },
-            "default": []
-          },
-          "peers": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "object": {
-                  "type": "string",
-                  "enum": [
-                    "related_security"
-                  ]
-                },
-                "id": {
-                  "type": "string"
-                },
-                "symbol": {
-                  "$ref": "#/components/schemas/FactorSimilarityPack/properties/symbol"
-                },
-                "similarity": {
-                  "type": "number"
-                },
-                "score": {
-                  "type": "number"
-                },
-                "factorSimilarity": {
-                  "type": "number"
-                },
-                "thematicSimilarity": {
-                  "type": "number"
-                },
-                "factorOverlap": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "default": []
-                },
-                "explanation": {
-                  "type": "string"
-                },
-                "themeLabels": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "default": []
-                },
-                "evidence": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/FactorSimilarityPack/properties/evidence/items"
-                  },
-                  "default": []
-                },
-                "provenance": {
-                  "type": "object",
-                  "properties": {
-                    "source": {
-                      "type": "string"
-                    },
-                    "accessionNumber": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "filingUrl": {
-                      "type": "string",
-                      "format": "uri"
-                    },
-                    "acceptedAt": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "retrievedAt": {
-                      "type": "string"
-                    },
-                    "parserVersion": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "source",
-                    "accessionNumber",
-                    "filingUrl",
-                    "retrievedAt",
-                    "parserVersion"
-                  ],
-                  "additionalProperties": false
-                },
-                "freshness": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "fresh",
-                        "stale",
-                        "degraded",
-                        "unknown"
-                      ]
-                    },
-                    "asOf": {
-                      "type": "string"
-                    },
-                    "sourcePublishedAt": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "lagMs": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "nullable": true
-                    }
-                  },
-                  "required": [
-                    "status",
-                    "asOf"
-                  ],
-                  "additionalProperties": false
-                },
-                "materialization": {
-                  "type": "object",
-                  "properties": {
-                    "parserVersion": {
-                      "type": "string"
-                    },
-                    "materializationVersion": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "parserVersion",
-                    "materializationVersion"
-                  ],
-                  "additionalProperties": false
-                },
-                "sourceRights": {
-                  "type": "object",
-                  "properties": {
-                    "source": {
-                      "type": "string"
-                    },
-                    "posture": {
-                      "type": "string",
-                      "enum": [
-                        "public_safe",
-                        "contract_gated",
-                        "internal_only",
-                        "inventory_only",
-                        "review_required"
-                      ]
-                    },
-                    "publicAvailability": {
-                      "type": "string",
-                      "enum": [
-                        "public",
-                        "contract_gated",
-                        "internal_only",
-                        "inventory_only"
-                      ]
-                    },
-                    "contractStatus": {
-                      "type": "string",
-                      "enum": [
-                        "approved",
-                        "review_required",
-                        "restricted",
-                        "prohibited",
-                        "expired"
-                      ]
-                    },
-                    "reviewOwner": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "reviewedAt": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "restrictions": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "default": []
-                    },
-                    "notes": {
-                      "type": "string",
-                      "nullable": true
-                    }
-                  },
-                  "required": [
-                    "source",
-                    "posture",
-                    "publicAvailability",
-                    "contractStatus"
-                  ],
-                  "additionalProperties": false
-                },
-                "methodology": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "version": {
-                      "type": "string"
-                    },
-                    "summary": {
-                      "type": "string"
-                    },
-                    "confidence": {
-                      "type": "string",
-                      "enum": [
-                        "high",
-                        "medium",
-                        "low"
-                      ]
-                    },
-                    "launchState": {
-                      "type": "string",
-                      "enum": [
-                        "experimental",
-                        "beta",
-                        "ga"
-                      ]
-                    },
-                    "inputs": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "default": []
-                    },
-                    "validation": {
-                      "type": "object",
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "version",
-                    "summary",
-                    "confidence",
-                    "launchState"
-                  ],
-                  "additionalProperties": false
-                },
-                "revision": {
-                  "type": "object",
-                  "properties": {
-                    "sourcePublishedAt": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "retrievedAt": {
-                      "type": "string"
-                    },
-                    "vintageId": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "revisedFrom": {
-                      "type": "string",
-                      "nullable": true
-                    }
-                  },
-                  "required": [
-                    "retrievedAt"
-                  ],
-                  "additionalProperties": false
-                },
-                "degradedState": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "retryable": {
-                      "type": "boolean"
-                    },
-                    "missingCapabilities": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "default": []
-                    },
-                    "fallbackUsed": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "default": []
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "message",
-                    "retryable"
-                  ],
-                  "additionalProperties": false,
-                  "nullable": true
-                }
-              },
-              "required": [
-                "object",
-                "id",
-                "symbol",
-                "similarity",
-                "score",
-                "factorSimilarity",
-                "thematicSimilarity",
-                "explanation",
-                "provenance",
-                "sourceRights"
-              ],
-              "additionalProperties": false
-            },
-            "default": []
-          },
-          "summaryMd": {
-            "type": "string"
-          },
-          "provenance": {
-            "$ref": "#/components/schemas/FactorSimilarityPack/properties/peers/items/properties/provenance"
-          },
-          "freshness": {
-            "$ref": "#/components/schemas/FactorSimilarityPack/properties/peers/items/properties/freshness"
-          },
-          "materialization": {
-            "$ref": "#/components/schemas/FactorSimilarityPack/properties/peers/items/properties/materialization"
-          },
-          "sourceRights": {
-            "$ref": "#/components/schemas/FactorSimilarityPack/properties/peers/items/properties/sourceRights"
-          },
-          "methodology": {
-            "$ref": "#/components/schemas/FactorSimilarityPack/properties/peers/items/properties/methodology"
-          },
-          "revision": {
-            "$ref": "#/components/schemas/FactorSimilarityPack/properties/peers/items/properties/revision"
-          },
-          "degradedState": {
-            "$ref": "#/components/schemas/FactorSimilarityPack/properties/peers/items/properties/degradedState"
-          }
-        },
-        "required": [
-          "object",
-          "id",
-          "symbol",
-          "asOf",
-          "anchorTheme",
-          "factorKeySuggestion",
-          "discoveryMode",
-          "semanticSignature",
-          "namingWorkflow",
-          "summaryMd",
-          "provenance",
-          "sourceRights"
-        ],
-        "additionalProperties": false
-      },
-      "FactorCustomDiscoveryRequest": {
-        "type": "object",
-        "properties": {
-          "symbol": {
-            "type": "string",
-            "minLength": 1
-          },
-          "symbols": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FactorCustomDiscoveryRequest/properties/symbol"
-            },
-            "maxItems": 25,
-            "default": []
-          },
-          "candidates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FactorCustomDiscoveryRequest/properties/symbol"
-            },
-            "maxItems": 25,
-            "default": []
-          },
-          "lookback": {
-            "type": "string",
-            "default": "6m"
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 25,
-            "default": 5
-          },
-          "refresh": {
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "additionalProperties": false
-      },
       "FactorDashboard": {
         "type": "object",
         "properties": {
@@ -31852,12 +31934,7 @@
                         "type": "object",
                         "properties": {
                           "status": {
-                            "type": "string",
-                            "enum": [
-                              "supported",
-                              "degraded",
-                              "unavailable"
-                            ]
+                            "$ref": "#/components/schemas/FootnoteIntelligenceResult/properties/topics/items/properties/traces/items/properties/status"
                           },
                           "kind": {
                             "type": "string",
@@ -31916,85 +31993,13 @@
             "type": "string"
           },
           "provenance": {
-            "type": "object",
-            "properties": {
-              "source": {
-                "type": "string"
-              },
-              "accessionNumber": {
-                "type": "string",
-                "nullable": true
-              },
-              "filingUrl": {
-                "type": "string",
-                "format": "uri"
-              },
-              "acceptedAt": {
-                "type": "string",
-                "nullable": true
-              },
-              "retrievedAt": {
-                "type": "string"
-              },
-              "parserVersion": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "source",
-              "accessionNumber",
-              "filingUrl",
-              "retrievedAt",
-              "parserVersion"
-            ],
-            "additionalProperties": false
+            "$ref": "#/components/schemas/FootnoteIntelligenceResult/properties/filing/properties/provenance"
           },
           "freshness": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "enum": [
-                  "fresh",
-                  "stale",
-                  "degraded",
-                  "unknown"
-                ]
-              },
-              "asOf": {
-                "type": "string"
-              },
-              "sourcePublishedAt": {
-                "type": "string",
-                "nullable": true
-              },
-              "lagMs": {
-                "type": "integer",
-                "minimum": 0,
-                "nullable": true
-              }
-            },
-            "required": [
-              "status",
-              "asOf"
-            ],
-            "additionalProperties": false
+            "$ref": "#/components/schemas/FootnoteIntelligenceResult/properties/filing/properties/freshness"
           },
           "materialization": {
-            "type": "object",
-            "properties": {
-              "parserVersion": {
-                "type": "string"
-              },
-              "materializationVersion": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "parserVersion",
-              "materializationVersion"
-            ],
-            "additionalProperties": false
+            "$ref": "#/components/schemas/FootnoteIntelligenceResult/properties/filing/properties/materialization"
           },
           "sourceRights": {
             "type": "object",
@@ -32497,10 +32502,7 @@
                         "13f",
                         "tightening",
                         "recession",
-                        "higher_for_longer",
-                        "buying",
-                        "selling",
-                        "unusual"
+                        "higher_for_longer"
                       ]
                     },
                     "default": []
@@ -33046,10 +33048,7 @@
                     "13f",
                     "tightening",
                     "recession",
-                    "higher_for_longer",
-                    "buying",
-                    "selling",
-                    "unusual"
+                    "higher_for_longer"
                   ]
                 },
                 "default": []

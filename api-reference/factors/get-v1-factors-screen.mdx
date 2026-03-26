@@ -1,10 +1,15 @@
 # GET /v1/factors/screen
 
-Return factor screens ranked by recent strength so agents can run factor-rotation and cross-factor ranking workflows.
+Return factor screens ranked by recent strength so agents can run factor-rotation and cross-factor ranking workflows
 
 <Info>
-Use this when you want a fast ranked list of factors. If you want securities screened under a macro regime, use `POST /v1/strategies/regime-screen`.
+Audience: application and coding agent.
 </Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
 
 ## Example request
 
@@ -13,7 +18,7 @@ Use this when you want a fast ranked list of factors. If you want securities scr
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/screen?category=style&lookback=6m&window=1m&limit=5"
+  "https://api.secapi.ai/v1/factors/screen"
 ```
 </RequestExample>
 
@@ -22,32 +27,22 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "object": "list",
-  "data": [
-    {
-      "factorKey": "MOMENTUM",
-      "window": "1m",
-      "scaledReturn": 0.084,
-      "zScore": 1.42
-    },
-    {
-      "factorKey": "QUALITY",
-      "window": "1m",
-      "scaledReturn": 0.061,
-      "zScore": 0.97
-    }
-  ],
-  "requestId": "req_example_123"
+  "requestId": "req_example_123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
-## Use this when
+## Give this prompt to your agent
 
-- you want the top factors by recent strength
-- you are building a factor-rotation workflow
+<Prompt>
+Use Omni Datastream GET /v1/factors/screen to return factor screens ranked by recent strength so agents can run factor-rotation and cross-factor ranking workflows. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
 
-## Do not use this when
+## Failure posture
 
-- you need security-level matches under a macro regime
-- you want one-call prompt compilation through `POST /v1/intelligence/query`
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+

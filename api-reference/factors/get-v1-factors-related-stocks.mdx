@@ -1,10 +1,15 @@
 # GET /v1/factors/related-stocks
 
-Return related stocks ranked by factor-overlap similarity for peer discovery and hedge ideation.
+Return related stocks ranked by factor-overlap similarity for peer discovery and hedge ideation
 
 <Info>
-Use this when you already know the anchor symbol and want peer candidates driven by the factor model. For richer thematic output, compare with `GET /v1/factors/similarity-pack`.
+Audience: application and coding agent.
 </Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
 
 ## Example request
 
@@ -13,7 +18,7 @@ Use this when you already know the anchor symbol and want peer candidates driven
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/related-stocks?symbol=AAPL&lookback=6m&limit=5"
+  "https://api.secapi.ai/v1/factors/related-stocks"
 ```
 </RequestExample>
 
@@ -22,32 +27,22 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "object": "list",
-  "data": [
-    {
-      "symbol": "MSFT",
-      "score": 0.2251,
-      "similarityScore": 0.2251,
-      "overlapScore": null
-    },
-    {
-      "symbol": "TSLA",
-      "score": 0.2411,
-      "similarityScore": 0.2411,
-      "overlapScore": null
-    }
-  ],
-  "requestId": "req_example_123"
+  "requestId": "req_example_123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
-## Use this when
+## Give this prompt to your agent
 
-- you need peers for a factor-driven comps set
-- you need hedge candidates or look-alike names
+<Prompt>
+Use Omni Datastream GET /v1/factors/related-stocks to return related stocks ranked by factor-overlap similarity for peer discovery and hedge ideation. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
 
-## Do not use this when
+## Failure posture
 
-- you need the named theme summary and peer rationale from `similarity-pack`
-- you want a ranked factor leaderboard
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+
