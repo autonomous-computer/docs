@@ -1,0 +1,218 @@
+---
+title: "Market Data Endpoints"
+description: "Price snapshots, historical bars, corporate actions, reference data, estimates, calendar, indices, and search."
+---
+
+# Market Data Endpoints
+
+<Info>
+Market data endpoints return structured, source-attributed payloads. All responses include provenance and freshness metadata.
+</Info>
+
+## GET /v1/market/snapshots
+
+Latest price snapshots for one or more symbols. Returns last price, change, volume, and timestamp.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `symbols` | string | yes | Comma-separated ticker symbols. Max 50 per request. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/snapshots?symbols=AAPL,MSFT,GOOG"
+```
+
+---
+
+## GET /v1/market/bars
+
+Historical OHLCV bars for a single symbol.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `symbol` | string | yes | Ticker symbol. |
+| `timeframe` | string | no | Bar resolution. One of `1D`, `1W`, `1M`. Defaults to `1D`. |
+| `start` | string | no | Start date in `YYYY-MM-DD` format. |
+| `end` | string | no | End date in `YYYY-MM-DD` format. |
+| `limit` | integer | no | Maximum bars to return. Defaults to `252`. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/bars?symbol=AAPL&timeframe=1D&start=2025-01-01&end=2025-12-31"
+```
+
+---
+
+## GET /v1/market/corporate-actions
+
+Dividends, splits, and spinoffs for a symbol or across the market within a date range.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `symbol` | string | no | Ticker symbol. Omit for market-wide results. |
+| `type` | string | no | Action type filter. One of `dividend`, `split`, `spinoff`. Omit for all types. |
+| `start` | string | no | Start date in `YYYY-MM-DD` format. |
+| `end` | string | no | End date in `YYYY-MM-DD` format. |
+| `limit` | integer | no | Maximum results. Defaults to `100`. |
+| `cursor` | string | no | Pagination cursor from a previous response. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/corporate-actions?symbol=AAPL&type=dividend&start=2025-01-01"
+```
+
+---
+
+## GET /v1/market/reference
+
+Company reference data including name, sector, industry, exchange, and identifiers.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `symbol` | string | yes | Ticker symbol. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/reference?symbol=AAPL"
+```
+
+---
+
+## GET /v1/market/estimates
+
+Analyst consensus estimates for a symbol. Returns EPS, revenue, and EBITDA consensus values with high/low range.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `symbol` | string | yes | Ticker symbol. |
+| `period` | string | no | Fiscal period. One of `FY0`, `FY1`, `FY2`, `Q0`, `Q1`. Defaults to `FY1`. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/estimates?symbol=AAPL&period=FY1"
+```
+
+---
+
+## GET /v1/market/calendar
+
+Trading calendar for a given exchange. Returns trading days, early closes, and holidays.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `exchange` | string | no | Exchange code. Defaults to `NYSE`. |
+| `start` | string | no | Start date in `YYYY-MM-DD` format. |
+| `end` | string | no | End date in `YYYY-MM-DD` format. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/calendar?exchange=NYSE&start=2026-01-01&end=2026-12-31"
+```
+
+---
+
+## GET /v1/market/indices
+
+Supported index inventory. Returns index metadata, rights posture, and sync cadence.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `supported_only` | boolean | no | When `true`, return only indices with public constituent export. Defaults to `false`. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/indices?supported_only=true"
+```
+
+---
+
+## GET /v1/market/indices/constituents
+
+Index constituent listings. See the [Index Constituents](/index-constituents) page for rights model and support posture details.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `"index"` | string | yes | Index code (e.g., `NDX`). |
+| `limit` | integer | no | Maximum constituents to return. Defaults to `100`. |
+| `cursor` | string | no | Pagination cursor from a previous response. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/indices/constituents?index=NDX&limit=10"
+```
+
+---
+
+## GET /v1/market/financials
+
+<Warning>
+Deprecated. Use `GET /v1/companies/financials` instead. This endpoint will be removed in a future API version.
+</Warning>
+
+Financial statements (income statement, balance sheet, cash flow) for a symbol.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `symbol` | string | yes | Ticker symbol. |
+| `statement` | string | no | One of `income`, `balance`, `cashflow`. Defaults to `income`. |
+| `period` | string | no | One of `annual`, `quarterly`. Defaults to `annual`. |
+| `limit` | integer | no | Number of periods to return. Defaults to `4`. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/financials?symbol=AAPL&statement=income&period=annual&limit=4"
+```
+
+---
+
+## GET /v1/market/search
+
+Ticker and company name search. Returns matching symbols with exchange, name, and type metadata.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | yes | Search query. Matches against ticker and company name. |
+| `limit` | integer | no | Maximum results. Defaults to `10`. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/search?q=apple&limit=5"
+```
+
+---
+
+## GET /v1/signals/volatility
+
+OMNI Volatility Score for a symbol. See the [Volatility Score](/volatility-score) page for methodology and quality controls.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ticker` | string | yes | Ticker symbol. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/signals/volatility?ticker=AAPL"
+```
+

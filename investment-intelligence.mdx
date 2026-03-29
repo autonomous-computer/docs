@@ -1,0 +1,247 @@
+---
+title: Investment Intelligence
+description: Pre-built intelligence bundles that join filings, financials, ownership, signals, and macro context into compact analyst-ready outputs.
+---
+
+# Investment Intelligence
+
+<Info>
+Intelligence endpoints combine multiple Datastream primitives into single-call bundles shaped for real investor workflows. Each response includes full provenance and source trails.
+</Info>
+
+## Endpoint overview
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/intelligence/security` | `GET` | Comprehensive security analysis |
+| `/v1/intelligence/company` | `GET` | Fundamental company analysis |
+| `/v1/intelligence/earnings-preview` | `GET` | Pre-earnings analysis |
+| `/v1/intelligence/portfolio` | `POST` | Portfolio macro analysis |
+| `/v1/intelligence/watchlist` | `POST` | Multi-security analysis |
+| `/v1/intelligence/query` | `POST` | Natural language semantic query |
+| `/v1/intelligence/query/:jobId` | `GET` | Poll async intelligence query |
+| `/v1/intelligence/footnotes/query` | `POST` | Financial footnote analysis |
+
+---
+
+## Security intelligence
+
+Returns a comprehensive intelligence bundle for a single security, joining recent filings, financial statements, ownership changes, derived signals, and macro context.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ticker` | string | yes | Security ticker symbol |
+| `includeSignals` | boolean | no | Include derived signal scores (volatility, etc.) |
+| `includeMacro` | boolean | no | Include relevant macro context |
+| `filingLimit` | number | no | Max recent filings to include |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/security?ticker=AAPL&includeSignals=true"
+```
+
+---
+
+## Company intelligence
+
+Returns a fundamental analysis bundle for a company, focused on financial statements, key metrics, segment breakdowns, and governance structure.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ticker` | string | yes | Company ticker symbol |
+| `period` | string | no | Reporting period (`annual`, `quarterly`) |
+| `includeSegments` | boolean | no | Include business segment breakdowns |
+| `includeGovernance` | boolean | no | Include governance and compensation context |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/company?ticker=MSFT&period=quarterly"
+```
+
+---
+
+## Earnings preview
+
+Returns a pre-earnings analysis bundle that combines recent financial trends, analyst-relevant filing context, guidance history, and risk factors ahead of an earnings event.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ticker` | string | yes | Company ticker symbol |
+| `includeGuidance` | boolean | no | Include prior guidance and revision history |
+| `includeRiskFactors` | boolean | no | Include risk-factor context from recent filings |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=NVDA&includeGuidance=true&includeRiskFactors=true"
+```
+
+---
+
+## Portfolio intelligence
+
+Accepts a set of holdings and returns portfolio-level macro analysis, factor exposures, concentration risks, and cross-holding context.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `holdings` | array | yes | Array of holding objects with `ticker` and optional `weight` |
+| `includeMacro` | boolean | no | Include macro overlay context |
+| `includeFactorExposure` | boolean | no | Include factor-level exposure analysis |
+| `includeConcentration` | boolean | no | Include concentration and overlap diagnostics |
+
+### Example
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "holdings": [
+      {"ticker": "AAPL", "weight": 0.30},
+      {"ticker": "MSFT", "weight": 0.25},
+      {"ticker": "GOOGL", "weight": 0.20},
+      {"ticker": "AMZN", "weight": 0.15},
+      {"ticker": "NVDA", "weight": 0.10}
+    ],
+    "includeMacro": true,
+    "includeFactorExposure": true
+  }' \
+  "https://api.secapi.ai/v1/intelligence/portfolio"
+```
+
+---
+
+## Watchlist intelligence
+
+Accepts multiple securities and returns a comparative analysis bundle with cross-security context, relative positioning, and signal summaries.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `tickers` | string[] | yes | Array of ticker symbols |
+| `includeSignals` | boolean | no | Include derived signal scores per security |
+| `includeComparatives` | boolean | no | Include cross-security comparative analysis |
+
+### Example
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tickers": ["AAPL", "MSFT", "GOOGL"],
+    "includeSignals": true,
+    "includeComparatives": true
+  }' \
+  "https://api.secapi.ai/v1/intelligence/watchlist"
+```
+
+---
+
+## Semantic intelligence query
+
+Submit a natural language query against Datastream's intelligence layer. Short queries may return synchronously. Longer or complex queries return `202 Accepted` with a `jobId` for async polling.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | yes | Natural language intelligence query |
+| `tickers` | string[] | no | Scope the query to specific securities |
+| `context` | object | no | Additional structured context for the query |
+
+### Response behavior
+
+- **Synchronous** (HTTP `200`): Result returned directly when the query resolves quickly.
+- **Asynchronous** (HTTP `202`): Returns a `jobId`. Poll the status endpoint until the job completes.
+
+### Example: submit query
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Compare revenue growth trends for AAPL and MSFT over the last four quarters",
+    "tickers": ["AAPL", "MSFT"]
+  }' \
+  "https://api.secapi.ai/v1/intelligence/query"
+```
+
+### Poll async query
+
+When the submit endpoint returns `202`, use the `jobId` from the response to poll for results.
+
+#### Path parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `jobId` | string | yes | Job identifier returned by the submit endpoint |
+
+#### Example: poll for results
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/query/job_abc123"
+```
+
+The poll response includes a `"status"` field (`pending`, `running`, `completed`, `failed`). Continue polling until the status is terminal.
+
+---
+
+## Footnote intelligence
+
+Analyze financial footnotes from SEC filings for a given company. Accepts a natural language query scoped to footnote content and returns structured findings with source references.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | yes | Natural language query about footnote content |
+| `ticker` | string | yes | Company ticker symbol |
+| `filingType` | string | no | Limit to a specific filing type (`10-K`, `10-Q`) |
+| `period` | string | no | Target reporting period |
+
+### Example
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the key lease obligation changes disclosed in recent footnotes?",
+    "ticker": "AAPL",
+    "filingType": "10-K"
+  }' \
+  "https://api.secapi.ai/v1/intelligence/footnotes/query"
+```
+
+---
+
+## Shared response conventions
+
+All intelligence endpoints follow the standard Datastream response conventions:
+
+- `provenance`: source trail for every data point included in the bundle
+- `freshness`: currency metadata showing how recent the underlying data is
+- `materialization`: how the response was assembled
+- `trace`: links back to source filings and pages when available
+
+<Note>
+Intelligence bundles are built on top of the same primitives available through individual Datastream endpoints. The bundle contract adds structure and cross-domain joins, not opaque transformations.
+</Note>
+

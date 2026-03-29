@@ -1,0 +1,79 @@
+# Migrate from Trading Economics
+
+This guide helps Trading Economics users map their existing workflows to OMNI Datastream equivalents. OMNI provides a narrower but deeper macro surface focused on high-signal indicators with factor-aware intelligence overlays that Trading Economics does not offer.
+
+## Endpoint mapping
+
+| Trading Economics | OMNI Datastream | Notes |
+|---|---|---|
+| `GET /indicators` | `GET /v1/macro/indicators` | Filter by `country` and `indicator` key |
+| `GET /calendar` | `GET /v1/macro/calendar` | Upcoming macro events with `country` and `days` params |
+| `GET /forecast` | `GET /v1/macro/forecasts` | Forward estimates with `horizons` param |
+| `GET /historical` | `GET /v1/macro/indicators` | Same endpoint, use `limit` for depth |
+| `GET /markets/commodities` | `GET /v1/market/snapshots` | Pass commodity ETF symbols |
+| `GET /markets/currency` | `GET /v1/market/snapshots` | Pass FX pair symbols |
+| `GET /markets/index` | `GET /v1/market/indices` | Supported index inventory |
+| `GET /news` | `GET /v1/news` | News feed |
+| Country overview | `POST /v1/intelligence/country-report` | Factor-aware country analysis — goes beyond TE |
+| N/A | `GET /v1/macro/high-signal-pack` | Curated daily indicator bundles per country — no TE equivalent |
+| N/A | `GET /v1/macro/regimes` | Macro regime classification — no TE equivalent |
+
+## Key differences
+
+### What OMNI adds beyond Trading Economics
+
+- **High-signal packs**: Curated daily/weekly indicator bundles for 12 countries (US, CN, JP, TW, IL, CA, GB, EZ, KR, BR, IN, SA) including yield curves, credit spreads, breakeven inflation, and volatility.
+- **Macro regime classification**: Automated regime detection (expansion, contraction, recovery, overheating) with factor-aware conditioning.
+- **Country reports**: AI-powered country analysis that integrates macro data with factor positioning and risk signals.
+- **Factor-conditioned macro**: Unique overlay of macro indicators with equity factor performance.
+
+### What Trading Economics covers that OMNI does not (yet)
+
+- **Breadth**: TE covers 15,000+ series across 196 countries. OMNI focuses on the 100-200 highest-signal series for allocators.
+- **Excel/Sheets plugins**: TE has native spreadsheet integrations. OMNI provides SDKs (JS, Python, Go, Rust) and MCP.
+- **Commodity/FX spot prices as dedicated series**: OMNI provides these via market snapshots and factor proxies rather than as standalone macro series.
+
+## Authentication
+
+Trading Economics uses a client key in the query string. OMNI uses the `x-api-key` header:
+
+```bash
+# Trading Economics
+curl "https://api.tradingeconomics.com/calendar?c=YOUR_KEY"
+
+# OMNI Datastream
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/macro/calendar?country=US"
+```
+
+## Example: get US macro indicators
+
+```bash
+# Trading Economics - US GDP
+curl "https://api.tradingeconomics.com/historical/country/united%20states/indicator/gdp?c=KEY"
+
+# OMNI Datastream - US GDP
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/macro/indicators?country=US&indicator=GDPC1"
+```
+
+## Example: get macro calendar
+
+```bash
+# Trading Economics
+curl "https://api.tradingeconomics.com/calendar?c=KEY"
+
+# OMNI Datastream
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/macro/calendar?country=US&days=7"
+```
+
+## Example: country analysis (OMNI exclusive)
+
+```bash
+curl -X POST -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"country": "US", "lookback": "6m"}' \
+  "https://api.secapi.ai/v1/intelligence/country-report"
+```
+

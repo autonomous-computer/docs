@@ -1,0 +1,205 @@
+# Factor Intelligence
+
+## What this surface covers
+
+OMNI Factor Intelligence provides a structured factor model spanning 84 factors across 5 categories. The surface supports factor catalog retrieval, historical and intraday returns, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
+
+Every response includes `requestId` and `traceparent` for downstream traceability.
+
+## Factor catalog
+
+- 84 factors organized into 5 categories: market, style, macro, sector, and industry
+- each factor entry includes methodology description, proxy ticker, orthogonalization metadata, and category assignment
+- the catalog is the canonical reference for factor identifiers used across all other factor endpoints
+
+### Categories
+
+| Category | Description |
+|----------|-------------|
+| `market` | broad market risk premia (e.g., equity risk premium, volatility) |
+| `style` | cross-sectional return drivers (e.g., momentum, value, quality, size, low-volatility) |
+| `macro` | macroeconomic regime factors (e.g., inflation, real rates, credit spreads, growth) |
+| `sector` | GICS sector-level return attribution |
+| `industry` | GICS industry-level return attribution |
+
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/catalog"
+```
+
+## Factor returns
+
+- historical daily factor return series with z-scores and volatility-scaled variants
+- supports filtering by factor category, individual factor identifiers, and date range
+- used for backtesting, trend analysis, and factor-timing research
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `category` | string | filter by factor category (`market`, `style`, `macro`, `sector`, `industry`) |
+| `factors` | string | comma-separated list of factor identifiers |
+| `start_date` | string | start of return window (ISO 8601 date) |
+| `end_date` | string | end of return window (ISO 8601 date) |
+| `frequency` | string | return frequency (`daily`, `weekly`, `monthly`) |
+
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/returns?category=style&start_date=2025-01-01&end_date=2025-12-31&frequency=daily"
+```
+
+## Factor correlations
+
+- factor-to-factor and factor-to-security correlation matrices
+- supports windowed correlation with configurable lookback
+- useful for strategy diversification analysis and risk decomposition
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `factors` | string | comma-separated list of factor identifiers |
+| `ticker` | string | optional security ticker for factor-to-security correlations |
+| `lookback_days` | integer | correlation lookback window in trading days |
+
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/correlations?factors=momentum,value,quality&lookback_days=252"
+```
+
+## Factor exposures
+
+- per-stock, portfolio, or watchlist factor loadings with model metadata and provenance
+- exposures reflect the sensitivity of a security's returns to each factor
+- supports single-ticker and batch queries
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ticker` | string | security ticker |
+| `tickers` | string | comma-separated list of tickers for batch queries |
+| `category` | string | filter exposures to a specific factor category |
+| `as_of` | string | point-in-time exposure date (ISO 8601 date) |
+
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/exposures?ticker=AAPL"
+```
+
+## Factor intraday
+
+- live intraday factor return snapshots derived from the latest benchmark proxy surface
+- intended for dashboards and real-time factor monitoring during market hours
+- returns are updated throughout the trading day as proxy prices move
+
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/returns/intraday"
+```
+
+## Factor dashboard
+
+- consolidated one-call view combining intraday returns, regime context, rotation signals, spotlight-security analysis, and optional model-portfolio drill-down
+- designed to power full-screen factor dashboards in a single request
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ticker` | string | optional spotlight security for per-stock factor context |
+| `portfolioId` | string | optional model portfolio identifier for drill-down section |
+
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/dashboard?ticker=AAPL"
+```
+
+## Factor regime performance
+
+- factor rankings conditioned on the current macro regime
+- blends the active macro backdrop (expansion, contraction, stress, recovery) with current factor state
+- useful for regime-aware factor rotation and allocation decisions
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `regime` | string | override regime label instead of using the detected current regime |
+| `lookback_years` | integer | historical lookback for regime-conditioned statistics |
+
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/regime-performance"
+```
+
+## Portfolio factor analysis
+
+- decompose an arbitrary portfolio into factor exposures, return attribution, and hedge suggestions
+- accepts a list of positions with weights in the request body
+- returns explained return, residual alpha, and per-factor contribution
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{
+    "positions": [
+      {"ticker": "AAPL", "weight": 0.30},
+      {"ticker": "MSFT", "weight": 0.25},
+      {"ticker": "GOOGL", "weight": 0.20},
+      {"ticker": "AMZN", "weight": 0.15},
+      {"ticker": "NVDA", "weight": 0.10}
+    ]
+  }' \
+  "https://api.secapi.ai/v1/portfolio/analyze"
+```
+
+## Model portfolio factor view
+
+- factor view scoped to a saved model portfolio
+- returns aggregate portfolio-level exposures and per-position factor breakdowns
+- useful for monitoring factor drift and concentration in model portfolios
+
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/model-portfolios/{portfolioId}/factor-view"
+```
+
+## Endpoint summary
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/v1/factors/catalog` | list all factor definitions |
+| `GET` | `/v1/factors/returns` | historical factor returns |
+| `GET` | `/v1/factors/correlations` | factor correlation matrix |
+| `GET` | `/v1/factors/exposures` | per-stock factor loadings |
+| `GET` | `/v1/factors/returns/intraday` | live intraday factor returns |
+| `GET` | `/v1/factors/dashboard` | consolidated factor dashboard |
+| `GET` | `/v1/factors/regime-performance` | factor performance by macro regime |
+| `POST` | `/v1/portfolio/analyze` | portfolio factor decomposition |
+| `GET` | `/v1/model-portfolios/:id/factor-view` | model portfolio factor view |
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
