@@ -1,0 +1,161 @@
+---
+title: Macro Intelligence
+description: Country-level macroeconomic data, regime classification, high-signal packs, and forward estimates
+---
+
+# Macro Intelligence
+
+Datastream provides a structured macro surface covering indicator time series, release history, forward estimates, regime classification, and curated high-signal country packs. All endpoints return `requestId` and `traceparent` for observability.
+
+## Macro indicators
+
+Time series observations by country and indicator. Each observation carries revision-aware provenance and country-quality metadata sourced from official statistical agencies.
+
+### `GET /v1/macro/indicators`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `indicator` | string | **required** | Indicator key (alias: `indicator_key`) |
+| `country` | string | `US` | ISO country code |
+| `limit` | number | -- | Maximum observations returned |
+| `refresh` | boolean | `false` | Force upstream refresh |
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/macro/indicators?country=US&indicator=GDP"
+```
+
+## Macro releases
+
+Release history with actual, prior, consensus, and surprise metadata for a given country. Optionally filter to a single indicator.
+
+### `GET /v1/macro/releases`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `country` | string | `US` | ISO country code |
+| `indicator` | string | -- | Filter to a specific indicator key (alias: `indicator_key`) |
+| `limit` | number | -- | Maximum releases returned |
+| `refresh` | boolean | `false` | Force upstream refresh |
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/macro/releases?country=US&indicator=CPI"
+```
+
+## Macro calendar
+
+Upcoming macro events for a country, including official-source releases and central-bank events.
+
+### `GET /v1/macro/calendar`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `country` | string | `US` | ISO country code |
+| `days` | number | -- | Look-ahead window in days |
+| `refresh` | boolean | `false` | Force upstream refresh |
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/macro/calendar?country=US&days=14"
+```
+
+## Macro forecasts
+
+Forward estimates with methodology metadata. Optionally scope to a single indicator and control the number of forecast horizons returned.
+
+### `GET /v1/macro/forecasts`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `country` | string | `US` | ISO country code |
+| `indicator` | string | -- | Filter to a specific indicator key (alias: `indicator_key`) |
+| `horizons` | number | -- | Number of forward horizons to return |
+| `refresh` | boolean | `false` | Force upstream refresh |
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/macro/forecasts?country=US&indicator=GDP&horizons=4"
+```
+
+## High-signal packs
+
+Curated country packs containing the highest-signal macro series with explicit source provenance, fallback posture, and release-calendar metadata. Each pack is scoped to a single country and returns the full set of configured series.
+
+### Supported countries
+
+| Country | Code | Series count | Notes |
+|---------|------|-------------|-------|
+| United States | `US` | 24 | Daily and weekly FRED series |
+| China | `CN` | 15 | |
+| Japan | `JP` | 17 | |
+| Taiwan | `TW` | -- | |
+| Israel | `IL` | -- | |
+| Canada | `CA` | -- | |
+| United Kingdom | `GB` | -- | |
+| Eurozone | `EZ` | -- | |
+| South Korea | `KR` | -- | |
+| Brazil | `BR` | -- | |
+| India | `IN` | -- | |
+| Saudi Arabia | `SA` | -- | |
+
+### `GET /v1/macro/high-signal-pack`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `country` | string | `JP` | ISO country code (see supported countries above) |
+| `refresh` | boolean | `false` | Force upstream refresh |
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/macro/high-signal-pack?country=US"
+```
+
+## Macro regime classification
+
+Returns the current macro regime classification for a country using the canonical Datastream macro overlay. The regime reflects the aggregate positioning across growth, inflation, and monetary-policy dimensions.
+
+### `GET /v1/macro/regimes`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `country` | string | `US` | ISO country code |
+| `lookback` | string | -- | Lookback period (e.g. `6m`, `1y`) |
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/macro/regimes?country=US"
+```
+
+## Country reports
+
+Returns an intelligence bundle covering the prior period's macro path, likely drivers, and forward view for a country. This is a POST endpoint that accepts a JSON body.
+
+### `POST /v1/intelligence/country-report`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `country` | string | `US` | ISO country code (2-12 characters) |
+| `lookback` | string | -- | Lookback period (e.g. `6m`, `1y`; 2-12 characters) |
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{"country": "US"}' \
+  "https://api.secapi.ai/v1/intelligence/country-report"
+```
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+

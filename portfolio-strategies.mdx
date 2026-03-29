@@ -1,0 +1,203 @@
+---
+title: "Portfolio & Strategy Endpoints"
+description: "Factor decomposition, stress testing, optimization, and regime-aware strategy signals."
+---
+
+# Portfolio & Strategy Endpoints
+
+<Info>
+These endpoints accept portfolio holdings and return structured factor analytics, stress-test results, optimization proposals, and strategy signals. All outputs include provenance and methodology version metadata.
+</Info>
+
+## POST /v1/portfolio/analyze
+
+Factor decomposition of a portfolio. Returns exposure to standard risk factors (value, momentum, quality, size, volatility, yield) with attribution breakdown.
+
+### Request body
+
+```json
+{
+  "holdings": [
+    { "symbol": "AAPL", "weight": 0.25 },
+    { "symbol": "JPM", "weight": 0.20 },
+    { "symbol": "XOM", "weight": 0.15 },
+    { "symbol": "AMZN", "weight": 0.40 }
+  ],
+  "country": "US",
+  "lookback": "1Y"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `holdings` | array | yes | Array of `{ symbol, weight }` objects. Weights should sum to 1.0. |
+| `holdings[].symbol` | string | yes | Ticker symbol. |
+| `holdings[].weight` | number | yes | Portfolio weight as a decimal (0.0 to 1.0). |
+| `country` | string | no | ISO 3166-1 alpha-2 country code. Defaults to `US`. |
+| `lookback` | string | no | Lookback window. One of `3M`, `6M`, `1Y`, `3Y`, `5Y`. Defaults to `1Y`. |
+
+### Example
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"JPM","weight":0.5}],"lookback":"1Y"}' \
+  "https://api.secapi.ai/v1/portfolio/analyze"
+```
+
+---
+
+## POST /v1/portfolio/stress-test
+
+Stress-test a portfolio against historical scenarios. Returns projected drawdown, recovery timeline, and per-holding impact.
+
+### Request body
+
+```json
+{
+  "holdings": [
+    { "symbol": "AAPL", "weight": 0.50 },
+    { "symbol": "TLT", "weight": 0.50 }
+  ],
+  "category": "rate_shock"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `holdings` | array | yes | Array of `{ symbol, weight }` objects. |
+| `category` | string | no | Scenario category filter. One of `rate_shock`, `credit_event`, `equity_crash`, `geopolitical`, `pandemic`. Omit for all scenarios. |
+
+### Example
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"TLT","weight":0.5}],"category":"equity_crash"}' \
+  "https://api.secapi.ai/v1/portfolio/stress-test"
+```
+
+---
+
+## POST /v1/portfolio/optimize
+
+Portfolio optimization across three objectives. Returns proposed weight adjustments, expected factor exposures, and constraint satisfaction metadata.
+
+### Request body
+
+```json
+{
+  "holdings": [
+    { "symbol": "AAPL", "weight": 0.30 },
+    { "symbol": "JPM", "weight": 0.30 },
+    { "symbol": "XOM", "weight": 0.20 },
+    { "symbol": "AMZN", "weight": 0.20 }
+  ],
+  "objective": "min_drawdown",
+  "country": "US",
+  "lookback": "3Y"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `holdings` | array | yes | Array of `{ symbol, weight }` objects. |
+| `objective` | string | yes | Optimization objective. One of `factor_neutral`, `min_drawdown`, `regime_aware`. |
+| `country` | string | no | ISO 3166-1 alpha-2 country code. Defaults to `US`. |
+| `lookback` | string | no | Lookback window. One of `1Y`, `3Y`, `5Y`. Defaults to `3Y`. |
+
+### Objectives
+
+- **`factor_neutral`** -- minimize net factor tilts across the portfolio
+- **`min_drawdown`** -- minimize expected maximum drawdown under historical stress scenarios
+- **`regime_aware`** -- tilt weights based on the current macro regime classification
+
+### Example
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"JPM","weight":0.5}],"objective":"factor_neutral"}' \
+  "https://api.secapi.ai/v1/portfolio/optimize"
+```
+
+---
+
+## GET /v1/model-portfolios/:id/factor-view
+
+Factor analysis for a named model portfolio. Returns the same factor decomposition structure as `/v1/portfolio/analyze` without requiring holdings in the request.
+
+| Parameter | In | Type | Required | Description |
+|-----------|------|------|----------|-------------|
+| `id` | path | string | yes | Model portfolio identifier. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/model-portfolios/us-quality-dividend/factor-view"
+```
+
+---
+
+## POST /v1/strategies/factor-rotation
+
+Generate factor rotation signals based on macro regime, momentum, and valuation inputs. Returns ranked factor tilts with conviction scores.
+
+### Request body
+
+```json
+{
+  "country": "US",
+  "lookback": "6M"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `country` | string | no | ISO 3166-1 alpha-2 country code. Defaults to `US`. |
+| `lookback` | string | no | Lookback window for signal generation. One of `3M`, `6M`, `1Y`. Defaults to `6M`. |
+
+### Example
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"country":"US","lookback":"6M"}' \
+  "https://api.secapi.ai/v1/strategies/factor-rotation"
+```
+
+---
+
+## POST /v1/strategies/regime-screen
+
+Screen securities through a regime-aware factor lens. Returns securities ranked by fit to the current macro regime with factor exposure detail.
+
+### Request body
+
+```json
+{
+  "country": "US",
+  "lookback": "1Y"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `country` | string | no | ISO 3166-1 alpha-2 country code. Defaults to `US`. |
+| `lookback` | string | no | Lookback window. One of `6M`, `1Y`, `3Y`. Defaults to `1Y`. |
+
+### Example
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"country":"US","lookback":"1Y"}' \
+  "https://api.secapi.ai/v1/strategies/regime-screen"
+```
+

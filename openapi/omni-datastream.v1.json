@@ -386,6 +386,21 @@
         "summary": "Return official SEC litigation releases and administrative proceedings with explicit release-source semantics and shared trace references"
       }
     },
+    "/v1/events/restatements": {
+      "get": {
+        "summary": "Return 8-K Item 4.02 restatement and non-reliance events with severity classification and affected-period extraction"
+      }
+    },
+    "/v1/events/auditor-changes": {
+      "get": {
+        "summary": "Return 8-K Item 4.01 auditor change events with change-type classification (dismissal, resignation, engagement)"
+      }
+    },
+    "/v1/events/officer-changes": {
+      "get": {
+        "summary": "Return 8-K Item 5.02 officer and director change events with change-type classification (appointment, departure, resignation, termination)"
+      }
+    },
     "/v1/earnings/transcripts": {
       "get": {
         "summary": "Return SEC-furnished earnings materials from 8-K filings with release, remarks, and transcript coverage states"
@@ -448,6 +463,55 @@
         "summary": "Search rights-safe news coverage and issuer communications by symbol, entity, or topic"
       }
     },
+    "/v1/macro/search": {
+      "get": {
+        "summary": "Search supported macro indicators by keyword across all countries and high-signal packs",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search term matched against indicator key, label, dataset, and series code"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO country code filter (e.g. US, JP, CN)"
+          },
+          {
+            "name": "frequency",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "weekly",
+                "monthly",
+                "quarterly"
+              ]
+            },
+            "description": "Indicator frequency filter"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Maximum results to return (default 25, max 100)"
+          }
+        ]
+      }
+    },
     "/v1/macro/indicators": {
       "get": {
         "summary": "Return official-source macro indicator observations with revision-aware provenance and country-quality metadata"
@@ -500,6 +564,37 @@
             }
           }
         }
+      }
+    },
+    "/v1/macro/credit-ratings": {
+      "get": {
+        "summary": "Return sovereign credit ratings from S&P, Moody's, and Fitch for tracked countries and G20 members",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by country name or ISO country code (case-insensitive)"
+          }
+        ]
+      }
+    },
+    "/v1/macro/credit-ratings/{country}": {
+      "get": {
+        "summary": "Return the sovereign credit rating for a single country by ISO country code",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO 2-letter country code (e.g. US, JP, DE)"
+          }
+        ]
       }
     },
     "/v1/factors/catalog": {
@@ -620,6 +715,21 @@
             }
           }
         }
+      }
+    },
+    "/v1/factors/pairs": {
+      "get": {
+        "summary": "Return pairwise factor spread data including cumulative spread, average, volatility, and daily series for two specified factors"
+      }
+    },
+    "/v1/factors/pair-history/{f1}/{f2}": {
+      "get": {
+        "summary": "Return historical spread between two specific factors identified by path parameters with windowed series data"
+      }
+    },
+    "/v1/factors/bulk-download": {
+      "get": {
+        "summary": "Return all factor returns data in bulk with full daily series for commercial plan bulk-download workflows"
       }
     },
     "/v1/factors/custom": {
@@ -1619,6 +1729,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -1762,6 +1913,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -1977,6 +2169,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -2257,6 +2490,47 @@
                       "materializationVersion"
                     ],
                     "additionalProperties": false
+                  },
+                  "validation": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "validated",
+                          "unvalidated",
+                          "degraded"
+                        ]
+                      },
+                      "confidence": {
+                        "type": "string",
+                        "enum": [
+                          "high",
+                          "medium",
+                          "low"
+                        ],
+                        "nullable": true
+                      },
+                      "validatedAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "validationPipeline": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "exceptions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -2298,6 +2572,9 @@
           },
           "materialization": {
             "$ref": "#/components/schemas/StatementBundle/properties/statements/properties/balanceSheet/properties/materialization"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/StatementBundle/properties/statements/properties/balanceSheet/properties/validation"
           }
         },
         "required": [
@@ -2668,6 +2945,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -4119,6 +4437,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -4353,6 +4712,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -4594,6 +4994,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -4820,6 +5261,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -5013,6 +5495,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -5209,6 +5732,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -5506,6 +6070,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -5753,6 +6358,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -5960,6 +6606,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -6156,6 +6843,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -6334,6 +7062,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -6538,6 +7307,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -6800,6 +7610,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -6994,6 +7845,47 @@
               "materializationVersion"
             ],
             "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -7164,6 +8056,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -8060,6 +8993,47 @@
             "required": [
               "parserVersion",
               "materializationVersion"
+            ],
+            "additionalProperties": false
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "validated",
+                  "unvalidated",
+                  "degraded"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "nullable": true
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "validationPipeline": {
+                "type": "string",
+                "nullable": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": [
+              "status"
             ],
             "additionalProperties": false
           }
@@ -11918,6 +12892,47 @@
                     "materializationVersion"
                   ],
                   "additionalProperties": false
+                },
+                "validation": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "validated",
+                        "unvalidated",
+                        "degraded"
+                      ]
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                      ],
+                      "nullable": true
+                    },
+                    "validatedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "validationPipeline": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "exceptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -12093,6 +13108,47 @@
                   "required": [
                     "parserVersion",
                     "materializationVersion"
+                  ],
+                  "additionalProperties": false
+                },
+                "validation": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "validated",
+                        "unvalidated",
+                        "degraded"
+                      ]
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                      ],
+                      "nullable": true
+                    },
+                    "validatedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "validationPipeline": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "exceptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    }
+                  },
+                  "required": [
+                    "status"
                   ],
                   "additionalProperties": false
                 }
@@ -12340,6 +13396,47 @@
                   "required": [
                     "parserVersion",
                     "materializationVersion"
+                  ],
+                  "additionalProperties": false
+                },
+                "validation": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "validated",
+                        "unvalidated",
+                        "degraded"
+                      ]
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                      ],
+                      "nullable": true
+                    },
+                    "validatedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "validationPipeline": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "exceptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    }
+                  },
+                  "required": [
+                    "status"
                   ],
                   "additionalProperties": false
                 }
@@ -18821,6 +19918,7 @@
                           "enum": [
                             "intraday",
                             "daily",
+                            "weekly",
                             "monthly",
                             "quarterly"
                           ]
@@ -18913,6 +20011,7 @@
                           "enum": [
                             "intraday",
                             "daily",
+                            "weekly",
                             "monthly",
                             "quarterly"
                           ]
@@ -31855,6 +32954,47 @@
                   "materializationVersion"
                 ],
                 "additionalProperties": false
+              },
+              "validation": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "validated",
+                      "unvalidated",
+                      "degraded"
+                    ]
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low"
+                    ],
+                    "nullable": true
+                  },
+                  "validatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "validationPipeline": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "exceptions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": []
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -32077,12 +33217,7 @@
                 "type": "string"
               },
               "confidence": {
-                "type": "string",
-                "enum": [
-                  "high",
-                  "medium",
-                  "low"
-                ]
+                "$ref": "#/components/schemas/FootnoteIntelligenceResult/properties/filing/properties/validation/properties/confidence"
               },
               "launchState": {
                 "type": "string",

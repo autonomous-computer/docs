@@ -1,0 +1,101 @@
+# Migrate from FactorsToday
+
+This guide helps FactorsToday users map their existing workflows to OMNI Datastream equivalents. OMNI provides a broader factor catalog with deeper macro and credit factor coverage, plus unique portfolio intelligence overlays.
+
+## Endpoint mapping
+
+| FactorsToday | OMNI Datastream | Notes |
+|---|---|---|
+| `GET /api/factors/catalog` | `GET /v1/factors/catalog` | 84 factors (vs FT's 147) — OMNI leads on macro/style/sector |
+| `GET /api/factor-returns/intraday` | `GET /v1/factors/intraday` | Live intraday factor returns |
+| `GET /api/factor-returns/historic` | `GET /v1/factors/returns` | Historical daily factor returns |
+| `GET /api/factor-loadings/:factor` | `GET /v1/factors/exposures` | Per-stock factor loadings |
+| `GET /api/factor-correlations` | `GET /v1/factors/correlations` | Factor correlation matrix |
+| `GET /api/factor-composition/:name` | `GET /v1/factors/catalog` | Equation and methodology in catalog entry |
+| `GET /api/stock-loadings/:ticker` | `GET /v1/factors/exposures` | Per-stock factor decomposition |
+| `GET /api/related-stocks/:ticker` | `GET /v1/factors/related-stocks` | Factor-similarity stock discovery |
+| `GET /api/portfolio/analyze` | `POST /v1/portfolio/analyze` | Portfolio factor decomposition |
+| `GET /api/hedge/calculate` | `POST /v1/portfolio/optimize` | Portfolio optimization with hedging |
+| `GET /api/screener/stocks-by-factor` | `GET /v1/factors/screen` | Factor-based stock screening |
+| `GET /api/stocks/search` | `GET /v1/entities/resolve` | Entity resolution |
+| N/A | `POST /v1/portfolio/stress-test` | Scenario-based stress testing — no FT equivalent |
+| N/A | `GET /v1/factors/regime-performance` | Factor returns by macro regime — no FT equivalent |
+| N/A | `GET /v1/factors/dashboard` | Consolidated factor dashboard — no FT equivalent |
+| N/A | `POST /v1/strategies/factor-rotation` | Factor rotation signals — no FT equivalent |
+
+## Factor catalog comparison
+
+| Category | FactorsToday | OMNI | Notes |
+|---|---|---|---|
+| Market/Macro | 7 | 17 | OMNI leads — includes credit, HY, TIPS, commodities, crypto, FX |
+| Style | 11 | 23 | OMNI leads — includes intl variants, buyback, profitability, earnings revisions |
+| Sectors | 11 | 26 | OMNI leads — GICS sectors + 15 sub-sectors |
+| Industry | 34 | 18 | FT leads — OMNI has 18 industry factors, expanding |
+| Countries | 42 | 0 | FT leads — country equity factors planned for Phase 2 |
+| Custom Baskets | 42 | 0 | FT exclusive — thematic AI-discovered baskets |
+| **Total** | **147** | **84** | |
+
+### Where OMNI leads
+
+- **Macro factor depth**: 17 macro factors covering rates, credit spreads, currencies, commodities, and crypto versus FT's 7.
+- **Style factor breadth**: 23 style factors including international variants, buyback, profitability, multi-factor, and earnings revisions.
+- **Sub-sector granularity**: 26 sector/sub-sector factors down to cybersecurity, clean energy, and AI/robotics level.
+- **Intelligence overlays**: Portfolio stress testing, regime-conditioned performance, factor rotation strategies, and semantic intelligence queries — none of which FT offers.
+
+## Authentication
+
+FactorsToday uses a query parameter API key. OMNI uses the `x-api-key` header:
+
+```bash
+# FactorsToday
+curl "https://api.factorstoday.com/api/factors/catalog?apiKey=YOUR_KEY"
+
+# OMNI Datastream
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/factors/catalog"
+```
+
+## Example: factor catalog
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/factors/catalog"
+
+# Filter by category
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/factors/catalog?category=industry"
+```
+
+## Example: historical factor returns
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/factors/returns?keys=VALUE,MOMENTUM,QUALITY&lookback=6m"
+```
+
+## Example: portfolio factor decomposition
+
+```bash
+curl -X POST -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.3},
+      {"symbol": "MSFT", "weight": 0.25},
+      {"symbol": "JPM", "weight": 0.2},
+      {"symbol": "XOM", "weight": 0.15},
+      {"symbol": "JNJ", "weight": 0.1}
+    ]
+  }' \
+  "https://api.secapi.ai/v1/portfolio/analyze"
+```
+
+## Example: factor rotation strategy (OMNI exclusive)
+
+```bash
+curl -X POST -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"country": "US", "lookback": "6m"}' \
+  "https://api.secapi.ai/v1/strategies/factor-rotation"
+```
+
