@@ -35,14 +35,14 @@ This guide helps Trading Economics users map their existing workflows to OMNI Da
 
 ## Authentication
 
-Trading Economics uses a client key in the query string. OMNI uses the `x-api-key` header:
+Trading Economics uses a client key in the query string. OMNI uses a Bearer token in the `Authorization` header:
 
 ```bash
 # Trading Economics
 curl "https://api.tradingeconomics.com/calendar?c=YOUR_KEY"
 
 # OMNI Datastream
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "Authorization: Bearer $OMNI_API_KEY" \
   "https://api.secapi.ai/v1/macro/calendar?country=US"
 ```
 
@@ -53,7 +53,7 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
 curl "https://api.tradingeconomics.com/historical/country/united%20states/indicator/gdp?c=KEY"
 
 # OMNI Datastream - US GDP
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "Authorization: Bearer $OMNI_API_KEY" \
   "https://api.secapi.ai/v1/macro/indicators?country=US&indicator=GDPC1"
 ```
 
@@ -64,14 +64,14 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
 curl "https://api.tradingeconomics.com/calendar?c=KEY"
 
 # OMNI Datastream
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "Authorization: Bearer $OMNI_API_KEY" \
   "https://api.secapi.ai/v1/macro/calendar?country=US&days=7"
 ```
 
 ## Example: country analysis (OMNI exclusive)
 
 ```bash
-curl -X POST -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -X POST -H "Authorization: Bearer $OMNI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"country": "US", "lookback": "6m"}' \
   "https://api.secapi.ai/v1/intelligence/country-report"

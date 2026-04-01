@@ -1,15 +1,24 @@
 # GET /v1/companies/ratios
 
-Return profitability, return, valuation, dividend, and leverage ratios derived from SEC XBRL statements plus market context
+Return computed financial ratios for a company including profit margin, return on assets, return on equity, debt-to-equity, and current ratio
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ticker` | string | Stock ticker symbol (required) |
+| `period` | string | `annual` or `quarterly` (default: `annual`) |
+| `limit` | integer | Number of periods to return (default: 4, max: 50) |
+
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
+- `lineage` — source attribution (`massive_financials`)
 
 ## Example request
 
@@ -18,7 +27,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/companies/ratios"
+  "https://api.secapi.ai/v1/companies/ratios?ticker=AAPL&period=annual&limit=4"
 ```
 </RequestExample>
 
@@ -27,6 +36,26 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "financial_ratio",
+      "fiscalPeriod": "FY",
+      "fiscalYear": "2025",
+      "profitMargin": 0.265,
+      "returnOnAssets": 0.312,
+      "returnOnEquity": 1.718,
+      "debtToEquity": 4.502,
+      "currentRatio": 0.988
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "lineage": {
+    "sources": ["massive_financials"],
+    "canonical": true,
+    "surface": "companies"
+  },
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
@@ -36,13 +65,13 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/companies/ratios to return profitability, return, valuation, dividend, and leverage ratios derived from sec xbrl statements plus market context. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream GET /v1/companies/ratios to return financial ratios for a company. Pass `ticker` (required), `period`, and `limit`. Key ratios include profitMargin, returnOnAssets, returnOnEquity, debtToEquity, currentRatio. Preserve `requestId`, `traceparent`, and `lineage`.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- requires `MASSIVE_API_KEY` — returns 503 if not configured
 
 

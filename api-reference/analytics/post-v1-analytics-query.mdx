@@ -6,6 +6,28 @@ Run a tenant-safe analytical query over supported Datastream history datasets wi
 Audience: application and coding agent.
 </Info>
 
+## Supported datasets
+
+| Dataset | Description | Dimensions | Measures |
+|---------|-------------|------------|----------|
+| `filings` | SEC filing history | `year`, `form`, `ticker` | `count` |
+| `sections_items` | Filing section extracts | `year`, `form`, `ticker` | `count` |
+| `segmented_revenues` | XBRL segmented revenue data | `year`, `ticker` | `count`, `sum_value` |
+| `ownership` | Institutional ownership filings (13F, 13D/G) | `year`, `form`, `ticker` | `count` |
+| `enforcement` | SEC enforcement actions | `year`, `source_type` | `count` |
+
+## Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `dataset` | string | Yes | One of `filings`, `sections_items`, `segmented_revenues`, `ownership`, `enforcement` |
+| `dimensions` | string[] | Yes | 1-2 dimensions to group by: `year`, `form`, `ticker`, `source_type` |
+| `measures` | string[] | No | Aggregation measures: `count` (default), `sum_value` |
+| `filters` | object | No | Filter by `ticker`, `cik`, or `form` |
+| `timeWindow` | object | No | `{ from?: string, to?: string }` date range filter |
+| `sort` | object | No | `{ field: string, direction?: "asc" \| "desc" }` |
+| `limit` | number | No | Max rows returned (1-200, default 50) |
+
 ## Canonical metadata
 
 - `requestId`
@@ -27,7 +49,7 @@ curl -X POST \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{"dataset":"segmented_revenues","dimensions":["segmentType","year"],"measures":["count","sum_value"],"filters":{"ticker":"AAPL","period":"annual"},"timeWindow":{"field":"filingDate","from":"2024-01-01","to":"2025-12-31"},"sort":{"field":"sum_value","direction":"desc"},"limit":50}' \
+  -d '{"dataset":"filings","dimensions":["year","form"],"filters":{"ticker":"AAPL"},"timeWindow":{"from":"2020-01-01","to":"2025-12-31"},"sort":{"field":"count","direction":"desc"},"limit":20}' \
   "https://api.secapi.ai/v1/analytics/query"
 ```
 </RequestExample>
@@ -38,62 +60,51 @@ curl -X POST \
 ```json
 {
   "object": "analytics_query_result",
-  "id": "aqr_example_123",
-  "createdAt": "2026-03-19T18:00:00.000Z",
-  "livemode": false,
-  "dataset": "segmented_revenues",
-  "mode": "aggregate",
+  "dataset": "filings",
   "dimensions": [
-    "segmentType",
-    "year"
+    "year",
+    "form"
   ],
   "measures": [
-    "count",
-    "sum_value"
+    "count"
   ],
   "filters": {
-    "ticker": "AAPL",
-    "period": "annual"
+    "ticker": "AAPL"
   },
   "timeWindow": {
-    "field": "filingDate",
-    "from": "2024-01-01",
+    "from": "2020-01-01",
     "to": "2025-12-31"
   },
   "sort": {
-    "field": "sum_value",
+    "field": "count",
     "direction": "desc"
   },
-  "limit": 50,
-  "rowCount": 2,
+  "limit": 20,
+  "rowCount": 3,
   "rows": [
     {
       "values": {
-        "segmentType": "product",
-        "year": 2025,
-        "count": 4,
-        "sum_value": 391035000000
+        "year": "2024",
+        "form": "10-Q",
+        "count": 3
       }
     },
     {
       "values": {
-        "segmentType": "geographic",
-        "year": 2025,
-        "count": 3,
-        "sum_value": 124500000000
+        "year": "2024",
+        "form": "10-K",
+        "count": 1
+      }
+    },
+    {
+      "values": {
+        "year": "2023",
+        "form": "10-K",
+        "count": 1
       }
     }
   ],
-  "warnings": [],
-  "provenance": {
-    "source": "omni_datastream",
-    "accessionNumber": null,
-    "filingUrl": "https://api.secapi.ai/v1/analytics/query",
-    "acceptedAt": null,
-    "retrievedAt": "2026-03-19T18:00:00.000Z",
-    "parserVersion": "analytics-query@2026-03-19"
-  },
-  "requestId": "req_123",
+  "requestId": "req_abc123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"
 }
 ```

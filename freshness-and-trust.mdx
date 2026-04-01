@@ -26,7 +26,7 @@ The current checked-in trust artifacts support strong scoped claims around bench
 - benchmark validation passes for the current dated investor-agent suite
 - FIGI-aware company-resolution inputs are live, while canonical-store completeness proof is tracked separately from the public claim set
 - page-level filing traceability is live for filing-derived datapoints, with HTML-first exact fact-region anchors now available on supported segmented revenue traces
-- non-filing trace hydration now extends to SEC enforcement source records through the same `/v1/traces` surface
+- non-filing trace hydration now extends to SEC enforcement source records, market price snapshots, and analyst estimate datapoints through the same `/v1/traces` surface
 - sentiment remains intentionally gated and is not part of the public 3.0 surface
 
 ## What makes a response trustworthy
@@ -51,8 +51,19 @@ The current checked-in trust artifacts support strong scoped claims around bench
 - freshness dashboard status: `monitor`
 - freshness claim posture: use the dashboard artifact and form-level telemetry, not generic real-time language
 - benchmark scorecard posture: `18 wins`, `0 losses`, `2 ties` on the current dated suite
-- traceability posture: filing-derived datapoints can resolve to the correct filing document and page, supported segmented revenue traces can preserve exact HTML fact ranges, and SEC enforcement releases now expose shared non-filing trace records
+- traceability posture: filing-derived datapoints can resolve to the correct filing document and page, supported segmented revenue traces can preserve exact HTML fact ranges, SEC enforcement releases expose shared non-filing trace records, and market prices and analyst estimates carry full source-record traces with provider attribution
 - remaining advisory caveat: some freshness signals still publish warnings instead of silently disappearing from the trust story
+
+## XBRL facts architecture
+
+Financial data queries (facts and statements) use a DB-first architecture. Over 95 million pre-parsed XBRL facts across 9,600+ SEC-registered companies are stored in our own PostgreSQL database and refreshed daily via an automated Dagster pipeline at 07:00 UTC.
+
+The query path:
+1. Check if the company has data in the `xbrl_facts` table
+2. If data exists, query directly from the database (fast path)
+3. If no data exists, fall back to live SEC EDGAR fetch (slow path)
+
+Every response includes a `source` field in its provenance or completeness object: `"xbrl_facts"` for database-served responses, `"company_facts"` for SEC-served responses.
 
 ## Source artifacts
 

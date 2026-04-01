@@ -8,17 +8,23 @@
 
 ## Current support posture
 
-- `NDX` is the first fully supported index roster
-- OMNI parses the public Nasdaq-100 companies page published by Nasdaq
+- `NDX` is fully supported — OMNI parses the public Nasdaq-100 companies page published by Nasdaq
 - OMNI returns company name, ticker, rank order, rights metadata, provenance, and any canonical entity match already available in the local graph
 - OMNI does not return weights for `NDX` because the public source page does not publish them
-- internal entity mapping now covers `NDX`, `SPX`, `DJIA`, and `RUT` through the canonical remote API even though public constituent export remains narrower
+
+## Operator-only indices
+
+The following indices are available to principals with `admin:operator` scope. They are derived from ClickHouse `market_reference_history` data and are approximate — not official committee selections.
+
+- `SPX` — S&P 500 approximation, derived from top ~500 US stocks by market cap
+- `DJIA` — Dow Jones Industrial Average, static 30-component list maintained in code
+- `RUT` — Russell 2000 approximation, derived from market cap rank 1001-3000
+- `XNAS_COMP` — Nasdaq Composite approximation, all active tickers with `primary_exchange = 'XNAS'`
+
+Operator-only indices appear in `/v1/market/indices` but return a 400 error from `/v1/market/indices/constituents` unless the caller has operator scope.
 
 ## Inventory-only indices
 
-- `SPX` is tracked, but constituent export remains blocked pending index licensing
-- `DJIA` is tracked, but constituent export remains blocked pending index licensing
-- `RUT` is tracked for internal mapping audit work, but public constituent export still requires documented shareability review
 - `UKX` and `SX5E` are tracked in the source inventory, but rights and extraction posture are still under review
 - inventory-only indices are intentionally visible in ops artifacts before they are exposed through the public API
 

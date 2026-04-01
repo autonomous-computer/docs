@@ -92,6 +92,11 @@
         "summary": "Warm operator-scoped factor returns, exposures, and correlations for covered symbols and factor categories"
       }
     },
+    "/v1/admin/maintenance/warm-factor-intraday": {
+      "post": {
+        "summary": "Warm operator-scoped intraday factor snapshots for supported categories and windows"
+      }
+    },
     "/v1/admin/maintenance/company-mapping-identifiers": {
       "post": {
         "summary": "Backfill FIGI-family and security identifier coverage into the canonical entity store from operator-supplied universe rows"
@@ -308,7 +313,29 @@
     },
     "/v1/analytics/query": {
       "post": {
-        "summary": "Run a tenant-safe analytical query over supported Datastream history datasets without exposing raw SQL"
+        "summary": "Run a tenant-safe analytical query over supported Datastream history datasets without exposing raw SQL",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsQueryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful analytics query result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsQueryResult"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/filings": {
@@ -434,6 +461,16 @@
     "/v1/market/corporate-actions": {
       "get": {
         "summary": "Return rights-reviewed corporate actions used to normalize price history and event analysis"
+      }
+    },
+    "/v1/market/universe": {
+      "get": {
+        "summary": "Browse the full ticker universe with pagination, filtering by exchange, type, sector, industry, and search"
+      }
+    },
+    "/v1/market/earnings-calendar": {
+      "get": {
+        "summary": "Return upcoming and recent earnings events with consensus estimates, actuals, and surprise data"
       }
     },
     "/v1/market/reference": {
@@ -9598,6 +9635,116 @@
         ],
         "additionalProperties": false
       },
+      "AnalyticsQueryInput": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "enum": [
+              "filings",
+              "sections_items",
+              "segmented_revenues",
+              "ownership",
+              "enforcement"
+            ]
+          },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "year",
+                "form",
+                "ticker",
+                "source_type"
+              ]
+            },
+            "minItems": 1
+          },
+          "measures": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "count",
+                "sum_value"
+              ]
+            },
+            "default": [
+              "count"
+            ]
+          },
+          "filters": {
+            "type": "object",
+            "properties": {
+              "ticker": {
+                "type": "string",
+                "minLength": 1
+              },
+              "cik": {
+                "type": "string",
+                "minLength": 1
+              },
+              "form": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "timeWindow": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "to": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "sort": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "enum": [
+                  "year",
+                  "form",
+                  "count",
+                  "ticker",
+                  "sum_value"
+                ]
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              }
+            },
+            "required": [
+              "field"
+            ],
+            "additionalProperties": false
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
+        },
+        "required": [
+          "dataset",
+          "dimensions"
+        ],
+        "additionalProperties": false
+      },
       "AnalyticsQueryResult": {
         "type": "object",
         "properties": {
@@ -9611,7 +9758,10 @@
             "type": "string",
             "enum": [
               "filings",
-              "sections_items"
+              "sections_items",
+              "segmented_revenues",
+              "ownership",
+              "enforcement"
             ]
           },
           "dimensions": {
@@ -9620,7 +9770,9 @@
               "type": "string",
               "enum": [
                 "year",
-                "form"
+                "form",
+                "ticker",
+                "source_type"
               ]
             }
           },
@@ -9629,7 +9781,8 @@
             "items": {
               "type": "string",
               "enum": [
-                "count"
+                "count",
+                "sum_value"
               ]
             }
           },
@@ -9673,7 +9826,9 @@
                 "enum": [
                   "year",
                   "form",
-                  "count"
+                  "count",
+                  "ticker",
+                  "sum_value"
                 ]
               },
               "direction": {

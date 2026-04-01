@@ -159,6 +159,52 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
 
 ---
 
+## GET /v1/market/universe
+
+Browse the full ticker universe with pagination, filtering, and search. Returns identifiers (CIK, FIGI), sector/industry classification, market cap, and listing status for every tracked ticker.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `exchange` | string | no | Filter by primary exchange (e.g. `XNYS`, `XNAS`). |
+| `type` | string | no | Filter by security type (e.g. `CS`, `ETF`). |
+| `sector` | string | no | Filter by GICS-style sector (e.g. `Technology`). |
+| `industry` | string | no | Filter by industry classification. |
+| `active` | boolean | no | Filter by active listing status. |
+| `has_figi` | boolean | no | Only tickers with a composite FIGI. |
+| `has_cik` | boolean | no | Only tickers with a SEC CIK. |
+| `search` | string | no | Case-insensitive search across symbol and company name. |
+| `limit` | integer | no | Page size. Defaults to `100`, max `1000`. |
+| `cursor` | integer | no | Pagination offset. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/universe?exchange=XNYS&sector=Technology&limit=25"
+```
+
+---
+
+## GET /v1/market/earnings-calendar
+
+Earnings events within a date range. Returns consensus estimates, actuals, surprise percentages, and analyst counts for EPS and revenue metrics.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `date_from` | string | yes | Start date in `YYYY-MM-DD` format. |
+| `date_to` | string | yes | End date in `YYYY-MM-DD` format. |
+| `symbol` | string | no | Filter to a single ticker symbol. |
+| `limit` | integer | no | Maximum results. Defaults to `100`, max `1000`. |
+
+### Example
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/market/earnings-calendar?date_from=2026-03-24&date_to=2026-03-31"
+```
+
+---
+
 ## GET /v1/market/financials
 
 <Warning>

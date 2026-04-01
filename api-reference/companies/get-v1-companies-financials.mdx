@@ -1,15 +1,25 @@
 # GET /v1/companies/financials
 
-Return combined SEC XBRL-derived income, balance-sheet, and cash-flow statements for a ticker
+Return unified financial statements (income statement, balance sheet, cash flow statement) for a company in a single call
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ticker` | string | Stock ticker symbol (e.g., AAPL) |
+| `cik` | string | SEC CIK number |
+| `period` | string | `annual` or `quarterly` (default: `annual`) |
+| `limit` | integer | Number of periods to return (default: 4, max: 50) |
+
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
+- `lineage` — source attribution (`sec_xbrl`)
 
 ## Example request
 
@@ -18,7 +28,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/companies/financials"
+  "https://api.secapi.ai/v1/companies/financials?ticker=AAPL&period=annual&limit=4"
 ```
 </RequestExample>
 
@@ -27,6 +37,12 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "company_financials",
+  "lineage": {
+    "sources": ["sec_xbrl"],
+    "canonical": true,
+    "surface": "companies"
+  },
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
@@ -36,7 +52,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/companies/financials to return combined sec xbrl-derived income, balance-sheet, and cash-flow statements for a ticker. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream GET /v1/companies/financials to return unified financial statements for a company. Pass `ticker` or `cik`, `period` (annual/quarterly), and `limit`. Preserve `requestId`, `traceparent`, and `lineage` in the output. Return a concise summary plus the structured payload.
 </Prompt>
 
 ## Failure posture

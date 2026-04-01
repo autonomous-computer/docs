@@ -1,0 +1,88 @@
+# GET /v1/market/universe
+
+Browse the full ticker universe with pagination, filtering by exchange, type, sector, industry, and search
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `exchange` | string | Filter by primary exchange (e.g. `XNYS`, `XNAS`) |
+| `type` | string | Filter by security type (e.g. `CS`, `ETF`, `ADRC`) |
+| `sector` | string | Filter by GICS-style sector (e.g. `Technology`, `Healthcare`) |
+| `industry` | string | Filter by industry classification |
+| `active` | boolean | Filter by active listing status |
+| `has_figi` | boolean | Only tickers with a composite FIGI |
+| `has_cik` | boolean | Only tickers with a SEC CIK |
+| `search` | string | Case-insensitive search across symbol and company name |
+| `limit` | integer | Page size (default 100, max 1000) |
+| `cursor` | integer | Pagination offset |
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/market/universe?exchange=XNYS&sector=Technology&limit=5"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "universe_ticker",
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "displayName": "Apple",
+      "primaryExchange": "XNAS",
+      "securityType": "CS",
+      "active": true,
+      "currency": "USD",
+      "cik": "0000320193",
+      "compositeFigi": "BBG000B9XRY4",
+      "shareClassFigi": "BBG001S5N8V8",
+      "marketCap": 3400000000000,
+      "listDate": "1980-12-12",
+      "sicCode": "3571",
+      "sicDescription": "Electronic Computers",
+      "sector": "Technology",
+      "industry": "Computer Hardware",
+      "asOf": "2026-03-30T00:00:00.000Z"
+    }
+  ],
+  "totalCount": 2845,
+  "hasMore": true,
+  "nextCursor": "5",
+  "configured": true,
+  "requestId": "req_example_123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use Omni Datastream GET /v1/market/universe to browse the full ticker universe. Filter by exchange, security type, sector, industry, or search term. Paginate with cursor. Each result includes identifiers (CIK, FIGI), sector/industry classification, market cap, and listing status. Preserve `requestId` and `traceparent` in the output.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+
