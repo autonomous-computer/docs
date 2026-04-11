@@ -1,0 +1,77 @@
+# Institutional Ownership & Insider Trading API
+
+Track institutional holders, insider transactions, and beneficial ownership across the full SEC disclosure surface. 13F holdings, Forms 3/4/5 insider trades, executive compensation, and board composition in one API family.
+
+## Why use this
+
+Ownership data is scattered across multiple SEC form types and filing families. The OMNI Ownership surface normalizes 13F institutional holdings, insider trades, beneficial ownership filings, and compensation disclosures into a single query interface with cross-quarter comparison built in.
+
+- **13F institutional holdings** -- query by investor or ticker, with historical quarterly extracts
+- **Insider transactions** -- Forms 3, 4, and 5 with transaction type, shares, price, and relationship
+- **Cross-quarter comparison** -- diff holdings between any two reporting periods in one call
+- **Compensation and board** -- executive compensation and board member data linked to the same entity graph
+- **Beneficial ownership** -- 13D/13G filings with ownership percentage and intent classification
+
+## Quick start
+
+```bash
+# Institutional holders for a ticker
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/owners/institutional/ticker?ticker=AAPL&limit=10"
+
+# Insider transactions
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&limit=10"
+```
+
+## Example: compare 13F holdings across quarters
+
+```bash
+curl -X POST -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"investorCik":"0001067983","periodA":"2023-09-30","periodB":"2023-06-30"}' \
+  "https://api.secapi.ai/v1/owners/13f/compare"
+```
+
+## Response shape (institutional holders)
+
+```json
+{
+  "holders": [
+    {
+      "investorName": "BERKSHIRE HATHAWAY INC",
+      "investorCik": "0001067983",
+      "sharesHeld": 905560000,
+      "value": 157400000000,
+      "reportDate": "2023-09-30",
+      "changeFromPrior": -10000000
+    }
+  ],
+  "pagination": {
+    "total": 4200,
+    "page": 1,
+    "limit": 10
+  }
+}
+```
+
+## Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/owners/institutional/ticker` | Institutional holders by ticker |
+| `GET /v1/owners/institutional/investor` | Holdings by investor CIK |
+| `GET /v1/owners/institutional/extract` | Historical quarterly extract |
+| `GET /v1/owners/13f` | 13F filing detail |
+| `GET /v1/owners/13f/filings` | 13F filing index |
+| `POST /v1/owners/13f/compare` | Cross-quarter diff |
+| `GET /v1/owners/13d-13g` | Beneficial ownership filings |
+| `GET /v1/insiders` | Insider transactions (Forms 3/4/5) |
+| `GET /v1/compensation` | Executive compensation |
+| `GET /v1/board` | Board composition |
+
+## Related
+
+- [API Reference: Ownership](/api-reference/owners)
+- [API Reference: Insiders](/api-reference/insiders)
+- [Ownership Workflows](/ownership-workflows)

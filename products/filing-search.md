@@ -1,0 +1,79 @@
+# EDGAR Filing Search API
+
+Search 14M+ SEC filings by 20+ parameters. Powered by Typesense with Lucene query syntax support, full pagination, and sub-200ms p95 latency.
+
+## Why use this
+
+Most EDGAR search tools offer keyword-only queries against a limited window. The OMNI Filing Search surface indexes the full EDGAR corpus and exposes structured filters that agents and applications can compose without screen-scraping.
+
+- **20+ filter parameters** -- ticker, CIK, form type, date range, SIC code, exchange, filing category, and more
+- **Lucene syntax support** -- boolean operators, phrase matching, wildcards, and field-scoped queries
+- **Typesense-backed** -- consistent sub-200ms response times with relevance scoring
+- **Agent-friendly pagination** -- cursor-based traversal with predictable page sizes
+
+## Quick start
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=5"
+```
+
+## Example: search by date range and form type
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=MSFT&form=10-Q&dateFrom=2023-01-01&dateTo=2024-01-01&sort=filedAt:desc"
+```
+
+## Response shape
+
+```json
+{
+  "filings": [
+    {
+      "accessionNumber": "0000320193-23-000077",
+      "form": "10-K",
+      "filedAt": "2023-11-03T00:00:00Z",
+      "ticker": "AAPL",
+      "companyName": "Apple Inc.",
+      "cik": "0000320193",
+      "periodOfReport": "2023-09-30",
+      "documentUrl": "https://www.sec.gov/Archives/edgar/data/..."
+    }
+  ],
+  "pagination": {
+    "total": 42,
+    "page": 1,
+    "limit": 5,
+    "cursor": "eyJ..."
+  }
+}
+```
+
+## Key parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ticker` | string | Company ticker symbol |
+| `cik` | string | SEC Central Index Key |
+| `form` | string | Filing form type (10-K, 10-Q, 8-K, etc.) |
+| `dateFrom` | string | Start date (ISO 8601) |
+| `dateTo` | string | End date (ISO 8601) |
+| `query` | string | Full-text Lucene query |
+| `sort` | string | Sort field and direction |
+| `limit` | number | Results per page (max 50) |
+| `cursor` | string | Pagination cursor |
+
+## Rate limits
+
+- **Standard plan**: 100 requests/minute
+- **Pro plan**: 500 requests/minute
+- **Enterprise**: Custom limits
+
+Rate limit headers are returned on every response: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+
+## Related
+
+- [API Reference: Filing Search](/api-reference/filings)
+- [Filing Types and Exhibits](/filing-types-and-exhibits)
+- [Getting Started](/getting-started)

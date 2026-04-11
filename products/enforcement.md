@@ -1,0 +1,80 @@
+# SEC Enforcement Actions API
+
+Query 5,993+ SEC enforcement records spanning litigation releases, administrative proceedings, and Accounting and Auditing Enforcement Releases (AAERs). Filter by violation type, respondent, date range, and penalty amount.
+
+## Why use this
+
+SEC enforcement data is published across multiple release types with no unified query surface. The OMNI Enforcement API normalizes litigation releases, administrative proceedings, and AAERs into a single searchable index with structured violation, respondent, and penalty fields.
+
+- **5,993+ enforcement records** -- continuously updated from SEC releases
+- **Three release types** -- litigation releases, administrative proceedings, AAERs
+- **Structured filters** -- violation type, respondent name, date range, penalty range
+- **Respondent detail** -- entity names, roles, and associated companies
+- **Penalty data** -- civil penalties, disgorgement, and settlement amounts where available
+
+## Quick start
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?limit=5"
+```
+
+## Example: filter by violation type
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?violationType=fraud&dateFrom=2023-01-01&limit=10"
+```
+
+## Response shape
+
+```json
+{
+  "enforcements": [
+    {
+      "id": "LR-25832",
+      "releaseType": "litigation",
+      "title": "SEC Charges Company with Securities Fraud",
+      "date": "2024-03-15",
+      "respondents": [
+        {
+          "name": "Example Corp",
+          "type": "company"
+        }
+      ],
+      "violationTypes": ["fraud", "disclosure"],
+      "civilPenalty": 2500000,
+      "disgorgement": 1200000,
+      "sourceUrl": "https://www.sec.gov/litigation/litreleases/..."
+    }
+  ],
+  "pagination": {
+    "total": 5993,
+    "page": 1,
+    "limit": 5
+  }
+}
+```
+
+## Key parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `violationType` | string | Filter by violation category (fraud, disclosure, insider-trading, etc.) |
+| `respondent` | string | Search by respondent name |
+| `releaseType` | string | litigation, administrative, or aaer |
+| `dateFrom` | string | Start date (ISO 8601) |
+| `dateTo` | string | End date (ISO 8601) |
+| `limit` | number | Results per page (max 50) |
+| `cursor` | string | Pagination cursor |
+
+## Rate limits
+
+- **Standard plan**: 100 requests/minute
+- **Pro plan**: 500 requests/minute
+- **Enterprise**: Custom limits
+
+## Related
+
+- [API Reference: Enforcement](/api-reference/platform)
+- [Getting Started](/getting-started)

@@ -1,0 +1,111 @@
+---
+title: "XBRL API — Parse XBRL Financial Data Without the Pain"
+description: "Access structured XBRL financial data from SEC filings via API. No XML parsing, no taxonomy mapping, no SGML headaches. Get normalized facts and statements instantly. Start free."
+---
+
+# XBRL API / XBRL Parser
+
+XBRL (eXtensible Business Reporting Language) is the structured data format behind SEC financial filings. It is powerful but painful to work with directly — taxonomy versions change, extension elements vary by company, and the XML structure requires specialized parsers.
+
+Datastream does the parsing for you. Get normalized, JSON-formatted financial data from any XBRL-tagged SEC filing through a simple REST API.
+
+## The XBRL problem
+
+Working with raw XBRL means dealing with:
+
+- **Multiple taxonomy versions** (US-GAAP 2014 through 2024, IFRS, SEC-specific extensions)
+- **Company-specific extensions** that need manual mapping
+- **Instance documents, schemas, calculation linkbases, and presentation linkbases** — all separate files
+- **Inline XBRL (iXBRL)** embedded in HTML that requires a different parser
+- **Inconsistent tagging** where the same concept uses different elements across companies
+
+Datastream normalizes all of this into a consistent JSON schema.
+
+## Quick start
+
+Pull normalized financial statements (parsed from XBRL):
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/statements/all?ticker=MSFT&period=annual&limit=1"
+```
+
+Pull individual XBRL facts:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/facts?ticker=MSFT&concept=Revenues&period=annual&limit=4"
+```
+
+```json
+{
+  "data": [
+    {
+      "concept": "Revenues",
+      "value": 245122000000,
+      "unit": "USD",
+      "period_end": "2024-06-30",
+      "fiscal_year": 2024,
+      "form": "10-K",
+      "taxonomy": "us-gaap/2024",
+      "accession_number": "0000789019-24-000076"
+    }
+  ]
+}
+```
+
+## What you get
+
+### Normalized financial statements
+
+The `/v1/statements` endpoint maps XBRL facts to a consistent schema across all companies:
+
+- **Income statement**: Revenue, COGS, gross profit, operating income, net income, EPS
+- **Balance sheet**: Total assets, total liabilities, equity, cash, debt
+- **Cash flow statement**: Operating, investing, and financing cash flows
+
+### Raw XBRL facts
+
+The `/v1/facts` endpoint gives you access to any XBRL concept, including company-specific extensions:
+
+- Query by concept name (e.g., `Revenues`, `Assets`, `NetIncomeLoss`)
+- Filter by period (annual/quarterly), date range, and company
+- Get the full provenance trail: taxonomy version, filing reference, and unit
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/statements/all` | Normalized income, balance sheet, and cash flow |
+| `GET /v1/facts` | Individual XBRL facts by concept |
+| `GET /v1/filings` | Find filings that contain XBRL data |
+
+## Use cases
+
+- **Financial modeling**: Pull structured income statements and balance sheets directly into models
+- **Multi-company comparison**: Compare financials across companies using a normalized schema
+- **Time series analysis**: Track any XBRL concept across quarters and years
+- **Data validation**: Cross-reference normalized statements against raw facts for audit trails
+- **AI/LLM pipelines**: Feed structured financials to AI agents without manual extraction
+
+## Why Datastream over raw XBRL
+
+| Feature | Datastream | Raw XBRL | Calcbench | XBRL US API |
+|---------|-----------|----------|-----------|-------------|
+| Normalized statements | Yes | No | Yes | No |
+| Raw fact access | Yes | Yes (with parsing) | Partial | Yes |
+| JSON output | Yes | XML | CSV/JSON | JSON |
+| Multi-year time series | One call | Multiple downloads | Yes | Yes |
+| Company extensions mapped | Yes | Manual | Partial | No |
+| Real-time availability | Minutes after filing | Hours | Hours | Hours |
+| SDK support | Python + JS | No | No | No |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start pulling structured financial data in under 60 seconds.
+</Card>
+
+- [Extract Revenue from 10-K Tutorial](/tutorials/extract-revenue-from-10k)
+- [API Reference — Statements](/api-reference/statements)
+- [API Reference — Facts](/api-reference/facts)

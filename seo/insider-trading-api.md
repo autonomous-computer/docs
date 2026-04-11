@@ -1,0 +1,103 @@
+---
+title: "Insider Trading Data API — SEC Form 4 Transactions"
+description: "Access structured insider trading data from SEC Forms 3, 4, and 5 via API. Track executive buys and sells, filter by transaction type, and detect patterns. Start free."
+---
+
+# Insider Trading Data API
+
+Corporate insiders — officers, directors, and beneficial owners of more than 10% of a company's stock — must report their transactions to the SEC within two business days. Datastream parses Forms 3, 4, and 5 and exposes structured transaction data through a REST API.
+
+## What you get
+
+- **Transaction details**: Insider name, title, transaction type, shares, price, and value
+- **Filtering**: By ticker, insider name, transaction type (purchase/sale), and date range
+- **Historical data**: Form 4 transactions going back to 2004
+- **Real-time updates**: New filings indexed within minutes
+
+## Quick start
+
+Get recent insider transactions for a company:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&limit=5"
+```
+
+```json
+{
+  "data": [
+    {
+      "transaction_date": "2024-12-10",
+      "insider_name": "Tim Cook",
+      "insider_title": "Chief Executive Officer",
+      "transaction_type": "sale",
+      "shares": 200000,
+      "price": 248.50,
+      "value": 49700000,
+      "shares_held_after": 3278651
+    }
+  ]
+}
+```
+
+Filter for insider purchases only:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=JPM&transaction_type=purchase&limit=10"
+```
+
+## Use cases
+
+### Insider buying signals
+
+Insider purchases are widely studied as a bullish signal. Insiders sell for many reasons (diversification, taxes, liquidity), but they typically buy for only one: they think the stock is undervalued.
+
+### Cluster buying detection
+
+When multiple insiders at the same company or across a sector start buying simultaneously, it can indicate strong conviction. Scan groups of tickers for coordinated activity.
+
+### Compliance monitoring
+
+Track insider activity across your portfolio for regulatory compliance and conflict-of-interest checks.
+
+### Executive compensation analysis
+
+Combine insider transaction data with [compensation data](/seo/executive-compensation-api) to understand total executive ownership and trading behavior.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/insiders` | List insider transactions with filtering |
+
+### Filter parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `ticker` | Company ticker | `AAPL` |
+| `transaction_type` | `purchase` or `sale` | `purchase` |
+| `insider_name` | Filter by insider name | `Jamie Dimon` |
+| `date_from` / `date_to` | Date range | `2024-01-01` |
+| `limit` | Results per page | `20` |
+
+## Why Datastream for insider trading data
+
+| Feature | Datastream | Raw EDGAR | OpenInsider | SECForm4 |
+|---------|-----------|-----------|-------------|----------|
+| Structured JSON API | Yes | No (XML) | No (HTML scrape) | Partial |
+| Real-time indexing | Minutes | Real-time | Hours | Hours |
+| Historical depth | 2004+ | 2004+ | 2004+ | 2013+ |
+| SDK support | Python + JS | No | No | No |
+| Webhook alerts | Yes | No | No | No |
+| Filtering by transaction type | Yes | Manual | Limited | Limited |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start tracking insider transactions in under 60 seconds.
+</Card>
+
+- [Analyze Insider Trading Tutorial](/tutorials/analyze-insider-trading)
+- [API Reference](/api-reference/insiders)
+- [Full documentation](/api-overview)

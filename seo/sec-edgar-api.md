@@ -1,0 +1,109 @@
+---
+title: "SEC EDGAR API — Structured SEC Data for Developers"
+description: "Access SEC EDGAR filings, financial statements, ownership data, and more through a modern REST API. No SGML parsing. No rate-limit headaches. Start free."
+---
+
+# SEC EDGAR API
+
+The fastest way to get structured data from SEC EDGAR into your application. Omni Datastream indexes every filing on EDGAR and exposes it through a clean REST API with normalized schemas, cursor pagination, and sub-second latency.
+
+## Why developers choose Datastream over raw EDGAR
+
+<CardGroup cols={2}>
+  <Card title="No SGML/HTML parsing" icon="code">
+    EDGAR serves filings as raw SGML, HTML, and XML. Datastream parses, normalizes, and structures everything before it reaches your code.
+  </Card>
+  <Card title="No rate limiting headaches" icon="gauge-high">
+    EDGAR enforces 10 requests per second with aggressive throttling. Datastream handles ingestion and serves data at API speed.
+  </Card>
+  <Card title="Normalized financial data" icon="table">
+    XBRL facts are mapped to a consistent schema across companies and time periods so you can compare without custom mapping tables.
+  </Card>
+  <Card title="Real-time updates" icon="bolt">
+    New filings are indexed within minutes of appearing on EDGAR. Set up webhooks to get notified the moment a filing lands.
+  </Card>
+</CardGroup>
+
+## What you can build
+
+- **Financial research platforms** — Pull income statements, balance sheets, and cash flows for any public company
+- **Compliance monitoring** — Watch for new filings, enforcement actions, and insider transactions in real time
+- **Investment analytics** — Track institutional holdings, executive compensation, and ownership changes
+- **AI agents** — Feed structured SEC data to LLMs via REST or hosted MCP
+
+## Quick start
+
+Get Apple's latest 10-K filing in one request:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
+```
+
+```json
+{
+  "accession_number": "0000320193-24-000081",
+  "form": "10-K",
+  "filed_at": "2024-11-01",
+  "company_name": "Apple Inc",
+  "cik": "0000320193"
+}
+```
+
+Pull structured financial statements:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
+```
+
+## Coverage
+
+| Data type | Endpoint | Coverage |
+|-----------|----------|----------|
+| Filings | `/v1/filings` | All SEC form types since 1993 |
+| Financial statements | `/v1/statements` | Income, balance sheet, cash flow |
+| XBRL facts | `/v1/facts` | All XBRL-tagged concepts |
+| Ownership (13F) | `/v1/owners/13f` | Institutional holdings quarterly |
+| Insider transactions | `/v1/insiders` | Form 3, 4, 5 transactions |
+| Enforcement actions | `/v1/events/enforcement` | SEC administrative proceedings |
+| Executive compensation | `/v1/compensation` | Proxy statement (DEF 14A) data |
+| Full-text search | `/v1/search` | Keyword and semantic search |
+| Subsidiaries | `/v1/companies/subsidiaries` | Exhibit 21 data |
+| Entity resolution | `/v1/entities/resolve` | Ticker, CIK, CUSIP, FIGI, ISIN |
+
+## How Datastream compares
+
+| Feature | Datastream | Raw EDGAR | SEC-API.io | Financial Datasets |
+|---------|-----------|-----------|------------|-------------------|
+| Structured financial statements | Yes | No (raw XBRL) | Partial | Yes |
+| Real-time webhook alerts | Yes | No | Yes | No |
+| Semantic search | Yes | No | No | No |
+| 13F holdings comparison | Yes | No | Partial | No |
+| Entity resolution (multi-ID) | Yes | CIK only | CIK + ticker | Ticker only |
+| Hosted MCP for AI agents | Yes | No | No | No |
+| Rate limits | Generous | 10 req/s | Varies | Varies |
+
+## SDKs and integrations
+
+- **Python**: `pip install omni-datastream-py`
+- **JavaScript/TypeScript**: `npm install @omni-datastream/sdk-js`
+- **Rust**: `cargo add omni-datastream`
+- **Go**: `go get github.com/omni-datastream/sdk-go`
+- **MCP**: Hosted MCP server for Claude, ChatGPT, and other AI agents
+
+## Pricing
+
+Start with 1,000 free API calls. Pay-as-you-go pricing scales with your usage. No upfront commitments.
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Create a free account and start making requests in under 60 seconds.
+</Card>
+
+## Resources
+
+- [Getting Started Guide](/getting-started)
+- [API Reference](/api-reference)
+- [Python SDK](/python-sdk)
+- [JavaScript SDK](/javascript-sdk)
+- [Tutorials](/tutorials/extract-revenue-from-10k)

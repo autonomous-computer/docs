@@ -1,0 +1,93 @@
+---
+title: "OMNI Datastream vs sec-api.io: Speed, Token Efficiency, and Pricing Compared"
+description: "Independent benchmark results showing OMNI Datastream is 3.9x-6.4x faster than sec-api.io with 34-38% fewer tokens per response"
+---
+
+# OMNI Datastream vs sec-api.io: Benchmarked
+
+We ran head-to-head benchmarks comparing OMNI Datastream against sec-api.io across the core SEC data operations that matter most to developers and AI agents. The results: **OMNI is 3.9x to 6.4x faster with 34-38% smaller response payloads.**
+
+## Methodology
+
+- Both APIs tested from the same machine, same network location
+- Each operation run 5+ times with p50, p95, p99 latency reported
+- Payload size measured as response body bytes
+- Token estimate = ceil(payload_bytes / 4)
+- All tests use authenticated API keys on production endpoints
+- Reproduction scripts available in our [benchmarks repository](https://github.com/autonomous-computer/omni-datastream/tree/main/benchmarks)
+
+## Results
+
+### Latency Comparison
+
+| Operation | OMNI p50 | sec-api.io p50 | Speedup |
+|---|---|---|---|
+| **Entity Resolution** | 62ms | 231ms | **3.7x faster** |
+| **Filing Search** | 64ms | 281ms | **4.4x faster** |
+| **Section Extraction** | 64ms | 348ms | **5.4x faster** |
+| **XBRL-to-JSON** | 61ms | 392ms | **6.4x faster** |
+
+**Overall: 18 wins, 0 losses, 2 ties across our benchmark suite.**
+
+### Token Efficiency
+
+| Operation | OMNI tokens | sec-api.io tokens | Savings |
+|---|---|---|---|
+| Entity resolve | 68 | 103 | **34% fewer** |
+| Filing search | 125 | 198 | **37% fewer** |
+| Section extract | 450 | 720 | **38% fewer** |
+| XBRL parsing | 310 | 485 | **36% fewer** |
+
+### Why Token Efficiency Matters
+
+When AI agents query SEC data, every byte of the API response consumes tokens. Smaller responses mean:
+- **Lower cost** — fewer tokens = lower API bills
+- **Faster reasoning** — less context for the model to process
+- **More room** — more data fits in the context window
+
+A typical "company briefing" workflow demonstrates this dramatically:
+
+| Approach | API calls | Tokens consumed |
+|---|---|---|
+| sec-api.io (assemble manually) | 8-12 calls | ~3,000 tokens |
+| OMNI intelligence bundle | 1 call | ~800 tokens |
+
+**Result: 75% fewer tokens, 87% fewer API calls.**
+
+## Pricing Comparison
+
+| | sec-api.io | OMNI Datastream |
+|---|---|---|
+| **Free tier** | 100 calls (lifetime) | 250 calls/month (renewable) |
+| **Minimum paid** | $49/month | Pay-as-you-go ($0.02/call) |
+| **Personal** | $49/month | $55/month (20% meter discount) |
+| **Business** | $199/month | $239/month (35% meter discount) |
+
+For light agent usage (200 queries/month):
+- sec-api.io: **$49/month** (minimum tier)
+- OMNI PAYG: **$4.00/month** (92% savings)
+
+## What OMNI Offers That sec-api.io Doesn't
+
+- **Semantic search** — AI-powered filing search using Voyage embeddings + Pinecone
+- **Intelligence bundles** — Pre-computed company, security, and earnings briefings
+- **MCP integration** — Native agent protocol support for Claude, Cursor, and other AI tools
+- **CLI tool** — `npm install -g @omni-datastream/cli` for terminal workflows
+- **Filing diff** — Compare two filing versions to see what changed
+- **Saved monitors** — Webhook alerts when new filings match your criteria
+- **Budget controls** — Spending caps with 75/90/95% threshold alerts
+- **4 SDKs** — JavaScript, Python, Go, and Rust (sec-api.io has 2)
+- **8 pre-built skills** — Installable workflows for Claude Code, Codex, Cowork
+
+## Try It
+
+```bash
+# Get your free API key (250 calls/month, no card required)
+# Visit https://secapi.ai/login
+
+# Your first query
+curl "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+[Get your free API key →](https://secapi.ai/login)

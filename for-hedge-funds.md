@@ -1,0 +1,120 @@
+# SEC Data for Investment Managers
+
+<Info>
+Omni Datastream delivers structured SEC data, factor analytics, ownership tracking, and intelligence bundles through a single API built for agent-driven investment research. Every response carries provenance, freshness metadata, and request traceability.
+</Info>
+
+## Why investment managers use Datastream
+
+<CardGroup cols={2}>
+  <Card title="Factor decomposition" icon="chart-line" href="/factor-intelligence">
+    84-factor model spanning market, style, macro, sector, and industry categories. Decompose portfolios, run correlation analysis, and monitor regime shifts.
+  </Card>
+  <Card title="13F ownership tracking" icon="building-2" href="/ownership-workflows">
+    Retrieve and compare institutional 13F holdings by quarter. Track position changes across your coverage universe.
+  </Card>
+  <Card title="Intelligence bundles" icon="brain" href="/investment-intelligence">
+    Single-call endpoints that join filings, financials, ownership, signals, and macro context into analyst-ready outputs.
+  </Card>
+  <Card title="Insider trade monitoring" icon="user-check" href="/api-reference/insiders">
+    Track Form 4 insider transactions by company or executive. Filter by transaction type, date range, and dollar value.
+  </Card>
+</CardGroup>
+
+---
+
+## Key endpoints for investment workflows
+
+| Endpoint | Method | Use case |
+|----------|--------|----------|
+| `/v1/factors/exposures` | `GET` | Per-stock factor exposure loadings |
+| `/v1/factors/returns` | `GET` | Historical factor return series with z-scores |
+| `/v1/intelligence/security` | `GET` | Comprehensive single-security analysis bundle |
+| `/v1/intelligence/earnings-preview` | `GET` | Pre-earnings analysis with guidance history |
+| `/v1/intelligence/portfolio` | `POST` | Portfolio-level macro and factor analysis |
+| `/v1/owners/13f` | `GET` | Latest 13F ownership report for an institution |
+| `/v1/owners/13f/compare` | `POST` | Quarter-over-quarter 13F position changes |
+| `/v1/insiders` | `GET` | Insider transactions by company or executive |
+
+---
+
+## Example: track institutional ownership changes across your portfolio
+
+Compare the latest two 13F filings for a major institution:
+
+```bash
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -d '{"cik":"0001067983","limit":20}' \
+  "https://api.secapi.ai/v1/owners/13f/compare"
+```
+
+Pull current factor exposures for a ticker in your portfolio:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/exposures?ticker=NVDA"
+```
+
+Run a pre-earnings intelligence bundle before a reporting date:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=TSLA&includeGuidance=true"
+```
+
+---
+
+## Example: portfolio-level factor decomposition
+
+Decompose a portfolio across all 84 factors in a single call:
+
+```bash
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  -d '{"positions":[{"ticker":"AAPL","weight":0.25},{"ticker":"MSFT","weight":0.25},{"ticker":"NVDA","weight":0.25},{"ticker":"GOOGL","weight":0.25}]}' \
+  "https://api.secapi.ai/v1/intelligence/portfolio"
+```
+
+Returns factor attribution, concentration metrics, and macro sensitivity analysis.
+
+---
+
+## Recommended skills
+
+These Claude Code skills accelerate investment research workflows:
+
+| Skill | What it does |
+|-------|-------------|
+| `intelligence.security` | Pull a full security intelligence bundle via natural language |
+| `intelligence.earnings` | Pre-earnings analysis with filing context and guidance |
+| `owners.13f` | Retrieve and compare institutional ownership positions |
+| `factors.exposures` | Factor exposure analysis for individual securities |
+| `insiders.list` | Scan insider transactions with flexible filters |
+
+Install via MCP for agent-driven portfolio research:
+
+```bash
+omni-sec mcp install
+```
+
+---
+
+## Pricing for investment managers
+
+<CardGroup cols={2}>
+  <Card title="Pay-as-you-go" icon="credit-card" href="/pay-as-you-go">
+    No commitment. Metered billing scales with your research volume. Intelligence bundles, factor queries, and ownership lookups are billed per request.
+  </Card>
+  <Card title="Team plan" icon="users" href="/plans-and-pricing">
+    Shared access for multi-analyst teams with higher throughput limits and consolidated billing.
+  </Card>
+</CardGroup>
+
+<Prompt>
+You are an investment research agent with access to Omni Datastream. For any portfolio or watchlist, pull security intelligence bundles, compare quarter-over-quarter 13F ownership changes for key institutional holders, run factor exposure analysis, and flag material insider transactions from the past 90 days. Always cite provenance and requestId in your outputs.
+</Prompt>

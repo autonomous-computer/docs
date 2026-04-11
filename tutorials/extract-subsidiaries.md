@@ -1,0 +1,199 @@
+---
+title: "Extract Subsidiaries from 10-K Exhibit 21"
+description: "Retrieve structured subsidiary data from SEC 10-K Exhibit 21 filings using the Datastream API. Includes curl, Python, and JavaScript examples."
+---
+
+# Extract Subsidiaries from 10-K Exhibit 21
+
+Public companies list their significant subsidiaries in Exhibit 21 of their 10-K annual filings. This data is useful for understanding corporate structure, mapping jurisdictional risk, and identifying undisclosed relationships. The API extracts and structures this data so you do not need to parse the raw exhibit.
+
+## Prerequisites
+
+- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- Basic familiarity with REST APIs
+- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
+
+## Step 1 — Retrieve subsidiaries for a company
+
+Use `/v1/companies/subsidiaries` to get the structured subsidiary list from the most recent 10-K Exhibit 21.
+
+### curl
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/companies/subsidiaries?ticker=AAPL"
+```
+
+### Python
+
+```python
+from omni_datastream_py import OmniDatastreamClient
+
+client = OmniDatastreamClient(api_key="your-api-key")
+
+subs = client.companies.subsidiaries(ticker="AAPL")
+
+print(f"Apple Inc — {len(subs.data)} subsidiaries")
+print(f"Source: {subs.accession_number} (filed {subs.filed_at})")
+print()
+
+for sub in subs.data[:10]:
+    print(f"  {sub.name} — {sub.jurisdiction}")
+```
+
+### JavaScript
+
+```ts
+import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+
+const client = new OmniDatastreamClient({
+  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+});
+
+const subs = await client.companies.subsidiaries({ ticker: "AAPL" });
+
+console.log(`Apple Inc — ${subs.data.length} subsidiaries`);
+console.log(`Source: ${subs.accessionNumber} (filed ${subs.filedAt})`);
+console.log();
+
+for (const sub of subs.data.slice(0, 10)) {
+  console.log(`  ${sub.name} — ${sub.jurisdiction}`);
+}
+```
+
+### Expected output
+
+```
+Apple Inc — 87 subsidiaries
+Source: 0000320193-24-000081 (filed 2024-11-01)
+
+  Apple Asia LLC — Delaware
+  Apple Asia Limited — Hong Kong
+  Apple Canada Inc. — Canada
+  Apple Distribution International Ltd. — Ireland
+  Apple Insurance Company, Inc. — Arizona
+  Apple Japan, Inc. — Japan
+  Apple Korea Ltd. — Republic of Korea
+  Apple Operations International Limited — Ireland
+  Apple Pty Limited — Australia
+  Apple Sales International Limited — Ireland
+```
+
+## Step 2 — Analyze jurisdictional distribution
+
+Map subsidiary counts by jurisdiction to understand geographic exposure and tax structure.
+
+### Python
+
+```python
+from collections import Counter
+
+subs = client.companies.subsidiaries(ticker="AAPL")
+
+jurisdictions = Counter(sub.jurisdiction for sub in subs.data)
+
+print("Subsidiary Jurisdiction Breakdown:")
+print("-" * 40)
+for jurisdiction, count in jurisdictions.most_common(10):
+    bar = "#" * count
+    print(f"  {jurisdiction:<25} {count:>3}  {bar}")
+```
+
+### JavaScript
+
+```ts
+const subs = await client.companies.subsidiaries({ ticker: "AAPL" });
+
+const jurisdictions: Record<string, number> = {};
+for (const sub of subs.data) {
+  jurisdictions[sub.jurisdiction] = (jurisdictions[sub.jurisdiction] || 0) + 1;
+}
+
+const sorted = Object.entries(jurisdictions).sort((a, b) => b[1] - a[1]);
+
+console.log("Subsidiary Jurisdiction Breakdown:");
+console.log("-".repeat(40));
+for (const [jurisdiction, count] of sorted.slice(0, 10)) {
+  const bar = "#".repeat(count);
+  console.log(`  ${jurisdiction.padEnd(25)} ${String(count).padStart(3)}  ${bar}`);
+}
+```
+
+### Expected output
+
+```
+Subsidiary Jurisdiction Breakdown:
+----------------------------------------
+  Ireland                    12  ############
+  Delaware                    9  #########
+  California                  7  #######
+  United Kingdom              6  ######
+  Japan                       5  #####
+  China                       5  #####
+  Germany                     4  ####
+  Singapore                   3  ###
+  Australia                   3  ###
+  Hong Kong                   3  ###
+```
+
+## Step 3 — Compare subsidiary structures across peers
+
+Pull subsidiary data for multiple companies to compare corporate complexity.
+
+### Python
+
+```python
+TICKERS = ["AAPL", "MSFT", "GOOG", "AMZN", "META"]
+
+print(f"{'Company':<10} {'Subsidiaries':>14} {'Jurisdictions':>15}")
+print("-" * 42)
+
+for ticker in TICKERS:
+    subs = client.companies.subsidiaries(ticker=ticker)
+    jurisdictions = set(sub.jurisdiction for sub in subs.data)
+    print(f"{ticker:<10} {len(subs.data):>14} {len(jurisdictions):>15}")
+```
+
+### Expected output
+
+```
+Company    Subsidiaries  Jurisdictions
+------------------------------------------
+AAPL               87              32
+MSFT              214              48
+GOOG              156              41
+AMZN              312              55
+META               78              29
+```
+
+## Step 4 — Search subsidiaries by jurisdiction
+
+Filter subsidiary data to find entities in a specific jurisdiction.
+
+### curl
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/companies/subsidiaries?ticker=GOOG&jurisdiction=Ireland"
+```
+
+### Python
+
+```python
+subs = client.companies.subsidiaries(ticker="GOOG")
+
+ireland_subs = [s for s in subs.data if "Ireland" in s.jurisdiction]
+
+print(f"Google subsidiaries in Ireland: {len(ireland_subs)}")
+for sub in ireland_subs:
+    print(f"  {sub.name}")
+```
+
+## Next steps
+
+- **Map supply chain risk**: Combine subsidiary jurisdiction data with geopolitical risk indices.
+- **Tax structure analysis**: Identify companies with high concentrations of subsidiaries in low-tax jurisdictions.
+- **Track changes year over year**: Compare Exhibit 21 across multiple filing years to detect new or dissolved entities.
+- **Corporate hierarchy**: Cross-reference subsidiary names with the `/v1/entities/resolve` endpoint to find publicly traded subsidiaries.
+
+See the [API Reference](/api-reference/companies) for the full subsidiaries endpoint specification.

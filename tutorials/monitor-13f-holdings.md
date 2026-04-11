@@ -1,0 +1,174 @@
+---
+title: "Monitor Institutional Holdings Changes"
+description: "Track 13F institutional holdings changes quarter over quarter using the Datastream API. Includes curl, Python, and JavaScript examples."
+---
+
+# Monitor Institutional Holdings Changes
+
+Institutional investors managing over $100M must disclose their equity holdings quarterly via SEC Form 13F. This tutorial shows how to retrieve those holdings and compare them across quarters to detect position changes.
+
+## Prerequisites
+
+- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- Basic familiarity with REST APIs
+- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
+
+## Step 1 — Retrieve current 13F holdings
+
+Use `/v1/owners/13f` to pull the latest holdings for an institutional investor by their CIK number.
+
+### curl
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
+```
+
+### Python
+
+```python
+from omni_datastream_py import OmniDatastreamClient
+
+client = OmniDatastreamClient(api_key="your-api-key")
+
+holdings = client.owners.thirteenf(cik="0001067983", limit=20)
+
+for holding in holdings.data:
+    print(f"{holding.issuer_name}: {holding.value:,} ({holding.shares:,} shares)")
+```
+
+### JavaScript
+
+```ts
+import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+
+const client = new OmniDatastreamClient({
+  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+});
+
+const holdings = await client.owners.thirteenF({
+  cik: "0001067983",
+  limit: 20,
+});
+
+for (const holding of holdings.data) {
+  console.log(
+    `${holding.issuerName}: ${holding.value.toLocaleString()} (${holding.shares.toLocaleString()} shares)`
+  );
+}
+```
+
+### Expected output
+
+```
+APPLE INC: 84,248,000 (400,000,000 shares)
+BANK OF AMER CORP: 41,071,000 (1,032,852,006 shares)
+AMERICAN EXPRESS CO: 38,367,000 (151,610,700 shares)
+COCA COLA CO: 25,440,000 (400,000,000 shares)
+```
+
+## Step 2 — Compare holdings across quarters
+
+The `/v1/owners/13f/compare` endpoint shows what changed between two filing periods. This surfaces new positions, closed positions, and share count changes.
+
+### curl
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f/compare?cik=0001067983&period_a=2024-Q3&period_b=2024-Q4"
+```
+
+### Python
+
+```python
+diff = client.owners.thirteenf_compare(
+    cik="0001067983",
+    period_a="2024-Q3",
+    period_b="2024-Q4",
+)
+
+for change in diff.data:
+    direction = "+" if change.shares_change > 0 else ""
+    print(f"{change.issuer_name}: {direction}{change.shares_change:,} shares ({change.change_type})")
+```
+
+### JavaScript
+
+```ts
+const diff = await client.owners.thirteenFCompare({
+  cik: "0001067983",
+  periodA: "2024-Q3",
+  periodB: "2024-Q4",
+});
+
+for (const change of diff.data) {
+  const direction = change.sharesChange > 0 ? "+" : "";
+  console.log(
+    `${change.issuerName}: ${direction}${change.sharesChange.toLocaleString()} shares (${change.changeType})`
+  );
+}
+```
+
+### Expected output
+
+```json
+{
+  "data": [
+    {
+      "issuer_name": "APPLE INC",
+      "shares_previous": 400000000,
+      "shares_current": 300000000,
+      "shares_change": -100000000,
+      "change_type": "reduced"
+    },
+    {
+      "issuer_name": "SIRIUS XM HOLDINGS INC",
+      "shares_previous": 0,
+      "shares_current": 108752027,
+      "shares_change": 108752027,
+      "change_type": "new_position"
+    }
+  ]
+}
+```
+
+## Step 3 — Build a quarterly monitoring workflow
+
+Combine the two endpoints to build a script that runs after each 13F filing deadline (45 days after quarter end) and flags material changes.
+
+### Python
+
+```python
+MANAGERS = [
+    {"name": "Berkshire Hathaway", "cik": "0001067983"},
+    {"name": "Bridgewater Associates", "cik": "0001350694"},
+]
+
+THRESHOLD_PCT = 10  # flag changes over 10%
+
+for manager in MANAGERS:
+    diff = client.owners.thirteenf_compare(
+        cik=manager["cik"],
+        period_a="2024-Q3",
+        period_b="2024-Q4",
+    )
+
+    significant = [
+        c for c in diff.data
+        if c.change_type in ("new_position", "closed")
+        or abs(c.shares_change / max(c.shares_previous, 1)) > THRESHOLD_PCT / 100
+    ]
+
+    if significant:
+        print(f"\n--- {manager['name']} ---")
+        for c in significant:
+            print(f"  {c.issuer_name}: {c.change_type} ({c.shares_change:+,} shares)")
+```
+
+## Next steps
+
+- **Set up webhooks**: Use the [Filing Monitor tutorial](/tutorials/build-filing-monitor) to get notified when new 13F filings are published.
+- **Cross-reference with insider trades**: Combine 13F data with [insider trading patterns](/tutorials/analyze-insider-trading) for a complete ownership picture.
+- **Track sector exposure**: Aggregate holdings by sector to monitor allocation shifts.
+
+See the [Ownership Workflows](/ownership-workflows) guide for additional patterns.

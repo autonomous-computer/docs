@@ -1,0 +1,107 @@
+---
+title: "Executive Compensation Data API — Proxy Statement Comp Tables"
+description: "Access structured executive compensation data from SEC proxy statements (DEF 14A) via API. Compare CEO pay across companies, analyze comp structure, and track trends. Start free."
+---
+
+# Executive Compensation Data API
+
+Public companies disclose executive compensation in annual proxy statements (DEF 14A). Datastream extracts and structures the Summary Compensation Table so you can access salary, bonus, stock awards, option awards, and total compensation for named executive officers through a simple API.
+
+## What you get
+
+- **Structured compensation data**: Salary, bonus, stock awards, option awards, non-equity incentive plan compensation, and total
+- **Named executive officers**: CEO, CFO, and the next three highest-paid executives
+- **Cross-company comparison**: Compare CEO pay across a peer group in one request
+- **Historical data**: Compensation data from proxy filings going back to 2010
+
+## Quick start
+
+Get executive compensation for a company:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/compensation?ticker=AAPL"
+```
+
+```json
+{
+  "data": [
+    {
+      "name": "Tim Cook",
+      "title": "Chief Executive Officer",
+      "salary": 3000000,
+      "bonus": 0,
+      "stock_awards": 40000000,
+      "option_awards": 0,
+      "non_equity_incentive": 12000000,
+      "other_compensation": 1209000,
+      "total": 63209000,
+      "fiscal_year": 2024
+    }
+  ],
+  "ticker": "AAPL",
+  "company_name": "Apple Inc",
+  "proxy_filed_at": "2025-01-10"
+}
+```
+
+Compare CEO compensation across companies:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/compensation/compare?tickers=AAPL,MSFT,GOOG,AMZN&role=ceo"
+```
+
+## Use cases
+
+### Peer benchmarking
+
+Compare executive pay across a peer group defined by sector, market cap, or custom criteria. Compensation committees and their advisors can automate what traditionally requires reading dozens of proxy statements.
+
+### Pay-for-performance analysis
+
+Combine compensation data with stock returns and financial metrics from `/v1/statements` to evaluate whether pay tracks performance.
+
+### Governance screening
+
+Flag outliers — companies where CEO pay is unusually high relative to peers, or where the equity component is unusually low. Useful for ESG scoring and proxy advisory.
+
+### Investor research
+
+Track how compensation structures change over time. Shifts from options to restricted stock, increases in performance-based pay, or new clawback provisions can signal governance changes.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/compensation` | Compensation for a single company |
+| `GET /v1/compensation/compare` | Compare compensation across companies |
+
+### Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `ticker` | Company ticker | `AAPL` |
+| `tickers` | Multiple tickers (compare endpoint) | `AAPL,MSFT,GOOG` |
+| `role` | Filter by role | `ceo`, `cfo` |
+| `fiscal_year` | Specific fiscal year | `2024` |
+
+## Why Datastream for compensation data
+
+| Feature | Datastream | Raw DEF 14A | Equilar | ISS |
+|---------|-----------|-------------|---------|-----|
+| Structured JSON API | Yes | No (HTML) | No (platform) | No (platform) |
+| Cross-company comparison | One API call | Manual | Built-in | Built-in |
+| Historical data | 2010+ | 2010+ | Varies | Varies |
+| SDK support | Python + JS | No | No | No |
+| Pricing | Pay-as-you-go | Free (raw) | Enterprise | Enterprise |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start pulling executive compensation data in under 60 seconds.
+</Card>
+
+- [Compare Executive Compensation Tutorial](/tutorials/compare-executive-compensation)
+- [Compensation Workflows](/compensation-workflows)
+- [API Reference — Compensation](/api-reference/compensation)

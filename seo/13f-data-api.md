@@ -1,0 +1,96 @@
+---
+title: "13F Institutional Holdings API — Track What the Smart Money Owns"
+description: "Access structured 13F institutional holdings data via API. Compare holdings quarter over quarter, track position changes, and monitor the largest investors. Start free."
+---
+
+# 13F Institutional Holdings API
+
+Every institutional investment manager with over $100M in qualifying assets must file SEC Form 13F within 45 days of each quarter end. Datastream parses these filings and exposes structured holdings data through a simple REST API.
+
+## What you get
+
+- **Current holdings**: Full position list for any 13F filer by CIK
+- **Quarter-over-quarter comparison**: See new positions, closed positions, and share changes
+- **Historical data**: Access 13F filings going back to 1999
+- **Normalized identifiers**: Holdings mapped to tickers, CUSIPs, and CIKs
+
+## Quick start
+
+Get Berkshire Hathaway's current 13F holdings:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=10"
+```
+
+```json
+{
+  "data": [
+    {
+      "issuer_name": "APPLE INC",
+      "cusip": "037833100",
+      "value": 84248000,
+      "shares": 400000000,
+      "share_type": "SH",
+      "investment_discretion": "SOLE",
+      "voting_authority_sole": 400000000
+    }
+  ],
+  "period": "2024-Q4",
+  "manager_name": "BERKSHIRE HATHAWAY INC",
+  "filed_at": "2025-02-14"
+}
+```
+
+Compare holdings across quarters:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f/compare?cik=0001067983&period_a=2024-Q3&period_b=2024-Q4"
+```
+
+## Use cases
+
+### Track position changes for top managers
+
+Monitor when the largest hedge funds and asset managers add or exit positions. The compare endpoint surfaces exactly what changed.
+
+### Build a 13F-based stock screener
+
+Screen for stocks that are being accumulated by multiple institutional investors simultaneously. Cross-reference with insider buying for stronger conviction signals.
+
+### Backtest institutional following
+
+Analyze whether stocks with increasing institutional ownership outperform. Use historical 13F data to build and validate strategies.
+
+### Compliance and reporting
+
+Wealth managers and fund administrators can use 13F data to verify holdings disclosures and track competitive positioning.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/owners/13f` | List holdings for a 13F filer |
+| `GET /v1/owners/13f/compare` | Compare holdings between two quarters |
+
+## Why Datastream for 13F data
+
+| Feature | Datastream | Raw EDGAR | WhaleWisdom | Fintel |
+|---------|-----------|-----------|-------------|--------|
+| Structured JSON API | Yes | No (XML/SGML) | Partial | Partial |
+| Quarter-over-quarter diff | Built-in | Manual | Manual | Manual |
+| Historical coverage | 1999+ | 1999+ | 2001+ | 2013+ |
+| Webhook alerts | Yes | No | No | No |
+| Python + JS SDKs | Yes | No | No | No |
+| Pricing | Pay-as-you-go | Free (raw) | $150+/mo | $100+/mo |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start pulling 13F data in under 60 seconds.
+</Card>
+
+- [Monitor 13F Holdings Tutorial](/tutorials/monitor-13f-holdings)
+- [Ownership Workflows](/ownership-workflows)
+- [API Reference](/api-reference/owners)

@@ -1,0 +1,177 @@
+---
+title: "Search SEC Enforcement Actions"
+description: "Find and filter SEC enforcement actions by violation type, date range, and respondent using the Datastream API. Includes curl, Python, and JavaScript examples."
+---
+
+# Search SEC Enforcement Actions
+
+The SEC publishes enforcement actions for securities fraud, insider trading, accounting violations, and other regulatory breaches. This tutorial shows how to search, filter, and analyze enforcement data programmatically.
+
+## Prerequisites
+
+- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- Basic familiarity with REST APIs
+- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
+
+## Step 1 — Search for recent enforcement actions
+
+The `/v1/events/enforcement` endpoint returns enforcement actions with structured metadata. Start with a broad query to see the data shape.
+
+### curl
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?limit=5"
+```
+
+### Python
+
+```python
+from omni_datastream_py import OmniDatastreamClient
+
+client = OmniDatastreamClient(api_key="your-api-key")
+
+actions = client.events.enforcement(limit=5)
+
+for action in actions.data:
+    print(f"{action.date} | {action.respondent_name} | {action.violation_type}")
+```
+
+### JavaScript
+
+```ts
+import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+
+const client = new OmniDatastreamClient({
+  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+});
+
+const actions = await client.events.enforcement({ limit: 5 });
+
+for (const action of actions.data) {
+  console.log(
+    `${action.date} | ${action.respondentName} | ${action.violationType}`
+  );
+}
+```
+
+### Expected output
+
+```
+2024-12-15 | Acme Corp | Securities Fraud
+2024-12-12 | John Smith | Insider Trading
+2024-12-10 | Global Advisors LLC | Investment Adviser Fraud
+2024-12-08 | XYZ Capital | Market Manipulation
+2024-12-05 | Jane Doe | Accounting Fraud
+```
+
+## Step 2 — Filter by violation type
+
+Narrow your search to specific violation categories. Common types include `fraud`, `insider_trading`, `accounting`, `market_manipulation`, and `offering_violations`.
+
+### curl
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?violation_type=insider_trading&limit=10"
+```
+
+### Python
+
+```python
+insider_cases = client.events.enforcement(
+    violation_type="insider_trading",
+    limit=10,
+)
+
+for case in insider_cases.data:
+    print(f"{case.date} | {case.respondent_name}")
+    print(f"  Relief: {case.relief_sought}")
+    print(f"  Penalty: ${case.penalty_amount:,.0f}" if case.penalty_amount else "  Penalty: TBD")
+    print()
+```
+
+### JavaScript
+
+```ts
+const insiderCases = await client.events.enforcement({
+  violationType: "insider_trading",
+  limit: 10,
+});
+
+for (const c of insiderCases.data) {
+  console.log(`${c.date} | ${c.respondentName}`);
+  console.log(`  Relief: ${c.reliefSought}`);
+  console.log(
+    `  Penalty: ${c.penaltyAmount ? `$${c.penaltyAmount.toLocaleString()}` : "TBD"}`
+  );
+}
+```
+
+## Step 3 — Filter by date range
+
+Search enforcement actions within a specific time window.
+
+### curl
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?date_from=2024-01-01&date_to=2024-12-31&limit=20"
+```
+
+### Python
+
+```python
+annual_actions = client.events.enforcement(
+    date_from="2024-01-01",
+    date_to="2024-12-31",
+    limit=20,
+)
+
+# Group by violation type
+from collections import Counter
+types = Counter(a.violation_type for a in annual_actions.data)
+
+print("2024 Enforcement Breakdown:")
+for vtype, count in types.most_common():
+    print(f"  {vtype}: {count}")
+```
+
+### JavaScript
+
+```ts
+const annualActions = await client.events.enforcement({
+  dateFrom: "2024-01-01",
+  dateTo: "2024-12-31",
+  limit: 20,
+});
+
+const types: Record<string, number> = {};
+for (const a of annualActions.data) {
+  types[a.violationType] = (types[a.violationType] || 0) + 1;
+}
+
+console.log("2024 Enforcement Breakdown:");
+for (const [type, count] of Object.entries(types).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${type}: ${count}`);
+}
+```
+
+### Expected output
+
+```
+2024 Enforcement Breakdown:
+  Securities Fraud: 47
+  Insider Trading: 31
+  Investment Adviser Fraud: 28
+  Accounting Fraud: 19
+  Market Manipulation: 14
+```
+
+## Next steps
+
+- **Set up alerts**: Use [webhooks](/tutorials/build-filing-monitor) to get notified when new enforcement actions are published.
+- **Cross-reference with filings**: Match enforcement respondents against company tickers to assess regulatory risk in your portfolio.
+- **Analyze trends**: Track enforcement volume and penalty amounts over time to identify regulatory focus areas.
+
+See the [API Reference](/api-reference/events) for the full enforcement endpoint specification.

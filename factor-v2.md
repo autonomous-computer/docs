@@ -1,0 +1,74 @@
+---
+title: "Factor V2"
+description: "Daily recomputed purified factors with intraday snapshots for live dashboards"
+---
+
+# Factor V2
+
+OMNI Datastream Factor V2 provides allocator-grade factor analysis with daily recomputation and intraday snapshots.
+
+## Key Improvements over V1
+
+| Feature | V1 | V2 |
+|---|---|---|
+| **Recompute frequency** | Weekly | Daily |
+| **Factor count** | 63 | 84+ |
+| **Intraday snapshots** | Not available | 1-minute and 5-minute |
+| **Portfolio drill-down** | Security-level only | Security + portfolio + model portfolio |
+| **Orthogonalization** | Basic | Full topological sort |
+
+## Endpoints
+
+### Daily Factor Returns
+```bash
+curl "https://api.secapi.ai/v1/factors/returns?lookback=30" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+```
+
+### Intraday Factor Snapshots
+```bash
+curl "https://api.secapi.ai/v1/factors/returns/intraday" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+```
+
+### Live Factor Dashboard (One Call)
+```bash
+curl "https://api.secapi.ai/v1/factors/dashboard" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+```
+
+Returns: intraday returns, regime context, rotation signals, and spotlight factors.
+
+### Stock-Level Factor Loadings
+```bash
+curl "https://api.secapi.ai/v1/stocks/AAPL/loadings" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+```
+
+### Portfolio Factor Exposures
+```bash
+curl -X POST "https://api.secapi.ai/v1/portfolio/analyze" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"holdings": [{"ticker": "AAPL", "weight": 0.3}, {"ticker": "MSFT", "weight": 0.3}, {"ticker": "GOOGL", "weight": 0.4}]}'
+```
+
+## Factor Catalog
+
+Access the full 84-factor catalog with methodology:
+
+```bash
+curl "https://api.secapi.ai/v1/factors/catalog" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+```
+
+Each factor includes: name, family, proxy ETF, orthogonalization method, and methodology summary.
+
+## Regime-Conditioned Performance
+
+See how factors perform in different macro regimes:
+
+```bash
+curl "https://api.secapi.ai/v1/factors/regime-performance" \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+```
