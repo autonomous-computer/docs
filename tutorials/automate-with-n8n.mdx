@@ -1,0 +1,266 @@
+---
+title: "Automate SEC Monitoring with n8n"
+description: "Build an n8n workflow that receives OMNI Datastream webhook events for new SEC filings and routes alerts to Slack. Includes importable workflow JSON."
+---
+
+# Automate SEC Monitoring with n8n
+
+n8n is an open-source workflow automation tool you can self-host or run in the cloud. In this tutorial you will wire an n8n webhook node to the OMNI Datastream API so that every time an 8-K filing is published for a watchlist of companies, n8n extracts the key data and posts a summary to a Slack channel.
+
+## Prerequisites
+
+- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An n8n instance (self-hosted or [n8n Cloud](https://n8n.io))
+- A Slack workspace with an incoming webhook URL or the n8n Slack credential configured
+- (Optional) Familiarity with the [Build a Filing Monitor](/tutorials/build-filing-monitor) tutorial
+
+## Architecture overview
+
+```
+EDGAR filing published
+        |
+        v
+OMNI Datastream monitor (8-K filings, watchlist tickers)
+        |
+        v
+Webhook POST --> n8n Webhook node
+        |
+        v
+n8n Function node (extract key data)
+        |
+        v
+n8n Slack node (post formatted alert)
+```
+
+## Step 1 --- Create the n8n webhook node
+
+1. Open your n8n instance and create a new workflow.
+2. Add a **Webhook** node as the trigger.
+3. Set **HTTP Method** to `POST`.
+4. Set **Path** to `omni-filings` (or any path you prefer).
+5. Under **Authentication**, select **None** for now (you will add signature verification in Step 4).
+6. Click **Listen for Test Event** to put the node in listening mode. Copy the **Test URL** --- you will need it in the next step.
+
+The test URL looks like:
+
+```
+https://your-n8n.example.com/webhook-test/omni-filings
+```
+
+Once the workflow is active, use the **Production URL** instead:
+
+```
+https://your-n8n.example.com/webhook/omni-filings
+```
+
+## Step 2 --- Register the webhook with OMNI Datastream
+
+Point the OMNI Datastream monitor at your n8n webhook URL.
+
+### Create a webhook endpoint
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-n8n.example.com/webhook/omni-filings",
+    "description": "n8n filing alerts",
+    "events": ["filing.new"]
+  }' \
+  "https://api.secapi.ai/v1/webhook_endpoints"
+```
+
+Save the returned `signing_secret` --- you will use it to verify payloads.
+
+### Create a filing monitor
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "n8n 8-K Watchlist",
+    "form_types": ["8-K", "8-K/A"],
+    "tickers": ["AAPL", "MSFT", "NVDA", "TSLA", "AMZN"],
+    "webhook_endpoint_id": "we_abc123"
+  }' \
+  "https://api.secapi.ai/v1/monitors"
+```
+
+Replace `we_abc123` with the endpoint ID from the previous response.
+
+## Step 3 --- Extract filing data with a Function node
+
+Add a **Function** node after the Webhook node. This node parses the incoming payload and prepares a clean object for Slack.
+
+Paste this code into the Function node:
+
+```javascript
+const webhook = $input.first().json;
+const filing = webhook.body.data;
+
+const itemDescriptions = {
+  "1.01": "Entry into a Material Definitive Agreement",
+  "1.02": "Termination of a Material Definitive Agreement",
+  "2.01": "Completion of Acquisition or Disposition of Assets",
+  "2.02": "Results of Operations and Financial Condition",
+  "2.05": "Costs Associated with Exit or Disposal Activities",
+  "5.02": "Departure/Election of Directors or Officers",
+  "7.01": "Regulation FD Disclosure",
+  "8.01": "Other Events",
+  "9.01": "Financial Statements and Exhibits",
+};
+
+const items = (filing.items || [])
+  .map((code) => `${code} - ${itemDescriptions[code] || "Other"}`)
+  .join("\n");
+
+return [
+  {
+    json: {
+      ticker: filing.ticker,
+      company: filing.company_name,
+      form: filing.form,
+      filed_at: filing.filed_at,
+      accession: filing.accession_number,
+      items_text: items || "No item codes",
+      description: filing.description || "No description",
+      edgar_url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${filing.ticker}&type=8-K&dateb=&owner=include&count=10`,
+    },
+  },
+];
+```
+
+## Step 4 --- Verify the webhook signature (recommended)
+
+Add a second **Function** node between the Webhook node and the extraction node to verify the OMNI signing secret. If verification fails, the workflow stops.
+
+```javascript
+const crypto = require("crypto");
+
+const SIGNING_SECRET = "whsec_..."; // Replace with your signing secret
+const signature = $input.first().json.headers["x-webhook-signature"];
+const body = JSON.stringify($input.first().json.body);
+
+const expected = crypto
+  .createHmac("sha256", SIGNING_SECRET)
+  .update(body)
+  .digest("hex");
+
+if (signature !== expected) {
+  throw new Error("Invalid webhook signature");
+}
+
+return $input.all();
+```
+
+> **Tip:** Store the signing secret in n8n Credentials (type: Header Auth or a custom credential) instead of hard-coding it.
+
+## Step 5 --- Post to Slack
+
+Add a **Slack** node after the Function node.
+
+1. Select **Message** > **Send a Message**.
+2. Choose the target channel (e.g., `#sec-alerts`).
+3. Set the **Message Text** to:
+
+```
+:page_facing_up: *New {{$json.form}} Filing*
+*Company:* {{$json.company}} ({{$json.ticker}})
+*Filed:* {{$json.filed_at}}
+*Description:* {{$json.description}}
+*Items:*
+{{$json.items_text}}
+*Accession:* `{{$json.accession}}`
+```
+
+4. Click **Execute Node** to test (you may need to trigger a test event first).
+
+## Importable n8n workflow JSON
+
+Copy this JSON and import it via **Workflow > Import from File** in n8n:
+
+```json
+{
+  "name": "OMNI SEC Filing Alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "omni-filings",
+        "responseMode": "onReceived",
+        "responseCode": 200
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const filing = $input.first().json.body.data;\nconst itemDescriptions = {\"1.01\":\"Entry into Material Agreement\",\"2.02\":\"Results of Operations\",\"5.02\":\"Departure/Election of Officers\",\"7.01\":\"Regulation FD\",\"8.01\":\"Other Events\",\"9.01\":\"Exhibits\"};\nconst items = (filing.items||[]).map(c=>`${c} - ${itemDescriptions[c]||'Other'}`).join('\\n');\nreturn [{json:{ticker:filing.ticker,company:filing.company_name,form:filing.form,filed_at:filing.filed_at,accession:filing.accession_number,items_text:items||'No item codes',description:filing.description||'No description'}}];"
+      },
+      "name": "Extract Filing Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#sec-alerts",
+        "text": ":page_facing_up: *New {{$json.form}} Filing*\n*Company:* {{$json.company}} ({{$json.ticker}})\n*Filed:* {{$json.filed_at}}\n*Description:* {{$json.description}}\n*Items:*\n{{$json.items_text}}\n*Accession:* `{{$json.accession}}`"
+      },
+      "name": "Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [750, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Extract Filing Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Filing Data": {
+      "main": [
+        [{ "node": "Slack Alert", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}
+```
+
+## Expected result
+
+When an 8-K filing is published for any ticker in your watchlist, your Slack channel receives a message like:
+
+```
+:page_facing_up: New 8-K Filing
+Company: Apple Inc (AAPL)
+Filed: 2024-12-15
+Description: Results of Operations and Financial Condition
+Items:
+2.02 - Results of Operations and Financial Condition
+9.01 - Financial Statements and Exhibits
+Accession: 0000320193-24-000095
+```
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| n8n webhook never fires | Make sure the workflow is **active** (toggle in top-right). Use the production URL, not the test URL. |
+| 401 or signature mismatch | Verify you are using the correct `signing_secret` from the OMNI webhook endpoint. |
+| Slack message is empty | Check that the Function node output includes all fields (`ticker`, `company`, etc.). Run the node in isolation with test data. |
+| Duplicate alerts | OMNI retries failed deliveries. Make the workflow idempotent by checking `accession_number` against a dedup store (e.g., n8n's built-in static data). |
+| Monitor not triggering | Confirm the monitor is `active` with `GET /v1/monitors`. Check that the `form_types` and `tickers` match what you expect. |
+
+## Next steps
+
+- **Add more channels**: Route different form types to different Slack channels using an n8n Switch node.
+- **Enrich with intelligence**: After receiving a filing event, call the OMNI `/v1/intelligence/query` endpoint to get an AI summary before posting.
+- **Store in a database**: Add a Postgres or Airtable node to log every filing for historical analysis.
+
+See the [Webhook Stream Workflows](/webhook-stream-workflows) guide for advanced webhook patterns.

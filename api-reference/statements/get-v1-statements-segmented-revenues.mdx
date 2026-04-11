@@ -6,17 +6,6 @@ Return filing-derived segmented revenue history with XBRL product or geography d
 Audience: application and coding agent.
 </Info>
 
-## Query parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `ticker` | string | Yes (or `cik`) | Ticker symbol (e.g., `AAPL`, `PFE`) |
-| `cik` | string | Yes (or `ticker`) | SEC CIK number |
-| `segment_type` | string | No | `geographic`, `product`, or `other`. Filters to the specified segment dimension. |
-| `period` | string | No | `annual` (default) or `quarterly`. Controls which filing forms are scanned (10-K vs 10-Q). |
-| `limit` | integer | No | Number of filing periods to return (default 6, max 50). |
-| `submission_file_limit` | integer | No | Number of SEC submission history files to scan for older filings (default 8, max 50). Increase for deep historical queries. |
-
 ## Canonical metadata
 
 - `requestId`
@@ -25,17 +14,6 @@ Audience: application and coding agent.
 - `freshness`
 - `materialization`
 
-## Key response fields
-
-| Field | Description |
-|-------|-------------|
-| `records[].segmentLabel` | Human-readable segment name (e.g., "Developed Europe", "EMEA") |
-| `records[].segmentType` | `geographic`, `product`, or `other` |
-| `records[].hierarchyDepth` | Depth in the segment hierarchy (1 = top-level, 2 = regional) |
-| `records[].isMostGranularSibling` | `true` for leaf segments suitable for analysis; `false` for parent containers |
-| `records[].value` | Revenue value in the reported currency |
-| `records[].periodEnd` | End date of the reporting period |
-
 ## Example request
 
 <RequestExample>
@@ -43,7 +21,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/segmented-revenues?ticker=AXP&segment_type=geographic&period=annual"
+  "https://api.secapi.ai/v1/statements/segmented-revenues"
 ```
 </RequestExample>
 

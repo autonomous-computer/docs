@@ -1,0 +1,211 @@
+---
+title: "SEC Data Automation with Zapier"
+description: "Create a Zapier Zap that tracks insider trades via OMNI Datastream webhooks and logs them to Google Sheets with Slack notifications. Step-by-step configuration included."
+---
+
+# SEC Data Automation with Zapier
+
+Zapier connects thousands of apps with no-code automations called Zaps. In this tutorial you will build a Zap that receives OMNI Datastream webhook events for new insider trades (Form 4 filings), logs each trade to a Google Sheets spreadsheet, and sends a Slack notification.
+
+## Prerequisites
+
+- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- A [Zapier](https://zapier.com) account (free tier supports single-step Zaps; multi-step requires a paid plan)
+- A Google account with Google Sheets access
+- A Slack workspace where you can post messages
+- (Optional) Familiarity with the [Analyze Insider Trading](/tutorials/analyze-insider-trading) tutorial
+
+## Architecture overview
+
+```
+OMNI Datastream insider trade monitor
+        |
+        v
+Webhook POST --> Zapier Catch Hook trigger
+        |
+        v
+Zapier Formatter (clean data)
+        |
+        +--> Google Sheets (append row)
+        |
+        +--> Slack (send notification)
+```
+
+## Step 1 --- Create the Zapier webhook trigger
+
+1. Log in to Zapier and click **Create Zap**.
+2. For the trigger app, search for **Webhooks by Zapier**.
+3. Select **Catch Hook** as the trigger event.
+4. Click **Continue**. Zapier generates a unique webhook URL:
+
+```
+https://hooks.zapier.com/hooks/catch/123456/abcdef/
+```
+
+5. Copy this URL --- you will register it with OMNI Datastream next.
+6. Click **Test trigger** and leave the page open. Zapier is now listening for a test event.
+
+## Step 2 --- Register the webhook with OMNI Datastream
+
+### Create a webhook endpoint
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://hooks.zapier.com/hooks/catch/123456/abcdef/",
+    "description": "Zapier insider trade tracker",
+    "events": ["filing.new"]
+  }' \
+  "https://api.secapi.ai/v1/webhook_endpoints"
+```
+
+### Create an insider trade monitor
+
+```bash
+curl -X POST \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Insider Trade Tracker",
+    "form_types": ["4", "4/A"],
+    "tickers": ["AAPL", "MSFT", "NVDA", "GOOGL", "META", "AMZN", "TSLA", "JPM", "GS", "BRK-B"],
+    "webhook_endpoint_id": "we_abc123"
+  }' \
+  "https://api.secapi.ai/v1/monitors"
+```
+
+Replace `we_abc123` with the endpoint ID from the previous response.
+
+### Send a test event to Zapier
+
+While Zapier is listening, send a sample payload so it can detect the data structure:
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "filing.new",
+    "timestamp": "2024-12-15T14:30:00Z",
+    "data": {
+      "accession_number": "0001234567-24-000100",
+      "form": "4",
+      "ticker": "AAPL",
+      "company_name": "Apple Inc",
+      "filed_at": "2024-12-15",
+      "insider_name": "Tim Cook",
+      "insider_title": "Chief Executive Officer",
+      "transaction_type": "sale",
+      "shares": 200000,
+      "price": 248.50,
+      "value": 49700000
+    }
+  }' \
+  "https://hooks.zapier.com/hooks/catch/123456/abcdef/"
+```
+
+Go back to Zapier and click **Test trigger** again. You should see the sample data.
+
+## Step 3 --- Prepare the Google Sheet
+
+Create a Google Sheet named **Insider Trade Tracker** with the following column headers in Row 1:
+
+| A | B | C | D | E | F | G | H | I |
+|---|---|---|---|---|---|---|---|---|
+| Date | Ticker | Company | Insider | Title | Type | Shares | Price | Value |
+
+## Step 4 --- Add a Google Sheets action
+
+1. Click **+** to add an action step.
+2. Search for **Google Sheets** and select it.
+3. Choose **Create Spreadsheet Row** as the action event.
+4. Connect your Google account and select the **Insider Trade Tracker** spreadsheet.
+5. Map the fields:
+
+| Sheet Column | Zapier Field |
+|---|---|
+| Date | `data__filed_at` |
+| Ticker | `data__ticker` |
+| Company | `data__company_name` |
+| Insider | `data__insider_name` |
+| Title | `data__insider_title` |
+| Type | `data__transaction_type` |
+| Shares | `data__shares` |
+| Price | `data__price` |
+| Value | `data__value` |
+
+6. Click **Test action** to verify a row is created in your sheet.
+
+## Step 5 --- Add a Slack notification
+
+1. Click **+** to add another action step.
+2. Search for **Slack** and select it.
+3. Choose **Send Channel Message** as the action event.
+4. Connect your Slack workspace and select the target channel (e.g., `#insider-trades`).
+5. Set the **Message Text** to:
+
+```
+:chart_with_upwards_trend: *Insider Trade Alert*
+*{{data__insider_name}}* ({{data__insider_title}}) at *{{data__company_name}}* ({{data__ticker}})
+:arrow_right: {{data__transaction_type}} of {{data__shares}} shares @ ${{data__price}}
+:moneybag: Total value: ${{data__value}}
+Filed: {{data__filed_at}}
+```
+
+6. Click **Test action** to verify the Slack message is sent.
+
+## Step 6 --- Turn on the Zap
+
+1. Name your Zap (e.g., "OMNI Insider Trade Tracker").
+2. Click **Publish** to activate it.
+
+## Zapier step summary
+
+```
+Step 1: Webhooks by Zapier - Catch Hook
+        Receives POST from OMNI Datastream
+
+Step 2: Google Sheets - Create Spreadsheet Row
+        Logs trade to "Insider Trade Tracker" sheet
+
+Step 3: Slack - Send Channel Message
+        Posts formatted alert to #insider-trades
+```
+
+## Expected result
+
+### Google Sheets row
+
+| Date | Ticker | Company | Insider | Title | Type | Shares | Price | Value |
+|---|---|---|---|---|---|---|---|---|
+| 2024-12-15 | AAPL | Apple Inc | Tim Cook | Chief Executive Officer | sale | 200000 | 248.50 | 49700000 |
+
+### Slack message
+
+```
+:chart_with_upwards_trend: Insider Trade Alert
+Tim Cook (Chief Executive Officer) at Apple Inc (AAPL)
+:arrow_right: sale of 200000 shares @ $248.50
+:moneybag: Total value: $49700000
+Filed: 2024-12-15
+```
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Zapier does not detect test data | Make sure you clicked **Test trigger** before sending the curl request. Zapier must be in listening mode. |
+| Google Sheets columns are misaligned | Verify the column headers match exactly. Zapier maps by header name. |
+| Slack message has missing fields | Check that the field names in the message template match the Zapier field names (e.g., `data__ticker`, not `ticker`). |
+| Zap triggers but no row is created | Check the Google Sheets action error log in Zapier. Common issue: the spreadsheet was moved or renamed. |
+| Too many alerts | Add a **Filter by Zapier** step to only continue for specific transaction types (e.g., `data__transaction_type` equals `purchase`). |
+
+## Next steps
+
+- **Add a Filter step**: Only track purchases (insider buys are often more meaningful than sales).
+- **Add a Formatter step**: Convert `value` to a human-readable currency format (e.g., `$49,700,000`).
+- **Multi-sheet routing**: Use a **Paths by Zapier** step to log buys and sells to different sheets.
+- **Enrich with OMNI data**: Add a **Webhooks by Zapier > GET** step to call `/v1/insiders?ticker={ticker}` and pull additional context before logging.
+
+See the [Analyze Insider Trading](/tutorials/analyze-insider-trading) tutorial for more on working with insider trade data.
