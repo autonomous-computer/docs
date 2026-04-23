@@ -1,14 +1,14 @@
 ---
 title: "Competitive Benchmarks"
-description: "Latency, payload size, and token efficiency comparisons: OMNI Datastream vs sec-api.io and financialdatasets.ai"
+description: "Latency, payload size, and token efficiency comparisons: OMNI Datastream vs sec-api.io, financialdatasets.ai, and edgartools"
 ---
 
 # Competitive Benchmarks
 
-OMNI Datastream is independently benchmarked against sec-api.io and financialdatasets.ai across core SEC data operations. All benchmarks are reproducible and run from the same network location against production endpoints.
+OMNI Datastream is independently benchmarked against three peers — sec-api.io and financialdatasets.ai (hosted APIs) and edgartools (open-source Python library) — across core SEC data operations. All benchmarks are reproducible and run from the same network location against production endpoints.
 
 <Info>
-Last updated: 2026-03-18. Benchmarks are re-run periodically and published here. Methodology and reproduction scripts are in the [benchmarks/](https://github.com/autonomous-computer/omni-datastream/tree/main/benchmarks) directory.
+Last updated: 2026-03-18 (vs sec-api.io and financialdatasets.ai); 2026-04-23 preliminary (vs edgartools, pending external methodology review — OMNI-3064). Methodology and reproduction scripts are in the [benchmarks/](https://github.com/autonomous-computer/omni-datastream/tree/main/benchmarks) directory; see [`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/omni-datastream/blob/main/benchmarks/METHODOLOGY.md) for the peer-reviewable methodology doc.
 </Info>
 
 ## vs sec-api.io
@@ -35,6 +35,29 @@ Token estimates are based on payload size ÷ 4 (average characters per token). S
 | **Cash flow statement** | 59ms | 339ms | **5.7x** |
 | **Financial metrics** | 57ms | 1,476ms | **25.9x** |
 
+## vs edgartools (preliminary)
+
+<Warning>
+**Preliminary — pending external methodology review (OMNI-3064)**. Numbers below
+will be re-verified by an external SRE before the full comparison is linked
+from the docs sidebar. See [`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/omni-datastream/blob/main/benchmarks/METHODOLOGY.md).
+</Warning>
+
+[edgartools](https://github.com/dgunning/edgartools) is a well-designed, MIT-licensed Python library that talks directly to SEC EDGAR. Same four workflows, N=5 iterations, each iteration runs in a fresh subprocess with all caches cleared so every call is a truly cold SEC fetch:
+
+| Operation | OMNI p50 | edgartools p50 | Speedup | OMNI wire bytes | edgartools wire bytes |
+|---|---|---|---|---|---|
+| **Entity resolve** | 34ms | 471ms | **13.9x** | 273 | 164,686 |
+| **Filing search** | 38ms | 688ms | **18.1x** | 1,033 | 362,459 |
+| **Section extract** | 34ms | 3,081ms | **90.6x** | 2,954 | 3,053,868 |
+| **XBRL → JSON** | 34ms | 1,508ms | **44.3x** | 1,522 | 1,520,790 |
+
+<Tip>
+**Wire bytes are measured at the HTTP transport layer for every comparand** — including edgartools, where a monkey-patched `httpx.Client.send` sums real SEC bytes per logical case. This makes payload numbers directly comparable across hosted APIs and client-side libraries. edgartools fetches raw SEC documents client-side (e.g., ~3 MB of 10-K HTML to extract Item 1A text) — that's an architectural choice behind its `pip install, zero API key, SEC direct` posture, not an inefficiency.
+</Tip>
+
+See [Compare OMNI vs edgartools](/compare-edgartools) for the full feature matrix and positioning, including edgartools' legitimate strengths (it's free, MIT-licensed, and community-supported).
+
 ## Why OMNI is faster
 
 1. **Purpose-built for the SEC domain.** Dedicated Postgres schema with filing-aware indexes, not a generic data warehouse.
@@ -55,25 +78,32 @@ The intelligence bundle pre-computes what agents would otherwise assemble from m
 
 ## Methodology
 
-- All benchmarks use production endpoints with authenticated API keys
-- Latency measured as wall-clock time from request to complete response
+- Hosted APIs (OMNI, sec-api.io, financialdatasets.ai) use production endpoints with authenticated API keys
+- edgartools (MIT-licensed Python library) calls SEC EDGAR directly; no API key
+- edgartools' persistent on-disk cache at `~/.edgar/_tcache/` is cleared between iterations so every run is a cold SEC fetch (without this, iteration 2+ would measure disk I/O on the runner rather than SEC latency)
+- Latency measured as wall-clock time from request start to result returned (client-side parsing included for edgartools)
 - Each operation run 5+ times; p50, p95, p99 reported
-- Payload size measured as response body bytes
+- Payload size measured at the HTTP transport layer for every comparand — raw response body bytes for hosted APIs, sum of SEC wire bytes (via monkey-patched `httpx.Client.send`) for edgartools
 - Token estimate = ceil(payload_bytes / 4)
+- Percentiles computed via linear-interpolation (Hyndman-Fan Type 7) for every comparand — all runners share one implementation in `scripts/bench/_common.py`
 - Network: same region, same machine, concurrent execution
-- Scripts: `scripts/bench/benchmark_sec_api.py`, `scripts/bench/benchmark_financialdatasets.py`
+- Scripts: `scripts/bench/benchmark_sec_api.py`, `scripts/bench/benchmark_financialdatasets.py`, `scripts/bench/benchmark_edgartools.py`
 - Scorecard: `scripts/bench/competitive_scorecard.py`
+- Full peer-reviewable methodology: [`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/omni-datastream/blob/main/benchmarks/METHODOLOGY.md)
 
 ## Reproduce
 
 ```bash
-# Run sec-api.io benchmark
+# Run sec-api.io benchmark (paid API key)
 SEC_API_KEY=your_key bun run bench:sec-api
 
-# Run financialdatasets.ai benchmark
+# Run financialdatasets.ai benchmark (paid API key)
 FD_API_KEY=your_key bun run bench:fd-ai
 
-# Generate scorecard
+# Run edgartools benchmark (no API key required)
+bun run bench:edgartools
+
+# Generate 4-way scorecard
 bun run bench:scorecard
 ```
 

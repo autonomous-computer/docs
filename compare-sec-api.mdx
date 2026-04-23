@@ -9,24 +9,43 @@ A direct comparison of the two leading SEC data APIs for developers and AI agent
 
 ## Speed
 
-| Operation | OMNI | sec-api.io | Winner |
+Two independent benchmark runs, each with its own OMNI baseline measured at the same time as the competitor. OMNI p50 has improved between runs (production performance is not static) — each table's speedup uses the OMNI value measured alongside that competitor, not across runs.
+
+**vs sec-api.io** (benchmark captured 2026-03-18)
+
+| Operation | OMNI p50 | sec-api.io p50 | Winner |
 |---|---|---|---|
 | Entity resolution | **62ms** | 231ms | OMNI (3.7x) |
 | Filing search | **64ms** | 281ms | OMNI (4.4x) |
 | Section extraction | **64ms** | 348ms | OMNI (5.4x) |
 | XBRL-to-JSON | **61ms** | 392ms | OMNI (6.4x) |
 
+**vs edgartools** (benchmark captured 2026-04-23, preliminary, subprocess-isolated cold fetches)
+
+| Operation | OMNI p50 | edgartools p50 | Winner |
+|---|---|---|---|
+| Entity resolution | **34ms** | 471ms | OMNI (13.9x) |
+| Filing search | **38ms** | 688ms | OMNI (18.1x) |
+| Section extraction | **34ms** | 3,081ms | OMNI (90.6x) |
+| XBRL-to-JSON | **34ms** | 1,508ms | OMNI (44.3x) |
+
+<Tip>
+edgartools numbers are preliminary pending external methodology review (OMNI-3064). See [benchmark-results](/benchmark-results) and [compare-edgartools](/compare-edgartools) for the full comparison and reproducible methodology.
+</Tip>
+
 ## Pricing
 
-| Tier | OMNI | sec-api.io |
-|---|---|---|
-| **Free** | 250 calls/month (renewable) | 100 calls (lifetime) |
-| **Pay-as-you-go** | From $0.01/call | Not offered |
-| **Personal** | $55/month | $49/month |
-| **Business/Team** | $239/month | $199/month |
-| **Enterprise** | Custom | Custom |
+| Tier | OMNI | sec-api.io | edgartools |
+|---|---|---|---|
+| **Free** | 250 calls/month (renewable) | 100 calls (lifetime) | Unlimited (MIT, truly free) |
+| **Pay-as-you-go** | From $0.01/call | Not offered | N/A |
+| **Personal** | $55/month | $49/month | $0 |
+| **Business/Team** | $239/month | $199/month | $0 |
+| **Enterprise** | Custom | Custom | None (community-supported) |
 
-**Key difference:** OMNI offers true pay-as-you-go with no monthly minimum. An agent making 200 queries/month pays $4 with OMNI vs $49 minimum with sec-api.io.
+**Key differences:**
+- **OMNI vs sec-api.io:** OMNI offers true pay-as-you-go with no monthly minimum. An agent making 200 queries/month pays $4 with OMNI vs $49 minimum with sec-api.io.
+- **vs edgartools:** edgartools is genuinely free (MIT Python library, calls SEC directly). The tradeoff is client-side parsing, no SLA, no commercial support, Python-only, and a latency/payload profile that's 13.9-90.6× and 600-1,000× higher than OMNI on the operations above. See [compare-edgartools](/compare-edgartools) for when each is the right choice.
 
 ## Features
 
