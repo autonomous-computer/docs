@@ -1,20 +1,20 @@
 # Auth, Billing, and First Utility
 
 <Info>
-The launch posture is deliberate: sign in with WorkOS, receive a starter org and key, make a real request, then attach billing only when the workflow proves itself.
+API keys are the primary authentication method for all plans. Create an org, mint an org-scoped key, make a real request, then attach billing only when the workflow proves itself. OAuth/SSO via WorkOS is planned for the enterprise tier in 2026 Q3+.
 </Info>
 
 ## Auth model
 
 <CardGroup cols={3}>
-  <Card title="WorkOS user login" icon="shield-check">
-    Human access to the dashboard uses WorkOS-hosted login and bearer tokens.
-  </Card>
-  <Card title="API keys" icon="key-round" href="/api-reference/platform">
-    REST and SDK clients use org-scoped `x-api-key` credentials.
+  <Card title="API keys (primary)" icon="key-round" href="/api-reference/platform">
+    All REST, SDK, and CLI clients use org-scoped `x-api-key` credentials. This is the primary authentication method for every plan.
   </Card>
   <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
-    MCP uses WorkOS OAuth discovery through `api.secapi.ai`.
+    MCP clients use WorkOS OAuth discovery through `api.secapi.ai`. This is the only surface where WorkOS is customer-visible today.
+  </Card>
+  <Card title="Enterprise SSO" icon="shield-check" href="/enterprise">
+    OAuth/SSO via WorkOS is planned for the enterprise tier in 2026 Q3+. Contact sales for roadmap details.
   </Card>
 </CardGroup>
 
@@ -28,8 +28,8 @@ The launch posture is deliberate: sign in with WorkOS, receive a starter org and
 ## Default onboarding motion
 
 <Steps>
-  <Step title="Log in with WorkOS">
-    Start at the marketing-site `Log in` button or the `/login` route.
+  <Step title="Create your org and API key">
+    Start at the marketing-site `Get Free API Key` button or the `/login` route. Complete the sign-in flow to create your org and mint your first org-scoped API key in one step.
   </Step>
   <Step title="Receive the starter grant">
     Every new org starts with `250` included calls and one API key.
@@ -114,8 +114,13 @@ Do not treat billing and plan headers as decorative. Preserve them in logs, trac
 - `Omni-Billing-Status`
 - `Omni-Billing-State`
 - `Omni-Free-Grant-Remaining`
+- `Omni-Token-Count`
+- `Omni-Estimated-Cost`
+- `Omni-Token-Count-Estimated` (present only when the count fell back to a byte/4 approximation)
 
-## WorkOS discovery endpoints
+## MCP OAuth discovery endpoints
+
+These endpoints back the hosted MCP surface. They are not part of the primary human-auth flow — API keys cover every REST, SDK, and CLI client.
 
 - protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
 - authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
@@ -123,7 +128,7 @@ Do not treat billing and plan headers as decorative. Preserve them in logs, trac
 ## Recommended first-success flow
 
 <Prompt>
-Set up Omni Datastream auth with WorkOS or an org-scoped API key. Verify health, readiness, OAuth discovery, billing, rates, and limits first. Then run one real issuer workflow while preserving `requestId`, `traceparent`, `Omni-Plan-Key`, `Omni-Billing-State`, `Omni-Free-Grant-Remaining`, provenance, and freshness metadata.
+Set up Omni Datastream auth with an org-scoped API key. Verify health, readiness, billing, rates, and limits first. Then run one real issuer workflow while preserving `requestId`, `traceparent`, `Omni-Plan-Key`, `Omni-Billing-State`, `Omni-Free-Grant-Remaining`, provenance, and freshness metadata.
 </Prompt>
 
 ## Read next

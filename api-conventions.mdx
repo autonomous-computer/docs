@@ -10,6 +10,16 @@
 - API responses include `Omni-Meter-Class`
 - this is the canonical hint for billing/quota classification in logs, smoke output, and reconciliation jobs
 
+## Cost and token headers
+
+- every `/v1/*` response includes `Omni-Token-Count` and `Omni-Estimated-Cost` so agents can budget natively without re-reading the pricing page
+- `Omni-Token-Count` is an approximate output-token count computed with the `o200k_base` tokenizer (gpt-4o / o1 / modern-frontier encoding) as a portable proxy; consumer-model token usage may vary 10–30%
+- `Omni-Estimated-Cost` is a dollar string at 4-decimal precision (e.g. `$0.0042`) reflecting the plan-discounted per-call rate pre-grant-offset
+- grant and credit balance are communicated separately via `Omni-Free-Grant-Remaining` and `Omni-Budget-Used` — the final billed amount reflects grant offsets on top of the per-call estimate
+- `Omni-Token-Count-Estimated: true` is emitted whenever `Omni-Token-Count` falls back to a `ceil(bytes / 4)` approximation — either because the response body exceeded 512 KB (and was not fully tokenized to protect p95 latency) or because the response is a non-JSON billable payload (filing downloads, csv/markdown/pdf exports). Absence of this header means the count is an exact tokenizer result from the JSON body
+- counts flagged as estimated are advisory for budget planning only; do not use them for exact tokenizer-equivalence math
+- error responses (4xx, 5xx), rate-limit 429, billing-required 402, and budget-gate 402 all emit `Omni-Token-Count: 0` and `Omni-Estimated-Cost: $0.0000` — agents should treat failed requests as free
+
 ## Versioning
 
 - production clients should send `omni-version` and pin to a dated release
