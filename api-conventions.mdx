@@ -20,6 +20,17 @@
 - counts flagged as estimated are advisory for budget planning only; do not use them for exact tokenizer-equivalence math
 - error responses (4xx, 5xx), rate-limit 429, billing-required 402, and budget-gate 402 all emit `Omni-Token-Count: 0` and `Omni-Estimated-Cost: $0.0000` — agents should treat failed requests as free
 
+## Response formats
+
+- every response-shape endpoint accepts `?view=default | compact | agent`
+  - `default` (implicit): human-readable shape with full provenance, freshness, materialization, and validation metadata
+  - `compact`: trimmed subset of top-level fields — suitable for UI consumers that only need identifiers + dates
+  - `agent`: agent-optimized shape that keeps essentials and citation pointers (e.g. `filingUrl`, `accessionNumber`, offsets) and drops provenance chains, freshness metadata, and pagination context not needed for retrieval
+- `?view=agent` and `?view=compact` coexist as distinct shapes; agent is not a strict subset of compact — it ships the richer "essentials + citations" shape while compact ships a UI-friendly top-level skim
+- token-count and cost headers naturally shrink in agent mode (agents pay less for compact responses). No client changes are required — header values reflect the final serialized body
+- agent-mode responses preserve camelCase field names — agent mode is a projection of the default shape, not a rename. See the per-endpoint API reference for the exact agent-mode field set
+- unknown values of `?view=` fall back silently to `default`, so accidental typos never surface as a 4xx
+
 ## Versioning
 
 - production clients should send `omni-version` and pin to a dated release
