@@ -31,6 +31,31 @@
 - agent-mode responses preserve camelCase field names — agent mode is a projection of the default shape, not a rename. See the per-endpoint API reference for the exact agent-mode field set
 - unknown values of `?view=` fall back silently to `default`, so accidental typos never surface as a 4xx
 
+### Endpoints that support `?view=agent`
+
+Agent mode is live on **15 endpoints** as of OMNI-3084. Expect 30–95% byte-size reduction depending on endpoint shape (endpoints that carry large prose summaries see the biggest wins).
+
+OMNI-3075 (first tranche):
+
+- `GET /v1/filings/latest` — single filing essentials + `filingUrl`
+- `GET /v1/entities/resolve` — entity with primary identifiers + match metadata
+- `GET /v1/statements` — statement with rows/periods, provenance dropped
+- `GET /v1/facts` — fact point items + lifted `accessionNumber` / `filingUrl`
+- `GET /v1/sections/search` — section items + lifted `startOffset` / `endOffset`
+
+OMNI-3084 (second tranche):
+
+- `GET /v1/insiders` — insider trade items with trade essentials, ownership flags dropped
+- `GET /v1/forms/144` — Form 144 filings with citation pointers
+- `GET /v1/offerings` — offering records (S-1 / 424) with prospectus URL
+- `GET /v1/events/ma` — M&A events with deal structure + counterparty
+- `GET /v1/events/enforcement` — enforcement actions with release metadata
+- `GET /v1/events/voting-results` — voting results events with proposals array (shaped)
+- `GET /v1/compensation` — executive compensation breakdown
+- `GET /v1/owners/13f` — 13F report with nested `holdings[]` (shaped)
+- `GET /v1/funds/nport/holdings` — N-PORT holdings with nested `holdings[]` (shaped)
+- `GET /v1/companies/subsidiaries` — subsidiary list with citation envelope (API-consistency, byte-neutral)
+
 ## Versioning
 
 - production clients should send `omni-version` and pin to a dated release
