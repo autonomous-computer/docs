@@ -1,0 +1,294 @@
+<!-- DO NOT HAND-EDIT — generated from packages/contracts/src/agent-prompts.ts -->
+<!-- Re-run `bun run docs:agent-prompts` after editing the contract. -->
+
+# Law firm — Agent Prompt Library
+
+<Info>12 v1 prompts live on `api.secapi.ai/mcp` today.</Info>
+
+Disclosure forensics, deal diligence, enforcement research, and litigation binder workflows for legal teams advising on public-company matters.
+
+Run any prompt by pasting it into Claude Desktop, Claude Code, or Cursor with the Omni Datastream MCP server installed. Or use the CLI:
+
+```bash
+omni-sec agents prompts read law-firm-enforcement-history
+omni-sec agents prompts copy law-firm-enforcement-history | pbcopy
+```
+
+---
+
+## Headline workflow
+
+The headliner for this persona is also rendered in the [vertical solutions page](/for-law-firms).
+
+### 1. Build a 12-month enforcement and disclosure dossier for a client target
+
+*Compile 12 months of filings, legal proceedings, and insider activity for due diligence.*
+
+**Category:** Enforcement research  ·  **Difficulty:** intermediate  ·  **Prompt id:** `law-firm-enforcement-history`
+
+**Prompt**
+
+```
+You are a legal research assistant with access to Omni Datastream. For any client target company, resolve the entity to a canonical CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and surface any 8-K Item 5.02 (officer/director departures) events. Output a dossier with one section per finding category and inline requestId references for auditability.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Canonicalize the target to a CIK
+2. `filings.search` — 12-month filing history
+3. `sections.get` — Item 3 legal proceedings from latest 10-K
+4. `insiders.list` — 12-month insider transaction history
+
+**Expected output:** Disclosure dossier (markdown) with 4 sections + inline requestId citations.
+
+---
+
+## All v1 workflows
+
+### 2. Diligence the latest 8-K material agreement for an M&A target
+
+*Pull the most recent 8-K Item 1.01 material agreement and produce a litigation-ready PDF.*
+
+**Category:** Deal diligence  ·  **Difficulty:** intermediate  ·  **Prompt id:** `law-firm-deal-disclosure-diligence`
+
+**Prompt**
+
+```
+For an M&A target (e.g., MSFT), find the most recent 8-K filing that contains an Item 1.01 (Entry into a Material Definitive Agreement) section. Extract the full Item 1.01 text, render the 8-K as a citation-friendly markdown document, and export it as a PDF for the deal binder. Surface the counterparty, agreement type, and any termination/material-adverse-change clauses identified.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve target to CIK
+2. `filings.search` — Find recent 8-K filings
+3. `sections.get` — Extract Item 1.01 text
+4. `filings.export` — Render 8-K to PDF for the binder
+
+**Expected output:** Item 1.01 extract + rendered 8-K PDF (base64) + counterparty/clause summary.
+
+### 3. Reconstruct proxy fight outcomes for governance precedent
+
+*Pull voting results, comp context, and 8-K Item 5.07 narrative for a contested proxy.*
+
+**Category:** Governance research  ·  **Difficulty:** advanced  ·  **Prompt id:** `law-firm-proxy-fight-vote-analysis`
+
+**Prompt**
+
+```
+For a contested proxy fight (e.g., DIS 2023, ETSY 2024), pull the events.voting_results record for the most recent annual meeting, list all proposals and their vote tallies, surface the named-executive comp from the same DEF 14A cycle, and extract the 8-K Item 5.07 (Submission of Matters to a Vote of Security Holders) text. Output a precedent memo with proposal-by-proposal outcomes, comp context, and any director-vote outliers.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve issuer
+2. `events.voting_results` — Latest annual meeting tally
+3. `comp.list` — Named-executive comp same cycle
+4. `sections.get` — Item 5.07 8-K narrative
+
+**Expected output:** Precedent memo (markdown) with proposal tallies + comp context + outliers.
+
+### 4. Surface restatements and material-weakness disclosures across a watchlist
+
+*Search a watchlist for 10-K/A restatements + Item 9A material-weakness language.*
+
+**Category:** Disclosure forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `law-firm-restatement-detection`
+
+**Prompt**
+
+```
+For a watchlist of small-cap US issuers, find any 10-K/A (amended annual reports) filed in the past 24 months. For each match, search sections for the keyword 'restatement' and pull Item 9A (Controls and Procedures) text from the underlying 10-K. Surface the type of restatement, the period restated, and any material-weakness disclosure language. Output a ranked table by severity.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve each ticker
+2. `filings.search` — 10-K/A filing history
+3. `sections.search` — Find restatement language
+4. `sections.get` — Item 9A material-weakness text
+
+**Expected output:** Severity-ranked table of restatements + material-weakness disclosures.
+
+**Caveats**
+- Material-weakness detection is keyword-based on Item 9A text. Typed AAER classification ships in v2 with the AAER MCP wrap.
+
+### 5. Export a litigation binder of filings as PDF + DOCX
+
+*Produce a multi-format binder of relevant filings for a litigation matter.*
+
+**Category:** Litigation support  ·  **Difficulty:** starter  ·  **Prompt id:** `law-firm-litigation-binder-export`
+
+**Prompt**
+
+```
+For a defendant company, pull the most recent 10-K, the most recent two 10-Qs, and any 8-K from the past 12 months that contains an Item 8.01 (Other Events) disclosure. Export each as both PDF (binder copy) and DOCX (markup-ready). Save accession numbers and provenance for the chain-of-custody log.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve defendant
+2. `filings.search` — Find target filings
+3. `filings.export` — PDF binder copy
+4. `filings.export` — DOCX markup-ready copy
+
+**Expected output:** Set of binder files (base64) + chain-of-custody log table.
+
+### 6. Track officer departures across a portfolio of insureds
+
+*Detect 8-K Item 5.02 officer departures for D&O claim-prevention monitoring.*
+
+**Category:** Event monitoring  ·  **Difficulty:** intermediate  ·  **Prompt id:** `law-firm-officer-departure-monitoring`
+
+**Prompt**
+
+```
+For a portfolio of 50 insured public companies, search the past 90 days of 8-K filings for any Item 5.02 (Departure of Directors or Certain Officers) disclosure. For each match, extract the Item 5.02 text, pull the executive's most recent compensation, and list the insider's recent Form 4 trading activity. Output a ranked alert list by claim-trigger likelihood.
+```
+
+**Expected tool chain**
+
+1. `filings.search` — Recent 8-K filings
+2. `sections.search` — Find Item 5.02 disclosures
+3. `sections.get` — Extract Item 5.02 text per match
+4. `insiders.list` — Departing executive's recent trades
+
+**Expected output:** Ranked alert list with Item 5.02 text + comp + trading activity per departure.
+
+### 7. Review insider trading clusters for Section 16 compliance
+
+*Surface insider clusters and cross-reference with comp grants for Section 16 filings.*
+
+**Category:** Compliance review  ·  **Difficulty:** advanced  ·  **Prompt id:** `law-firm-insider-trading-pattern-review`
+
+**Prompt**
+
+```
+For a public company you are advising, list all Form 4 insider transactions in the past 180 days, group by reporting person, surface any clusters of 3+ transactions in any 14-day window, cross-reference with the named-executive comp disclosures (DEF 14A) to identify whether transactions follow scheduled grants, and flag any sales by directors/officers above $1M. Output a Section 16 review packet.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve issuer
+2. `insiders.list` — 180-day insider transactions
+3. `comp.list` — Named-executive comp + grant schedule
+4. `owners.get_13f` — Institutional context
+
+**Expected output:** Section 16 review packet with insider clusters + grant alignment + ≥$1M sales flagged.
+
+### 8. Compare risk-factor disclosures across industry peers
+
+*Benchmark a client's Item 1A risk factors against factor-similar peers.*
+
+**Category:** Disclosure comparison  ·  **Difficulty:** advanced  ·  **Prompt id:** `law-firm-disclosure-comparison-peer`
+
+**Prompt**
+
+```
+For NVDA, identify the top 10 factor-similar US peers, pull each peer's latest Item 1A (Risk Factors) section, and identify any risk-factor topics present in 7+ peers but missing from NVDA's disclosure. Output a comparison matrix + recommended risk-factor additions for the next 10-K cycle.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve subject and peers
+2. `factors.related_stocks` — Factor-similar peer set
+3. `sections.get` — Item 1A from each peer's 10-K
+4. `intelligence.query` — Surface common risk-factor topics across the cohort
+
+**Expected output:** Comparison matrix + recommended risk-factor additions.
+
+### 9. Identify cross-issuer regulatory disclosure trends
+
+*Search semantically across filings for an emerging regulatory theme.*
+
+**Category:** Regulatory research  ·  **Difficulty:** advanced  ·  **Prompt id:** `law-firm-regulatory-search-thematic`
+
+**Prompt**
+
+```
+Identify how US public companies are disclosing AI governance and data-privacy risk in their 2024 10-Ks. Run a semantic intelligence query, then for the top 10 returned issuers pull the relevant 10-K sections and the underlying filings (PDF). Output a thematic memo with three representative excerpts and a list of disclosure approaches.
+```
+
+**Expected tool chain**
+
+1. `intelligence.query` — Semantic search across 10-Ks
+2. `sections.search` — Find specific risk-factor sections
+3. `filings.search` — Underlying filings inventory
+4. `filings.export` — PDF of representative filings
+
+**Expected output:** Thematic memo with 3 excerpts + disclosure approach taxonomy.
+
+### 10. Detect going-concern language across small-cap watchlist
+
+*Sweep watchlist filings for substantial-doubt and going-concern language.*
+
+**Category:** Solvency monitoring  ·  **Difficulty:** intermediate  ·  **Prompt id:** `law-firm-going-concern-keyword-scan`
+
+**Prompt**
+
+```
+For a watchlist of US micro-cap issuers, search 10-K and 10-Q filings for any occurrence of 'substantial doubt' or 'going concern' language. For each match, pull the Item 9A (Controls) section and the most recent balance sheet + cash flow snapshots to estimate runway. Output a watchlist alert table ranked by months of runway.
+```
+
+**Expected tool chain**
+
+1. `sections.search` — Going-concern language search
+2. `sections.get` — Item 9A internal-controls text
+3. `companies.balance_sheets` — Latest balance sheet for runway estimation
+4. `companies.cash_flow_statements` — Burn-rate context
+
+**Expected output:** Runway-ranked alert table for going-concern candidates.
+
+**Caveats**
+- Runway computation is approximate; uses cash + ST investments / TTM operating cash burn.
+
+### 11. Establish defendant's financial baseline for damages assessment
+
+*Pull a financial baseline (revenue, margins, market cap) for damages computation.*
+
+**Category:** Litigation support  ·  **Difficulty:** starter  ·  **Prompt id:** `law-firm-defendant-financial-baseline`
+
+**Prompt**
+
+```
+For a defendant company, pull the most recent annual income statement, the latest balance sheet, the trailing-twelve-month revenue trajectory (last 8 quarters), and the latest market snapshot. Output a one-page financial baseline + key ratios for the damages expert.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve defendant
+2. `companies.financials` — Annual + quarterly fundamentals
+3. `companies.ratios` — Key ratios
+4. `market.snapshots` — Latest market snapshot
+
+**Expected output:** 1-page financial baseline + key ratios for the damages expert.
+
+### 12. Compile D&O liability binder for a board
+
+*Build a board-side D&O binder covering comp, ownership, insider activity.*
+
+**Category:** D&O preparation  ·  **Difficulty:** intermediate  ·  **Prompt id:** `law-firm-d-and-o-binder`
+
+**Prompt**
+
+```
+For a public-company board, compile a D&O liability binder including: most recent named-executive comp, year-over-year comp change, latest 13F institutional ownership snapshot, and the past 12 months of insider Form 4 transactions. Add a one-page narrative on governance posture.
+```
+
+**Expected tool chain**
+
+1. `comp.list` — Latest comp disclosures
+2. `comp.compare` — Year-over-year comp comparison
+3. `owners.get_13f` — Institutional ownership snapshot
+4. `insiders.list` — 12-month Form 4 history
+
+**Expected output:** D&O binder (markdown) + 1-page governance narrative.
+
+
+---
+
+## See also
+
+- [Agent prompt library index](/agents/prompt-library)
+- [Install MCP for Claude Desktop / Claude Code / Cursor](/mcp-install)
+- [Agent operating layer](/agent-operating-layer)
+- [omni-sec CLI workflows](/libraries-and-sdks/javascript-sdk)
+
