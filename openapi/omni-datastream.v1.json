@@ -218,6 +218,72 @@
         "summary": "Replay a stored webhook delivery attempt by re-emitting its source event to the endpoint"
       }
     },
+    "/v1/monitors": {
+      "get": {
+        "summary": "List saved-search monitors for the current organization"
+      },
+      "post": {
+        "summary": "Create a saved-search monitor with optional webhook or email delivery destination"
+      }
+    },
+    "/v1/monitors/{monitor_id}": {
+      "get": {
+        "summary": "Retrieve a single monitor by id"
+      },
+      "delete": {
+        "summary": "Deactivate a monitor (idempotent; sets is_active=false)"
+      }
+    },
+    "/v1/monitors/{monitor_id}/matches": {
+      "get": {
+        "summary": "Run the monitor's saved query and return new matches since last_checked_at"
+      }
+    },
+    "/v1/monitors/{monitor_id}/delivery": {
+      "post": {
+        "summary": "Update or replace the monitor's delivery destination (e.g., set or change an email recipient)"
+      }
+    },
+    "/v1/delivery/unsubscribe": {
+      "get": {
+        "summary": "Render an unsubscribe confirmation page for a signed token",
+        "description": "Anonymous endpoint. GET is preview-safe and never mutates state — it only renders a confirmation page with a POST form. Email link previewers (Outlook, Apple Mail, Gmail) will fetch this URL during scanning; the user must submit POST to actually unsubscribe (RFC 8058).",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed unsubscribe token (HMAC-SHA256, with nonce + expiry)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirmation HTML page rendered"
+          },
+          "400": {
+            "description": "Invalid or expired token"
+          }
+        }
+      },
+      "post": {
+        "summary": "Unsubscribe from monitor email delivery (RFC 8058 one-click compatible)",
+        "description": "Anonymous endpoint. Token may be supplied in form-encoded body OR query string. When the body includes `List-Unsubscribe=One-Click`, the response is 204 No Content per RFC 8058. Idempotent — repeated calls with the same token return the same result.",
+        "responses": {
+          "200": {
+            "description": "Confirmation HTML page (interactive flow)"
+          },
+          "204": {
+            "description": "One-click unsubscribe processed (RFC 8058 List-Unsubscribe-Post)"
+          },
+          "400": {
+            "description": "Invalid or expired token"
+          }
+        }
+      }
+    },
     "/v1/stream_subscriptions": {
       "get": {
         "summary": "List stream subscriptions for the current organization"
@@ -1392,6 +1458,84 @@
               "minimum": 1,
               "maximum": 25
             }
+          }
+        ]
+      }
+    },
+    "/v1/search/semantic": {
+      "get": {
+        "summary": "Semantic vector search across SEC filing section content via Voyage AI + Pinecone, with hybrid keyword + vector RRF and OMNI-3083 citation fields on every result row",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "keyword",
+                "semantic",
+                "hybrid"
+              ]
+            },
+            "description": "Retrieval mode (default hybrid)"
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filing_year",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "agent"
+              ]
+            },
+            "description": "Pass `agent` to drop score and retrievalMode while preserving citation fields"
           }
         ]
       }
@@ -12196,6 +12340,7 @@
                 "artifact.created",
                 "artifact.reconciled",
                 "filing.published",
+                "monitor.match",
                 "webhook_endpoint.created",
                 "stream_subscription.created"
               ]
@@ -12267,6 +12412,7 @@
                 "artifact.created",
                 "artifact.reconciled",
                 "filing.published",
+                "monitor.match",
                 "webhook_endpoint.created",
                 "stream_subscription.created"
               ]

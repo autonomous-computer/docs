@@ -11,6 +11,20 @@ The changelog is part of the trust surface. It keeps shipped changes, release rh
 
 ## Release trail
 
+<Update label="April 25, 2026" description="Email delivery for monitors (Resend)" tags={["OMNI", "Release"]}>
+Monitors now support email destinations alongside the existing webhook channel. SEC filing matches alert your inbox with one-click, RFC 8058-compliant unsubscribe.
+
+### Highlights
+
+- POST /v1/monitors accepts delivery: { type: 'email', config: { to } } as a discriminated union — Slack and other channels extend the same surface
+- Transactional alerts via Resend with HTML + plaintext bodies, inline-styled for Outlook compatibility
+- Signed unsubscribe tokens (HMAC-SHA256, nonce + 365-day expiry, recipient hashed not raw — URL is non-PII)
+- GET /v1/delivery/unsubscribe renders confirmation; POST mutates state — preview-safe under Outlook/Apple/Gmail link previewers (RFC 8058 + List-Unsubscribe-Post: List-Unsubscribe=One-Click for one-click clients)
+- New email_delivery_attempts audit table parallels webhook_delivery_attempts; recipient hashed, redacted form retained for ops debugging
+- New email_delivery MeterClass for per-org rate limiting (180/min default; observability-only, not billable in v1)
+- Channel ships as a primitive — automated dispatch via Dagster cron is filed as a separate follow-up (see OMNI-3244)
+</Update>
+
 <Update label="April 24, 2026" description="Structured 8-K Item 5.07 voting results — first-in-market parser" tags={["OMNI", "Release"]}>
 New GET /v1/events/voting-results endpoint and events.voting_results MCP tool return structured voting results from 8-K Item 5.07 filings with per-proposal vote counts, approval outcomes, and proposal-type classification. sec-api.io has had an open bug on 5.07 parsing since July 2025 — OMNI ships the structured route first.
 
@@ -191,17 +205,6 @@ Highlights from this shipping window include fix: add DNS preflight check before
 - fix: use persisted snapshots for standalone intraday materialization
 </Update>
 
-<Update label="April 4, 2026" description="fix: retry Dagster job launches on DNS failure to get fresh ECS tasks + 6 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: retry Dagster job launches on DNS failure to get fresh ECS tasks; fix: harden extraction HTML stripping; deps(docker): bump python from 3.11-slim to 3.12-slim in /pipelines/sec-pipeline.
-
-### Highlights
-
-- fix: retry Dagster job launches on DNS failure to get fresh ECS tasks
-- fix: harden extraction HTML stripping
-- deps(docker): bump python from 3.11-slim to 3.12-slim in /pipelines/sec-pipeline
-- deps(py): update certifi requirement in /autoresearch
-</Update>
-
 <Update label="April 4, 2026" description="deps(deps): bump lucide-react from 0.511.0 to 0.577.0 + 6 more" tags={["OMNI", "Release"]}>
 Highlights from this shipping window include deps(deps): bump lucide-react from 0.511.0 to 0.577.0; deps(rs): update markup5ever_rcdom requirement; deps(rs): update reqwest requirement from 0.12 to 0.13 in /packages/sdk-rust.
 
@@ -213,6 +216,17 @@ Highlights from this shipping window include deps(deps): bump lucide-react from 
 - deps(py): update anthropic requirement in /autoresearch
 </Update>
 
+<Update label="April 4, 2026" description="fix: retry Dagster job launches on DNS failure to get fresh ECS tasks + 6 more" tags={["OMNI", "Release"]}>
+Highlights from this shipping window include fix: retry Dagster job launches on DNS failure to get fresh ECS tasks; fix: harden extraction HTML stripping; deps(docker): bump python from 3.11-slim to 3.12-slim in /pipelines/sec-pipeline.
+
+### Highlights
+
+- fix: retry Dagster job launches on DNS failure to get fresh ECS tasks
+- fix: harden extraction HTML stripping
+- deps(docker): bump python from 3.11-slim to 3.12-slim in /pipelines/sec-pipeline
+- deps(py): update certifi requirement in /autoresearch
+</Update>
+
 <Update label="April 3, 2026" description="Geographic segment depth detection + preferred stock deduction" tags={["OMNI", "Release"]}>
 Segmented revenues now recognize geographic acronyms (EMEA, APAC, LACC) at depth 2 for proper isMostGranularSibling filtering. Company financials pipeline now deducts PreferredStockValue from StockholdersEquity when CommonStockholdersEquity is not filed separately.
 
@@ -221,14 +235,6 @@ Segmented revenues now recognize geographic acronyms (EMEA, APAC, LACC) at depth
 - inferSegmentHierarchyDepth: added EMEA, APAC, LACC, Americas patterns
 - PREFERRED_STOCK_CONCEPT_TAGS: PreferredStockValue, PreferredStockLiquidationPreference, PreferredStockCarryingAmount
 - Common equity derivation: statement-level > supplemental > preferred stock deduction
-</Update>
-
-<Update label="April 2, 2026" description="fix: address 33 unresolved bot review comments from last 72h" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix: address 33 unresolved bot review comments from last 72h
 </Update>
 
 <Update label="April 2, 2026" description="fix: broaden health care row key match for pension table extraction + 3 more" tags={["OMNI", "Release"]}>
@@ -242,15 +248,12 @@ Highlights from this shipping window include fix: broaden health care row key ma
 - fix: datastream answer quality fast follow
 </Update>
 
-<Update label="April 1, 2026" description="fix: supplement sparse statement history + 9 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: supplement sparse statement history; feat: expose stock repurchases in statements; fix: carry filing quarters through sec lookups.
+<Update label="April 2, 2026" description="fix: address 33 unresolved bot review comments from last 72h" tags={["OMNI", "Release"]}>
+A focused product or platform improvement shipped to OMNI.
 
 ### Highlights
 
-- fix: supplement sparse statement history
-- feat: expose stock repurchases in statements
-- fix: carry filing quarters through sec lookups
-- fix: reject xbrl noise in filing sections
+- fix: address 33 unresolved bot review comments from last 72h
 </Update>
 
 <Update label="April 1, 2026" description="Fix datastream historical filing truth + 9 more" tags={["OMNI", "Release"]}>
@@ -262,6 +265,17 @@ Highlights from this shipping window include Fix datastream historical filing tr
 - fix: preserve exact sec ticker resolution
 - fix: honor accession in risk categories
 - fix: invalidate stale statement cache
+</Update>
+
+<Update label="April 1, 2026" description="fix: supplement sparse statement history + 9 more" tags={["OMNI", "Release"]}>
+Highlights from this shipping window include fix: supplement sparse statement history; feat: expose stock repurchases in statements; fix: carry filing quarters through sec lookups.
+
+### Highlights
+
+- fix: supplement sparse statement history
+- feat: expose stock repurchases in statements
+- fix: carry filing quarters through sec lookups
+- fix: reject xbrl noise in filing sections
 </Update>
 
 <Update label="March 31, 2026" description="fix: hide readiness bootstrap errors" tags={["OMNI", "Release"]}>
@@ -319,17 +333,6 @@ Highlights from this shipping window include Fix npm publish provenance and stal
 - Fix npm publish provenance for private repo
 </Update>
 
-<Update label="March 23, 2026" description="chore: mark stripe live account dedicated + 8 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include chore: mark stripe live account dedicated; fix: authenticate final signoff factor check; chore: sync tracked stripe test state.
-
-### Highlights
-
-- chore: mark stripe live account dedicated
-- fix: authenticate final signoff factor check
-- chore: sync tracked stripe test state
-- feat: add stripe state sync workflow
-</Update>
-
 <Update label="March 23, 2026" description="fix: align factor catalog release checks + 8 more" tags={["OMNI", "Release"]}>
 Highlights from this shipping window include fix: align factor catalog release checks; fix: align launch signoff api key env; Fix merged bugbot fast-follows.
 
@@ -339,6 +342,17 @@ Highlights from this shipping window include fix: align factor catalog release c
 - fix: align launch signoff api key env
 - Fix merged bugbot fast-follows
 - feat: ship market estimates end-to-end
+</Update>
+
+<Update label="March 23, 2026" description="chore: mark stripe live account dedicated + 8 more" tags={["OMNI", "Release"]}>
+Highlights from this shipping window include chore: mark stripe live account dedicated; fix: authenticate final signoff factor check; chore: sync tracked stripe test state.
+
+### Highlights
+
+- chore: mark stripe live account dedicated
+- fix: authenticate final signoff factor check
+- chore: sync tracked stripe test state
+- feat: add stripe state sync workflow
 </Update>
 
 <Update label="March 20, 2026" description="fix: align site browser smoke with local auth base + 1 more" tags={["OMNI", "Release"]}>
@@ -367,6 +381,15 @@ A focused product or platform improvement shipped to OMNI.
 - fix: normalize company mapping backfill identifiers
 </Update>
 
+<Update label="March 16, 2026" description="Advance section extraction moat work + 1 more" tags={["OMNI", "Release"]}>
+Highlights from this shipping window include Advance section extraction moat work; Add Omni Datastream 2.0 strategy plan.
+
+### Highlights
+
+- Advance section extraction moat work
+- Add Omni Datastream 2.0 strategy plan
+</Update>
+
 <Update label="March 16, 2026" description="fix: close PR 29 fast-follow bugs + 3 more" tags={["OMNI", "Release"]}>
 Highlights from this shipping window include fix: close PR 29 fast-follow bugs; Ship ownership history backfill support; Relax stored filing manifest timestamp typing.
 
@@ -378,13 +401,12 @@ Highlights from this shipping window include fix: close PR 29 fast-follow bugs; 
 - Fix latest filing and section storage fast paths
 </Update>
 
-<Update label="March 16, 2026" description="Advance section extraction moat work + 1 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include Advance section extraction moat work; Add Omni Datastream 2.0 strategy plan.
+<Update label="March 15, 2026" description="Close final Stripe signoff gaps" tags={["OMNI", "Release"]}>
+A focused product or platform improvement shipped to OMNI.
 
 ### Highlights
 
-- Advance section extraction moat work
-- Add Omni Datastream 2.0 strategy plan
+- Close final Stripe signoff gaps
 </Update>
 
 <Update label="March 15, 2026" description="Fix statement alias and cache normalization + 3 more" tags={["OMNI", "Release"]}>
@@ -396,14 +418,6 @@ Highlights from this shipping window include Fix statement alias and cache norma
 - Harden SEC entity and replay handling
 - Port extraction autoresearch boundary win
 - Fix Python SDK parity and CI action versions
-</Update>
-
-<Update label="March 15, 2026" description="Close final Stripe signoff gaps" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- Close final Stripe signoff gaps
 </Update>
 
 <Update label="March 13, 2026" description="Initialize repository" tags={["OMNI", "Release"]}>

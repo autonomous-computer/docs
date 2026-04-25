@@ -1,0 +1,108 @@
+# Monitors
+
+Monitors are saved searches that trigger delivery to a destination — either a webhook or an email address — when new SEC filings match the query. Use monitors for inbox-grade alerting on portfolio events: 8-K material events, 13F holdings changes, insider transactions, AAERs, auditor changes, and any keyword search the filing search supports.
+
+## Lifecycle
+
+1. Create a monitor with `POST /v1/monitors`. Provide `name`, `query`, and optionally `filters` (e.g., `{ ticker, form, date_from, date_to }`) plus a delivery destination (webhook or email).
+2. Inspect recent matches on demand with `GET /v1/monitors/{monitor_id}/matches`.
+3. List your org's monitors with `GET /v1/monitors`.
+4. Deactivate a monitor with `DELETE /v1/monitors/{monitor_id}` (idempotent; sets `is_active=false`).
+5. Replace the delivery destination on an existing monitor with `POST /v1/monitors/{monitor_id}/delivery`.
+
+## Destination types
+
+A monitor has exactly one delivery destination in v1. Multiple destinations per monitor (e.g., email AND Slack) is a planned follow-up; until then create one monitor per channel.
+
+### Webhook (legacy single-URL path)
+
+The `webhookUrl` field on a monitor sends matches to a signed webhook endpoint. Webhook delivery uses the same signing protocol as `POST /v1/webhook_endpoints` — see [Webhook and stream workflows](./webhook-stream-workflows.md) for the full lifecycle and signature verification details.
+
+```bash
+curl -X POST https://api.secapi.ai/v1/monitors \
+  -H "Authorization: Bearer $OMNI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Goodwill impairments",
+    "query": "goodwill impairment",
+    "filters": { "form": "8-K" },
+    "webhookUrl": "https://your-app.example.com/hooks/omni"
+  }'
+```
+
+### Email
+
+Email delivery uses Resend as the transactional provider. Each match-batch produces a single email containing the rendered HTML + plaintext alongside an RFC 8058-compliant `List-Unsubscribe` header for one-click client integrations. The `delivery` object in the request body is a discriminated union; future channels (Slack, etc.) extend the `type` field.
+
+```bash
+curl -X POST https://api.secapi.ai/v1/monitors \
+  -H "Authorization: Bearer $OMNI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Goodwill impairments",
+    "query": "goodwill impairment",
+    "filters": { "form": "8-K" },
+    "delivery": {
+      "type": "email",
+      "config": { "to": "alerts@your-firm.com" }
+    }
+  }'
+```
+
+The response includes a `delivery` block describing the destination:
+
+```json
+{
+  "object": "monitor",
+  "id": "mon_...",
+  "delivery": {
+    "type": "email",
+    "config": { "to": "alerts@your-firm.com" },
+    "status": "active"
+  },
+  ...
+}
+```
+
+`delivery.status` cycles through `active` → `unsubscribed` (one-click from email) or `bounced` (set by future bounce-webhook handling). When status is anything other than `active`, the email channel does not fire.
+
+## Email behavior
+
+### Sender address
+
+Emails ship from the address configured by the `EMAIL_SENDER_FROM` environment variable on the API service. The default for the production deployment is `alerts@secapi.ai`. You can override the sender per-destination via `delivery.config.from` if your Resend account has multiple verified domains.
+
+### Unsubscribe
+
+Every email includes a signed unsubscribe link in both the body and the `List-Unsubscribe` header. The token is HMAC-SHA256-bound to the monitor and the recipient address (hashed, not raw), with a 365-day expiry and a fresh nonce per email so two clicks from the same recipient produce different valid tokens.
+
+The unsubscribe endpoint is **GET-render / POST-mutate** per RFC 8058:
+
+- `GET /v1/delivery/unsubscribe?token=...` renders a confirmation page. **Does not mutate state.** This is intentional: Outlook Safe Links, Apple Mail Privacy Protection, and Gmail's URL classifier all fire GETs on every inbox link to render previews and scan for malware. A GET-mutates design would silently unsubscribe 5–15% of recipients on first deploy.
+- `POST /v1/delivery/unsubscribe` flips `delivery.status` to `unsubscribed`. Idempotent — re-clicking the same link returns the same confirmation.
+- Modern mail clients honoring `List-Unsubscribe-Post: List-Unsubscribe=One-Click` will hit POST directly without rendering the confirmation page; the response in that case is `204 No Content`.
+
+To re-enable email delivery on an unsubscribed monitor, call `POST /v1/monitors/{monitor_id}/delivery` with a fresh destination (status resets to `active`).
+
+### Retry semantics
+
+Resend's API does not auto-retry on 5xx. OMNI does not retry per-call either: a failed send writes a row to `email_delivery_attempts` with `ok=false` and the HTTP status / error message, plus a Sentry capture tagged `workflow=email_delivery`. The cron that drives monitor → email dispatch handles backoff at the next scheduled tick.
+
+The adapter sets a stable `Idempotency-Key = sha256(monitor_id + match_ids_sorted)` on every send, so any future retry path (manual replay, cron retry, etc.) is duplicate-safe at the Resend side.
+
+### Audit trail
+
+Every send attempt — success or failure — is persisted to `email_delivery_attempts` with the recipient hashed (not raw), a redacted preview (`a***@example.com`), the request id, the Resend message id (on success), the HTTP status, and the latency. This enables support cases ("did my customer get the alert?") without exposing recipient PII in operator-visible logs.
+
+## Limits
+
+- **Search modes**: only `keyword` is supported in monitor execution at this time. Semantic search support will land in a future release.
+- **One destination per monitor**: v1 supports a single delivery destination per monitor row. Use multiple monitors to fan out to multiple channels for now.
+- **Quota**: email delivery is metered as `email_delivery` (180 sends per minute by default per org). Adjust via the standard plan policy override env.
+
+## Related
+
+- [Webhook and stream workflows](./webhook-stream-workflows.md)
+- [Datastream events](./events.md) — full event-type reference
+- [Build a filing monitor (tutorial)](./tutorials/build-filing-monitor.md)
+
