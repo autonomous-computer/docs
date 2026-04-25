@@ -1,0 +1,286 @@
+<!-- DO NOT HAND-EDIT — generated from packages/contracts/src/agent-prompts.ts -->
+<!-- Re-run `bun run docs:agent-prompts` after editing the contract. -->
+
+# PR firm — Agent Prompt Library
+
+<Info>12 v1 prompts live on `api.secapi.ai/mcp` today.</Info>
+
+Proxy-season narrative, 8-K material event monitoring, executive transition tracking, and peer benchmarking for IR and crisis-comms teams.
+
+Run any prompt by pasting it into Claude Desktop, Claude Code, or Cursor with the Omni Datastream MCP server installed. Or use the CLI:
+
+```bash
+omni-sec agents prompts read pr-firm-voting-results-narrative
+omni-sec agents prompts copy pr-firm-voting-results-narrative | pbcopy
+```
+
+---
+
+## Headline workflow
+
+### 1. Generate a proxy-season vote-results narrative for client briefings
+
+*Pull voting results, comp context, and peer comparison for a proxy-season recap.*
+
+**Category:** Proxy season  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-voting-results-narrative`
+
+**Prompt**
+
+```
+For a corporate IR client, pull the most recent annual meeting voting results, list every proposal with vote tallies and percentages, surface the named-executive comp context, and identify the top 5 factor-similar peer companies whose annual meetings ran in the same window. Output a recap memo + comparative table for the IR client briefing.
+```
+
+**Expected tool chain**
+
+1. `events.voting_results` — Voting results structured pull
+2. `comp.list` — Named-executive comp context
+3. `intelligence.query` — Surface narrative context for the meeting
+4. `factors.related_stocks` — Peer set for comparative recap
+
+**Expected output:** Proxy-season recap memo (markdown) + comparative peer table.
+
+---
+
+## All v1 workflows
+
+### 2. Monitor 8-K material events across a portfolio of clients
+
+*Sweep client portfolio 8-K filings for material-event disclosures.*
+
+**Category:** Event monitoring  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-8k-material-event-monitoring`
+
+**Prompt**
+
+```
+For a portfolio of 25 PR clients, sweep the past 30 days of 8-K filings, search for any Item 8.01 (Other Events) disclosure that references a 'material' announcement, and pull the full text of each match. Output a daily monitoring digest with one paragraph per event and a recommended client-comms posture.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve each client to canonical CIK
+2. `filings.search` — Recent 8-K filings
+3. `sections.search` — Find Item 8.01 material disclosures
+4. `sections.get` — Extract full Item 8.01 text
+
+**Expected output:** Daily monitoring digest + recommended client-comms posture per event.
+
+### 3. Detect executive transitions for crisis-comms prep
+
+*Surface 8-K Item 5.02 officer transitions and pull supporting comp + insider context.*
+
+**Category:** Crisis comms  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-executive-transition-detection`
+
+**Prompt**
+
+```
+Sweep the past 7 days of 8-K filings for any Item 5.02 (Departure of Directors or Certain Officers) disclosure. For each match, extract the full text, identify the officer's most recent compensation, and check Form 4 trading activity in the past 30 days. Output a crisis-comms prep packet ranked by reputational risk.
+```
+
+**Expected tool chain**
+
+1. `filings.search` — Recent 8-K filings
+2. `sections.get` — Item 5.02 text per match
+3. `comp.compare` — Departing officer's comp history
+4. `insiders.list` — Recent Form 4 trades
+
+**Expected output:** Crisis-comms prep packet with reputational-risk ranking.
+
+### 4. Build peer-comparison context for client crisis comms
+
+*Compare a client's financial posture against factor-similar peers for crisis prep.*
+
+**Category:** Peer benchmarking  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-peer-comparison-context`
+
+**Prompt**
+
+```
+For an IR client (e.g., NFLX), generate the top 10 factor-similar peers, pull each peer's most recent annual financials and named-executive comp, and produce a comparison table. Output a crisis-comms briefing with three messages framed by where the client's metrics sit vs the peer cohort.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve client
+2. `factors.related_stocks` — Factor-similar peer set
+3. `companies.financials` — Peer fundamentals
+4. `comp.list` — Peer named-executive comp
+
+**Expected output:** Peer comparison table + 3 message-framings for crisis comms.
+
+### 5. Audit insider trading during client quiet periods
+
+*Surface insider trades that occurred during quiet-period windows.*
+
+**Category:** Compliance comms  ·  **Difficulty:** advanced  ·  **Prompt id:** `pr-firm-quiet-period-trading-watch`
+
+**Prompt**
+
+```
+For a corporate client, list all Form 4 insider transactions in the past 90 days, identify any that occurred within 14 days of an earnings announcement (quiet period), and surface any 'trading window' or 'quiet period' language in recent filings. Output a comms advisory + compliance flags.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve client
+2. `insiders.list` — 90-day Form 4 transactions
+3. `filings.search` — Recent Form 4 filings
+4. `sections.search` — Trading-window policy search
+
+**Expected output:** Comms advisory + compliance flag table.
+
+### 6. Prep acquisition-announcement materials with deal-context lookup
+
+*Pull deal-context filings, comp impact, and entity profile for an acquisition press release.*
+
+**Category:** Deal comms  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-acquisition-announcement-context`
+
+**Prompt**
+
+```
+For an upcoming acquisition announcement, pull the most recent 8-K Item 1.01 (Material Definitive Agreement) for the acquirer, extract the deal terms, resolve the target entity, and pull comp comparison context for the acquirer's executives. Output a press-release ready brief with deal-terms summary, target profile, and exec-comp implications.
+```
+
+**Expected tool chain**
+
+1. `filings.search` — Find recent 8-K Item 1.01 filings
+2. `sections.get` — Item 1.01 deal terms
+3. `entities.resolve` — Resolve target entity
+4. `comp.compare` — Acquirer exec-comp comparison
+
+**Expected output:** Press-release-ready brief with deal terms + target profile + comp implications.
+
+### 7. Cross-check press release against latest 8-K Reg FD filing
+
+*Validate that draft press release content aligns with latest Reg FD 8-K disclosure.*
+
+**Category:** Reg FD compliance  ·  **Difficulty:** advanced  ·  **Prompt id:** `pr-firm-press-release-disclosure-cross-check`
+
+**Prompt**
+
+```
+For a client's draft press release, pull the most recent 8-K filing that includes an Item 7.01 (Reg FD Disclosure) section, render the 8-K to markdown, run a semantic comparison against the press release content, and surface any material claim in the draft that lacks 8-K corroboration. Output a Reg FD compliance review.
+```
+
+**Expected tool chain**
+
+1. `filings.search` — Find recent 8-K Item 7.01 filings
+2. `sections.get` — Item 7.01 Reg FD text
+3. `filings.render` — Render 8-K to markdown for diff
+4. `intelligence.query` — Semantic alignment check
+
+**Expected output:** Reg FD compliance review with claim-by-claim alignment table.
+
+### 8. Build earnings-results announcement materials
+
+*Pull estimates, results, and MD&A for an earnings press release.*
+
+**Category:** Earnings comms  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-results-announcement-prep`
+
+**Prompt**
+
+```
+For an upcoming earnings announcement (e.g., AAPL), pull consensus estimates, the most recent 4 quarters of income statement, and the latest 8-K Item 2.02 (Results of Operations and Financial Condition) section. Output a press-release outline with the headline beat/miss framing, three supporting bullets, and a draft management quote pulled from the 8-K narrative.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve issuer
+2. `market.estimates` — Consensus estimates
+3. `companies.income_statements` — Recent quarterly income
+4. `sections.get` — Item 2.02 results-of-operations text
+
+**Expected output:** Press-release outline with framing + 3 bullets + draft mgmt quote.
+
+### 9. Reconstruct shareholder meeting narrative from voting record
+
+*Build a post-meeting narrative for IR's annual letter using voting results + comp + 8-K text.*
+
+**Category:** Proxy season  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-shareholder-meeting-narrative`
+
+**Prompt**
+
+```
+For a corporate IR client's most recent shareholder meeting, pull the structured voting results, named-executive comp from the same DEF 14A cycle, and the 8-K Item 5.07 (Submission of Matters to a Vote of Security Holders) text. Cross-reference with intelligence.query for any analyst or media commentary in the same window. Output a 1-page post-meeting narrative for the annual letter.
+```
+
+**Expected tool chain**
+
+1. `events.voting_results` — Structured voting outcomes
+2. `comp.list` — Same-cycle comp
+3. `sections.get` — Item 5.07 8-K narrative
+4. `intelligence.query` — External commentary signal
+
+**Expected output:** 1-page post-meeting narrative for the IR annual letter.
+
+### 10. Track board composition changes across a watchlist
+
+*Detect 8-K Item 5.02 board changes and pull supporting comp + ownership context.*
+
+**Category:** Governance comms  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-board-composition-change`
+
+**Prompt**
+
+```
+For a watchlist of 25 corporate clients, sweep the past 60 days of 8-K filings for Item 5.02 (officer/director departure or appointment) disclosures, extract the full text, identify the new appointee or departing director, pull comp comparison context, and check institutional ownership snapshot. Output a governance-comms digest.
+```
+
+**Expected tool chain**
+
+1. `filings.search` — Recent 8-K filings
+2. `sections.get` — Item 5.02 text per match
+3. `comp.compare` — Comp comparison context
+4. `owners.get_13f` — Institutional ownership snapshot
+
+**Expected output:** Governance-comms digest with appointee profiles + comp context per match.
+
+### 11. Build segment-disclosure narrative for IR roadshow prep
+
+*Walk segment footnotes + segment income for an IR roadshow narrative.*
+
+**Category:** Roadshow prep  ·  **Difficulty:** intermediate  ·  **Prompt id:** `pr-firm-segment-disclosure-narrative`
+
+**Prompt**
+
+```
+For an IR client (diversified issuer), pull the segment-disclosure footnote from the latest 10-K, align with the latest annual segment-level income statement, and surface the segment with the largest absolute revenue growth and the segment with the largest margin compression. Output a roadshow narrative with three segment-level talking points.
+```
+
+**Expected tool chain**
+
+1. `intelligence.footnotes` — Segment-disclosure footnote
+2. `companies.income_statements` — Segmented income statement
+3. `sections.get` — Item 8 financial-statement narrative
+4. `entities.resolve` — Resolve issuer
+
+**Expected output:** Roadshow narrative + 3 segment-level talking points.
+
+### 12. Pulse stakeholder sentiment via factor cohort + 13F + intelligence
+
+*Triangulate stakeholder sentiment using factor peers + ownership rotation + intelligence query.*
+
+**Category:** Sentiment monitoring  ·  **Difficulty:** advanced  ·  **Prompt id:** `pr-firm-stakeholder-sentiment-pulse`
+
+**Prompt**
+
+```
+For a corporate IR client, surface a sentiment pulse: build the factor-similar peer set, pull quarter-over-quarter institutional rotation across the cohort, and run a semantic intelligence query for analyst sentiment in the past 60 days. Output a 1-page stakeholder-sentiment briefing with three takeaways.
+```
+
+**Expected tool chain**
+
+1. `entities.resolve` — Resolve client
+2. `factors.related_stocks` — Factor-similar peer cohort
+3. `owners.compare_13f` — Cohort rotation signal
+4. `intelligence.query` — Analyst sentiment semantic signal
+
+**Expected output:** 1-page stakeholder-sentiment briefing with 3 takeaways.
+
+
+---
+
+## See also
+
+- [Agent prompt library index](/agents/prompt-library)
+- [Install MCP for Claude Desktop / Claude Code / Cursor](/mcp-install)
+- [Agent operating layer](/agent-operating-layer)
+- [omni-sec CLI workflows](/javascript-sdk)
+

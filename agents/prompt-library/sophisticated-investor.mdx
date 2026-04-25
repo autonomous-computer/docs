@@ -1,0 +1,311 @@
+<!-- DO NOT HAND-EDIT — generated from packages/contracts/src/agent-prompts.ts -->
+<!-- Re-run `bun run docs:agent-prompts` after editing the contract. -->
+
+# Sophisticated investor — Agent Prompt Library
+
+<Info>8 v1 prompts live on `api.secapi.ai/mcp` today · 4 v2 expansion prompts queued.</Info>
+
+Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows.
+
+<Note>v1 framing: forensic accounting (footnote forensics + insider/13F divergence + cash-flow stress). v2 expansion adds dilution forensics (warrants, convertibles, ATM-program tracking, cash runway) when OMNI-3071/3079/3087 land.</Note>
+
+Run any prompt by pasting it into Claude Desktop, Claude Code, or Cursor with the Omni Datastream MCP server installed. Or use the CLI:
+
+```bash
+omni-sec agents prompts read sophisticated-investor-equity-comp-burn-rate
+omni-sec agents prompts copy sophisticated-investor-equity-comp-burn-rate | pbcopy
+```
+
+---
+
+## Headline workflow
+
+### 1. Equity comp burn-rate forensics
+
+*Walk equity comp grants vs cash flow vs shares outstanding to surface dilution-via-comp risk.*
+
+**Category:** Equity comp forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-equity-comp-burn-rate`
+
+**Prompt**
+
+```
+For a high-growth issuer with heavy equity-comp use (e.g., SNOW), pull the latest named-executive comp, the trailing 5 years of cash flow statements (focus on share-based compensation), the income statement (for share-based-comp expense line), and the relevant XBRL fact (ShareBasedCompensation tag). Compute equity-comp burn rate as a fraction of revenue and as shares-issued-as-comp / shares-outstanding. Output a forensic memo.
+```
+
+**Expected tool chain**
+
+1. `comp.list` — Named-executive comp baseline
+2. `companies.cash_flow_statements` — 5-year share-based comp cash flow line
+3. `facts.get` — ShareBasedCompensation XBRL fact
+4. `companies.income_statements` — Revenue context for burn rate
+
+**Expected output:** Forensic memo + burn-rate table (% revenue, % shares-out).
+
+---
+
+## All v1 workflows
+
+### 2. Debt covenant headroom check
+
+*Pull debt-covenant footnote + balance sheet to estimate covenant headroom.*
+
+**Category:** Credit forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-debt-covenant-headroom`
+
+**Prompt**
+
+```
+For a leveraged issuer (e.g., HTZ), pull the debt-covenant footnote (intelligence.footnotes topic=debt_covenant), the latest balance sheet (focus on debt + cash), and the latest ratios (leverage, interest coverage). Cross-reference with the MD&A (Item 7) for any covenant-relief or amendment language. Output a covenant headroom estimate (% of trigger) + 3-paragraph risk summary.
+```
+
+**Expected tool chain**
+
+1. `intelligence.footnotes` — Debt-covenant footnote text
+2. `companies.balance_sheets` — Debt + cash snapshot
+3. `companies.ratios` — Leverage + interest coverage
+4. `sections.get` — MD&A covenant amendment language
+
+**Expected output:** Covenant headroom % + 3-paragraph risk summary.
+
+### 3. Stress-test uncertain tax positions
+
+*Surface uncertain tax positions and stress-test against income statement.*
+
+**Category:** Tax forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-tax-position-stress`
+
+**Prompt**
+
+```
+For a multinational (e.g., GOOGL), pull the tax footnote (intelligence.footnotes topic=tax), the deferred-tax-asset XBRL fact, the trailing 3 years of income statement (focus on effective tax rate), and the relevant 10-K MD&A passages. Stress-test scenarios where deferred-tax assets are written down by 25/50/100%. Output a tax forensics memo + scenario impact table.
+```
+
+**Expected tool chain**
+
+1. `intelligence.footnotes` — Tax footnote text
+2. `facts.get` — DeferredTaxAssetsNet XBRL fact
+3. `companies.income_statements` — Effective-tax-rate trajectory
+4. `sections.get` — MD&A tax discussion
+
+**Expected output:** Tax forensics memo + 25/50/100% write-down scenario table.
+
+### 4. Revenue-recognition forensics on growth narratives
+
+*Compare deferred revenue + revenue footnote + income statement for revenue-recognition aggression.*
+
+**Category:** Revenue forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-revenue-recognition-forensics`
+
+**Prompt**
+
+```
+For a high-growth SaaS issuer (e.g., NOW), pull the revenue-recognition footnote (intelligence.footnotes topic=revenue), the deferred-revenue XBRL fact across 5 years, the trailing 5-year income statement, and the MD&A passages. Surface any divergence between billings growth, deferred revenue, and recognized revenue. Output a forensic memo with a billings-vs-revenue ratio table.
+```
+
+**Expected tool chain**
+
+1. `intelligence.footnotes` — Revenue-recognition footnote text
+2. `facts.get` — DeferredRevenue XBRL fact 5-year
+3. `companies.income_statements` — 5-year revenue trajectory
+4. `sections.get` — MD&A revenue discussion
+
+**Expected output:** Revenue forensic memo + billings-vs-revenue ratio table.
+
+### 5. Spot smart-money divergence for thesis validation
+
+*Surface 13F filers diverging on a name and cross-reference with insider trades + comp.*
+
+**Category:** Smart-money signals  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-13f-divergence-thesis`
+
+**Prompt**
+
+```
+For a contested name (e.g., GME), pull the latest 13F snapshot for the top 20 institutional holders, compare quarter-over-quarter, identify the 5 holders making the largest position increases AND the 5 making the largest decreases, then pull insider Form 4 history and comp comparison. Output a divergence memo for short/long thesis validation.
+```
+
+**Expected tool chain**
+
+1. `owners.get_13f` — Top-20 institutional snapshot
+2. `owners.compare_13f` — Q-over-Q rotation
+3. `insiders.list` — Insider Form 4 history
+4. `comp.compare` — Comp comparison for executive alignment
+
+**Expected output:** Divergence memo + long/short thesis validation table.
+
+### 6. Sweep small-cap watchlist for going-concern language
+
+*Find substantial-doubt and going-concern language across small caps and estimate runway.*
+
+**Category:** Solvency forensics  ·  **Difficulty:** intermediate  ·  **Prompt id:** `sophisticated-investor-going-concern-sweep`
+
+**Prompt**
+
+```
+For a watchlist of 100 US micro-caps, search 10-K and 10-Q filings for 'going concern' or 'substantial doubt' language. For each match, pull Item 9A (Controls), the latest balance sheet, and the cash flow statement to estimate runway. Output a runway-ranked alert table with one-line risk summary per name.
+```
+
+**Expected tool chain**
+
+1. `sections.search` — Going-concern keyword sweep
+2. `sections.get` — Item 9A internal-controls text
+3. `companies.balance_sheets` — Latest balance sheet for runway
+4. `companies.cash_flow_statements` — Burn-rate context
+
+**Expected output:** Runway-ranked alert table + 1-line risk summary per name.
+
+### 7. Lease-obligation off-balance-sheet forensics
+
+*Walk lease footnote + balance sheet + XBRL lease tags to estimate true leverage.*
+
+**Category:** Off-balance-sheet  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-lease-obligations-forensics`
+
+**Prompt**
+
+```
+For a lease-heavy retailer (e.g., M), pull the lease footnote (intelligence.footnotes topic=lease), the operating-lease-liability XBRL fact, the latest balance sheet, and the cash flow statement. Compute adjusted leverage including capitalized operating leases at 8x rent. Output a lease-adjusted leverage memo + comparison table vs reported leverage.
+```
+
+**Expected tool chain**
+
+1. `intelligence.footnotes` — Lease footnote text
+2. `facts.get` — OperatingLeaseLiability XBRL fact
+3. `companies.balance_sheets` — Reported balance sheet
+4. `companies.cash_flow_statements` — Lease cash flows
+
+**Expected output:** Lease-adjusted leverage memo + reported-vs-adjusted comparison table.
+
+### 8. Segment-disclosure forensics on diversified issuers
+
+*Surface segment-aggregation choices and compare to peer disclosure granularity.*
+
+**Category:** Segment forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-segment-aggregation-forensics`
+
+**Prompt**
+
+```
+For a diversified issuer (e.g., GE), pull the segment-disclosure footnote and segment income statement. Compare segment count and revenue concentration to factor-similar peers. Identify any segment that contributes more than 50% of revenue but less than 30% of segment-level disclosure. Output a segment-aggregation forensic memo.
+```
+
+**Expected tool chain**
+
+1. `intelligence.footnotes` — Segment-disclosure footnote
+2. `companies.income_statements` — Segmented income
+3. `sections.get` — Item 8 financial-statement segment narrative
+4. `factors.related_stocks` — Peer-set comparison
+
+**Expected output:** Segment-aggregation forensic memo + peer disclosure granularity comparison.
+
+
+---
+
+## v2 expansion (queued)
+
+Prompts in this section reference MCP tools that are not yet live on `api.secapi.ai/mcp`. They ship as part of the v2 expansion when the listed tickets merge.
+
+### 9. Surface warrant + convertible overhang for dilution thesis
+
+<Note>**v2-pending** — ships when OMNI-3071, OMNI-3079, OMNI-3087 merge. The tool chain references future MCP surfaces and is shown for visibility into the v2 expansion roadmap.</Note>
+
+*Walk warrants, convertibles, and shares outstanding to estimate dilution overhang.*
+
+**Category:** Dilution forensics (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-warrants-overhang`
+
+**Prompt**
+
+```
+For a low-float small cap with active capital raises, pull the dilution.warrants_query for outstanding warrants, dilution.convertibles for convertible debt, dilution.cash_position for runway, and cross-reference with the latest balance sheet + named-executive comp. Compute share-overhang at exercise and probability-weighted dilution at 12m horizon.
+```
+
+**Expected tool chain**
+
+1. `dilution.warrants_query` — Outstanding warrant inventory (FUTURE)
+2. `dilution.convertibles` — Convertible debt inventory (FUTURE)
+3. `dilution.cash_position` — Runway + burn (FUTURE)
+4. `companies.balance_sheets` — Reported balance sheet
+
+**Expected output:** Dilution-overhang memo + 12m probability-weighted share-count scenario table.
+
+**Blocked by:** `OMNI-3071`, `OMNI-3079`, `OMNI-3087`
+
+### 10. Track ATM program activity for dilution-velocity signal
+
+<Note>**v2-pending** — ships when OMNI-3071, OMNI-3079, OMNI-3087 merge. The tool chain references future MCP surfaces and is shown for visibility into the v2 expansion roadmap.</Note>
+
+*Detect ATM program issuance velocity and cross-reference with insider trading.*
+
+**Category:** Dilution forensics (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-atm-program-tracking`
+
+**Prompt**
+
+```
+For an issuer with an active ATM (at-the-market) program, pull dilution.events for the latest ATM issuance, dilution.cash_position for runway impact, owners.compare_13f for institutional response, and insiders.list for any insider trading around the ATM dates. Output a dilution-velocity dashboard.
+```
+
+**Expected tool chain**
+
+1. `dilution.events` — ATM issuance events (FUTURE)
+2. `dilution.cash_position` — Runway impact (FUTURE)
+3. `owners.compare_13f` — Institutional response
+4. `insiders.list` — Insider trades around ATM dates
+
+**Expected output:** Dilution-velocity dashboard.
+
+**Blocked by:** `OMNI-3071`, `OMNI-3079`, `OMNI-3087`
+
+### 11. Stress-test convertible overhang against share price scenarios
+
+<Note>**v2-pending** — ships when OMNI-3071, OMNI-3079, OMNI-3087 merge. The tool chain references future MCP surfaces and is shown for visibility into the v2 expansion roadmap.</Note>
+
+*Walk convertible inventory + price-based conversion mechanics for dilution risk.*
+
+**Category:** Dilution forensics (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-convertible-overhang-stress`
+
+**Prompt**
+
+```
+For an issuer with toxic convertibles, pull dilution.convertibles for the inventory + conversion mechanics (variable-reset, full-ratchet), dilution.warrants_query for any associated warrants, and stress-test share-count at -25%/-50% price scenarios. Cross-reference with companies.balance_sheets for cash + debt.
+```
+
+**Expected tool chain**
+
+1. `dilution.convertibles` — Convertible inventory + mechanics (FUTURE)
+2. `dilution.warrants_query` — Associated warrant inventory (FUTURE)
+3. `dilution.cash_position` — Cash + runway (FUTURE)
+4. `companies.balance_sheets` — Reported balance sheet
+
+**Expected output:** Convertible stress-test memo + scenario share-count table.
+
+**Blocked by:** `OMNI-3071`, `OMNI-3079`, `OMNI-3087`
+
+### 12. Cash runway forensics with corporate-action overlay
+
+<Note>**v2-pending** — ships when OMNI-3071, OMNI-3079, OMNI-3087 merge. The tool chain references future MCP surfaces and is shown for visibility into the v2 expansion roadmap.</Note>
+
+*Compute cash runway and overlay reverse-split/de-SPAC corporate-action history.*
+
+**Category:** Dilution forensics (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-cash-runway-forensics`
+
+**Prompt**
+
+```
+For a small-cap with cash burn concerns, pull dilution.cash_position for runway, dilution.corporate_actions for any reverse splits or de-SPACs in the past 24 months, dilution.ratings for the composite risk score, and cross-reference with companies.cash_flow_statements. Output a runway forensics memo.
+```
+
+**Expected tool chain**
+
+1. `dilution.cash_position` — Cash + burn + runway (FUTURE)
+2. `dilution.corporate_actions` — Reverse-split / de-SPAC history (FUTURE)
+3. `dilution.ratings` — Composite dilution risk score (FUTURE)
+4. `companies.cash_flow_statements` — Burn-rate context
+
+**Expected output:** Cash runway forensics memo with corporate-action overlay.
+
+**Blocked by:** `OMNI-3071`, `OMNI-3079`, `OMNI-3087`
+
+
+---
+
+## See also
+
+- [Agent prompt library index](/agents/prompt-library)
+- [Install MCP for Claude Desktop / Claude Code / Cursor](/mcp-install)
+- [Agent operating layer](/agent-operating-layer)
+- [omni-sec CLI workflows](/javascript-sdk)
+

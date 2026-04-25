@@ -1,0 +1,64 @@
+<!-- DO NOT HAND-EDIT — generated from packages/contracts/src/agent-prompts.ts -->
+<!-- Re-run `bun run docs:agent-prompts` after editing the contract. -->
+
+# Agent Prompt Library
+
+<Info>50 production-grade prompts across 5 customer personas, wired to the live Omni Datastream MCP server at `https://api.secapi.ai/mcp`. Copy any prompt into Claude Desktop, Claude Code, or Cursor — or use the `omni-sec` CLI.</Info>
+
+Each prompt names the exact MCP tools it expects to call, the output artifact (memo, table, JSON export, scorecard), and any known caveats. Every v1 entry is structurally validated against `services/datastream-api/src/routes/mcp.ts` on every PR.
+
+## Personas
+
+<CardGroup cols={2}>
+  <Card title="Law firm" icon="scale" href="/agents/prompt-library/law-firm">
+    12 v1 prompts. Disclosure forensics, deal diligence, enforcement research, and litigation binder workflows for legal teams advising on public-company matters.
+  </Card>
+  <Card title="Investment manager" icon="trending-up" href="/agents/prompt-library/investment-manager">
+    12 v1 prompts. Quant research, factor decomposition, 13F-vs-insider divergence, and earnings-context workflows for portfolio managers and analysts.
+  </Card>
+  <Card title="Sophisticated investor" icon="microscope" href="/agents/prompt-library/sophisticated-investor">
+    8 v1 prompts. Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows.
+  </Card>
+  <Card title="Insurance & risk" icon="shield-alert" href="/agents/prompt-library/insurance">
+    6 v1 prompts. D&O underwriting profile, auditor-change detection, material-weakness scans, and renewal-book monitoring for risk and underwriting teams.
+  </Card>
+  <Card title="PR firm" icon="megaphone" href="/agents/prompt-library/pr-firm">
+    12 v1 prompts. Proxy-season narrative, 8-K material event monitoring, executive transition tracking, and peer benchmarking for IR and crisis-comms teams.
+  </Card>
+</CardGroup>
+
+## How to use
+
+1. **Install Omni Datastream MCP** in Claude Desktop, Claude Code, or Cursor — see [MCP install](/mcp-install).
+2. **Copy any prompt** from a persona page (or via `omni-sec agents prompts copy <id>`).
+3. **Paste into a fresh chat** with the MCP server enabled. The agent will call the tools listed in the prompt's expected tool chain.
+
+## CLI access
+
+```bash
+# List the 5 personas
+omni-sec agents personas
+
+# List all v1 prompts (or filter by persona)
+omni-sec agents prompts list
+omni-sec agents prompts list --persona law-firm
+omni-sec agents prompts list --persona investment-manager --json
+
+# Read a specific prompt with full metadata
+omni-sec agents prompts read law-firm-enforcement-history
+
+# Copy a prompt body to clipboard for paste-into-Claude-Desktop
+omni-sec agents prompts copy investment-manager-factor-decomposition | pbcopy
+```
+
+## v2 expansion
+
+<Note>10 additional prompts are queued for delivery alongside the dilution-tools epic (OMNI-3071/3079/3087) and the AAER MCP wrap. They are visible via `omni-sec agents prompts list --include-v2` and labelled `v2-pending` on each persona page.</Note>
+
+## See also
+
+- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — the persona-agnostic onramp
+- [Agent operating layer](/agent-operating-layer) — billing guardrails + policy bundles
+- [Custom skills](/custom-skills) — Claude Code skills for the investment-manager workflows
+- [Build Your First SEC Agent tutorials](/tutorials/build-sec-filing-monitor-agent) — 5 long-form how-tos
+

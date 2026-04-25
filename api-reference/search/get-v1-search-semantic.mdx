@@ -1,0 +1,67 @@
+# GET /v1/search/semantic
+
+Semantic vector search across SEC filing section content via Voyage AI + Pinecone, with hybrid keyword + vector RRF and OMNI-3083 citation fields on every result row
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Citation fields (OMNI-3083)
+
+Every result row carries seven additive top-level fields:
+
+| Field | Description |
+|---|---|
+| `accession` | SEC accession number for the source filing |
+| `section_key` | Canonical section identifier (e.g. `item_1a`) |
+| `char_start` / `char_end` | Half-open offsets into the section markdown text (`section_snippets.content_md`) — section-text-relative, stable across reparses |
+| `highlighted_snippet` | ±150 char window with query terms wrapped in `**…**`, sentence-boundary truncated, ≤320 chars |
+| `source_url` | Public SEC.gov filing URL |
+| `ticker` | Issuer ticker, when known |
+
+When the validator can't produce a span (no section text, no query-term match, or offsets out of bounds), `char_start`/`char_end`/`highlighted_snippet` drop to `null` and `_citation_degraded` records the reason. Identity fields (`accession`, `section_key`, `source_url`, `ticker`) are always populated when known. See [api conventions → citation + char-range spans](/api-conventions#citation-char-range-spans) for the full contract.
+
+## Agent mode
+
+Pass `?view=agent` to drop `score` and `retrievalMode` from each row. The seven citation fields are preserved unconditionally. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/search/semantic"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "requestId": "req_example_123",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use Omni Datastream GET /v1/search/semantic to semantic vector search across sec filing section content via voyage ai + pinecone, with hybrid keyword + vector rrf and omni-3083 citation fields on every result row. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+

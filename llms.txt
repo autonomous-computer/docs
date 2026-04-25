@@ -1,0 +1,61 @@
+# Omni Datastream
+
+Omni Datastream is a primary-source, agent-native SEC data platform with REST, CLI, hosted MCP, and a 50-prompt persona library spanning law firms, investment managers, sophisticated investors, insurance, and PR firms.
+
+## Best entry points
+
+- Agent prompt library: https://docs.secapi.ai/agents/prompt-library
+- API health: `/healthz`
+- API docs content: `apps/docs/content/`
+- MCP server: `/mcp`
+- JS SDK: `packages/sdk-js/src/index.ts`
+- Python SDK: `packages/sdk-py/omni_datastream_py/client.py`
+
+## Core API workflows
+
+- resolve entities: `GET /v1/entities/resolve`
+- search filings: `GET /v1/filings`
+- latest filing: `GET /v1/filings/latest`
+- latest section: `GET /v1/filings/latest/sections/{sectionKey}`
+- facts: `GET /v1/facts`
+- statements: `GET /v1/statements/{statementKey}`
+- 13F: `GET /v1/owners/13f`
+- compensation: `GET /v1/compensation`
+- artifacts: `POST /v1/artifacts`
+- usage: `GET /v1/usage`
+- limits: `GET /v1/limits`
+- events: `GET /v1/events`
+
+## MCP workflows
+
+35 tools live on `https://api.secapi.ai/mcp` (full inventory in `services/datastream-api/src/routes/mcp.ts`):
+
+- entity: `entities.resolve`
+- filings: `filings.search`, `filings.latest`, `filings.render`, `filings.export`, `sections.get`, `sections.search`
+- xbrl + statements: `facts.get`, `statements.get`
+- company financials: `companies.financials`, `companies.ratios`, `companies.income_statements`, `companies.balance_sheets`, `companies.cash_flow_statements`
+- ownership + insiders: `owners.get_13f`, `owners.compare_13f`, `insiders.list`
+- compensation: `comp.list`, `comp.compare`
+- artifacts: `artifacts.bundle`
+- market data: `market.financials`, `market.search`, `market.estimates`, `market.snapshots`
+- macro: `macro.indicators`, `macro.high_signal_pack`, `macro.regimes`
+- factors + portfolio: `factors.returns`, `factors.dashboard`, `factors.decomposition`, `factors.related_stocks`, `portfolio.analyze`
+- intelligence: `intelligence.query`, `intelligence.footnotes` (topics: lease, tax, revenue, debt_covenant, segment)
+- sec events: `events.voting_results` (8-K Item 5.07 structured proposals)
+
+10 resources: `sec://entities/{ticker_or_cik}`, `sec://filings/latest/{ticker_or_cik}/{form}`, `sec://sections/latest/{ticker_or_cik}/{form}/{section_key}` (+ `?mode=compact|full`), `sec://statements/{ticker_or_cik}/{statement_key}/{period}`, `sec://13f/{cik}`, `sec://market/estimates/{ticker}`, `sec://market/snapshot/{symbol}`, `sec://macro/{country}/{indicator_key}`, `sec://factors/returns/{factor_key}`, `sec://intelligence/company/{ticker_or_cik}`.
+
+## Agent prompt library
+
+50 v1 prompts (12 investment-manager / 12 law-firm / 12 pr-firm / 8 sophisticated-investor / 6 insurance) plus 10 v2-pending entries queued for delivery alongside the dilution-tools epic + AAER MCP wrap. Discoverable at:
+
+- Mintlify: `https://docs.secapi.ai/agents/prompt-library/{persona}`
+- CLI: `omni-sec agents prompts list/read/copy`
+- Source: `packages/contracts/src/agent-prompts.ts`
+
+## API conventions
+
+- request correlation: `Request-Id` header
+- metering classification: `Omni-Meter-Class` header
+- auth: `x-api-key` today, WorkOS OAuth discovery later
+- errors: structured JSON with `object=error`, `code`, `type`, `message`, `requestId`
