@@ -1,0 +1,82 @@
+---
+title: "Install Omni in LangChain"
+description: "Wire OMNI Datastream into a LangChain agent in Python or JavaScript using langchain-mcp-adapters — copy-paste-able snippets for both runtimes."
+---
+
+# Install Omni in LangChain
+
+LangChain has first-party MCP support via `langchain-mcp-adapters` (Python) and `@langchain/mcp-adapters` (JS). Both speak streamable HTTP and pass headers verbatim, so wiring up Omni is one config block.
+
+## Prerequisites
+
+- Omni API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Set `OMNI_DATASTREAM_API_KEY`.
+- Python: `langchain-mcp-adapters` ≥ 0.2 with `langchain` ≥ 1.0 and `langgraph`.
+- JavaScript / TypeScript (Node only): `@langchain/mcp-adapters` ≥ 1.1 with `@langchain/core` ≥ 0.3.
+
+## Python
+
+```bash
+pip install langchain-mcp-adapters langchain langgraph langchain-anthropic
+```
+
+```python
+import asyncio, os
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain.agents import create_agent
+
+async def main():
+    client = MultiServerMCPClient({
+        "omni-datastream": {
+            "transport": "streamable_http",
+            "url": "https://api.secapi.ai/mcp",
+            "headers": {"x-api-key": os.environ["OMNI_DATASTREAM_API_KEY"]},
+        }
+    })
+    tools = await client.get_tools()
+    agent = create_agent("anthropic:claude-sonnet-4-5", tools)
+    result = await agent.ainvoke({"messages": [("user", "Show me Apple's latest 8-K filing.")]})
+    print(result["messages"][-1].content)
+
+asyncio.run(main())
+```
+
+## JavaScript / TypeScript
+
+```bash
+npm install @langchain/mcp-adapters @langchain/core @langchain/anthropic langchain
+```
+
+```typescript
+import { MultiServerMCPClient } from "@langchain/mcp-adapters";
+import { ChatAnthropic } from "@langchain/anthropic";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+
+const client = new MultiServerMCPClient({
+  "omni-datastream": {
+    transport: "streamable_http",
+    url: "https://api.secapi.ai/mcp",
+    headers: { "x-api-key": process.env.OMNI_DATASTREAM_API_KEY! },
+  },
+});
+const tools = await client.getTools();
+const agent = createReactAgent({ llm: new ChatAnthropic({ model: "claude-sonnet-4-5" }), tools });
+const result = await agent.invoke({ messages: [{ role: "user", content: "Show me Apple's latest 8-K filing." }] });
+console.log(result.messages.at(-1)?.content);
+```
+
+## Verify
+
+Run either snippet. The agent should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and print the filing URL plus a short summary.
+
+## Troubleshooting
+
+- **`401 Unauthorized`** — `x-api-key` is missing or wrong. Sanity check: `curl https://api.secapi.ai/v1/limits -H "x-api-key: $OMNI_DATASTREAM_API_KEY"`.
+- **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
+- **No tools returned** — confirm the URL ends in `/mcp` (not `/sse`); the SSE transport is deprecated as of MCP 2025-03-26.
+- **JS only: streaming notifications missing** — `@langchain/mcp-adapters` does not yet propagate real-time MCP notifications over streamable HTTP. Tool calls and results work; long-running progress events do not.
+
+## Next
+
+- [Available tools](/mcp-install#available-tools) — 39 SEC + market data tools
+- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
+

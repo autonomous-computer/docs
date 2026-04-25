@@ -1,0 +1,72 @@
+---
+title: "Install Omni in Continue"
+description: "Add OMNI Datastream as an MCP server in Continue's config.yaml — supports streamable HTTP transport with header-based authentication."
+---
+
+# Install Omni in Continue
+
+Continue (continue.dev) has native MCP support via `~/.continue/config.yaml`. Headers go under `requestOptions.headers`, and YAML configs can pull secrets from Continue's secrets store with `${{ secrets.NAME }}`.
+
+## Prerequisites
+
+- Omni API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai).
+- Continue installed in your IDE (VS Code, JetBrains, or CLI). Latest stable release supports MCP `streamable-http`.
+
+## Install
+
+Open (or create) `~/.continue/config.yaml`. Add an `mcpServers` entry; this example merges with any existing config:
+
+```yaml
+name: My Config
+version: 1.0.0
+schema: v1
+
+mcpServers:
+  - name: Omni Datastream
+    type: streamable-http
+    url: https://api.secapi.ai/mcp
+    requestOptions:
+      timeout: 30000
+      headers:
+        x-api-key: ${{ secrets.OMNI_DATASTREAM_API_KEY }}
+```
+
+Save your key in Continue Hub secrets as `OMNI_DATASTREAM_API_KEY`, or replace the `${{ … }}` expression with the literal key for a quick test.
+
+If you're still on `config.json` (legacy), the same entry looks like:
+
+```json
+{
+  "mcpServers": [
+    {
+      "name": "Omni Datastream",
+      "type": "streamable-http",
+      "url": "https://api.secapi.ai/mcp",
+      "requestOptions": {
+        "headers": { "x-api-key": "YOUR_API_KEY" }
+      }
+    }
+  ]
+}
+```
+
+## Verify
+
+In the Continue chat, ask:
+
+> Show me Apple's latest 8-K filing.
+
+Continue should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and return the filing URL plus a short summary.
+
+## Troubleshooting
+
+- **`type` rejected** — must be `streamable-http` (hyphenated). Valid types are `stdio`, `sse`, `streamable-http`.
+- **`mcpServers` shape error** — Continue expects a list, not a name-keyed map. Each entry has its own `name` field.
+- **Secrets aren't substituted** — `${{ secrets.NAME }}` works in `config.yaml` only. In `config.json`, paste the key literally or use a shell-exported env var via your IDE's launch config.
+- **`401 Unauthorized`** — the secret didn't resolve. Check `Continue → Settings → Hub Secrets` and confirm the secret is named `OMNI_DATASTREAM_API_KEY`.
+
+## Next
+
+- [Available tools](/mcp-install#available-tools) — 39 SEC + market data tools
+- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
+

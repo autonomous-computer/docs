@@ -1,0 +1,54 @@
+---
+title: "Install Omni in Custom GPT"
+description: "Connect OMNI Datastream to a Custom GPT — native MCP via ChatGPT Apps Developer Mode, or an OpenAPI Action fallback for any tier."
+---
+
+# Install Omni in Custom GPT
+
+Two install paths depending on your ChatGPT plan. Path 1 gives a Custom GPT (or any chat) the full MCP toolset via ChatGPT Apps. Path 2 wraps the REST API as an OpenAPI Action so a Custom GPT on any tier can still call OMNI.
+
+## Prerequisites
+
+- Omni API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai).
+- For Path 1: ChatGPT Pro, Plus, Business, Enterprise, or Edu with a workspace admin who can enable Developer Mode.
+- For Path 2: any ChatGPT tier with access to the GPT Builder.
+
+## Path 1 — ChatGPT Apps + Developer Mode (native MCP)
+
+1. Workspace admin: `Settings → Apps & Connectors → Advanced → Developer Mode → On`.
+2. `Settings → Apps & Connectors → Create`.
+3. **MCP Server URL**: `https://api.secapi.ai/mcp`
+4. **Authentication**: API Key.
+5. **Header name**: `x-api-key`. **Header value**: your Omni API key.
+6. Save. Enable the connector in any chat; the 39 Omni tools are now available.
+
+## Path 2 — Classic Custom GPT + OpenAPI Action (any tier)
+
+This calls the REST API directly. Tool calls work, but you skip MCP's auto-discovery — your GPT instructions need to spell out which endpoints to use.
+
+1. In GPT Builder: `Configure → Actions → Create new action`.
+2. **Schema**: paste the URL `https://docs.secapi.ai/openapi/omni-datastream.v1.json` and import.
+3. **Authentication**: API Key → **Auth Type**: Custom → **Custom Header Name**: `x-api-key` → paste your Omni key as the value.
+4. **Privacy policy**: `https://secapi.ai/privacy` (required by the GPT Store).
+5. Save and test in the playground.
+
+## Verify
+
+In a chat with the connector (or Custom GPT) enabled, ask:
+
+> Show me Apple's latest 8-K filing.
+
+The agent should call `filings.latest` (Path 1) or `GET /v1/filings/latest?ticker=AAPL&form=8-K` (Path 2) and return the filing URL plus a short summary.
+
+## Troubleshooting
+
+- **"Action returned 401"** — `x-api-key` not configured or wrong. Re-enter the value in the connector / action auth settings.
+- **"Server URL invalid" (Path 1)** — must be the literal `https://api.secapi.ai/mcp` (note `/mcp` suffix, no trailing slash).
+- **"Schema import failed" (Path 2)** — verify the schema URL returns JSON with `curl https://docs.secapi.ai/openapi/omni-datastream.v1.json | head`.
+- **429 rate limit** — check `GET https://api.secapi.ai/v1/billing` for your monthly cap; upgrade at [secapi.ai/pricing](https://secapi.ai/pricing).
+
+## Next
+
+- [Available tools](/mcp-install#available-tools) — the 39 SEC + market data tools exposed via MCP
+- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — a canonical briefing block for richer agent workflows
+

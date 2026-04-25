@@ -1,0 +1,59 @@
+---
+title: "Install Omni in LlamaIndex"
+description: "Add OMNI Datastream as a tool spec in LlamaIndex using llama-index-tools-mcp and a custom httpx client for x-api-key auth."
+---
+
+# Install Omni in LlamaIndex
+
+LlamaIndex ships first-party MCP support via `llama-index-tools-mcp`. The `BasicMCPClient` constructor doesn't take a `headers=` kwarg directly, so we pass auth through a custom `httpx.AsyncClient`.
+
+## Prerequisites
+
+- Omni API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Set `OMNI_DATASTREAM_API_KEY`.
+- `llama-index-tools-mcp` ≥ 0.4 with `llama-index-core` ≥ 0.13 and `llama-index-llms-anthropic`.
+
+## Install
+
+```bash
+pip install llama-index-tools-mcp llama-index-core llama-index-llms-anthropic httpx
+```
+
+```python
+import asyncio, os
+import httpx
+from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
+from llama_index.core.agent.workflow import FunctionAgent
+from llama_index.llms.anthropic import Anthropic
+
+async def main():
+    http = httpx.AsyncClient(headers={"x-api-key": os.environ["OMNI_DATASTREAM_API_KEY"]})
+    mcp = BasicMCPClient("https://api.secapi.ai/mcp", http_client=http)
+    tools = await McpToolSpec(client=mcp).to_tool_list_async()
+
+    agent = FunctionAgent(tools=tools, llm=Anthropic(model="claude-sonnet-4-5"))
+    response = await agent.run("Show me Apple's latest 8-K filing.")
+    print(response)
+
+asyncio.run(main())
+```
+
+## Verify
+
+Run the snippet. The agent should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and print the filing URL plus a short summary.
+
+## Troubleshooting
+
+- **`401 Unauthorized`** — the `httpx.AsyncClient` headers didn't reach the server. Verify the env var is set in the same shell that runs Python: `echo $OMNI_DATASTREAM_API_KEY`.
+- **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
+- **`AttributeError: BasicMCPClient` has no attribute `headers`** — you're passing `headers=` to the constructor; that kwarg doesn't exist. Always wrap auth in a custom `httpx.AsyncClient` as shown above.
+- **Connection timeout** — verify the URL ends in `/mcp` (note the `/mcp` suffix, not `/sse`).
+
+## OAuth alternative
+
+For longer-lived workflows that need rotating credentials, swap `BasicMCPClient(...)` for `BasicMCPClient.with_oauth(...)` and follow the OAuth-protected-resource metadata at `https://api.secapi.ai/.well-known/oauth-protected-resource`.
+
+## Next
+
+- [Available tools](/mcp-install#available-tools) — 39 SEC + market data tools
+- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
+

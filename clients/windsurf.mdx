@@ -1,0 +1,53 @@
+---
+title: "Install Omni in Windsurf"
+description: "Connect OMNI Datastream to Windsurf's Cascade agent by editing one JSON config file — full MCP support with environment-variable auth interpolation."
+---
+
+# Install Omni in Windsurf
+
+Windsurf's Cascade agent has native MCP support over streamable HTTP. Auth headers can pull values from environment variables, so you don't have to hard-code your key into the config file.
+
+## Prerequisites
+
+- Omni API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Export `OMNI_DATASTREAM_API_KEY` in your shell.
+- Windsurf installed and signed in.
+
+## Install
+
+Open (or create) `~/.codeium/windsurf/mcp_config.json` on macOS/Linux, or `%USERPROFILE%\.codeium\windsurf\mcp_config.json` on Windows:
+
+```json
+{
+  "mcpServers": {
+    "omni-datastream": {
+      "serverUrl": "https://api.secapi.ai/mcp",
+      "headers": {
+        "x-api-key": "${env:OMNI_DATASTREAM_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Open the Cascade chat, click the MCP icon, and hit **Refresh** — Windsurf does not auto-watch the config file. The 39 Omni tools should appear in the tool list.
+
+## Verify
+
+In a Cascade chat, ask:
+
+> Show me Apple's latest 8-K filing.
+
+Cascade should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and return the filing URL plus a short summary.
+
+## Troubleshooting
+
+- **Server doesn't appear in the MCP panel** — click **Refresh** in the panel; Windsurf reads the config on demand, not on save.
+- **`401 Unauthorized`** — environment variable is unset or unreadable from Windsurf's process. Restart Windsurf after `export OMNI_DATASTREAM_API_KEY=…`, or replace `${env:OMNI_DATASTREAM_API_KEY}` with the literal key for a quick test.
+- **Old config path doesn't work** — older guides reference `~/.codeium/mcp_config.json` (without `windsurf/`). The current canonical path includes the `windsurf/` segment.
+- **`url` vs `serverUrl`** — both keys are accepted, but `serverUrl` is canonical in current Windsurf docs.
+
+## Next
+
+- [Available tools](/mcp-install#available-tools) — 39 SEC + market data tools
+- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
+
