@@ -66,6 +66,24 @@ answer = client.intelligence_query({
 })
 ```
 
+## Dilution intelligence
+
+```python
+# Top 10 highest-dilution-risk issuers
+ratings = client.dilution_ratings(overall_risk="high", limit=10)
+
+# Single-ticker dilution rollup
+score = client.dilution_score(ticker="BBBB")
+
+# ATM offerings only (boolean filter on the events list)
+atms = client.dilution_events(ticker="BBBB", is_atm=True)
+
+# Coverage + freshness rollup (no agent shape — already compact)
+coverage = client.dilution_coverage(ticker="BBBB")
+```
+
+The full surface — `dilution_events`, `dilution_event_detail`, `dilution_warrants`, `dilution_convertibles`, `dilution_rofr`, `dilution_lockups`, `dilution_cash_position`, `dilution_corporate_actions`, `dilution_nasdaq_compliance`, `dilution_ratings`, `dilution_reverse_splits`, `dilution_score`, `dilution_share_float_history`, `dilution_coverage` — mirrors the REST routes 1:1. Add `view="agent"` to any list call (except `dilution_coverage`) for the compact agent-mode shape.
+
 <Prompt>
 Use the Python SDK to build a research workflow around AAPL. Resolve the issuer, fetch the latest 10-K, read the latest market snapshot, read Japan CPI, run the portfolio factor-neutralization query, and write the results into a markdown brief that preserves requestId, provenance, freshness, and materialization metadata.
 </Prompt>

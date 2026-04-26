@@ -41,6 +41,24 @@ let client = omni_datastream_sdk_rust::OmniDatastreamClient::new(
 let signal = client.volatility_signal(&[("ticker", "AAPL")]).await?;
 ```
 
+## Dilution intelligence
+
+```rust
+// Top 10 highest-dilution-risk issuers
+let ratings = client.dilution_ratings(&[("overall_risk", "high"), ("limit", "10")]).await?;
+
+// Single-ticker dilution rollup
+let score = client.dilution_score(&[("ticker", "BBBB")]).await?;
+
+// ATM offerings only (boolean filter on the events list)
+let atms = client.dilution_events(&[("ticker", "BBBB"), ("is_atm", "true")]).await?;
+
+// Coverage + freshness rollup (no agent shape — already compact)
+let coverage = client.dilution_coverage(&[("ticker", "BBBB")]).await?;
+```
+
+The full surface — `dilution_events`, `dilution_event_detail`, `dilution_warrants`, `dilution_convertibles`, `dilution_rofr`, `dilution_lockups`, `dilution_cash_position`, `dilution_corporate_actions`, `dilution_nasdaq_compliance`, `dilution_ratings`, `dilution_reverse_splits`, `dilution_score`, `dilution_share_float_history`, `dilution_coverage` — mirrors the REST routes 1:1. Pass `("view", "agent")` in any list call (except `dilution_coverage`) for the compact agent-mode shape.
+
 <Prompt>
 Integrate the Rust SDK with this service. Verify the base auth path with a volatility or entity call, then add one filing or statement workflow and preserve requestId, traceparent, freshness, and provenance in the service logs.
 </Prompt>

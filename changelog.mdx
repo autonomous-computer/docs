@@ -11,6 +11,31 @@ The changelog is part of the trust surface. It keeps shipped changes, release rh
 
 ## Release trail
 
+<Update label="April 26, 2026" description="Dilution endpoints in all four SDKs (TS / Python / Go / Rust) + omni-sec CLI" tags={["OMNI", "Release"]}>
+All 14 dilution endpoints — events, warrants, convertibles, ROFR, lockups, cash position, corporate actions, Nasdaq compliance, ratings, reverse splits, score, share-float history, coverage — are now first-class methods in every SDK and the omni-sec CLI. Wedge feature, fully reachable.
+
+### Highlights
+
+- TypeScript SDK: 14 new methods on OmniDatastreamClient (dilutionEvents, dilutionEventDetail, dilutionWarrants, dilutionConvertibles, dilutionRofr, dilutionLockups, dilutionCashPosition, dilutionCorporateActions, dilutionNasdaqCompliance, dilutionRatings, dilutionReverseSplits, dilutionScore, dilutionShareFloatHistory, dilutionCoverage); bumped to 0.2.0
+- Python SDK: matching client.dilution_* methods (with an is_atm boolean adapter so True/False serialize as the lowercase strings the route expects); bumped to 0.2.0
+- Go SDK: matching Client.Dilution* receiver methods returning (map[string]any, error); bumped to 0.2.0
+- Rust SDK: matching client.dilution_* async functions returning Result<Value, OmniDatastreamError>; bumped to 0.2.0
+- omni-sec CLI: new dilution group with 14 subcommands (omni-sec dilution events|event|warrants|convertibles|rofr|lockups|cash-position|corporate-actions|nasdaq-compliance|ratings|reverse-splits|score|share-float-history|coverage); bumped to 0.2.0
+- ?view=agent honored across 13 of 14 endpoints (coverage is already a small rollup with no agent shape)
+- Demo: omni-sec dilution ratings --overall-risk high --limit 10 returns the highest-dilution-risk issuers; omni-sec dilution score --ticker BBBB returns the per-issuer Dilution Score
+</Update>
+
+<Update label="April 26, 2026" description="fix(sdk-rust): url-encode dilution event_id path segment (OMNI-3091, Devin r1) + 9 more" tags={["OMNI", "Release"]}>
+Highlights from this shipping window include fix(sdk-rust): url-encode dilution event_id path segment (OMNI-3091, Devin r1); Merge remote-tracking branch 'origin/main' into danielscrivner/omni-3091-w4-stream-b-sdk-regen-dilution; docs: dilution intelligence example on every SDK install page + changelog (OMNI-3091).
+
+### Highlights
+
+- fix(sdk-rust): url-encode dilution event_id path segment (OMNI-3091, Devin r1)
+- Merge remote-tracking branch 'origin/main' into danielscrivner/omni-3091-w4-stream-b-sdk-regen-dilution
+- docs: dilution intelligence example on every SDK install page + changelog (OMNI-3091)
+- test+chore: smoke for dilution endpoints + 0.2.0 version bumps + supply-chain artifact (OMNI-3091)
+</Update>
+
 <Update label="April 25, 2026" description="Email delivery for monitors (Resend)" tags={["OMNI", "Release"]}>
 Monitors now support email destinations alongside the existing webhook channel. SEC filing matches alert your inbox with one-click, RFC 8058-compliant unsubscribe.
 
@@ -23,6 +48,14 @@ Monitors now support email destinations alongside the existing webhook channel. 
 - New email_delivery_attempts audit table parallels webhook_delivery_attempts; recipient hashed, redacted form retained for ops debugging
 - New email_delivery MeterClass for per-org rate limiting (180/min default; observability-only, not billable in v1)
 - Channel ships as a primitive — automated dispatch via Dagster cron is filed as a separate follow-up (see OMNI-3244)
+</Update>
+
+<Update label="April 25, 2026" description="fix(verification): drop truncated citation candidates for fractional values (OMNI-3081 fast-follow)" tags={["OMNI", "Release"]}>
+A focused product or platform improvement shipped to OMNI.
+
+### Highlights
+
+- fix(verification): drop truncated citation candidates for fractional values (OMNI-3081 fast-follow)
 </Update>
 
 <Update label="April 24, 2026" description="Structured 8-K Item 5.07 voting results — first-in-market parser" tags={["OMNI", "Release"]}>

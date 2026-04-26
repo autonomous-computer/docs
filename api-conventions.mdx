@@ -56,6 +56,55 @@ OMNI-3084 (second tranche):
 - `GET /v1/funds/nport/holdings` — N-PORT holdings with nested `holdings[]` (shaped)
 - `GET /v1/companies/subsidiaries` — subsidiary list with citation envelope (API-consistency, byte-neutral)
 
+## Citation + char-range spans
+
+Two endpoints emit machine-verifiable citations on every result row:
+
+- `GET /v1/sections/search`
+- `GET /v1/search/semantic`
+
+Each result carries the following fields top-level (additive, always-on):
+
+| Field | Type | Description |
+|---|---|---|
+| `accession` | string \| null | SEC accession number (e.g. `0000950170-24-012345`) |
+| `section_key` | string \| null | Canonical section identifier (e.g. `item_1a`, `item_7`, `risk_factors`) |
+| `char_start` | int \| null | Inclusive start offset into the section text (see reference frame below) |
+| `char_end` | int \| null | Exclusive end offset — `0 ≤ char_start < char_end ≤ len(section_text)` |
+| `highlighted_snippet` | string \| null | ±150 char window around the match, with query terms wrapped in `**…**`, sentence-boundary truncated, capped at 320 chars |
+| `source_url` | string \| null | Public SEC.gov filing URL — usable directly in the browser |
+| `ticker` | string \| null | Issuer ticker, when known |
+
+### Reference frame
+
+`char_start` and `char_end` index into the **section markdown text** (the canonical plaintext extraction stored in `section_snippets.content_md`), not the raw filing HTML. This frame is stable across reparses and meaningful without fetching the multi-MB filing HTML body.
+
+To re-fetch the original section text outside the response, request the section by `(accession, section_key)` from `GET /v1/filings/{accession_number}/sections/{section_key}`, and slice the returned `contentMd` from `char_start` to `char_end`.
+
+### Null-fallback semantics
+
+When the validator can't produce a span (no section text available for the row or offsets out of bounds), the response drops `char_start`, `char_end`, and `highlighted_snippet` to `null` but keeps `accession`, `section_key`, `source_url`, and `ticker` populated. A `_citation_degraded` field records the reason (`"no_section_text" | "offsets_invalid"`). Agents should switch on `char_start === null` rather than `"char_start" in result`.
+
+### `?view=agent` interaction
+
+Citation fields are emitted on every result row regardless of `?view=`. In agent mode (`?view=agent`), `score` and `retrievalMode` are dropped from `/v1/search/semantic` results — the citation surface is preserved.
+
+## REST vs MCP shape conventions
+
+REST and MCP serve different consumer profiles, and Datastream optimizes for each:
+
+- **REST endpoints** support `?view={default,compact,agent}`. The `agent` view is the wire-byte-optimized projection — large prose drops out, the dilution `verification` block compresses to the canonical `{ confidence, crossValidationsPassed, sourceSpanResolved, modelVersion }` summary, and the response shrinks 30–95% depending on the endpoint. Use it from SDK clients that want low-latency / low-token responses to forward to a UI or downstream agent.
+- **MCP tools** always return the full payload (verification block, full provenance chain, all citation pointers). MCP context is already an agent context — round-tripping through compact-then-fetch wastes tokens compared to surfacing full evidence on the first call. Agents reasoning over MCP decide what to surface to the user.
+
+This split is intentional: REST optimizes for the wire (network bytes); MCP optimizes for the model (in-context evidence). For OMNI-3089's dilution endpoints, the rule is concrete:
+
+- `GET /v1/dilution/events?view=agent` → returns `summarizeVerification(row.verification)` (the contract from `packages/contracts/src/verification.ts`).
+- `dilution.events.list` MCP tool → returns the full row including the unmodified `verification` block. No `view` argument is accepted.
+
+### Substring-match heuristic
+
+The match span is anchored by the longest query token, falling back to the snippet's leading words and finally to a section-head citation. Multi-occurrence ambiguity is resolved by earliest occurrence. The `highlighted_snippet` window is the stable user surface; the precise `[char_start, char_end)` may move slightly as upstream rerankers improve — agents should rely on the bolded snippet for display and on the offsets only for programmatic slicing.
+
 ## Versioning
 
 - production clients should send `omni-version` and pin to a dated release

@@ -44,6 +44,30 @@ calendar, err := client.MarketCalendar(map[string]string{
 })
 ```
 
+## Dilution intelligence
+
+```go
+// Top 10 highest-dilution-risk issuers
+ratings, err := client.DilutionRatings(map[string]string{
+  "overall_risk": "high",
+  "limit":        "10",
+})
+
+// Single-ticker dilution rollup
+score, err := client.DilutionScore(map[string]string{"ticker": "BBBB"})
+
+// ATM offerings only (boolean filter on the events list)
+atms, err := client.DilutionEvents(map[string]string{
+  "ticker": "BBBB",
+  "is_atm": "true",
+})
+
+// Coverage + freshness rollup (no agent shape — already compact)
+coverage, err := client.DilutionCoverage(map[string]string{"ticker": "BBBB"})
+```
+
+The full surface — `DilutionEvents`, `DilutionEventDetail`, `DilutionWarrants`, `DilutionConvertibles`, `DilutionRofr`, `DilutionLockups`, `DilutionCashPosition`, `DilutionCorporateActions`, `DilutionNasdaqCompliance`, `DilutionRatings`, `DilutionReverseSplits`, `DilutionScore`, `DilutionShareFloatHistory`, `DilutionCoverage` — mirrors the REST routes 1:1. Pass `"view": "agent"` in any list call (except `DilutionCoverage`) for the compact agent-mode shape.
+
 <Prompt>
 Wire the Go SDK into this service. Start with one entity or market calendar call to confirm auth, then add a filing or ownership workflow that preserves requestId and freshness metadata in structured logs.
 </Prompt>

@@ -76,6 +76,37 @@ A typical "company briefing" workflow requires:
 
 The intelligence bundle pre-computes what agents would otherwise assemble from multiple API calls, reducing both latency and token cost by 75%+.
 
+## FinanceBench canary-25 (datastream-api MCP regression-check)
+
+<Warning>
+**Preliminary — datastream-api MCP regression-check, NOT the agent-chat-routed benchmark.** Bridge-50 numbers below were produced by an eval harness that instantiates the Anthropic SDK directly and routes tool calls into datastream-api's MCP surface. This validates the *data layer*. The agent-chat-routed full-stack benchmark (which exercises OMNI's agent-chat WebSocket path end-to-end) is tracked separately under [OMNI-3286](https://linear.app/arcadegroup/issue/OMNI-3286) and dispatches as soon as PR #394 merges. See [`evals/financebench-canary-25/2026-04-25-iter5/REPORT.md`](https://github.com/autonomous-computer/omni-datastream/blob/main/evals/financebench-canary-25/2026-04-25-iter5/REPORT.md) for the full methodology + per-question breakdown.
+</Warning>
+
+[FinanceBench](https://github.com/patronus-ai/financebench) (Patronus AI) is a 150-question benchmark over 10-K / 10-Q / 8-K filings that tests an AI system's ability to answer real financial-analyst questions with citations to source documents.
+
+| Gate | Target | OMNI canary-25 (post-data-drift) | Methodology |
+|---|---|---|---|
+| 25-q canary (datastream-api MCP, judge-correct) | ≥23/25 (92%) | **18/25 (72%)** | Sonnet-4.5 + extended thinking (10k); reflection disabled; OMNI-3083 citations active |
+| 25-q canary (datastream-api MCP, rule-based) | ≥23/25 (92%) | 19/25 (76%) | Same harness; structural API-correctness scoring |
+| 50-q bridge (regression vs 2026-04-02 baseline) | ≥86% | *(not run; held pending OMNI-3286)* | Same harness, expanded suite |
+
+**What the 72% reflects:** OMNI's datastream-api MCP surface scored 18/25 judge-correct on canary-25 against current production data on 2026-04-25. Compared to the 2026-04-02 baseline (25/25 judge), the gap is dominated by **production data drift** — new 10-Q/8-K filings ingested in the intervening 23 days now return as "latest" for queries that don't pin a fiscal period. The agent's tool-calling strategy and the canonical_calls hint shape don't fully compensate. Five iterations of prompt + thinking + reflection + canonical_calls fixes plateaued at this number.
+
+**What the 72% is NOT:** the W6 launch claim. The legitimate W6 anchor is the agent-chat-routed run that OMNI-3286 will execute against the same suite — that exercises the full agent-chat surface (WebSocket transport, MCP wiring from OMNI-3087, dilution-aware system prompt, OMNI-3083 citations end-to-end), not just the data layer. Expect the agent-chat number to differ; both are valid measurements of different surfaces.
+
+**Failure decomposition (5 chronic + 2 reasoning-bound):**
+
+| Pattern | Questions | Investigation |
+|---|---|---|
+| `section_snippets` granularity gap | fb_055, fb_056 (BBY Q2 FY24) | [OMNI-3298](https://linear.app/arcadegroup/issue/OMNI-3298) |
+| Sonnet-4.5 reasoning ceiling | fb_054, fb_141 | [OMNI-3299](https://linear.app/arcadegroup/issue/OMNI-3299) — re-test on Opus-4.7 |
+| Wrong-source (GAAP vs Non-GAAP) | fb_029 | Pending OMNI-3286 (agent-chat may resolve via better RAG path) |
+| Production data drift | fb_028 | Pending OMNI-3300 URL-pin diagnostic |
+
+**Cost / latency (improvements vs original harness):** $0.44 / Q (down 41%), p95 latency 88s (down 8%). Cost guard ($20 / run) held throughout the iteration ladder.
+
+**Reproducibility:** every run writes a `reproducibility` block at the top of the artifact JSON (commit_sha, agent_chat_version, datastream_api_version, model_version, run_date, harness_version, fixture_baseline_commit, fixture_baseline_date, `harness_routes_through_agent_chat: false` honesty flag). The flag flips to `true` when OMNI-3286 lands.
+
 ## Methodology
 
 - Hosted APIs (OMNI, sec-api.io, financialdatasets.ai) use production endpoints with authenticated API keys

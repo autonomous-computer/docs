@@ -62,6 +62,24 @@ const answer = await client.intelligenceQuery({
 })
 ```
 
+## Dilution intelligence
+
+```ts
+// Top 10 highest-dilution-risk issuers
+const ratings = await client.dilutionRatings({ overall_risk: "high", limit: 10 })
+
+// Single-ticker dilution rollup
+const score = await client.dilutionScore({ ticker: "BBBB" })
+
+// ATM offerings only (boolean filter on the events list)
+const atms = await client.dilutionEvents({ ticker: "BBBB", is_atm: true })
+
+// Coverage + freshness rollup (no agent shape — already compact)
+const coverage = await client.dilutionCoverage({ ticker: "BBBB" })
+```
+
+The full surface — `dilutionEvents`, `dilutionEventDetail`, `dilutionWarrants`, `dilutionConvertibles`, `dilutionRofr`, `dilutionLockups`, `dilutionCashPosition`, `dilutionCorporateActions`, `dilutionNasdaqCompliance`, `dilutionRatings`, `dilutionReverseSplits`, `dilutionScore`, `dilutionShareFloatHistory`, `dilutionCoverage` — mirrors the REST routes 1:1. Add `view: "agent"` to any list call (except `dilutionCoverage`) for the compact agent-mode shape.
+
 <Prompt>
 Install the JavaScript SDK for Omni Datastream in this project. Resolve AAPL, fetch the latest 10-K, fetch the latest market snapshot, read US CPI, run the semantic intelligence query for AAPL return decomposition, and log requestId, traceparent, provenance, freshness, and materialization metadata with each response.
 </Prompt>
