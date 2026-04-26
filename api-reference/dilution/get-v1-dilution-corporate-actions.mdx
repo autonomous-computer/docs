@@ -1,6 +1,6 @@
 # GET /v1/dilution/corporate-actions
 
-List dilution-relevant corporate actions: ticker changes, exchange moves, de-SPAC closings, splits
+List dilution-relevant corporate actions: ticker changes, exchange moves, de-SPAC closings, splits. Ordered by `effective_date desc`. Verification block on every row.
 
 <Info>
 Audience: application and coding agent.
@@ -10,6 +10,19 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
+- `verification`
+- `provenance`
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `ticker` | string | Issuer ticker. |
+| `action_type` | string | Filter (`ticker_change`, `exchange_move`, `despac`, `split`, etc.). |
+| `effective_date_from` / `effective_date_to` | ISO date | Bounds on `effective_date`. |
+| `cursor` | int | From prior page's `nextCursor`. |
+| `limit` | int (1–50, default 10) | Page size. |
+| `view` | enum | Response shape. |
 
 ## Example request
 
@@ -18,7 +31,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/corporate-actions"
+  "https://api.secapi.ai/v1/dilution/corporate-actions?ticker=ACME"
 ```
 </RequestExample>
 
@@ -27,6 +40,37 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_corporate_action",
+      "id": "dil_ca_acme_2026_a",
+      "ticker": "ACME",
+      "actionType": "exchange_move",
+      "effectiveDate": "2026-01-22",
+      "splitFrom": null,
+      "splitTo": null,
+      "newSymbol": null,
+      "oldSymbol": null,
+      "symbolChange": false,
+      "despacClosing": false,
+      "exchange": "NASDAQ",
+      "currentStatus": "active",
+      "filedAt": "2026-01-15T13:30:00.000Z",
+      "verification": {
+        "sourceSpan": "8-K#item-3.01#char[800..1200]",
+        "extractionTraceId": "lf_2026q1_acme_corp_extract",
+        "confidence": 0.97,
+        "crossValidations": [
+          { "name": "effective_date_parses", "passed": true }
+        ],
+        "modelVersion": "dilution-v1.4",
+        "verifiedAt": "2026-01-15T13:34:00.000Z"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
@@ -36,13 +80,10 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/dilution/corporate-actions to list dilution-relevant corporate actions: ticker changes, exchange moves, de-spac closings, splits. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream `GET /v1/dilution/corporate-actions` to surface ticker changes, exchange moves, de-SPAC closings, and splits. Preserve `requestId`, `traceparent`, and `verification`. When reporting, include `actionType` and `effectiveDate` so downstream consumers can correlate with float-history.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- preserve `requestId` and `traceparent`

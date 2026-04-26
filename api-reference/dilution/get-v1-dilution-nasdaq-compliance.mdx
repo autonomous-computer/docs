@@ -1,6 +1,6 @@
 # GET /v1/dilution/nasdaq-compliance
 
-List Nasdaq deficiency notices with status and remediation tracking
+List Nasdaq deficiency notices with status and remediation tracking. Ordered by `date desc`. Verification block on every row.
 
 <Info>
 Audience: application and coding agent.
@@ -10,6 +10,19 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
+- `verification`
+- `provenance`
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `ticker` | string | Issuer ticker. |
+| `status` | string | Filter (`pending`, `in_compliance`, `delinquent`). |
+| `date_from` / `date_to` | ISO date | Bounds on `date`. |
+| `cursor` | int | From prior page's `nextCursor`. |
+| `limit` | int (1–50, default 10) | Page size. |
+| `view` | enum | Response shape. |
 
 ## Example request
 
@@ -18,7 +31,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/nasdaq-compliance"
+  "https://api.secapi.ai/v1/dilution/nasdaq-compliance?ticker=ACME"
 ```
 </RequestExample>
 
@@ -27,6 +40,30 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_nasdaq_compliance",
+      "id": "ndq_a1b2c3d4e5",
+      "ticker": "ACME",
+      "date": "2026-01-15",
+      "deficiency": "Bid Price",
+      "company": "Acme Corp",
+      "market": "Nasdaq Capital Market",
+      "risk": "low",
+      "status": "pending",
+      "verification": {
+        "sourceSpan": "https://api.nasdaq.com/.../listing#row-12",
+        "extractionTraceId": "ndq_extract_2026_01_15",
+        "confidence": 0.6,
+        "crossValidations": [],
+        "modelVersion": "nasdaq-rules-v1",
+        "verifiedAt": "2026-01-15T14:00:00.000Z"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
@@ -36,13 +73,10 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/dilution/nasdaq-compliance to list nasdaq deficiency notices with status and remediation tracking. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream `GET /v1/dilution/nasdaq-compliance` to surface deficiency notices and remediation status. Preserve `requestId`, `traceparent`, and `verification`. Status transitions (e.g. `pending → in_compliance`) fire the `dilution.nasdaq_compliance.status_changed` webhook event.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- preserve `requestId` and `traceparent`

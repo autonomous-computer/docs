@@ -1,6 +1,6 @@
 # GET /v1/dilution/warrants
 
-List warrant schedules parsed from offering exhibits with price-protection and ratchet clauses
+List warrant schedules parsed from offering exhibits, including price-protection and ratchet metadata, with the full verification block on every row.
 
 <Info>
 Audience: application and coding agent.
@@ -10,6 +10,21 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
+- `verification`
+- `provenance`
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `ticker` | string | Issuer ticker. |
+| `cik` | string | SEC CIK. |
+| `accession_number` | string | Match a specific filing's warrants. |
+| `form_type` | string | Filing form (e.g. `424B5`, `S-1`). |
+| `filed_at_from` / `filed_at_to` | ISO date | Bounds on `filed_at`. |
+| `cursor` | int | From prior page's `nextCursor`. |
+| `limit` | int (1–50, default 10) | Page size. |
+| `view` | enum | Response shape (default \| compact \| agent). |
 
 ## Example request
 
@@ -18,7 +33,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/warrants"
+  "https://api.secapi.ai/v1/dilution/warrants?ticker=ACME&limit=5"
 ```
 </RequestExample>
 
@@ -27,6 +42,41 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_warrant",
+      "id": "dil_warr_acme_2026_a",
+      "ticker": "ACME",
+      "cik": "0001234567",
+      "accessionNumber": "0001234567-26-001234",
+      "formType": "424B5",
+      "warrantsAmount": 8000000,
+      "warrantsRemaining": 8000000,
+      "warrantsExercisePrice": 5.50,
+      "conversionPrice": null,
+      "priceProtection": true,
+      "ppClause": "Standard ratchet on subsequent dilutive issuance below exercise price.",
+      "registered": true,
+      "underlyingSharesCalculated": 8000000,
+      "filedAt": "2026-02-12T20:31:00.000Z",
+      "exercisableDate": "2026-02-19",
+      "expirationDate": "2031-02-19",
+      "verification": {
+        "sourceSpan": "424b5#exhibit-4#char[820..1402]",
+        "extractionTraceId": "lf_2026q1_acme_warrant_extract",
+        "confidence": 0.95,
+        "crossValidations": [
+          { "name": "exercise_price_positive", "passed": true },
+          { "name": "expiration_after_filed", "passed": true }
+        ],
+        "modelVersion": "dilution-v1.4",
+        "verifiedAt": "2026-02-12T20:34:18.000Z"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
@@ -36,13 +86,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/dilution/warrants to list warrant schedules parsed from offering exhibits with price-protection and ratchet clauses. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream `GET /v1/dilution/warrants` to list warrant schedules and assess overhang. Preserve `requestId`, `traceparent`, and the per-row `verification` block. Flag warrants whose `priceProtection` is true (price-reset / ratchet exposure) and report total potential dilutive shares from `underlyingSharesCalculated` when present.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- when `verification.confidence < 0.7`, treat the row as advisory only

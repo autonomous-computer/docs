@@ -1,6 +1,6 @@
 # GET /v1/dilution/convertibles
 
-List convertible debt schedules with conversion price, maturity, and ratchet metadata
+List convertible debt and convertible-preferred schedules with conversion price, maturity, and ratchet metadata. Verification block on every row.
 
 <Info>
 Audience: application and coding agent.
@@ -10,6 +10,21 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
+- `verification`
+- `provenance`
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `ticker` | string | Issuer ticker. |
+| `cik` | string | SEC CIK. |
+| `accession_number` | string | Match a specific filing. |
+| `form_type` | string | Filing form. |
+| `filed_at_from` / `filed_at_to` | ISO date | Bounds on `filed_at`. |
+| `cursor` | int | From prior page's `nextCursor`. |
+| `limit` | int (1–50, default 10) | Page size. |
+| `view` | enum | Response shape. |
 
 ## Example request
 
@@ -18,7 +33,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/convertibles"
+  "https://api.secapi.ai/v1/dilution/convertibles?ticker=ACME"
 ```
 </RequestExample>
 
@@ -27,6 +42,42 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_convertible",
+      "id": "dil_conv_acme_2026_a",
+      "ticker": "ACME",
+      "cik": "0001234567",
+      "accessionNumber": "0001234567-26-001234",
+      "formType": "424B5",
+      "sharesAmount": 4500000,
+      "sharesRemaining": 4500000,
+      "conversionPrice": 6.00,
+      "sharePrice": 4.25,
+      "priceProtection": true,
+      "ppClause": "Floor at $1.00; full ratchet on dilutive issuance.",
+      "registered": true,
+      "underlyingSharesCalculated": 4500000,
+      "convertibleDebtAmount": 27000000,
+      "convertibleDebtRemaining": 27000000,
+      "filedAt": "2026-02-12T20:31:00.000Z",
+      "maturityDate": "2029-02-19",
+      "verification": {
+        "sourceSpan": "424b5#exhibit-5#char[2200..2840]",
+        "extractionTraceId": "lf_2026q1_acme_conv_extract",
+        "confidence": 0.91,
+        "crossValidations": [
+          { "name": "conversion_price_positive", "passed": true },
+          { "name": "maturity_after_filed", "passed": true }
+        ],
+        "modelVersion": "dilution-v1.4",
+        "verifiedAt": "2026-02-12T20:34:18.000Z"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
@@ -36,13 +87,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/dilution/convertibles to list convertible debt schedules with conversion price, maturity, and ratchet metadata. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream `GET /v1/dilution/convertibles` to list convertible debt / preferred schedules. Preserve `requestId`, `traceparent`, and the `verification` block. Flag rows where `priceProtection` is true and `sharePrice < conversionPrice` — those are at risk of triggering a reset.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- preserve `requestId` and `traceparent`
+- treat `verification.confidence < 0.7` as advisory only

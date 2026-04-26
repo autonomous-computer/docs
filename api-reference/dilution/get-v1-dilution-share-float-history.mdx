@@ -1,6 +1,6 @@
 # GET /v1/dilution/share-float-history
 
-Historical shares outstanding and public float series materialized from filings
+Historical shares outstanding and public float series materialized from filings. Ordered by `as_of_date desc`. Verification block on every row.
 
 <Info>
 Audience: application and coding agent.
@@ -10,6 +10,18 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
+- `verification`
+- `provenance`
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `ticker` | string | Issuer ticker. |
+| `as_of_date_from` / `as_of_date_to` | ISO date | Bounds on `as_of_date`. |
+| `cursor` | int | From prior page's `nextCursor`. |
+| `limit` | int (1–50, default 10) | Page size. |
+| `view` | enum | Response shape. |
 
 ## Example request
 
@@ -18,7 +30,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/share-float-history"
+  "https://api.secapi.ai/v1/dilution/share-float-history?ticker=ACME&limit=4"
 ```
 </RequestExample>
 
@@ -27,6 +39,32 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_share_float_history",
+      "id": "dil_sfh_acme_2026q1",
+      "ticker": "ACME",
+      "asOfDate": "2026-02-12",
+      "sharesOutstanding": 32480000,
+      "publicFloat": 27410000,
+      "sourceForm": "424B5",
+      "sourceAccession": "0001234567-26-001234",
+      "computedAt": "2026-02-13T01:00:00.000Z",
+      "verification": {
+        "sourceSpan": "424b5#cover#char[180..260]",
+        "extractionTraceId": "lf_2026q1_acme_sfh_extract",
+        "confidence": 0.96,
+        "crossValidations": [
+          { "name": "shares_outstanding_xbrl_match", "passed": true }
+        ],
+        "modelVersion": "dilution-v1.4",
+        "verifiedAt": "2026-02-13T01:00:00.000Z"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
@@ -36,13 +74,10 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/dilution/share-float-history to historical shares outstanding and public float series materialized from filings. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream `GET /v1/dilution/share-float-history` to chart shares-outstanding and public-float deltas over time. Preserve `requestId`, `traceparent`, and `verification`. Compute period-over-period dilution as `(sharesOutstanding[t] - sharesOutstanding[t-1]) / sharesOutstanding[t-1]`.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- preserve `requestId` and `traceparent`

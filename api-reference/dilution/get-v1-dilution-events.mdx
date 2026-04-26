@@ -1,6 +1,6 @@
 # GET /v1/dilution/events
 
-List dilution events (S-1, 424B*, FWP, S-3 offerings) with filters by ticker, form, date, and is_atm
+List dilution events parsed from S-1, 424B*, FWP, and S-3 offering filings, with the full programmatic verification block on every row.
 
 <Info>
 Audience: application and coding agent.
@@ -10,6 +10,24 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
+- `verification` (programmatic per-row block — see API conventions)
+- `provenance`
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `ticker` | string | Issuer ticker (case-insensitive). |
+| `cik` | string | SEC CIK as digits. |
+| `accession_number` | string | Match a specific filing's events. |
+| `form_type` | string | E.g. `S-1`, `424B5`, `FWP`, `S-3`. |
+| `offering_type` | string | Free-text classification (e.g. `atm`, `pipe`). |
+| `is_atm` | boolean | Filter to at-the-market offerings. |
+| `filed_at_from` | ISO date/timestamp | Inclusive lower bound on `filed_at`. |
+| `filed_at_to` | ISO date/timestamp | Inclusive upper bound on `filed_at`. |
+| `cursor` | int (offset) | Cursor from prior page's `nextCursor`. |
+| `limit` | int (1–50, default 10) | Page size. |
+| `view` | `default` \| `compact` \| `agent` | Response shape (default leaves verification block intact; agent compresses via `summarizeVerification`). |
 
 ## Example request
 
@@ -18,7 +36,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/events"
+  "https://api.secapi.ai/v1/dilution/events?ticker=ACME&form_type=424B5&limit=2"
 ```
 </RequestExample>
 
@@ -27,8 +45,86 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_event",
+      "id": "dil_evt_acme_424b5_2026q1",
+      "ticker": "ACME",
+      "cik": "0001234567",
+      "accessionNumber": "0001234567-26-001234",
+      "formType": "424B5",
+      "documentUrl": "https://www.sec.gov/Archives/edgar/data/1234567/000123456726001234/424b5.htm",
+      "primaryFiling": true,
+      "isAtm": true,
+      "offeringType": "atm",
+      "offeringAmount": 50000000,
+      "raisableAmount": 50000000,
+      "amountSoldToDate": 12500000,
+      "amountRemainingAtm": 37500000,
+      "sharePrice": 4.25,
+      "warrantsAmount": null,
+      "headline": "ATM offering — $50M aggregate, $12.5M sold",
+      "filedAt": "2026-02-12T20:31:00.000Z",
+      "verification": {
+        "sourceSpan": "424b5#section-3#char[1240..1620]",
+        "extractionTraceId": "lf_2026q1_acme_424b5_extract",
+        "confidence": 0.92,
+        "crossValidations": [
+          { "name": "shares_amount_consistency", "passed": true },
+          { "name": "citation_verifier", "passed": true }
+        ],
+        "modelVersion": "dilution-v1.4",
+        "verifiedAt": "2026-02-12T20:34:18.000Z"
+      },
+      "provenance": {
+        "source": "sec.gov",
+        "accessionNumber": "0001234567-26-001234",
+        "filingUrl": "https://www.sec.gov/Archives/edgar/data/1234567/000123456726001234/424b5.htm",
+        "retrievedAt": "2026-02-12T20:34:18.000Z"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Example response (`?view=agent`)
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_event",
+      "id": "dil_evt_acme_424b5_2026q1",
+      "ticker": "ACME",
+      "cik": "0001234567",
+      "accessionNumber": "0001234567-26-001234",
+      "formType": "424B5",
+      "isAtm": true,
+      "offeringType": "atm",
+      "offeringAmount": 50000000,
+      "raisableAmount": 50000000,
+      "sharePrice": 4.25,
+      "headline": "ATM offering — $50M aggregate, $12.5M sold",
+      "filedAt": "2026-02-12T20:31:00.000Z",
+      "verification": {
+        "confidence": 0.92,
+        "crossValidationsPassed": 2,
+        "sourceSpanResolved": true,
+        "modelVersion": "dilution-v1.4"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_example_123"
 }
 ```
 </ResponseExample>
@@ -36,13 +132,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/dilution/events to list dilution events (s-1, 424b*, fwp, s-3 offerings) with filters by ticker, form, date, and is_atm. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream `GET /v1/dilution/events` to list dilution events for the issuer of interest, then summarize ATM activity, offering pace, and warrant overhang. Always preserve `requestId`, `traceparent`, and the per-row `verification` block (or its agent-mode summary). When `confidence < 0.7` or `crossValidationsPassed` reports failures, treat the row as unverified and surface the `sourceSpan` for human review.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- if the verification block reports `confidence < 0.5` or any `crossValidations` entry fails, surface that signal — do not paper over it

@@ -1,6 +1,6 @@
 # GET /v1/dilution/events/{event_id}
 
-Retrieve a single dilution event with verification block, warrants, and convertibles linkage
+Retrieve a single dilution event by id, including the full verification block, offering economics, and provenance pointer.
 
 <Info>
 Audience: application and coding agent.
@@ -10,6 +10,20 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
+- `verification`
+- `provenance`
+
+## Path parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `event_id` | string | Primary key of the dilution event row (e.g. `dil_evt_acme_424b5_2026q1`). |
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `view` | `default` \| `compact` \| `agent` | Response shape — agent compresses verification via `summarizeVerification`. |
 
 ## Example request
 
@@ -18,7 +32,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
   -H "omni-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/events/{event_id}"
+  "https://api.secapi.ai/v1/dilution/events/dil_evt_acme_424b5_2026q1"
 ```
 </RequestExample>
 
@@ -27,22 +41,51 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "dilution_event",
+  "id": "dil_evt_acme_424b5_2026q1",
+  "ticker": "ACME",
+  "cik": "0001234567",
+  "accessionNumber": "0001234567-26-001234",
+  "formType": "424B5",
+  "documentUrl": "https://www.sec.gov/Archives/edgar/data/1234567/000123456726001234/424b5.htm",
+  "isAtm": true,
+  "offeringAmount": 50000000,
+  "filedAt": "2026-02-12T20:31:00.000Z",
+  "verification": {
+    "sourceSpan": "424b5#section-3#char[1240..1620]",
+    "extractionTraceId": "lf_2026q1_acme_424b5_extract",
+    "confidence": 0.92,
+    "crossValidations": [
+      { "name": "shares_amount_consistency", "passed": true },
+      { "name": "citation_verifier", "passed": true }
+    ],
+    "modelVersion": "dilution-v1.4",
+    "verifiedAt": "2026-02-12T20:34:18.000Z"
+  },
+  "provenance": {
+    "source": "sec.gov",
+    "accessionNumber": "0001234567-26-001234",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/1234567/000123456726001234/424b5.htm",
+    "retrievedAt": "2026-02-12T20:34:18.000Z"
+  },
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Errors
+
+- `404 dilution_event_not_found` — no row matches `event_id`.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/dilution/events/{event_id} to retrieve a single dilution event with verification block, warrants, and convertibles linkage. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use Omni Datastream `GET /v1/dilution/events/{event_id}` to fetch the full record for one dilution event. Always preserve `requestId`, `traceparent`, and the `verification` block. If `verification.confidence < 0.7` or any `crossValidations` entry has `passed: false`, surface that — and the `sourceSpan` — instead of treating the row as a confirmed observation.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- on `404 dilution_event_not_found`, do not retry; the id is wrong or the row is not yet extracted
