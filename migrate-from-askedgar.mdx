@@ -87,7 +87,7 @@ curl "https://api.secapi.ai/v1/dilution/share-float-history?ticker=MULN" \
 ```
 
 <Prompt>
-Migrate this AskEdgar integration to OMNI Datastream. Replace the host `api.askedgar.com` with `api.secapi.ai/v1`. Swap the `API-KEY` header for `x-api-key`. Map `/v1/dilution-data` to `/v1/dilution/events`, split warrants/convertibles into `/v1/dilution/warrants` and `/v1/dilution/convertibles`, and replace any `verified === true` check with `verification.confidence >= 0.9 && verification.sourceSpanResolved`. Add `?view=agent` for token-efficient summaries on token-sensitive paths. Keep `Request-Id` logging and any current fallback gaps in the final implementation notes.
+Migrate this AskEdgar integration to OMNI Datastream. Replace the host `api.askedgar.com` with `api.secapi.ai` (the existing paths already carry `/v1/...`, so the cutover is host-only — do NOT add `/v1` to the host or you will get `/v1/v1/...`). Swap the `API-KEY` header for `x-api-key`. Map `/v1/dilution-data` to `/v1/dilution/events`, split warrants/convertibles into `/v1/dilution/warrants` and `/v1/dilution/convertibles`, and replace any `verified === true` check with `verification.confidence >= 0.9 && verification.sourceSpanResolved`. Add `?view=agent` for token-efficient summaries on token-sensitive paths. Keep `Request-Id` logging and any current fallback gaps in the final implementation notes.
 </Prompt>
 
 ## Verification model migration
@@ -139,6 +139,9 @@ per `apps/docs/content/billing-faq.md`.
 
 ```bash
 #!/usr/bin/env bash
+# Bash treats ** as literal unless globstar is enabled. Without this, the script
+# expands src/**/*.{ts,js,py} to a literal path and sed gets a "file not found".
+shopt -s globstar nullglob
 # Drop-in cutover. Manual review required for the warrants/convertibles split.
 # Host replacement does NOT include /v1 — the path substitutions below already
 # carry /v1/... so combining the two would produce /v1/v1/... (broken).
@@ -148,7 +151,7 @@ sed -i.bak \
   -e 's|/v1/dilution-data|/v1/dilution/events|g' \
   -e 's|/v1/dilution-rating|/v1/dilution/score|g' \
   -e 's|/v1/historical-float-pro|/v1/dilution/share-float-history|g' \
-  -e 's|/v1/float-outstanding|/v1/dilution/share-float-history?limit=1|g' \
+  -e 's|/v1/float-outstanding|/v1/dilution/share-float-history|g' \
   -e 's|/v1/reverse-splits|/v1/dilution/reverse-splits|g' \
   -e 's|/v1/nasdaq-compliance|/v1/dilution/nasdaq-compliance|g' \
   src/**/*.{ts,js,py}
@@ -157,6 +160,7 @@ sed -i.bak \
 #  - DilutionEntity warrants/convertibles fields -> /v1/dilution/warrants and /v1/dilution/convertibles
 #  - /v1/offerings, /v1/registrations -> /v1/dilution/events with form= filters
 #  - /v1/dilution-rating history -> /v1/dilution/ratings (separate from /v1/dilution/score)
+#  - /v1/float-outstanding (returns latest entry only) -> /v1/dilution/share-float-history returns the full series; add `&limit=1` (or `?limit=1` if no other params) to your query string to preserve "latest only" semantics
 #  - `verified === true` -> verification.confidence >= 0.9 && verification.sourceSpanResolved
 ```
 
