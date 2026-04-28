@@ -1,0 +1,107 @@
+---
+title: "SEC Company Search API — Entity Resolution by Any Identifier"
+description: "Search SEC-registered companies by ticker, CIK, CUSIP, FIGI, ISIN, or name. Resolve any identifier to a unified entity profile with full filing history. Start free."
+---
+
+# SEC Company Search API
+
+Finding the right company on EDGAR means knowing its CIK. Datastream's entity resolution engine lets you search by any identifier — ticker symbol, CIK, CUSIP, FIGI, ISIN, or company name — and get back a unified entity profile with all mapped identifiers and filing metadata.
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Multi-identifier lookup" icon="fingerprint">
+    Search by ticker, CIK, CUSIP, FIGI, ISIN, LEI, or company name. All identifiers map to a single canonical entity.
+  </Card>
+  <Card title="Fuzzy name matching" icon="magnifying-glass">
+    Handles spelling variations, abbreviations, and former names. "Alphabet" resolves to GOOGL just as well as "Google."
+  </Card>
+  <Card title="Full entity profile" icon="id-card">
+    Returns SIC code, state of incorporation, filing history summary, and all known identifiers for each entity.
+  </Card>
+  <Card title="Bulk resolution" icon="list">
+    Resolve hundreds of identifiers in a single batch request. Ideal for portfolio mapping and data reconciliation.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Resolve a ticker to its full entity profile:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=TSLA"
+```
+
+```json
+{
+  "entity": {
+    "cik": "0001318605",
+    "name": "Tesla, Inc.",
+    "ticker": "TSLA",
+    "cusip": "88160R101",
+    "figi": "BBG000N9MNX3",
+    "isin": "US88160R1014",
+    "sic": "3711",
+    "sic_description": "Motor Vehicles & Passenger Car Bodies",
+    "state_of_incorporation": "DE",
+    "filing_count": 842
+  }
+}
+```
+
+Search by company name with fuzzy matching:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/entities/search?query=berkshire+hathaway&limit=5"
+```
+
+## Use cases
+
+### Portfolio identifier mapping
+
+Map a portfolio of CUSIPs to CIKs and tickers for cross-referencing with SEC filing data. Batch resolve thousands of positions in one call.
+
+### Data reconciliation
+
+When merging datasets from different providers that use different identifiers, use entity resolution to create a single canonical mapping.
+
+### Company lookup for applications
+
+Build autocomplete and search features that let users find companies by any identifier they have on hand.
+
+### Historical entity tracking
+
+Track name changes, ticker changes, and CIK reassignments over time to maintain accurate mapping for historical analysis.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/entities/resolve` | Resolve any identifier to an entity |
+| `GET /v1/entities/search` | Fuzzy search by company name |
+| `POST /v1/entities/resolve/batch` | Bulk resolve multiple identifiers |
+
+## Why Datastream for entity resolution
+
+| Feature | Datastream | Raw EDGAR | SEC-API.io | OpenFIGI |
+|---------|-----------|-----------|------------|----------|
+| Ticker lookup | Yes | No (CIK only) | Yes | No |
+| CUSIP resolution | Yes | No | No | No |
+| FIGI/ISIN resolution | Yes | No | No | Yes (FIGI) |
+| Fuzzy name search | Yes | Basic | Basic | No |
+| Batch resolution | Yes | No | No | Yes |
+| Full entity profile | Yes | Partial | Partial | No |
+| Pricing | Pay-as-you-go | Free (limited) | $Varies | Free (FIGI) |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start resolving entities in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [SEC EDGAR API](/seo/sec-edgar-api)
+- [Filing Search API](/seo/sec-filing-search-api)
+- [API Reference](/api-reference)
+

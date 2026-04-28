@@ -1,0 +1,106 @@
+---
+title: "SEC Filing Diff API — Compare Amendments and Document Versions"
+description: "Compare SEC filing amendments side by side via API. Detect changes between 10-K/A, 10-Q/A, and other amended filings with structured diffs. Start free."
+---
+
+# SEC Filing Diff API
+
+When companies amend their SEC filings, the changes can be buried in hundreds of pages of identical text. Datastream's diff engine compares any two versions of a filing and returns a structured changeset — additions, deletions, and modifications — so you can see exactly what changed without reading the entire document.
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Structured diffs" icon="code-compare">
+    Additions, deletions, and modifications returned as structured JSON with section-level context.
+  </Card>
+  <Card title="Amendment comparison" icon="file-circle-check">
+    Compare an original 10-K with its 10-K/A amendment automatically. Works with any form type that has amendments.
+  </Card>
+  <Card title="Section-level granularity" icon="scissors">
+    Changes grouped by section (e.g., Item 1A Risk Factors, Item 8 Financial Statements) for quick navigation.
+  </Card>
+  <Card title="Numeric change detection" icon="hashtag">
+    Financial figures that changed are flagged with old and new values for instant identification of restated numbers.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Compare an original 10-K with its amendment:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/diff?accession_a=0000320193-24-000081&accession_b=0000320193-25-000003"
+```
+
+```json
+{
+  "original": "0000320193-24-000081",
+  "amendment": "0000320193-25-000003",
+  "form": "10-K/A",
+  "changes": [
+    {
+      "section": "Item 8 - Financial Statements",
+      "type": "modification",
+      "description": "Restated revenue figure for Q3 2024",
+      "old_text": "Revenue: $94,930,000,000",
+      "new_text": "Revenue: $94,880,000,000"
+    },
+    {
+      "section": "Item 1A - Risk Factors",
+      "type": "addition",
+      "description": "New risk factor added",
+      "new_text": "Regulatory changes in the European Union may impact..."
+    }
+  ],
+  "total_changes": 12,
+  "sections_affected": 3
+}
+```
+
+## Use cases
+
+### Restatement detection
+
+Automatically detect when companies restate financial figures by diffing 10-K and 10-K/A filings. Flag the specific numbers that changed.
+
+### Compliance monitoring
+
+Regulatory teams can track what changed in amended filings from issuers they monitor without manually reviewing hundreds of pages.
+
+### Audit trail creation
+
+Build an auditable record of all changes between filing versions for legal, compliance, or research purposes.
+
+### Risk factor monitoring
+
+Track changes to Item 1A (Risk Factors) between annual filings to detect emerging risks and removed risks over time.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/filings/diff` | Compare two filing accession numbers |
+| `GET /v1/filings/amendments` | Find all amendments for a filing |
+
+## Why Datastream for filing diffs
+
+| Feature | Datastream | Raw EDGAR | SEC-API.io | Manual review |
+|---------|-----------|-----------|------------|---------------|
+| Structured diff output | Yes | No | No | N/A |
+| Section-level grouping | Yes | No | No | Manual |
+| Numeric change detection | Yes | No | No | Manual |
+| REST API | Yes | No | No | N/A |
+| Any form type | Yes | Manual | No | Manual |
+| Pricing | Pay-as-you-go | Free (manual) | N/A | Labor cost |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start comparing SEC filings in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [10-K Section Extraction API](/seo/sec-10k-section-extraction-api)
+- [Full-Text Search API](/seo/sec-full-text-search-api)
+- [API Reference](/api-reference)
+

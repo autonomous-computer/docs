@@ -1,0 +1,117 @@
+# GET /v1/signals/dilution
+
+Return the OMNI Dilution Score: factor-weighted 0-100 derived metric with sub-ratings, percentile, and optional rolling history
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+- `provenance`
+- `freshness`
+- `methodologyVersion`
+- `factors`
+- `subRatings`
+- `regsho`
+- `percentile`
+- `degradedReasons`
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `ticker` | string | Issuer ticker. Either `ticker` or `cik` is required. |
+| `cik` | string | Issuer CIK (10-digit zero-padded). Either `ticker` or `cik` is required. |
+| `history` | enum | Optional. `30d` \| `90d` \| `1y`. Returns rolling timeseries under `history[]`. |
+| `view` | enum | Response shape (`default` \| `compact` \| `agent`). `agent` drops `factors[]` for token efficiency. |
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/signals/dilution?ticker=MULN"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "dilution_signal",
+  "id": "sig_dil_muln",
+  "signalKey": "omni_dilution_score",
+  "methodologyVersion": "2026-04-26.1",
+  "entityId": "ent_muln",
+  "ticker": "MULN",
+  "cik": "0001893311",
+  "companyName": "Mullen Automotive, Inc.",
+  "asOf": "2026-04-26T16:00:00.000Z",
+  "score": 88.5,
+  "band": "high",
+  "confidence": "medium",
+  "summaryMd": "## OMNI Dilution Score for Mullen Automotive, Inc.\n\nScore: 88.5 (high). Strongest contributor: Active Offering Pressure.",
+  "factors": [
+    {
+      "key": "active_offering_pressure",
+      "label": "Active Offering Pressure",
+      "score": 92,
+      "weight": 0.30,
+      "value": 2,
+      "explanation": "Recent (≤90d) offering events sized against market cap; ATM and over-baby-shelf flags add ceiling penalty."
+    },
+    {
+      "key": "cash_runway_pressure",
+      "label": "Cash Runway Pressure",
+      "score": 90,
+      "weight": 0.25,
+      "value": 2,
+      "explanation": "Inverse of cash-remaining-months capped at 18mo; categorical cash_need bucket sets a floor (acute → 90, high → 70, moderate → 40, low → 10)."
+    }
+  ],
+  "subRatings": {
+    "overallRisk": "high",
+    "offeringAbilityRisk": "high",
+    "dilutionRisk": "high",
+    "historicalRisk": "high",
+    "cashNeedLevel": "high",
+    "warrantExerciseRating": "high"
+  },
+  "regsho": false,
+  "percentile": 95,
+  "degradedReasons": [],
+  "freshness": {
+    "status": "fresh",
+    "updatedAt": "2026-04-26T16:00:00.000Z",
+    "reason": null
+  },
+  "provenance": {
+    "source": "sec.gov",
+    "accessionNumber": "0001234567-26-000099",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/1893311/000123456726000099/mullen-424b5.htm",
+    "retrievedAt": "2026-04-26T16:00:00.000Z",
+    "parserVersion": "dilution-score-v1.0"
+  }
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use Omni Datastream GET /v1/signals/dilution to return the OMNI Dilution Score for an issuer. The response is a single 0-100 derived metric with a band (low/moderate/elevated/high), confidence rating, factor breakdown, six categorical sub-ratings (overallRisk, offeringAbilityRisk, dilutionRisk, historicalRisk, cashNeedLevel, warrantExerciseRating), regsho boolean, percentile rank, and provenance. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `methodologyVersion`, `factors`, `subRatings`, `regsho`, `percentile`, `degradedReasons` in the output. Use `?history=30d|90d|1y` for rolling timeseries reads.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- when `confidence` is `low` or `freshness.status` is `stale`/`degraded`, surface the `degradedReasons[]` to the user verbatim so trust is not lost in the handoff
+- the score is deterministic given (inputs, methodologyVersion); a methodology bump is recorded in the persisted history table without overwriting prior rows
+

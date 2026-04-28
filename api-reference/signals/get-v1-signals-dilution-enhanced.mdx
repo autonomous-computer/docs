@@ -1,0 +1,97 @@
+# GET /v1/signals/dilution/enhanced
+
+Return the OMNI Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder)
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+Returns the full `/v1/signals/dilution` response plus a top-level `factorModelContext` object:
+
+- `factorModelContext.liquidityRegime` — macro regime classification (per `/v1/macro/regimes`) plus per-ticker `LIQUIDITY` factor exposure
+- `factorModelContext.momentum` — per-ticker `MOMENTUM` factor exposure (Carhart 12-1) from `latest_factor_exposures`
+- `factorModelContext.shortInterest` — placeholder; no internal short-interest source ingested yet (status: `unavailable`)
+
+## Query parameters
+
+| Param | Type | Description |
+|---|---|---|
+| `ticker` | string | Issuer ticker. Either `ticker` or `cik` is required. |
+| `cik` | string | Issuer CIK (10-digit zero-padded). Either `ticker` or `cik` is required. |
+| `view` | enum | Response shape (`default` \| `compact` \| `agent`). |
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "omni-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/signals/dilution/enhanced?ticker=MULN"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "dilution_signal",
+  "id": "sig_dil_muln",
+  "signalKey": "omni_dilution_score",
+  "methodologyVersion": "2026-04-26.1",
+  "ticker": "MULN",
+  "score": 88.5,
+  "band": "high",
+  "confidence": "medium",
+  "factors": [],
+  "subRatings": {
+    "overallRisk": "high",
+    "offeringAbilityRisk": "high",
+    "dilutionRisk": "high",
+    "historicalRisk": "high",
+    "cashNeedLevel": "high",
+    "warrantExerciseRating": "high"
+  },
+  "regsho": false,
+  "percentile": 95,
+  "factorModelContext": {
+    "liquidityRegime": {
+      "macroRegimeKey": "higher_for_longer",
+      "macroRegimeConfidence": "high",
+      "liquidityFactorBeta": 0.42,
+      "liquidityFactorPercentile": 78
+    },
+    "momentum": {
+      "factorBeta": -0.31,
+      "factorPercentile": 18,
+      "rSquared": 0.27,
+      "asOf": "2026-04-25T00:00:00.000Z"
+    },
+    "shortInterest": {
+      "percentOfFloat": null,
+      "daysToCover": null,
+      "asOf": null,
+      "status": "unavailable"
+    }
+  },
+  "degradedReasons": [
+    "short_interest_unavailable: dilution-enhanced does not yet ingest a short-interest source; see OMNI-3090 follow-up."
+  ]
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use Omni Datastream GET /v1/signals/dilution/enhanced when you need the OMNI Dilution Score plus factor-model context — macro liquidity regime (per /v1/macro/regimes), per-ticker MOMENTUM and LIQUIDITY factor exposures, and a short-interest placeholder. Treat `factorModelContext.shortInterest.status === "unavailable"` as known-missing, not as zero. Preserve all canonical metadata fields plus `factorModelContext`.
+</Prompt>
+
+## Failure posture
+
+- short-interest is intentionally `unavailable` — surface that state instead of treating it as zero
+- when the macro overlay or factor exposures time out, the corresponding context fields are nulled and a `degradedReasons[]` entry is added; preserve those reasons in your downstream summary
+

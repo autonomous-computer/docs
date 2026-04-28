@@ -1,0 +1,102 @@
+---
+title: "Real-Time SEC Filing Stream API — WebSocket & Webhook Alerts"
+description: "Stream SEC filings the moment they hit EDGAR with WebSocket and webhook APIs. Sub-minute latency, filterable by form type and ticker. Start free with 250 calls/month."
+---
+
+# Real-Time SEC Filing Stream API
+
+Get SEC filings delivered to your application the moment they appear on EDGAR. Datastream monitors the EDGAR full-text feed continuously and pushes new filings through WebSocket connections and webhook callbacks with sub-minute latency.
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="WebSocket streaming" icon="plug">
+    Open a persistent connection and receive filings as they land. Filter by form type, ticker, CIK, or SIC code.
+  </Card>
+  <Card title="Webhook callbacks" icon="bell">
+    Register an endpoint and Datastream will POST structured filing data to your server with automatic retries and HMAC signing.
+  </Card>
+  <Card title="Sub-minute latency" icon="bolt">
+    Filings are detected, parsed, and dispatched within 60 seconds of appearing on EDGAR — often faster.
+  </Card>
+  <Card title="Structured payloads" icon="code">
+    Every event includes parsed metadata: accession number, form type, filer CIK, company name, filed date, and direct document URLs.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Subscribe to real-time 10-K and 10-Q filings via webhook:
+
+```bash
+curl -X POST -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://yourapp.com/webhooks/sec",
+    "forms": ["10-K", "10-Q"],
+    "secret": "your-hmac-secret"
+  }' \
+  "https://api.secapi.ai/v1/webhooks"
+```
+
+```json
+{
+  "webhook_id": "wh_abc123",
+  "status": "active",
+  "forms": ["10-K", "10-Q"],
+  "created_at": "2025-03-15T10:30:00Z"
+}
+```
+
+Get the latest filings via polling (REST fallback):
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?form=10-K&limit=5"
+```
+
+## Use cases
+
+### Earnings release monitoring
+
+Detect 8-K filings with Item 2.02 (Results of Operations) the moment they appear. Trigger downstream analysis pipelines or alert traders before the news hits terminals.
+
+### Compliance surveillance
+
+Financial institutions can monitor filings from counterparties, portfolio companies, and regulated entities in real time without polling EDGAR.
+
+### AI-powered filing analysis
+
+Pipe real-time filing events into LLM workflows to generate instant summaries, risk assessments, or structured extractions as filings land.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /v1/webhooks` | Register a webhook for filing events |
+| `GET /v1/webhooks` | List active webhooks |
+| `DELETE /v1/webhooks/:id` | Remove a webhook |
+| `GET /v1/filings/latest` | Poll latest filings (REST fallback) |
+| `WSS /v1/stream` | WebSocket connection for real-time streaming |
+
+## Why Datastream for real-time filings
+
+| Feature | Datastream | Raw EDGAR | SEC-API.io | Quiver Quant |
+|---------|-----------|-----------|------------|--------------|
+| WebSocket streaming | Yes | No | No | No |
+| Webhook with HMAC signing | Yes | No | Yes | No |
+| Sub-minute latency | Yes | N/A (polling) | ~5 min | ~15 min |
+| Form type filtering | Yes | No | Yes | Limited |
+| Structured JSON payloads | Yes | No (raw index) | Yes | Partial |
+| Python + JS SDKs | Yes | No | No | No |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start streaming SEC filings in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [Filing Search API](/seo/sec-filing-search-api)
+- [API Reference](/api-reference)
+- [Python SDK](/python-sdk)
+
