@@ -1,0 +1,149 @@
+# Factor Model Methodology
+
+<Info>
+**Audience:** Allocators, portfolio managers, risk analysts, and compliance teams evaluating OMNI's factor model for portfolio construction, attribution, and risk management.
+</Info>
+
+## Overview
+
+OMNI Datastream provides an allocator-grade factor model spanning 230+ factors across 7 categories: market, style, macro, sector, industry, country, and thematic. The model follows a hierarchical purification architecture consistent with institutional standards pioneered by MSCI Barra and adopted by Axioma (Qontigo), Bloomberg PORT, and Northfield.
+
+Every factor return is recomputed daily with intraday snapshots at 1-minute and 5-minute intervals during US market hours (9:30–16:00 ET).
+
+## Factor categories
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| `market` | 1 | Broad US equity risk premium (MKT_US) |
+| `style` | 24 | Cross-sectional return drivers (momentum, value, quality, size, low-volatility, etc.) |
+| `macro` | 16 | Macroeconomic regime factors (rates, credit, commodities, currencies) |
+| `sector` | 21 | GICS sector and sub-sector return attribution |
+| `industry` | 27 | Industry-level return attribution |
+| `country` | 61 | Single-country and regional equity factors |
+| `thematic` | 81 | Named investment themes (nuclear energy, genomics, REITs, etc.) |
+
+## Factor construction pipeline
+
+### Step 1: Universe construction
+
+Factors are computed over a point-in-time US equity universe refreshed monthly:
+
+- Minimum $100M market capitalization
+- Minimum $5M average daily dollar volume
+- Minimum $1.00 share price
+- Excludes warrants, units, rights, ETFs, ETNs, ADR certificates
+- Exchanges: NYSE, NASDAQ, AMEX, ARCA, BATS
+
+Universe membership is determined as of each rebalance date using data available at that time — no look-ahead bias.
+
+### Step 2: Constituent sourcing
+
+Each factor type uses a different data source for membership and characteristic computation:
+
+| Source | Factor types | Example |
+|--------|-------------|---------|
+| Point-in-time fundamentals (SEC XBRL) | Style factors | Book/Market ratio from latest 10-K filing |
+| SIC classification | Sector and industry factors | SIC 7372 → Technology / Software |
+| ETF holdings (Polygon API) | Thematic baskets with ETF proxy | URA holdings → Nuclear Energy basket |
+| Curated constituent lists | Thematic baskets without ETF proxy | Hotel REITs: APLE, HLT, MAR, HST... |
+| Single-country ETF | Country factors | EWJ → Japan equity premium |
+
+### Step 3: Return computation
+
+**Style factors:** Long-short decile portfolio sorts. Stocks are ranked by a characteristic (e.g., book-to-market for Value), divided into decile portfolios, and the factor return is the spread between the top decile (long) and bottom decile (short). Portfolios are cap-weighted within each leg and rebalanced monthly.
+
+**Thematic baskets (ETF-backed, 66 factors):** Factor return is the ETF return minus a relevant benchmark. The ETF provider (Global X, ARK, VanEck, iShares, etc.) handles constituent selection and rebalancing. Example: `THEMATIC_NUCLEAR_ENERGY = R(URA) - R(SPY)`.
+
+**Thematic baskets (curated, 15 factors):** Factor return is the equal-weight constituent basket return minus a relevant benchmark. Constituents are sourced from public factor composition data and reviewed quarterly. Example: `THEMATIC_CASINO_LEISURE = (1/9) · Σ R(casino stocks) - R(SPY)`.
+
+**Macro and country factors:** ETF proxy spread versus a reference instrument. Example: `RATES = R(TLT) - R(SHV)`.
+
+### Step 4: Hierarchical purification (orthogonalization)
+
+Each factor declares 1–3 parent factors and is purified against them using rolling 156-trading-day OLS regression to extract the residual return not explained by parent factors.
+
+```
+Market (MKT_US)
+├── Style factors (SIZE, VALUE, MOMENTUM, ...)
+│   └── purified against: MKT_US
+├── Sector factors (SECTOR_ENERGY, SECTOR_TECH, ...)
+│   └── purified against: MKT_US
+├── Thematic baskets
+│   ├── Energy themes → purified against: MKT_US, SECTOR_ENERGY
+│   ├── Tech themes → purified against: MKT_US, SECTOR_TECH
+│   ├── REIT themes → purified against: MKT_US, THEMATIC_REITS
+│   └── Country themes → purified against: MKT_US, regional parent
+└── Country factors
+    └── purified against: MKT_US, regional parent
+```
+
+**Why hierarchical purification?**
+
+The choice to purify against a small number of theoretically motivated parent factors — rather than all factors simultaneously — is a deliberate methodological decision supported by decades of factor research:
+
+- **Parsimony:** Fama & French (2018, *Journal of Financial Economics*) argue that factor models should include only factors that earn their place. Redundant factors should be excluded, not controlled for via regression.
+- **Overfitting resistance:** Harvey, Liu & Zhu (2016, *Review of Financial Studies*) show that including many correlated regressors inflates false discovery. Kozak, Nagel & Santosh (2020, *Journal of Financial Economics*) demonstrate that shrinkage estimators dominate unrestricted high-dimensional OLS.
+- **Institutional alignment:** MSCI Barra's US Equity Model (USE4) uses hierarchical nesting: market → country → industry → style. Axioma and Bloomberg follow similar architectures. No major institutional risk model provider uses unrestricted regression against 100+ factors.
+- **Signal preservation:** Purifying a housing theme against market + real estate sector preserves the thematic signal. Over-purification against all known factors strips out the very characteristics that define the theme.
+
+### Step 5: Dynamic volatility targeting
+
+After purification, each factor's residual return series is dynamically leveraged to target 10% annualized volatility:
+
+- Rolling realized volatility computed over the same 156-day window
+- Leverage = min(target_vol / realized_vol, 3.0)
+- Prevents any single factor from dominating portfolio-level attribution
+- Consistent with standard practice at AQR, MSCI, and major factor ETF providers
+
+### Step 6: Z-score computation
+
+Scaled returns are converted to rolling z-scores for cross-factor comparability. Z-scores are the primary output for dashboards, screening, and signal generation.
+
+## Intraday factor snapshots
+
+During US market hours (9:30–16:00 ET), OMNI computes 1-minute and 5-minute factor snapshots using real-time ETF and constituent prices. Each snapshot includes raw return, purified return, scaled return, and z-score.
+
+## Data provenance and traceability
+
+Every factor return observation includes:
+
+- `requestId` and `traceparent` for end-to-end request tracing
+- `modelName` identifying the computation pipeline version
+- `methodology.inputs` listing the data sources consumed
+- `sourceRightsNotes` documenting licensing posture for each factor family
+
+## Methodology comparison
+
+| Feature | OMNI | MSCI Barra (USE4) |
+|---------|------|-------------------|
+| Purification | Hierarchical, 1–3 declared parents | Hierarchical nesting |
+| Estimation window | Rolling 156-day | Rolling 252-day with exponential decay |
+| Factor hierarchy | Market → Sector → Theme | Market → Country → Industry → Style |
+| Weighting | Cap-weight (style), equal-weight (thematic) | Cap-weight |
+| Volatility targeting | 10% annual, dynamic leverage | Factor-specific |
+| Recomputation | Daily + intraday (1m, 5m) | Daily |
+| Factor count | 230+ | Varies by model |
+
+## Thematic basket methodology
+
+OMNI's 81 thematic baskets cover named investment themes across energy, technology, healthcare, financials, real estate, consumer, transport, ESG, and regional equity.
+
+**Two construction modes:**
+
+1. **ETF-backed** (66 baskets): An institutional ETF provider handles constituent selection and rebalancing. OMNI computes the spread versus a relevant benchmark and applies hierarchical purification. Examples: genomics (ARKG vs XLV), nuclear energy (URA vs SPY), cybersecurity (CIBR vs XLK).
+
+2. **Curated constituent** (15 baskets): Equal-weight portfolio of named constituents versus a benchmark. Constituents reviewed quarterly. Examples: hotel REITs (18 stocks vs VNQ), trucking (16 stocks vs XLI), alternative asset managers (10 stocks vs XLF).
+
+Both modes pass through the same hierarchical purification and volatility-targeting pipeline.
+
+## Academic references
+
+- Ang, A., & Kristensen, D. (2012). Testing conditional factor models. *Journal of Financial Economics*, 106(1), 132–156.
+- Asness, C. S., Moskowitz, T. J., & Pedersen, L. H. (2013). Value and momentum everywhere. *Journal of Finance*, 68(3), 929–985.
+- DeMiguel, V., Garlappi, L., & Uppal, R. (2009). Optimal versus naive diversification. *Review of Financial Studies*, 22(5), 1915–1953.
+- Fama, E. F., & French, K. R. (2018). Choosing factors. *Journal of Financial Economics*, 128(2), 234–252.
+- Harvey, C. R., Liu, Y., & Zhu, H. (2016). ...and the cross-section of expected returns. *Review of Financial Studies*, 29(1), 5–68.
+- Kozak, S., Nagel, S., & Santosh, S. (2020). Shrinking the cross-section. *Journal of Financial Economics*, 135(2), 271–292.
+- Menchero, J., Orr, D. J., & Wang, J. (2011). The Barra US equity model (USE4). *MSCI Barra Research*.
+- Patton, A. J., & Verardo, M. (2012). Does beta move with news? *Review of Financial Studies*, 25(9), 2789–2839.
+

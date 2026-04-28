@@ -1,0 +1,74 @@
+# OMNI Dilution Score
+
+A single 0-100 derived metric expressing near-term dilution risk per issuer. Built by composing five factor signals from the OMNI dilution dataset (filed offering events, outstanding warrants and convertibles, latest cash position, share-float trajectory, Nasdaq compliance status). Surfaces alongside six categorical sub-ratings, a `regsho` flag, and an optional rolling-history timeseries materialized daily.
+
+## Methodology
+
+| Factor | Weight | Inputs |
+|---|---|---|
+| Active offering pressure | 0.30 | `dilution_events` (≤90d): offering size vs market cap; ATM and over-baby-shelf flags |
+| Cash runway pressure | 0.25 | `dilution_cash_position`: cash-remaining-months capped at 18mo; categorical `cash_need` floor |
+| Convertible & warrant overhang | 0.20 | `dilution_warrants` + `dilution_convertibles`: underlying shares vs SO; near-term exercisable (≤12mo) weighted 1.5× |
+| Share float velocity | 0.15 | `dilution_share_float_history`: trailing-12mo % increase in shares outstanding |
+| Compliance pressure | 0.10 | `dilution_nasdaq_compliance`: worst status (delisted → 100, pending → 80, extension_granted → 60, resolved → 10) |
+
+Final score = round-1-decimal(Σ factor.score × factor.weight).
+
+Bands: `low` <35, `moderate` 35-54, `elevated` 55-74, `high` ≥75.
+
+## Quality controls
+
+- methodology version is returned in every payload (bumping the version invalidates persisted history without overwriting prior rows)
+- confidence drops when OMNI has to fall back because dilution events, warrants/convertibles, cash-position, share-float-history, or Nasdaq-compliance inputs are unavailable
+- degraded reasons are surfaced explicitly so consumers can reason about gaps instead of treating the score as full-confidence
+- score is deterministic given (inputs, methodology_version) — same inputs always produce the same envelope
+- score is always bounded `[0, 100]`; never NaN or Infinity even under extreme inputs
+
+## Sub-ratings (6 categorical)
+
+Derived deterministically from the factor scores; mirror the columns on `dilution_ratings`:
+
+- `overallRisk` — average of the 5 factor scores, bucketed
+- `offeringAbilityRisk` — `active_offering_pressure` bucket
+- `dilutionRisk` — average of `active_offering_pressure` and `convertible_warrant_overhang`, bucketed
+- `historicalRisk` — `share_float_velocity` bucket
+- `cashNeedLevel` — `cash_runway_pressure` bucket
+- `warrantExerciseRating` — `convertible_warrant_overhang` bucket
+
+Buckets: `high` (≥70), `medium` (≥40), `low` (>0), `unknown` (0).
+
+## Output
+
+- score on a `0-100` scale
+- band: `low`, `moderate`, `elevated`, `high`
+- confidence: `high`, `medium`, `low`
+- factor-level breakdown with weights and per-factor explanations
+- six categorical sub-ratings + `regsho` flag
+- percentile rank (against the trailing-365-day `dilution_score_history` population at the same methodology version)
+- freshness metadata, degraded reasons, and provenance
+- optional `history[]` array when `?history=30d|90d|1y` is set
+
+## Refresh cadence
+
+Daily Dagster materialization (`dilution_score_materialization` asset) runs at 09:00 UTC and UPSERTs into `dilution_score_history` via the `(ticker, methodology_version, as_of)` unique index. The endpoint reads the latest live computation on every request; `?history=` reads the persisted timeseries.
+
+## Example
+
+```bash
+# Default response — full envelope with factors[]
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/signals/dilution?ticker=MULN"
+
+# With rolling 90d history
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/signals/dilution?ticker=MULN&history=90d"
+
+# Compact agent shape (drops factors[] for token efficiency)
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/signals/dilution?ticker=MULN&view=agent"
+
+# With factor-model context (macro liquidity regime + momentum exposure)
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/signals/dilution/enhanced?ticker=MULN"
+```
+
