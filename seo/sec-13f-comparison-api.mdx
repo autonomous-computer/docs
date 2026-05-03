@@ -1,0 +1,108 @@
+---
+title: "13F Holdings Comparison API — Quarter-over-Quarter Institutional Changes"
+description: "Compare 13F institutional holdings quarter over quarter via API. Track new positions, exits, share changes, and portfolio turnover for any institutional investor. Start free."
+---
+
+# 13F Holdings Comparison API
+
+Institutional investors file 13F reports every quarter, but the real signal is in what changed. Datastream's comparison endpoint diffs two quarters of 13F data automatically — surfacing new positions, exited positions, increased holdings, and decreased holdings without you having to compute the diff yourself.
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Automatic quarter diff" icon="code-compare">
+    Compare any two quarters for a 13F filer in a single request. New, exited, increased, and decreased positions returned separately.
+  </Card>
+  <Card title="Share and value changes" icon="arrow-up-right-dots">
+    Both absolute and percentage changes in shares and market value for every position that changed.
+  </Card>
+  <Card title="Portfolio-level metrics" icon="chart-pie">
+    Total portfolio value, position count, turnover rate, and concentration metrics for each quarter.
+  </Card>
+  <Card title="Multi-filer comparison" icon="people-arrows">
+    Compare holdings across multiple filers to find stocks being accumulated (or dumped) by the smart money simultaneously.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Compare Bridgewater's holdings between Q3 and Q4 2024:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f/compare?cik=0001350694&period_a=2024-Q3&period_b=2024-Q4"
+```
+
+```json
+{
+  "manager": "BRIDGEWATER ASSOCIATES, LP",
+  "period_a": "2024-Q3",
+  "period_b": "2024-Q4",
+  "new_positions": [
+    {
+      "issuer_name": "NVIDIA CORP",
+      "cusip": "67066G104",
+      "shares": 5200000,
+      "value": 720000000
+    }
+  ],
+  "exited_positions": [
+    {
+      "issuer_name": "INTEL CORP",
+      "cusip": "458140100",
+      "shares_sold": 12000000
+    }
+  ],
+  "increased": 145,
+  "decreased": 89,
+  "portfolio_turnover": 0.23
+}
+```
+
+## Use cases
+
+### Smart money tracking
+
+Monitor what the top hedge funds and asset managers are buying and selling each quarter. Identify consensus trades across multiple filers.
+
+### Crowded trade detection
+
+Find stocks where many institutions are building positions simultaneously — a potential crowded trade signal.
+
+### Portfolio rebalancing signals
+
+Use quarter-over-quarter changes from top managers as an input signal for systematic or discretionary strategies.
+
+### Client reporting
+
+Wealth managers can generate reports showing how major institutional investors are positioning relative to client portfolios.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/owners/13f/compare` | Compare two quarters for a filer |
+| `GET /v1/owners/13f` | List holdings for a specific quarter |
+| `GET /v1/owners/13f/top-changes` | Biggest position changes across all filers |
+
+## Why Datastream for 13F comparison
+
+| Feature | Datastream | Raw EDGAR | WhaleWisdom | Fintel |
+|---------|-----------|-----------|-------------|--------|
+| Built-in quarter diff | Yes | No (manual) | Manual | Manual |
+| Share + value changes | Yes | Manual calc | Partial | Partial |
+| Portfolio turnover metrics | Yes | No | No | No |
+| Multi-filer aggregation | Yes | No | Premium | Premium |
+| REST API | Yes | No | No | Limited |
+| Pricing | Pay-as-you-go | Free (raw) | $150+/mo | $100+/mo |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start comparing institutional holdings in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [13F Institutional Holdings API](/seo/13f-data-api)
+- [Insider Trading API](/seo/insider-trading-api)
+- [API Reference](/api-reference)
+

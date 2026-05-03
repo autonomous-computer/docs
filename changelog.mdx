@@ -11,6 +11,20 @@ The changelog is part of the trust surface. It keeps shipped changes, release rh
 
 ## Release trail
 
+<Update label="April 26, 2026" description="OMNI Dilution Score — single 0-100 derived metric with sub-ratings, percentile, and rolling history (OMNI-3090)" tags={["OMNI", "Release"]}>
+New `GET /v1/signals/dilution` and `GET /v1/signals/dilution/enhanced` endpoints surface the OMNI Dilution Score: a factor-weighted 0-100 derived metric expressing near-term dilution risk per issuer, mirroring the volatility-score surface family. The enhanced variant adds factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder).
+
+### Highlights
+
+- New: `GET /v1/signals/dilution` returns a `dilution_signal` envelope with score (0-100), band (low/moderate/elevated/high), confidence (high/medium/low), 6 categorical sub-ratings (overallRisk, offeringAbilityRisk, dilutionRisk, historicalRisk, cashNeedLevel, warrantExerciseRating), `regsho` boolean, percentile rank, and full factor breakdown
+- New: `GET /v1/signals/dilution/enhanced` adds `factorModelContext` (macro regime + per-ticker MOMENTUM/LIQUIDITY exposures from `latest_factor_exposures`)
+- New: MCP tools `signals.dilution.get` and `signals.dilution.enhanced.get`
+- New: `dilution_score_history` table (migration 024) with `(ticker, methodology_version, as_of)` UPSERT key — daily Dagster materialization, methodology versions don't overwrite each other
+- Factor weights (v1, methodology version `2026-04-26.1`): active offering pressure 0.30, cash runway pressure 0.25, convertible/warrant overhang 0.20, share float velocity 0.15, compliance pressure 0.10
+- Optional `?history=30d|90d|1y` rolling timeseries from the daily-Dagster persisted table
+- `?view=agent` drops the factor breakdown for token-efficient agent consumption
+</Update>
+
 <Update label="April 26, 2026" description="W5 Stream H — /compare-askedgar competitive landing page + /migrate-from-askedgar engineering migration guide" tags={["OMNI", "Release"]}>
 Two new pages for customers evaluating AskEdgar (askedgar.io) — a focused dilution-intelligence SaaS that launched 2026-04-22 with parity on the 42-field DilutionEntity. OMNI matches their dilution schema field-for-field, ships per-field programmatic verification (vs their binary `verified: boolean`), and adds 38 endpoint families they don't touch. Each OMNI dilution row carries an `askedgar_url` field so customers running both can dual-source during cutover.
 
@@ -439,4 +453,5 @@ A focused product or platform improvement shipped to OMNI.
 
 - Initialize repository
 </Update>
+
 

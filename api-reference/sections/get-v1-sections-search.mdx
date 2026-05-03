@@ -6,9 +6,24 @@ Search filing sections and snippets with filing-scoped filters and cursor pagina
 Audience: application and coding agent.
 </Info>
 
+## Citation fields (OMNI-3083)
+
+Every result row carries seven additive top-level fields:
+
+| Field | Description |
+|---|---|
+| `accession` | SEC accession number for the source filing |
+| `section_key` | Canonical section identifier (e.g. `item_1a`) |
+| `char_start` / `char_end` | Half-open offsets into the section markdown text (`section_snippets.content_md`) — section-text-relative, stable across reparses |
+| `highlighted_snippet` | ±150 char window with query terms wrapped in `**…**`, sentence-boundary truncated, ≤320 chars |
+| `source_url` | Public SEC.gov filing URL |
+| `ticker` | Issuer ticker, when known |
+
+When the validator can't produce a span (no section text, no query-term match, or offsets out of bounds), `char_start`/`char_end`/`highlighted_snippet` drop to `null` and `_citation_degraded` records the reason. Identity fields (`accession`, `section_key`, `source_url`, `ticker`) are always populated when known. See [api conventions → citation + char-range spans](/api-conventions#citation-char-range-spans) for the full contract.
+
 ## Agent mode
 
-Pass `?view=agent` to receive the compact agent shape: key + snippet + lifted `accessionNumber` / `startOffset` / `endOffset` from provenance/trace. Content-md and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+Pass `?view=agent` to receive the compact agent shape: key + snippet + lifted `accessionNumber` / `startOffset` / `endOffset` from provenance/trace, plus the OMNI-3083 citation envelope (`accession`, `section_key`, `char_start`, `char_end`, `highlighted_snippet`, `source_url`, `ticker`). Content-md and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
 ## Canonical metadata
 

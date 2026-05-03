@@ -1,34 +1,45 @@
 ---
 title: "Macro Tier-1 Official Sources"
-description: "Official-source macro indicators from FRED, World Bank, IMF for US, China, Japan"
+description: "Official-source macro indicators from direct government APIs for 12 countries"
 ---
 
 # Macro Tier-1 Official Sources
 
-OMNI Datastream provides allocator-grade macro data from official government sources — not third-party aggregators.
+OMNI Datastream provides allocator-grade macro data from official government sources — not third-party aggregators. Production data is refreshed daily by Dagster (`macro_official_source_sync_job` at 06:00 UTC).
 
 ## Coverage
 
-### Launch Ring (Tier-1)
+### Launch Ring (Tier-1) — All Direct Official
 
-| Country | Series Count | Primary Sources |
-|---|---|---|
-| **US** | 32 | FRED/ALFRED, BLS, Census |
-| **China** | 14 | NBS, PBoC, SAFE |
-| **Japan** | 10 | BOJ, MOF, Cabinet Office |
-| **Taiwan** | 7 | DGBAS, CBC |
-| **Israel** | 8 | CBS, BOI |
+| Country | Series Count | Primary Sources | Source Mode |
+|---|---|---|---|
+| **US** | 32 | FRED/ALFRED, BLS, Census | direct_official |
+| **China** | 14 | NBS China, SAFE | direct_official |
+| **Japan** | 10 | BOJ, e-Stat, MOF, Cabinet Office | direct_official |
+| **Taiwan** | 7 | DGBAS, CBC | direct_official |
+| **Israel** | 8 | CBS Israel, Bank of Israel | direct_official |
 
-### Expansion Ring
+### Expansion Ring V1
 
-| Country | Status |
-|---|---|
-| South Korea | Planned |
-| India | Planned |
-| Brazil | Planned |
-| UK | Planned |
-| Eurozone | Planned |
-| Canada | Planned |
+| Country | Series Count | Primary Sources | Source Mode |
+|---|---|---|---|
+| **Canada** | 4 | Statistics Canada, Bank of Canada | direct_official |
+| **UK** | 4 | ONS, Bank of England | direct_official |
+| **Eurozone** | 4 | Eurostat, ECB | direct_official |
+| **South Korea** | 4 | KOSIS, Bank of Korea ECOS | direct_official |
+| **Brazil** | 4 | IBGE SIDRA, BCB SGS | direct_official |
+| **India** | 3 | MOSPI, data.gov.in | official_via_dbnomics |
+| **Saudi Arabia** | 3 | GASTAT | official_via_dbnomics |
+
+## Source Modes
+
+- **`direct_official`**: Primary runtime fetches directly from the official government agency API or download endpoint. This is the target for all indicators.
+- **`official_bridge`**: Official agency data accessed through DBnomics or another bridge. Not acceptable for strict direct-source completion.
+- **`fallback_harmonized`**: Non-primary harmonized source (e.g., IMF IFS, World Bank). Not acceptable for strict direct-source completion.
+
+### DBnomics Policy
+
+DBnomics is allowed only as a documented runtime fallback after a direct official API attempt fails. It must be visible in observation metadata as a fallback, not as primary provenance.
 
 ## Endpoints
 
@@ -66,11 +77,16 @@ curl "https://api.secapi.ai/v1/macro/regimes" \
 
 Returns current macro regime classification per country (expansion, contraction, recovery, overheating).
 
+## Production Ownership
+
+Dagster (`macro_official_source_sync_job`) is the sole scheduled production writer for macro data to ClickHouse. GitHub Actions workflows are read-only validation only.
+
 ## Source Provenance
 
 Every observation includes:
 - **Source**: The official government agency
 - **Revision status**: Whether this is a preliminary, revised, or final release
 - **Release calendar**: When the next update is expected
-- **Fallback policy**: DBnomics is used as fallback only when official APIs are unavailable
+- **Canonicality**: Whether the data was fetched directly from the official source or via a bridge
+- **Fallback policy**: DBnomics is used as fallback only when official APIs are unavailable, and is always annotated in metadata
 

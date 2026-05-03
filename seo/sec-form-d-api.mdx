@@ -1,0 +1,108 @@
+---
+title: "SEC Form D API — Structured Private Placement Data"
+description: "Access structured Form D data for private placements and Regulation D offerings via API. Track exempt offerings, fundraising rounds, and issuer details. Start free."
+---
+
+# SEC Form D API
+
+SEC Form D filings disclose exempt securities offerings under Regulation D — the primary mechanism for private capital raises. Datastream parses the XML structure of every Form D filing and exposes it as structured JSON, making it easy to track private placements, venture fundraising rounds, and exempt offerings programmatically.
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Structured XML extraction" icon="code">
+    Every Form D field parsed from SEC XML: issuer details, offering amounts, exemptions claimed, and sales compensation recipients.
+  </Card>
+  <Card title="Real-time monitoring" icon="bolt">
+    New Form D filings indexed within minutes. Set up webhooks to track fundraising activity as it happens.
+  </Card>
+  <Card title="Historical coverage" icon="clock-rotate-left">
+    Form D filings indexed from 2008 to present, covering hundreds of thousands of exempt offerings.
+  </Card>
+  <Card title="Amendment tracking" icon="file-circle-check">
+    Track original filings and amendments to see how offering details evolve over time.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Search for recent Form D filings in the technology sector:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?form=D&sic_group=technology&limit=5"
+```
+
+```json
+{
+  "data": [
+    {
+      "accession_number": "0001234567-25-000012",
+      "form": "D",
+      "issuer_name": "Acme AI Labs Inc",
+      "cik": "0001234567",
+      "filed_at": "2025-03-10",
+      "offering_amount": 50000000,
+      "total_sold": 35000000,
+      "exemption_type": "Rule 506(b)",
+      "industry_group": "Technology",
+      "is_amendment": false
+    }
+  ]
+}
+```
+
+Get detailed Form D data for a specific filing:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/form-d?accession_number=0001234567-25-000012"
+```
+
+## Use cases
+
+### Venture capital deal tracking
+
+Monitor Form D filings to detect new fundraising rounds before they hit the press. Filter by industry, geography, and offering size.
+
+### Private market research
+
+Analyze trends in private capital formation: average round sizes, popular exemption types, and geographic distribution of issuers.
+
+### Compliance monitoring
+
+Track Form D filings from portfolio companies to ensure timely and accurate disclosure of exempt offerings.
+
+### Sales compensation analysis
+
+Form D disclosures include details on broker-dealers and finders involved in the offering — useful for compliance and business development.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/filings/latest?form=D` | Latest Form D filings |
+| `GET /v1/filings/form-d` | Detailed Form D data |
+| `GET /v1/filings/search?form=D` | Search Form D filings with filters |
+
+## Why Datastream for Form D data
+
+| Feature | Datastream | Raw EDGAR | PitchBook | Crunchbase |
+|---------|-----------|-----------|-----------|------------|
+| Structured JSON API | Yes | No (XML) | No API | Partial |
+| Real-time monitoring | Yes | No | Delayed | Delayed |
+| Amendment tracking | Yes | Manual | No | No |
+| Full XML field extraction | Yes | Raw XML | N/A | N/A |
+| Historical coverage | 2008+ | 2008+ | Varies | Varies |
+| Pricing | Pay-as-you-go | Free (raw XML) | $$$$ | $$$ |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start tracking private placements in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [SEC EDGAR API](/seo/sec-edgar-api)
+- [Filing Search API](/seo/sec-filing-search-api)
+- [API Reference](/api-reference)
+

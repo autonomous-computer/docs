@@ -1,3 +1,4 @@
+<!-- audit-checked: 2026-04-27 sha=bc9afca3 -->
 # Omni Datastream
 
 Omni Datastream is a primary-source, agent-native SEC data platform with REST, CLI, hosted MCP, and a 50-prompt persona library spanning law firms, investment managers, sophisticated investors, insurance, and PR firms.
@@ -22,13 +23,12 @@ Omni Datastream is a primary-source, agent-native SEC data platform with REST, C
 - 13F: `GET /v1/owners/13f`
 - compensation: `GET /v1/compensation`
 - artifacts: `POST /v1/artifacts`
-- usage: `GET /v1/usage`
-- limits: `GET /v1/limits`
+- billing + plan caps: `GET /v1/billing` (rate caps, monthly budget headroom)
 - events: `GET /v1/events`
 
 ## MCP workflows
 
-35 tools live on `https://api.secapi.ai/mcp` (full inventory in `services/datastream-api/src/routes/mcp.ts`):
+51 tools live on `https://api.secapi.ai/mcp` (full inventory in `services/datastream-api/src/routes/mcp.ts`):
 
 - entity: `entities.resolve`
 - filings: `filings.search`, `filings.latest`, `filings.render`, `filings.export`, `sections.get`, `sections.search`
@@ -41,6 +41,8 @@ Omni Datastream is a primary-source, agent-native SEC data platform with REST, C
 - macro: `macro.indicators`, `macro.high_signal_pack`, `macro.regimes`
 - factors + portfolio: `factors.returns`, `factors.dashboard`, `factors.decomposition`, `factors.related_stocks`, `portfolio.analyze`
 - intelligence: `intelligence.query`, `intelligence.footnotes` (topics: lease, tax, revenue, debt_covenant, segment)
+- dilution: `dilution.score.get`, `dilution.coverage.get`, `dilution.events.list`, `dilution.events.get`, `dilution.share_float_history.list`, `dilution.cash_position.list`, `dilution.convertibles.list`, `dilution.warrants.list`, `dilution.lockups.list`, `dilution.rofr.list`, `dilution.corporate_actions.list`, `dilution.reverse_splits.list`, `dilution.nasdaq_compliance.list`, `dilution.ratings.list`
+- signals: `signals.dilution.get`, `signals.dilution.enhanced.get` (OMNI Dilution Score — factor-weighted 0-100 derived metric + factor-model context)
 - sec events: `events.voting_results` (8-K Item 5.07 structured proposals)
 
 10 resources: `sec://entities/{ticker_or_cik}`, `sec://filings/latest/{ticker_or_cik}/{form}`, `sec://sections/latest/{ticker_or_cik}/{form}/{section_key}` (+ `?mode=compact|full`), `sec://statements/{ticker_or_cik}/{statement_key}/{period}`, `sec://13f/{cik}`, `sec://market/estimates/{ticker}`, `sec://market/snapshot/{symbol}`, `sec://macro/{country}/{indicator_key}`, `sec://factors/returns/{factor_key}`, `sec://intelligence/company/{ticker_or_cik}`.

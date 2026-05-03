@@ -1,0 +1,54 @@
+# SDK reliability
+
+<Info>
+The JavaScript and Python SDKs include safe-by-default retries, exponential backoff, and a client-side circuit breaker for transient Datastream failures.
+</Info>
+
+## Retry classification
+
+- Auto-retried by default: `GET`, `HEAD`, `OPTIONS`
+- Opt-in required: `POST`, `PUT`, `PATCH`, `DELETE`, MCP `tools/call`
+- Always retried regardless of method: `429` rate limits, with `Retry-After` honored unless retry is disabled
+- Retryable failures: network errors, `408`, `429`, `502`, `503`, `504`
+- Never retried: `400`, `401`, `403`, `404`, `422`
+
+Defaults are base `200ms`, max backoff `5s`, max retries `3`, and total request budget `30s`. The per-client circuit breaker opens after 5 consecutive terminal retryable failures and cools down for 60s.
+
+## TypeScript
+
+```ts
+const client = new OmniDatastreamClient({
+  apiKey: process.env.OMNI_DATASTREAM_API_KEY,
+  retry: false,
+})
+
+await client.createArtifact(
+  { kind: "audit", payload: { ticker: "AAPL" } },
+  { retry: { enabled: true, idempotencyKey: "artifact-aapl-audit-2026-05-01" } },
+)
+```
+
+## Python
+
+```python
+client = OmniDatastreamClient(
+    api_key=os.environ["OMNI_DATASTREAM_API_KEY"],
+    retry=False,
+)
+
+client.create_artifact(
+    {"kind": "audit", "payload": {"ticker": "AAPL"}},
+    retry={"enabled": True, "idempotency_key": "artifact-aapl-audit-2026-05-01"},
+)
+```
+
+## MCP tools/call
+
+MCP tool calls are HTTP `POST`, and the SDK cannot know whether the selected tool is read-only or mutating. Non-429 retries are off by default. Opt in per call only when the tool is read-only or your caller supplies an idempotency key.
+
+## Telemetry
+
+The SDK emits anonymous `client_retry_attempt` events when it retries. Telemetry includes SDK language/version, method, route template, origin, retry attempt, delay, status/error class, and elapsed time. It excludes API keys, request bodies, query strings, raw headers, and email addresses.
+
+Set `telemetry: false` in TypeScript or `telemetry=False` in Python to opt out.
+

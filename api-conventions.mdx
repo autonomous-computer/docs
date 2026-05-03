@@ -9,16 +9,51 @@
 
 - API responses include `Omni-Meter-Class`
 - this is the canonical hint for billing/quota classification in logs, smoke output, and reconciliation jobs
+- hosted MCP `tools/call` usage rows also persist `mcp_tool_name`; `intelligence.query` and `signals.dilution.enhanced.get` are the current MCP tools that count toward `ai_queries`
+
+### MCP JSON-RPC quota envelope
+
+Successful quota-counted MCP tool calls include top-level `_omni.quota` metadata with `family`, `mcpToolName`, `limit`, `used`, `remaining`, `resetAt`, and plan context. MCP quota exhaustion returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`.
+
+`-32004` means `mcp_tool_timeout` and may be retried with bounded backoff. `-32005` means quota exhaustion and should not be retried until the reset window or a plan/quota change. `-32006` means `mcp_tool_circuit_open`; treat it as temporary service protection for that tool and retry only after backoff, not as quota exhaustion.
 
 ## Cost and token headers
 
 - every `/v1/*` response includes `Omni-Token-Count` and `Omni-Estimated-Cost` so agents can budget natively without re-reading the pricing page
 - `Omni-Token-Count` is an approximate output-token count computed with the `o200k_base` tokenizer (gpt-4o / o1 / modern-frontier encoding) as a portable proxy; consumer-model token usage may vary 10–30%
-- `Omni-Estimated-Cost` is a dollar string at 4-decimal precision (e.g. `$0.0042`) reflecting the plan-discounted per-call rate pre-grant-offset
+- `Omni-Estimated-Cost` is a dollar string at 4-decimal precision (e.g. `$0.0042`) reflecting the plan-discounted per-call rate pre-grant-offset — emitted on every `/v1/*` 2xx regardless of token-count opt-in
 - grant and credit balance are communicated separately via `Omni-Free-Grant-Remaining` and `Omni-Budget-Used` — the final billed amount reflects grant offsets on top of the per-call estimate
 - `Omni-Token-Count-Estimated: true` is emitted whenever `Omni-Token-Count` falls back to a `ceil(bytes / 4)` approximation — either because the response body exceeded 512 KB (and was not fully tokenized to protect p95 latency) or because the response is a non-JSON billable payload (filing downloads, csv/markdown/pdf exports). Absence of this header means the count is an exact tokenizer result from the JSON body
 - counts flagged as estimated are advisory for budget planning only; do not use them for exact tokenizer-equivalence math
 - error responses (4xx, 5xx), rate-limit 429, billing-required 402, and budget-gate 402 all emit `Omni-Token-Count: 0` and `Omni-Estimated-Cost: $0.0000` — agents should treat failed requests as free
+
+### Opting in to exact token counts (OMNI-3428)
+
+Response-body tokenization is opt-in by default to keep p50 latency on hot paths low. Clients that want exact counts on every response add the request header:
+
+```
+Omni-Compute-Headers: token-count
+```
+
+Behavior matrix:
+
+| Mode | `Omni-Token-Count` | `Omni-Token-Count-Source` | `Omni-Estimated-Cost` |
+|---|---|---|---|
+| Opt-in absent (default), cache miss | `0` | `opt-in-required` | rate-card |
+| Opt-in absent (default), cache hit | exact (from cached body) | omitted; `Omni-Cache-Hit: true` | rate-card |
+| Opt-in present, cache miss | exact (from body tokenize) | omitted | rate-card |
+| Opt-in present, cache hit | exact (from cached body) | omitted; `Omni-Cache-Hit: true` | rate-card |
+| Error (4xx/5xx) | `0` | (omitted) | `$0.0000` |
+
+Cache-served responses (a subset of cacheable `/v1/*` GETs) carry an exact token count regardless of opt-in, because the count is precomputed once at cache-write time and stored alongside the body. The `Omni-Cache-Hit: true` header makes that visible to clients.
+
+The `Omni-Token-Count-Source: opt-in-required` advisory header marks the cheap path: if your agent needs an exact count for cost reconciliation, re-issue the request with `Omni-Compute-Headers: token-count`. The official SDKs will adopt the header in the next minor release tracked under OMNI-3127.
+
+Operators can override the policy with the runtime flag `OMNI_METERING_TOKENIZE_BODY`:
+
+- `always` — revert to pre-OMNI-3428 always-on body tokenization (cache hits + cache misses both emit exact counts)
+- `auto` (default) — opt-in via the request header above; cache hits emit exact precomputed counts regardless of opt-in
+- `never` — emergency kill-switch: `Omni-Token-Count: 0` everywhere including cache hits. Use only if a downstream consumer breaks unexpectedly. `Omni-Estimated-Cost` is unaffected.
 
 ## Response formats
 

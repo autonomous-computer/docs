@@ -62,6 +62,35 @@ const answer = await client.intelligenceQuery({
 })
 ```
 
+## Reliability defaults
+
+The JavaScript SDK retries transient failures with exponential backoff and a per-client circuit breaker.
+
+- Auto-retried by default: `GET`, `HEAD`, `OPTIONS`
+- Opt-in required: `POST`, `PUT`, `PATCH`, `DELETE`, MCP `tools/call`
+- Always retried regardless of method: `429` rate limits, with `Retry-After` honored
+
+Disable SDK retries when your application already owns retry behavior:
+
+```ts
+const client = new OmniDatastreamClient({
+  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+  retry: false,
+  telemetry: false,
+})
+```
+
+Opt into mutating retries only when the operation is idempotent:
+
+```ts
+await client.createArtifact(
+  { kind: "markdown_bundle", ticker: "AAPL" },
+  { retry: { enabled: true, idempotencyKey: "artifact-aapl-markdown-bundle" } },
+)
+```
+
+See [SDK reliability](/sdk-reliability) for the full retry policy and migration notes.
+
 ## Dilution intelligence
 
 ```ts
