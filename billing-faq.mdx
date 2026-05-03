@@ -28,3 +28,36 @@ Use the dashboard billing tab or `POST /v1/billing/portal`.
 
 Use `POST /v1/billing/quote` before expensive loops and set org-level controls with `PUT /v1/billing/budget`. The server enforces hard-cap and approval-required thresholds at request time.
 
+## What counts as an AI query?
+
+The `ai_queries` monthly quota covers semantic intelligence and AI-graded routes. Today the quota counts:
+
+- Every `/v1/intelligence/*` request (security, company, earnings preview, country report, footnotes query, portfolio, watchlist, query/poll)
+- `GET /v1/signals/dilution/enhanced` (and any sub-paths)
+- MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhanced.get`
+
+When the chat surfaces (`/v1/copilot/chat`, `/v1/filings/chat`) ship, they will count as well. Other meter classes (filings reads, factor lookups, market data) do not consume `ai_queries` quota.
+
+## What are the per-tier ai_queries limits?
+
+| Plan | Monthly AI queries |
+| --- | --- |
+| Sandbox grant | 10 (trial allocation) |
+| Pay As You Go | 0 (PAYG charges per call instead) |
+| Personal ($55) | 600 |
+| Team ($239) | 3,000 |
+| Commercial ($1,500 floor) | 10,000 (configurable per-org) |
+
+## When does my AI query quota reset?
+
+Calendar-month reset, in UTC. The `Omni-AI-Quota-Reset` response header carries the exact ISO timestamp (the first day of the next UTC month at `00:00:00Z`).
+
+## What happens when I exhaust my ai_queries quota?
+
+Quota-counted REST routes return `429 Too Many Requests` with `code: "ai_query_quota_exceeded"` and structured `details` (`aiQueryQuotaLimit`, `aiQueryQuotaUsed`, `aiQueryQuotaRemaining`, `aiQueryQuotaResetAt`, `upgradeUrl`, `docsUrl`). MCP quota exhaustion returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`. Inspect `Omni-AI-Quota-*` headers on every quota-counted response for proactive monitoring.
+
+During the post-launch grace window, `429s` are suppressed and the response includes an `Omni-AI-Quota-Grace-Until` header so clients can program against the upcoming enforcement date.
+
+## Can I see my current ai_queries usage?
+
+`GET /v1/billing` includes a `monthlyQuotas.ai_queries` block: `{ limit, used, remaining, resetAt }`. The same information is mirrored on every quota-counted response via `Omni-AI-Quota-*` headers.

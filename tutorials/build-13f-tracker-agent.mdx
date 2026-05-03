@@ -1,0 +1,481 @@
+---
+title: "Build a 13F Holdings Tracker Agent"
+description: "Build a Python agent that compares 13F institutional holdings across quarters for top fund managers and generates a markdown report of position changes."
+---
+
+# Build a 13F Holdings Tracker Agent
+
+Institutional investors managing over $100 million in qualifying securities must file Form 13F with the SEC each quarter. This tutorial builds a Python agent that pulls 13F holdings for any fund manager, compares them across quarters, and generates a detailed markdown report showing new positions, closed positions, and size changes.
+
+## What you will build
+
+- A Python script that fetches 13F holdings from the OMNI Datastream API
+- Quarter-over-quarter comparison logic for detecting position changes
+- A markdown report generator with tables for new, closed, and changed positions
+- Support for tracking multiple fund managers at once
+
+## Prerequisites
+
+- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- Python 3.9+
+- Basic familiarity with the SEC 13F filing system
+
+## Step 1 — Set up the project
+
+Create a project directory and install dependencies.
+
+```bash
+mkdir -p 13f-tracker-agent
+cd 13f-tracker-agent
+```
+
+Create `requirements.txt`:
+
+```
+requests>=2.31.0
+tabulate>=0.9.0
+python-dotenv>=1.0.0
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Create a `.env` file for your API key:
+
+```
+OMNI_DATASTREAM_API_KEY=your-api-key
+```
+
+## Step 2 — Build the API client
+
+Create `tracker.py` with the core API interaction layer.
+
+```python
+"""13F Holdings Tracker Agent — compare institutional holdings across quarters."""
+
+import os
+import sys
+from datetime import datetime
+from collections import defaultdict
+
+import requests
+from dotenv import load_dotenv
+from tabulate import tabulate
+
+load_dotenv()
+
+API_BASE = "https://api.secapi.ai"
+API_KEY = os.environ["OMNI_DATASTREAM_API_KEY"]
+HEADERS = {"x-api-key": API_KEY}
+
+
+def fetch_13f_holdings(cik: str, period: str | None = None) -> list[dict]:
+    """Fetch 13F holdings for an institutional investor.
+
+    Args:
+        cik: The CIK number of the institutional investor.
+        period: Optional filing period (e.g. '2024-12-31'). Defaults to latest.
+    """
+    params = {"cik": cik, "limit": 500}
+    if period:
+        params["period"] = period
+
+    all_holdings = []
+    offset = 0
+
+    while True:
+        params["offset"] = offset
+        resp = requests.get(
+            f"{API_BASE}/v1/owners/13f", headers=HEADERS, params=params
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        holdings = data.get("data", [])
+        if not holdings:
+            break
+        all_holdings.extend(holdings)
+        offset += len(holdings)
+        if len(holdings) < 500:
+            break
+
+    return all_holdings
+
+
+def fetch_13f_filings(cik: str, limit: int = 8) -> list[dict]:
+    """Fetch the list of 13F filing periods for an investor."""
+    resp = requests.get(
+        f"{API_BASE}/v1/owners/13f/filings",
+        headers=HEADERS,
+        params={"cik": cik, "limit": limit},
+    )
+    resp.raise_for_status()
+    return resp.json().get("data", [])
+```
+
+## Step 3 — Build the comparison engine
+
+Add functions to compare holdings between two quarters and classify the changes.
+
+```python
+def compare_holdings(
+    current: list[dict], previous: list[dict]
+) -> dict[str, list[dict]]:
+    """Compare two quarters of 13F holdings and categorize changes.
+
+    Returns a dict with keys: new_positions, closed_positions, increased,
+    decreased, unchanged.
+    """
+    curr_map = {h["cusip"]: h for h in current}
+    prev_map = {h["cusip"]: h for h in previous}
+
+    curr_cusips = set(curr_map.keys())
+    prev_cusips = set(prev_map.keys())
+
+    result = {
+        "new_positions": [],
+        "closed_positions": [],
+        "increased": [],
+        "decreased": [],
+        "unchanged": [],
+    }
+
+    # New positions — in current but not previous
+    for cusip in curr_cusips - prev_cusips:
+        h = curr_map[cusip]
+        result["new_positions"].append(
+            {
+                "issuer": h.get("issuer_name", "Unknown"),
+                "cusip": cusip,
+                "shares": h.get("shares", 0),
+                "value": h.get("value", 0),
+            }
+        )
+
+    # Closed positions — in previous but not current
+    for cusip in prev_cusips - curr_cusips:
+        h = prev_map[cusip]
+        result["closed_positions"].append(
+            {
+                "issuer": h.get("issuer_name", "Unknown"),
+                "cusip": cusip,
+                "shares": h.get("shares", 0),
+                "value": h.get("value", 0),
+            }
+        )
+
+    # Changed or unchanged — in both quarters
+    for cusip in curr_cusips & prev_cusips:
+        curr_h = curr_map[cusip]
+        prev_h = prev_map[cusip]
+        curr_shares = curr_h.get("shares", 0)
+        prev_shares = prev_h.get("shares", 0)
+        share_change = curr_shares - prev_shares
+
+        entry = {
+            "issuer": curr_h.get("issuer_name", "Unknown"),
+            "cusip": cusip,
+            "prev_shares": prev_shares,
+            "curr_shares": curr_shares,
+            "share_change": share_change,
+            "pct_change": (
+                (share_change / prev_shares * 100) if prev_shares else 0
+            ),
+            "curr_value": curr_h.get("value", 0),
+        }
+
+        if share_change > 0:
+            result["increased"].append(entry)
+        elif share_change < 0:
+            result["decreased"].append(entry)
+        else:
+            result["unchanged"].append(entry)
+
+    # Sort by absolute value of change
+    result["new_positions"].sort(key=lambda x: x["value"], reverse=True)
+    result["closed_positions"].sort(key=lambda x: x["value"], reverse=True)
+    result["increased"].sort(
+        key=lambda x: abs(x["share_change"]), reverse=True
+    )
+    result["decreased"].sort(
+        key=lambda x: abs(x["share_change"]), reverse=True
+    )
+
+    return result
+```
+
+## Step 4 — Generate the markdown report
+
+Add a report generator that produces a clean markdown document.
+
+```python
+def format_value(value: int) -> str:
+    """Format a dollar value in thousands (as reported in 13F)."""
+    if value >= 1_000_000:
+        return f"${value / 1_000_000:,.1f}B"
+    if value >= 1_000:
+        return f"${value / 1_000:,.1f}M"
+    return f"${value:,}K"
+
+
+def format_shares(shares: int) -> str:
+    """Format a share count for display."""
+    if shares >= 1_000_000:
+        return f"{shares / 1_000_000:,.2f}M"
+    if shares >= 1_000:
+        return f"{shares / 1_000:,.1f}K"
+    return f"{shares:,}"
+
+
+def generate_report(
+    manager_name: str,
+    cik: str,
+    current_period: str,
+    previous_period: str,
+    changes: dict[str, list[dict]],
+) -> str:
+    """Generate a markdown report of holdings changes."""
+    lines = []
+    now = datetime.now().strftime("%Y-%m-%d %H:%M UTC")
+    lines.append(f"# 13F Holdings Report: {manager_name}")
+    lines.append(f"")
+    lines.append(f"**CIK:** {cik}  ")
+    lines.append(f"**Current period:** {current_period}  ")
+    lines.append(f"**Previous period:** {previous_period}  ")
+    lines.append(f"**Generated:** {now}")
+    lines.append("")
+
+    # Summary
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"| Metric | Count |")
+    lines.append(f"|--------|-------|")
+    lines.append(f"| New positions | {len(changes['new_positions'])} |")
+    lines.append(f"| Closed positions | {len(changes['closed_positions'])} |")
+    lines.append(f"| Increased | {len(changes['increased'])} |")
+    lines.append(f"| Decreased | {len(changes['decreased'])} |")
+    lines.append(f"| Unchanged | {len(changes['unchanged'])} |")
+    lines.append("")
+
+    # New positions
+    if changes["new_positions"]:
+        lines.append("## New Positions")
+        lines.append("")
+        table = [
+            [p["issuer"], p["cusip"], format_shares(p["shares"]), format_value(p["value"])]
+            for p in changes["new_positions"][:20]
+        ]
+        lines.append(
+            tabulate(
+                table,
+                headers=["Issuer", "CUSIP", "Shares", "Value"],
+                tablefmt="github",
+            )
+        )
+        lines.append("")
+
+    # Closed positions
+    if changes["closed_positions"]:
+        lines.append("## Closed Positions")
+        lines.append("")
+        table = [
+            [p["issuer"], p["cusip"], format_shares(p["shares"]), format_value(p["value"])]
+            for p in changes["closed_positions"][:20]
+        ]
+        lines.append(
+            tabulate(
+                table,
+                headers=["Issuer", "CUSIP", "Shares", "Value"],
+                tablefmt="github",
+            )
+        )
+        lines.append("")
+
+    # Increased positions
+    if changes["increased"]:
+        lines.append("## Increased Positions")
+        lines.append("")
+        table = [
+            [
+                p["issuer"],
+                format_shares(p["prev_shares"]),
+                format_shares(p["curr_shares"]),
+                f"+{format_shares(abs(p['share_change']))}",
+                f"+{p['pct_change']:.1f}%",
+            ]
+            for p in changes["increased"][:20]
+        ]
+        lines.append(
+            tabulate(
+                table,
+                headers=["Issuer", "Previous", "Current", "Change", "% Change"],
+                tablefmt="github",
+            )
+        )
+        lines.append("")
+
+    # Decreased positions
+    if changes["decreased"]:
+        lines.append("## Decreased Positions")
+        lines.append("")
+        table = [
+            [
+                p["issuer"],
+                format_shares(p["prev_shares"]),
+                format_shares(p["curr_shares"]),
+                f"-{format_shares(abs(p['share_change']))}",
+                f"{p['pct_change']:.1f}%",
+            ]
+            for p in changes["decreased"][:20]
+        ]
+        lines.append(
+            tabulate(
+                table,
+                headers=["Issuer", "Previous", "Current", "Change", "% Change"],
+                tablefmt="github",
+            )
+        )
+        lines.append("")
+
+    lines.append("---")
+    lines.append(
+        "*Data sourced from SEC EDGAR via OMNI Datastream API. "
+        "Values in 13F are reported in thousands of dollars.*"
+    )
+
+    return "\n".join(lines)
+```
+
+## Step 5 — Wire up the main function
+
+Add the entry point that ties everything together.
+
+```python
+# Well-known fund manager CIKs
+FUND_MANAGERS = {
+    "Berkshire Hathaway": "0001067983",
+    "Bridgewater Associates": "0001350694",
+    "Renaissance Technologies": "0001037389",
+    "Citadel Advisors": "0001423053",
+    "Two Sigma Investments": "0001179392",
+}
+
+
+def main():
+    """Run the 13F tracker for all configured fund managers."""
+    target = sys.argv[1] if len(sys.argv) > 1 else None
+    managers = (
+        {target: FUND_MANAGERS[target]}
+        if target and target in FUND_MANAGERS
+        else FUND_MANAGERS
+    )
+
+    for name, cik in managers.items():
+        print(f"\nProcessing {name} (CIK: {cik})...")
+
+        # Get the two most recent filing periods
+        filings = fetch_13f_filings(cik, limit=4)
+        if len(filings) < 2:
+            print(f"  Not enough filing periods for {name}. Skipping.")
+            continue
+
+        current_period = filings[0]["period"]
+        previous_period = filings[1]["period"]
+        print(f"  Comparing {current_period} vs {previous_period}")
+
+        # Fetch holdings for both periods
+        current = fetch_13f_holdings(cik, period=current_period)
+        previous = fetch_13f_holdings(cik, period=previous_period)
+        print(f"  Current: {len(current)} holdings | Previous: {len(previous)} holdings")
+
+        # Compare and generate report
+        changes = compare_holdings(current, previous)
+        report = generate_report(name, cik, current_period, previous_period, changes)
+
+        # Write report to file
+        filename = f"report-{name.lower().replace(' ', '-')}-{current_period}.md"
+        with open(filename, "w") as f:
+            f.write(report)
+        print(f"  Report saved to {filename}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Step 6 — Run the tracker
+
+Execute the script to generate reports for all configured fund managers.
+
+```bash
+python tracker.py
+```
+
+To track a single manager:
+
+```bash
+python tracker.py "Berkshire Hathaway"
+```
+
+### Expected output
+
+```
+Processing Berkshire Hathaway (CIK: 0001067983)...
+  Comparing 2024-12-31 vs 2024-09-30
+  Current: 42 holdings | Previous: 40 holdings
+  Report saved to report-berkshire-hathaway-2024-12-31.md
+
+Processing Bridgewater Associates (CIK: 0001350694)...
+  Comparing 2024-12-31 vs 2024-09-30
+  Current: 847 holdings | Previous: 812 holdings
+  Report saved to report-bridgewater-associates-2024-12-31.md
+```
+
+The generated markdown report will look like this:
+
+```markdown
+# 13F Holdings Report: Berkshire Hathaway
+
+**CIK:** 0001067983
+**Current period:** 2024-12-31
+**Previous period:** 2024-09-30
+**Generated:** 2025-04-11 23:00 UTC
+
+## Summary
+
+| Metric | Count |
+|--------|-------|
+| New positions | 2 |
+| Closed positions | 1 |
+| Increased | 8 |
+| Decreased | 5 |
+| Unchanged | 26 |
+
+## New Positions
+
+| Issuer            | CUSIP     | Shares  | Value   |
+|-------------------|-----------|---------|---------|
+| Constellation Bra | 21036P108 | 5.63M   | $1.8B   |
+| Pool Corp         | 73278L105 | 404.0K  | $143.2M |
+```
+
+## Step 7 — Automate with cron
+
+Set up a quarterly schedule to run the tracker after 13F filing deadlines (45 days after quarter end).
+
+```bash
+# Run on the 16th of Feb, May, Aug, Nov (day after 13F deadline)
+0 8 16 2,5,8,11 * cd /path/to/13f-tracker-agent && python tracker.py >> /var/log/13f-tracker.log 2>&1
+```
+
+## Next steps
+
+- **Compare specific holders of a stock**: Use the `/v1/owners/13f` endpoint with a ticker parameter to see which institutions hold a specific stock and how their positions changed.
+- **Add portfolio-level analytics**: Use the `/v1/portfolio/analyze` endpoint to calculate sector concentration and risk metrics for a fund's 13F holdings.
+- **Track 13D/13G activist positions**: Extend the tracker to also monitor `/v1/owners/13d-13g` for activist investor disclosures.
+- **Build a historical database**: Store quarterly snapshots in SQLite or PostgreSQL to analyze long-term trends in institutional positioning.
+
+See the [Monitor Institutional Holdings Changes](/tutorials/monitor-13f-holdings) tutorial for a simpler approach focused on a single investor.
+

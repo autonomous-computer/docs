@@ -7,12 +7,14 @@ description: "Daily recomputed purified factors with intraday snapshots for live
 
 OMNI Datastream Factor V2 provides allocator-grade factor analysis with daily recomputation and intraday snapshots.
 
+For the full construction methodology, including hierarchical purification, thematic basket construction, and academic references, see [Factor Model Methodology](factor-model-methodology).
+
 ## Key Improvements over V1
 
 | Feature | V1 | V2 |
 |---|---|---|
 | **Recompute frequency** | Weekly | Daily |
-| **Factor count** | 63 | 84+ |
+| **Factor count** | ETF-proxy slice | 146-factor catalog; 24 implemented stock-basket factors |
 | **Intraday snapshots** | Not available | 1-minute and 5-minute |
 | **Portfolio drill-down** | Security-level only | Security + portfolio + model portfolio |
 | **Orthogonalization** | Basic | Full topological sort |
@@ -55,14 +57,16 @@ curl -X POST "https://api.secapi.ai/v1/portfolio/analyze" \
 
 ## Factor Catalog
 
-Access the full 84-factor catalog with methodology:
+Access the full 146-factor catalog with methodology and source-rights metadata:
 
 ```bash
 curl "https://api.secapi.ai/v1/factors/catalog" \
   -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
 ```
 
-Each factor includes: name, family, proxy ETF, orthogonalization method, and methodology summary.
+Each factor includes: name, family, methodology inputs, source-rights posture, orthogonalization method, and methodology summary.
+
+Implemented stock-basket factors: `MKT_US`, `EQUAL_WEIGHT`, `MARKET_BREADTH`, `SIZE`, `VALUE`, `MOMENTUM`, `PROFITABILITY`, `QUALITY`, `GROWTH`, `LOW_VOL`, `BETA`, `INVESTMENT`, `DIVIDEND_YIELD`, `BUYBACK`, `EARNINGS_REVISIONS`, `FCF_YIELD`, `ACCRUALS`, `EARNINGS_QUALITY`, `EARNINGS_YIELD`, `CASH_FLOW_TO_PRICE`, `ROE`, `PRICE_TO_SALES`, `LIQUIDITY`, and `MULTI_FACTOR`.
 
 ## Regime-Conditioned Performance
 

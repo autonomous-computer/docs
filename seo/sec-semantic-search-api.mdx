@@ -1,0 +1,130 @@
+---
+title: "SEC Semantic Search API — AI-Powered Filing Search"
+description: "Search SEC filings by meaning, not just keywords. AI-powered semantic search finds relevant passages across millions of filings even when exact terms differ. Start free."
+---
+
+# SEC Semantic Search API
+
+Traditional keyword search misses filings that discuss a concept without using your exact terms. Datastream's semantic search uses vector embeddings to find filings by meaning — so a search for "supply chain disruption" also returns filings discussing "logistics delays," "component shortages," and "vendor concentration risk."
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Meaning-based search" icon="brain">
+    Vector embeddings match on semantic similarity, not just keyword overlap. Find relevant filings even when terminology differs.
+  </Card>
+  <Card title="Passage-level results" icon="paragraph">
+    Results include the specific passage that matched, with surrounding context, so you can evaluate relevance instantly.
+  </Card>
+  <Card title="Hybrid search" icon="filter">
+    Combine semantic similarity with structured filters — form type, ticker, date range, SIC code — for precise results.
+  </Card>
+  <Card title="Full corpus coverage" icon="database">
+    Millions of SEC filings indexed and embedded. Search across 10-Ks, 10-Qs, 8-Ks, proxy statements, and more.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Search for filings discussing AI regulation risks:
+
+```bash
+curl -X POST -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "artificial intelligence regulatory risk and compliance burden",
+    "forms": ["10-K"],
+    "section": "1A",
+    "limit": 5
+  }' \
+  "https://api.secapi.ai/v1/search/semantic"
+```
+
+```json
+{
+  "results": [
+    {
+      "ticker": "GOOGL",
+      "company_name": "Alphabet Inc.",
+      "accession_number": "0001652044-25-000012",
+      "section": "1A - Risk Factors",
+      "passage": "Evolving regulations around artificial intelligence, including the EU AI Act, may require significant compliance investments and could limit our ability to deploy AI features...",
+      "similarity_score": 0.94,
+      "filed_at": "2025-02-03"
+    },
+    {
+      "ticker": "MSFT",
+      "company_name": "Microsoft Corporation",
+      "accession_number": "0000789019-24-000086",
+      "section": "1A - Risk Factors",
+      "passage": "Government regulation of AI is evolving rapidly. New laws and regulations may increase our compliance costs and restrict our development and deployment of AI technologies...",
+      "similarity_score": 0.91,
+      "filed_at": "2024-07-30"
+    }
+  ],
+  "total_matches": 1247
+}
+```
+
+Combine semantic search with keyword filtering:
+
+```bash
+curl -X POST -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "material weakness in internal controls",
+    "forms": ["10-K", "10-K/A"],
+    "date_from": "2024-01-01",
+    "must_include": ["restatement"],
+    "limit": 10
+  }' \
+  "https://api.secapi.ai/v1/search/semantic"
+```
+
+## Use cases
+
+### Risk factor research
+
+Find companies discussing specific risks — climate change, cybersecurity, geopolitical exposure — across the entire SEC filing universe, regardless of the exact phrasing used.
+
+### Competitive intelligence
+
+Search for filings that discuss a competitor's products, markets, or strategies to understand how peers position themselves.
+
+### Due diligence
+
+During M&A or investment due diligence, search for relevant disclosures across a target's full filing history using natural language queries.
+
+### Regulatory impact analysis
+
+When new regulations are proposed, search for all companies that discuss the affected activity to estimate the universe of impacted issuers.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /v1/search/semantic` | Semantic search with optional filters |
+| `POST /v1/search/similar` | Find filings similar to a given passage |
+| `GET /v1/search` | Keyword search (full-text) |
+
+## Why Datastream for semantic search
+
+| Feature | Datastream | Raw EDGAR | SEC-API.io | EDGAR full-text |
+|---------|-----------|-----------|------------|-----------------|
+| Semantic (AI) search | Yes | No | No | No |
+| Passage-level results | Yes | No | No | No |
+| Hybrid (semantic + filters) | Yes | No | Keyword only | Keyword only |
+| Section-specific search | Yes | No | No | No |
+| Filing corpus coverage | Millions | Millions (raw) | Partial | Full |
+| Pricing | Pay-as-you-go | Free (no search) | $Varies | Free (basic) |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start searching SEC filings by meaning in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [Full-Text Search API](/seo/sec-full-text-search-api)
+- [10-K Section Extraction API](/seo/sec-10k-section-extraction-api)
+- [API Reference](/api-reference)
+

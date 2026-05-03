@@ -1,0 +1,108 @@
+---
+title: "10-K Section Extraction API — Parse Item 1, 1A, 7, 7A, 8 Programmatically"
+description: "Extract individual sections from SEC 10-K filings via API. Get Item 1 (Business), 1A (Risk Factors), 7 (MD&A), 7A (Market Risk), and 8 (Financial Statements) as clean text. Start free."
+---
+
+# 10-K Section Extraction API
+
+Annual reports (10-K filings) contain critical business information buried in lengthy HTML documents. Datastream extracts and indexes individual sections so you can pull exactly the content you need — Item 1 (Business Description), Item 1A (Risk Factors), Item 7 (MD&A), Item 7A (Market Risk Disclosures), and Item 8 (Financial Statements) — as clean, structured text.
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Section-level extraction" icon="scissors">
+    Request any standard 10-K section by item number. No HTML parsing or regex required.
+  </Card>
+  <Card title="Clean text output" icon="file-lines">
+    Tables preserved as structured data. Boilerplate headers and footers stripped. Ready for NLP pipelines.
+  </Card>
+  <Card title="Historical coverage" icon="clock-rotate-left">
+    Sections extracted from 10-K filings going back to 2000 for all SEC filers.
+  </Card>
+  <Card title="Batch retrieval" icon="layer-group">
+    Pull multiple sections from multiple filings in a single request with batch endpoints.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Extract the Risk Factors section (Item 1A) from Apple's latest 10-K:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/sections?ticker=AAPL&form=10-K&section=1A&limit=1"
+```
+
+```json
+{
+  "accession_number": "0000320193-24-000081",
+  "section": "1A",
+  "section_title": "Risk Factors",
+  "content": "The Company's business, reputation, results of operations...",
+  "word_count": 12450,
+  "filed_at": "2024-11-01"
+}
+```
+
+Extract MD&A (Item 7) for year-over-year comparison:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/filings/sections?ticker=MSFT&form=10-K&section=7&limit=2"
+```
+
+## Use cases
+
+### Risk factor analysis
+
+Track how risk disclosures change year over year. Feed Item 1A into an LLM to detect new risks, removed risks, and language changes that signal shifting concerns.
+
+### Competitive intelligence
+
+Compare Item 1 (Business) across competitors to understand strategic positioning, product focus, and market segment targeting.
+
+### MD&A trend extraction
+
+Item 7 contains management's own analysis of financial performance. Extract key metrics, forward-looking statements, and segment breakdowns programmatically.
+
+### Audit and compliance
+
+Pull Item 8 (Financial Statements and Supplementary Data) for automated validation against XBRL-reported figures.
+
+## Supported sections
+
+| Item | Section name | Description |
+|------|-------------|-------------|
+| 1 | Business | Company overview, products, markets |
+| 1A | Risk Factors | Material risks to the business |
+| 1B | Unresolved Staff Comments | SEC comment letters |
+| 2 | Properties | Physical assets and facilities |
+| 3 | Legal Proceedings | Pending litigation |
+| 4 | Mine Safety Disclosures | Mining safety data |
+| 5 | Market for Common Equity | Stock and dividend info |
+| 6 | Selected Financial Data | Multi-year financial summary |
+| 7 | MD&A | Management Discussion and Analysis |
+| 7A | Market Risk Disclosures | Quantitative risk data |
+| 8 | Financial Statements | Audited financials |
+
+## Why Datastream for 10-K extraction
+
+| Feature | Datastream | Raw EDGAR | SEC-API.io | Calcbench |
+|---------|-----------|-----------|------------|-----------|
+| Section-level extraction | Yes | No (full doc) | Partial | Yes |
+| Clean text (no HTML) | Yes | No | Partial | Yes |
+| Historical coverage | 2000+ | 1993+ | 2012+ | 2010+ |
+| Batch section retrieval | Yes | No | No | No |
+| REST API | Yes | No | Yes | Yes |
+| Pricing | Pay-as-you-go | Free (raw) | $Varies | $500+/mo |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start extracting 10-K sections in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [SEC EDGAR API](/seo/sec-edgar-api)
+- [Full-Text Search API](/seo/sec-full-text-search-api)
+- [API Reference](/api-reference)
+

@@ -1,0 +1,340 @@
+---
+title: "Build an SEC Filing Monitor Agent"
+description: "Build an autonomous agent that monitors SEC 8-K filings daily using Claude Code and the OMNI Datastream CLI, then sends Slack alerts for your watchlist."
+---
+
+# Build an SEC Filing Monitor Agent
+
+Build an autonomous agent that checks for new 8-K filings every day and sends Slack notifications when companies on your watchlist file material events. This tutorial uses Claude Code skills and the OMNI Datastream CLI to create a fully automated filing monitor you can run on a schedule.
+
+## What you will build
+
+- A Claude Code skill that runs on a cron schedule
+- Daily checks against the OMNI Datastream API for new 8-K filings
+- Slack alerts with filing details for your watchlist companies
+- A persistent state file to avoid duplicate notifications
+
+## Prerequisites
+
+- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
+- A Slack workspace with an incoming webhook URL
+- Node.js 18+ installed
+
+## Step 1 — Install the OMNI Datastream CLI
+
+Install the CLI globally so your agent skill can call it directly.
+
+```bash
+npm install -g @omni-datastream/cli
+
+# Verify the installation
+omni-datastream --version
+
+# Authenticate with your API key
+omni-datastream auth login
+```
+
+Set your API key as an environment variable for non-interactive use:
+
+```bash
+export OMNI_DATASTREAM_API_KEY="your-api-key"
+```
+
+## Step 2 — Create the project structure
+
+Set up a directory for your agent skill and configuration files.
+
+```bash
+mkdir -p sec-filing-monitor-agent
+cd sec-filing-monitor-agent
+
+# Create the files we need
+touch watchlist.json
+touch skill.js
+touch state.json
+```
+
+Define your watchlist in `watchlist.json`:
+
+```json
+{
+  "tickers": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA"],
+  "form_types": ["8-K", "8-K/A"],
+  "slack_webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+}
+```
+
+Initialize the state file to track what you have already seen:
+
+```json
+{
+  "last_checked": null,
+  "seen_accession_numbers": []
+}
+```
+
+## Step 3 — Write the filing check logic
+
+Create `skill.js` with the core logic that queries the OMNI Datastream API for recent 8-K filings.
+
+```javascript
+import { readFileSync, writeFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const WATCHLIST = JSON.parse(
+  readFileSync(join(__dirname, "watchlist.json"), "utf-8")
+);
+const STATE_PATH = join(__dirname, "state.json");
+const API_BASE = "https://api.secapi.ai";
+const API_KEY = process.env.OMNI_DATASTREAM_API_KEY;
+
+function loadState() {
+  try {
+    return JSON.parse(readFileSync(STATE_PATH, "utf-8"));
+  } catch {
+    return { last_checked: null, seen_accession_numbers: [] };
+  }
+}
+
+function saveState(state) {
+  writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
+}
+
+async function fetchRecentFilings(ticker) {
+  const url = new URL(`${API_BASE}/v1/filings`);
+  url.searchParams.set("ticker", ticker);
+  url.searchParams.set("form_type", WATCHLIST.form_types.join(","));
+  url.searchParams.set("limit", "10");
+  url.searchParams.set("sort", "filed_at:desc");
+
+  const res = await fetch(url.toString(), {
+    headers: { "x-api-key": API_KEY },
+  });
+
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${await res.text()}`);
+  }
+
+  return res.json();
+}
+
+async function sendSlackAlert(filing) {
+  const blocks = [
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: `New ${filing.form} Filing: ${filing.ticker}`,
+      },
+    },
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*Company:*\n${filing.company_name}` },
+        { type: "mrkdwn", text: `*Form:*\n${filing.form}` },
+        { type: "mrkdwn", text: `*Filed:*\n${filing.filed_at}` },
+        {
+          type: "mrkdwn",
+          text: `*Accession:*\n${filing.accession_number}`,
+        },
+      ],
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: filing.description
+          ? `*Description:* ${filing.description}`
+          : "_No description available_",
+      },
+    },
+    {
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: { type: "plain_text", text: "View Filing" },
+          url: `https://www.sec.gov/Archives/edgar/data/${filing.cik}/${filing.accession_number.replace(/-/g, "")}`,
+        },
+      ],
+    },
+  ];
+
+  await fetch(WATCHLIST.slack_webhook_url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ blocks }),
+  });
+}
+
+export async function run() {
+  const state = loadState();
+  const seen = new Set(state.seen_accession_numbers);
+  const newFilings = [];
+
+  console.log(
+    `Checking ${WATCHLIST.tickers.length} tickers for new ${WATCHLIST.form_types.join("/")} filings...`
+  );
+
+  for (const ticker of WATCHLIST.tickers) {
+    try {
+      const response = await fetchRecentFilings(ticker);
+      const filings = response.data || [];
+
+      for (const filing of filings) {
+        if (!seen.has(filing.accession_number)) {
+          newFilings.push(filing);
+          seen.add(filing.accession_number);
+        }
+      }
+    } catch (err) {
+      console.error(`Error fetching filings for ${ticker}:`, err.message);
+    }
+  }
+
+  console.log(`Found ${newFilings.length} new filing(s).`);
+
+  for (const filing of newFilings) {
+    console.log(
+      `  -> ${filing.ticker}: ${filing.form} (${filing.accession_number})`
+    );
+    await sendSlackAlert(filing);
+  }
+
+  // Update state
+  state.last_checked = new Date().toISOString();
+  state.seen_accession_numbers = Array.from(seen).slice(-500); // Keep last 500
+  saveState(state);
+
+  return {
+    checked: WATCHLIST.tickers.length,
+    new_filings: newFilings.length,
+    last_checked: state.last_checked,
+  };
+}
+
+// Run directly
+run().then(console.log).catch(console.error);
+```
+
+## Step 4 — Create the Claude Code skill wrapper
+
+Create a `.claude/skills/sec-monitor.md` file so Claude Code can invoke this as a skill:
+
+```bash
+mkdir -p .claude/skills
+```
+
+Write the skill definition in `.claude/skills/sec-monitor.md`:
+
+```markdown
+# SEC Filing Monitor
+
+Check for new 8-K filings for watchlist companies and send Slack alerts.
+
+## Trigger
+
+Run daily at 6:00 PM ET (after market close and EDGAR processing).
+
+## Steps
+
+1. Read the watchlist from `watchlist.json`
+2. Query the OMNI Datastream API for recent 8-K and 8-K/A filings for each ticker
+3. Compare against previously seen accession numbers in `state.json`
+4. Send a Slack notification for each new filing
+5. Update the state file with the new accession numbers
+
+## Command
+
+```bash
+node skill.js
+```
+
+## Step 5 — Set up the cron schedule
+
+Add a cron entry to run the skill daily. You can use `crontab` on Linux/macOS or a systemd timer.
+
+```bash
+# Open crontab editor
+crontab -e
+
+# Add this line to run at 6:00 PM ET (23:00 UTC) every weekday
+0 23 * * 1-5 cd /path/to/sec-filing-monitor-agent && OMNI_DATASTREAM_API_KEY="your-api-key" node skill.js >> /var/log/sec-monitor.log 2>&1
+```
+
+Alternatively, use Claude Code's built-in scheduling:
+
+```bash
+claude schedule "Run SEC filing monitor" --cron "0 23 * * 1-5" --command "cd /path/to/sec-filing-monitor-agent && node skill.js"
+```
+
+## Step 6 — Test the agent
+
+Run the skill manually to verify it works before enabling the schedule.
+
+```bash
+cd sec-filing-monitor-agent
+node skill.js
+```
+
+### Expected output
+
+```
+Checking 7 tickers for new 8-K/8-K/A filings...
+Found 3 new filing(s).
+  -> AAPL: 8-K (0000320193-25-000042)
+  -> NVDA: 8-K (0001045810-25-000018)
+  -> MSFT: 8-K (0000789019-25-000033)
+{
+  checked: 7,
+  new_filings: 3,
+  last_checked: "2025-04-11T23:00:01.234Z"
+}
+```
+
+You will also see Slack messages appear in your configured channel with rich formatting showing the company name, form type, filing date, and a link to the SEC filing.
+
+## Step 7 — Add error handling and retries
+
+For production use, wrap the runner with retry logic and error notifications.
+
+```javascript
+async function runWithRetry(maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await run();
+    } catch (err) {
+      console.error(`Attempt ${attempt} failed:`, err.message);
+      if (attempt === maxRetries) {
+        // Send error alert to Slack
+        await fetch(WATCHLIST.slack_webhook_url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: `SEC Filing Monitor failed after ${maxRetries} attempts: ${err.message}`,
+          }),
+        });
+        throw err;
+      }
+      // Wait before retrying (exponential backoff)
+      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+    }
+  }
+}
+
+runWithRetry().then(console.log).catch(console.error);
+```
+
+## Next steps
+
+- **Expand form types**: Add `10-K`, `10-Q`, `13F-HR`, `S-1`, or `DEF 14A` to catch more filing types.
+- **Add filing content extraction**: Use the `/v1/filings/{accession_number}/sections/{section_key}` endpoint to pull specific sections and include a summary in the Slack message.
+- **Multi-channel routing**: Route different form types to different Slack channels (e.g., earnings to #research, proxy statements to #governance).
+- **Build a dashboard**: Store filings in a database and build a web UI for browsing alerts.
+
+See the [Build a Filing Monitor with Webhooks](/tutorials/build-filing-monitor) tutorial for a push-based alternative using webhooks instead of polling.
+

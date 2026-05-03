@@ -81,6 +81,30 @@ claude mcp add --transport streamable-http omni-datastream https://api.secapi.ai
 - `portfolio.analyze`
 - `intelligence.query`
 
+## AI query quota
+
+MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhanced.get` count toward the monthly `ai_queries` quota. Successful calls include a top-level `_omni.quota` envelope with projected post-call usage:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "quota_example",
+  "result": {},
+  "_omni": {
+    "quota": {
+      "family": "ai_queries",
+      "mcpToolName": "intelligence.query",
+      "limit": 600,
+      "used": 42,
+      "remaining": 558,
+      "resetAt": "2026-05-01T00:00:00.000Z"
+    }
+  }
+}
+```
+
+When the quota is exhausted, hosted MCP returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`. Treat `-32004` as retryable timeout and `-32005` as non-retryable until quota reset or plan upgrade. If a tool circuit is open, hosted MCP returns HTTP `503` with JSON-RPC error code `-32006` and `error.data.code: "mcp_tool_circuit_open"`; retry it only after availability backoff.
+
 <Prompt>
 Set up Omni Datastream hosted MCP in this MCP-aware client. Register the streamable HTTP MCP endpoint, resolve AAPL, fetch the latest 10-K, extract Item 1A, and return the result with requestId, provenance, freshness, and materialization metadata intact.
 </Prompt>

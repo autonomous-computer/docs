@@ -86,19 +86,67 @@ To re-enable email delivery on an unsubscribed monitor, call `POST /v1/monitors/
 
 ### Retry semantics
 
-Resend's API does not auto-retry on 5xx. OMNI does not retry per-call either: a failed send writes a row to `email_delivery_attempts` with `ok=false` and the HTTP status / error message, plus a Sentry capture tagged `workflow=email_delivery`. The cron that drives monitor → email dispatch handles backoff at the next scheduled tick.
+The dispatch cron (see §Dispatch behavior below) handles retries on transient failure. A failed send writes a row to `email_delivery_attempts` with `dispatch_status='retry_pending'` and a `next_attempt_at` timestamp; the next sweep tick claims rows whose `next_attempt_at` has passed and re-attempts the send.
 
-The adapter sets a stable `Idempotency-Key = sha256(monitor_id + match_ids_sorted)` on every send, so any future retry path (manual replay, cron retry, etc.) is duplicate-safe at the Resend side.
+State machine (added in OMNI-3244):
+
+| State | Meaning |
+| --- | --- |
+| `sent` | Resend returned 2xx; recipient should have received the email. |
+| `failed` | Adapter wrote the row but the dispatcher hasn't yet flipped it to a retry/permanent state (rare transient state). |
+| `retry_pending` | Send failed transiently; the row is queued for re-attempt at `next_attempt_at`. |
+| `sending` | A retry-drainer has claimed this row and is currently calling Resend. Re-claimed back to `retry_pending` if it sits >10 min (mid-flight crash recovery). |
+| `permanent_failed` | Three retry attempts all failed; no further attempts. Sentry-capture surfaces these. |
+| `rate_limited` | The send was blocked by the per-monitor hourly cap or per-org daily cap (see §Rate limits below). The daily summary picks these up. |
+| `sent_dryrun` | QA-tooling-only: the send was simulated; no Resend call was made. |
+
+Backoff schedule: attempt 1 fails → wait 30s → attempt 2; attempt 2 fails → wait 5min → attempt 3. If attempt 3 fails the row is `permanent_failed` (no further retries).
+
+Stable `Idempotency-Key = sha256(monitor_id + match_ids_sorted)` is set on every Resend POST, and a unique partial index `(monitor_id, idempotency_key)` on `email_delivery_attempts` enforces duplicate-safety at the database layer too.
 
 ### Audit trail
 
 Every send attempt — success or failure — is persisted to `email_delivery_attempts` with the recipient hashed (not raw), a redacted preview (`a***@example.com`), the request id, the Resend message id (on success), the HTTP status, and the latency. This enables support cases ("did my customer get the alert?") without exposing recipient PII in operator-visible logs.
+
+## Dispatch behavior
+
+The OMNI Dagster cron drives monitor → email dispatch on a **15-minute cadence**. At each tick the sweep:
+
+1. Reclaims any `'sending'` rows that have been stuck for >10 min (mid-flight crash recovery).
+2. Drains any `retry_pending` rows whose `next_attempt_at` has passed (transient-`'sending'` short-txn pattern: claim → COMMIT lock → call Resend → COMMIT terminal state).
+3. Iterates active monitors in `last_checked_at asc nulls first` order, runs each saved search, and fans out new matches via the email channel. The cursor (`last_checked_at`) is bumped only when at least one destination returned `sent`, `deduped`, or `rate_limited` — so a totally-failed dispatch does not silently drop matches.
+
+The cron also emits a `monitor.match` Datastream event for every dispatch, so org-level webhook subscribers (configured via `POST /v1/webhook_endpoints` with `monitor.match` in `subscribed_event_types`) receive a signal regardless of email delivery outcome.
+
+Worst-case latency from filing publish to email arrival is approximately 7.5 minutes (half the 15-min tick interval). For sub-2-second alerting, see the planned LISTEN-driven Phase 2 (OMNI-3437, deferred).
+
+## Rate limits
+
+To prevent runaway alert storms when a customer's monitor suddenly matches thousands of filings, two windows are enforced:
+
+| Window | Default | Env override |
+| --- | --- | --- |
+| **Per-monitor, per-hour** | 100 sends | `OMNI_MONITOR_DISPATCH_RATE_LIMIT_PER_HOUR` |
+| **Per-org, per-day** | 1,000 sends | `OMNI_MONITOR_DISPATCH_DAILY_CAP` |
+
+When a send is blocked by either window, the row is persisted with `dispatch_status='rate_limited'` and **no Resend call is made**. The matches are not lost — the [daily summary](#daily-summary) picks them up. The bucket counts every dispatch intent (sent + rate_limited + retry_pending + sending + permanent_failed) — bouncing addresses cannot game the bucket by failing intentionally.
+
+Rate-limit math runs primarily through Redis (sliding-window ZSET via the same primitive that backs HTTP middleware). When Redis is unavailable, OMNI falls back to a Postgres count query against `email_delivery_attempts`. When both are unhealthy, the dispatcher fails open with a Sentry warning — better to potentially over-cap than to silently drop alerts.
+
+## Daily summary
+
+For each org that hits the rate limit on any monitor in a 24-hour window, OMNI sends **one** rolled-up summary email per (org, recipient) at **23:55 UTC**. The summary lists every monitor that hit the cap with the total match count for the day; the body is plain text + HTML, both Outlook-safe.
+
+The summary is idempotent per (org, recipient, UTC date) — re-running the daily-summary asset on the same UTC date is a no-op.
+
+Customers who'd like to disable the summary entirely can unsubscribe via the `List-Unsubscribe` header on any monitor email, which flips `delivery.status` to `unsubscribed` (the dispatcher then skips that monitor entirely until the customer re-enables via `POST /v1/monitors/{monitor_id}/delivery`).
 
 ## Limits
 
 - **Search modes**: only `keyword` is supported in monitor execution at this time. Semantic search support will land in a future release.
 - **One destination per monitor**: v1 supports a single delivery destination per monitor row. Use multiple monitors to fan out to multiple channels for now.
 - **Quota**: email delivery is metered as `email_delivery` (180 sends per minute by default per org). Adjust via the standard plan policy override env.
+- **Legacy `webhookUrl`**: the deprecated `monitor.webhookUrl` column is preserved for backward compatibility but no longer carries a live delivery path. New monitors should use `delivery.type='email'` (above) or subscribe an org-level `webhook_endpoint` to the `monitor.match` event type. Removal is tracked in OMNI-3436.
 
 ## Related
 

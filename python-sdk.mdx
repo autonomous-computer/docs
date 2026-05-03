@@ -66,6 +66,31 @@ answer = client.intelligence_query({
 })
 ```
 
+## Reliability defaults
+
+The Python SDK retries transient failures with exponential backoff and a per-client circuit breaker.
+
+- Auto-retried by default: `GET`, `HEAD`, `OPTIONS`
+- Opt-in required: `POST`, `PUT`, `PATCH`, `DELETE`, MCP `tools/call`
+- Always retried regardless of method: `429` rate limits, with `Retry-After` honored
+
+Disable SDK retries when your application already owns retry behavior:
+
+```python
+client = OmniDatastreamClient(api_key="ods_test_...", retry=False, telemetry=False)
+```
+
+Opt into mutating retries only when the operation is idempotent:
+
+```python
+artifact = client.create_artifact(
+    {"kind": "markdown_bundle", "ticker": "AAPL"},
+    retry={"enabled": True, "idempotency_key": "artifact-aapl-markdown-bundle"},
+)
+```
+
+See [SDK reliability](/sdk-reliability) for the full retry policy and migration notes.
+
 ## Dilution intelligence
 
 ```python

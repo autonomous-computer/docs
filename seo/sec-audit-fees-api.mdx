@@ -1,0 +1,103 @@
+---
+title: "SEC Audit Fees API — Structured Data from Proxy Statements"
+description: "Access structured audit fee data extracted from SEC proxy statements (DEF 14A) via API. Track audit, audit-related, tax, and all other fees by company. Start free."
+---
+
+# SEC Audit Fees API
+
+Every public company discloses fees paid to its external auditor in its annual proxy statement (DEF 14A). Datastream extracts and structures these disclosures — audit fees, audit-related fees, tax fees, and all other fees — so you can analyze auditor economics, independence risks, and cost trends programmatically.
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Four fee categories" icon="money-check-dollar">
+    Audit fees, audit-related fees, tax fees, and all other fees extracted and categorized from proxy statements.
+  </Card>
+  <Card title="Auditor identification" icon="building-columns">
+    Auditing firm name and PCAOB ID included with every record for easy cross-referencing.
+  </Card>
+  <Card title="Historical trends" icon="chart-line">
+    Track how audit fees change over time for a company — or compare fees across an entire industry.
+  </Card>
+  <Card title="Independence analysis" icon="scale-balanced">
+    Compare non-audit fees to audit fees to flag potential auditor independence concerns.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Get Microsoft's audit fees from the latest proxy:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/companies/audit-fees?ticker=MSFT&limit=1"
+```
+
+```json
+{
+  "ticker": "MSFT",
+  "company_name": "Microsoft Corporation",
+  "fiscal_year": 2024,
+  "auditor": "Deloitte & Touche LLP",
+  "audit_fees": 42500000,
+  "audit_related_fees": 2100000,
+  "tax_fees": 8300000,
+  "all_other_fees": 500000,
+  "total_fees": 53400000,
+  "non_audit_ratio": 0.204
+}
+```
+
+Compare audit fees across a sector:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/companies/audit-fees?sic=7372&limit=20&sort=total_fees:desc"
+```
+
+## Use cases
+
+### Auditor independence monitoring
+
+PCAOB rules limit non-audit services. Track the ratio of non-audit fees to total fees to flag potential independence issues before they become problems.
+
+### Audit fee benchmarking
+
+Compare audit fees across peers in the same industry and of similar size to identify outliers — either underinvestment in auditing or excessive fees.
+
+### Auditor change detection
+
+Monitor when companies switch auditors by tracking changes in the auditor field year over year. Auditor changes can signal accounting issues.
+
+### Academic research
+
+Study the relationship between audit fees, audit quality, restatement risk, and other corporate governance factors across the full SEC universe.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/companies/audit-fees` | Audit fee data by company |
+| `GET /v1/companies/audit-fees/history` | Historical audit fees over time |
+
+## Why Datastream for audit fee data
+
+| Feature | Datastream | Raw EDGAR | Audit Analytics | Manual |
+|---------|-----------|-----------|-----------------|--------|
+| Structured JSON API | Yes | No (HTML) | Yes | N/A |
+| All four fee categories | Yes | Yes (unstructured) | Yes | Depends |
+| Auditor identification | Yes | Yes (unstructured) | Yes | Manual |
+| REST API | Yes | No | Partial | No |
+| Historical coverage | 2004+ | 2004+ | 2000+ | Per-project |
+| Pricing | Pay-as-you-go | Free (raw) | $$$ | Labor cost |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start pulling audit fee data in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [Executive Compensation API](/seo/executive-compensation-api)
+- [SEC EDGAR API](/seo/sec-edgar-api)
+- [API Reference](/api-reference)
+

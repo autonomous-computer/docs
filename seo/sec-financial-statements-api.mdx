@@ -1,0 +1,106 @@
+---
+title: "SEC Financial Statements API — Income, Balance Sheet, Cash Flow"
+description: "Pull structured income statements, balance sheets, and cash flow statements for any SEC filer via API. Normalized across companies and periods. Start free with 250 calls/month."
+---
+
+# SEC Financial Statements API
+
+Public companies report financial statements in XBRL format embedded in their SEC filings, but the raw data requires complex parsing and normalization. Datastream extracts, standardizes, and serves income statements, balance sheets, and cash flow statements as clean JSON — ready to compare across companies and time periods.
+
+## Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Three core statements" icon="chart-line">
+    Income statement, balance sheet, and cash flow statement extracted and normalized for every annual and quarterly filing.
+  </Card>
+  <Card title="Cross-company comparability" icon="scale-balanced">
+    XBRL concepts mapped to a consistent schema so revenue from Apple and revenue from Microsoft use the same field name.
+  </Card>
+  <Card title="Period flexibility" icon="calendar">
+    Request annual or quarterly data. Pull multiple periods in a single call for trend analysis.
+  </Card>
+  <Card title="As-reported fidelity" icon="check">
+    Financial data matches what the company reported. Restated values flagged when available.
+  </Card>
+</CardGroup>
+
+## Quick start
+
+Get Apple's annual income statement:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/statements/income?ticker=AAPL&period=annual&limit=1"
+```
+
+```json
+{
+  "ticker": "AAPL",
+  "period": "2024-09-28",
+  "period_type": "annual",
+  "revenue": 391035000000,
+  "cost_of_revenue": 210352000000,
+  "gross_profit": 180683000000,
+  "operating_income": 123216000000,
+  "net_income": 93736000000,
+  "eps_basic": 6.11,
+  "eps_diluted": 6.08
+}
+```
+
+Pull balance sheet data for multiple quarters:
+
+```bash
+curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  "https://api.secapi.ai/v1/statements/balance-sheet?ticker=AAPL&period=quarterly&limit=4"
+```
+
+## Use cases
+
+### Financial modeling
+
+Pull historical financials to build DCF models, comparable company analyses, and financial projections programmatically.
+
+### Stock screeners
+
+Screen the entire SEC universe by financial metrics — revenue growth, profit margins, debt ratios, and more — using normalized data.
+
+### AI-powered analysis
+
+Feed structured financial data to LLMs for automated earnings analysis, trend detection, and anomaly identification.
+
+### Portfolio analytics
+
+Track financial health metrics across a portfolio of holdings with consistent, comparable data from a single API.
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/statements/income` | Income statement data |
+| `GET /v1/statements/balance-sheet` | Balance sheet data |
+| `GET /v1/statements/cash-flow` | Cash flow statement data |
+| `GET /v1/statements/all` | All three statements combined |
+
+## Why Datastream for financial statements
+
+| Feature | Datastream | Raw EDGAR | Financial Datasets | Intrinio |
+|---------|-----------|-----------|-------------------|----------|
+| Normalized schema | Yes | No (raw XBRL) | Yes | Yes |
+| All three statements | Yes | Yes (raw) | Yes | Yes |
+| REST API | Yes | No | Yes | Yes |
+| Cross-company consistency | Yes | No | Partial | Yes |
+| Historical depth | 2009+ | 2009+ (XBRL era) | 2010+ | 2008+ |
+| SDKs (Python, JS, Rust, Go) | Yes | No | Python only | Yes |
+| Pricing | Pay-as-you-go | Free (raw) | $19+/mo | $500+/mo |
+
+## Get started
+
+<Card title="Get your API key" icon="key" href="/getting-started">
+  Start pulling financial statements in under 60 seconds. 250 free API calls per month.
+</Card>
+
+- [XBRL API](/seo/xbrl-api)
+- [SEC EDGAR API](/seo/sec-edgar-api)
+- [API Reference](/api-reference)
+
