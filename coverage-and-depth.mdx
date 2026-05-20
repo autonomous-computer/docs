@@ -9,12 +9,12 @@ description: "Current SEC API coverage, history depth, and known coverage bounda
 **Dilution support is live in all 4 SDKs and the CLI (April 2026).** Eleven row types (events, warrants, convertibles, ROFR, lockups, cash position, corporate actions, Nasdaq compliance, ratings, reverse splits, share-float history) plus a coverage rollup and a per-issuer score are exposed through 14 REST endpoints (`/v1/dilution/*`), 14 MCP tools, and first-class methods in the TypeScript, Python, Go, and Rust SDKs. Thirteen of the 14 routes honor `?view=agent`; coverage is already compact. See [Dilution endpoints](/api-reference/dilution).
 </Note>
 
-This page summarizes current public coverage without overstating what SEC API has shipped. Current coverage includes:
+This page summarizes current public coverage and the boundaries you should account for when building production workflows. Current coverage includes:
 
 - broad public workflows built around SEC and adjacent market utilities
 - a 9-year searchable history floor for filings and section workflows
 - stronger completed-year completeness guarantees for the most recent two full years of filings and section workflows
-- a 30-year cold-storage policy target that remains intentionally deferred from the hot path
+- a 30-year historical archive target outside the current hot query path
 - explicit partial and unavailable states where support is not fully generalized yet
 
 ## XBRL facts coverage
@@ -48,7 +48,7 @@ This page summarizes current public coverage without overstating what SEC API ha
 - the history inventory tracks the searchable filings plus sections floor separately from freshness
 - the benchmark suite tracks repeated investor-agent workloads separately from freshness so speed claims do not blur into freshness claims
 
-## Partial or intentionally scoped support
+## Scoped Coverage
 
 - market calendar:
   `XNYS` and `XNAS` are holiday-configured; other covered exchanges remain `weekend_only`
@@ -57,19 +57,19 @@ This page summarizes current public coverage without overstating what SEC API ha
 - offerings:
   public filing records are live; section-level extraction (Prospectus Summary, Risk Factors, Use of Proceeds, Capitalization, Dilution, Description of Securities, Underwriting, Selling Stockholders, Plan of Distribution, Principal Stockholders, Management, Executive Compensation, Related-Party Transactions, 424B pricing supplements, FWP term sheets, 20-F items) is live for S-1 / S-3 / 424B* / FWP / 20-F with a dedicated catalog and exhibit parsing for EX-4, EX-5, and EX-10 (warrant, legality, and material-contract exhibits). Richer extracted dilution payloads such as warrant terms, lockup schedules, and rights of first refusal are not part of this offering extractor.
 - sentiment:
-  not public
+  sentiment endpoints are not currently available
 - traceability:
-  filing-derived document-plus-page support is live, HTML-first exact region anchors ship for supported segmented revenue facts and supported section excerpts, and the shared trace API also covers SEC enforcement source records. Broader PDF/cell parity and richer non-filing families are not public yet.
+  filing-derived document-plus-page support is live, HTML-first exact region anchors are available for supported segmented revenue facts and supported section excerpts, and the shared trace API also covers SEC enforcement source records.
 - analytics:
-  a scoped query API is live across filings, sections, segmented revenues, SEC enforcement actions, and quarter-specific institutional ownership extracts. Raw SQL and broader warehouse-style coverage are not public.
+  a scoped query API is live across filings, sections, segmented revenues, SEC enforcement actions, and quarter-specific institutional ownership extracts.
 
 ## Historical depth
 
 - searchable hot coverage today:
   9-year filings and sections floor
-- cold archive target:
+- historical archive target:
   30-year archive
 - not included today:
   full 30-year hot normalization
 
-Warm and cold tiering remains separate from current production behavior. Treat the 30-year archive as a policy target, not as a hot-path normalization guarantee.
+Treat the 30-year archive as a historical coverage target, not as a guarantee that every endpoint has 30 years of normalized hot-path results.
