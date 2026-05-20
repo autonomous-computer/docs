@@ -3,10 +3,10 @@
 List dilution events parsed from S-1, 424B*, FWP, and S-3 offering filings, with the full programmatic verification block on every row.
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -131,13 +131,12 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt>
-Use SEC API `GET /v1/dilution/events` to list dilution events for the issuer of interest, then summarize ATM activity, offering pace, and warrant overhang. Always preserve `requestId`, `traceparent`, and the per-row `verification` block (or its agent-mode summary). When `confidence < 0.7` or `crossValidationsPassed` reports failures, treat the row as unverified and API the `sourceSpan` for human review.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Use SEC API `GET /v1/dilution/events` to list dilution events for the issuer of interest, then summarize ATM activity, offering pace, and warrant overhang. Always preserve `requestId`, `traceparent`, and the per-row `verification` block (or its agent-mode summary). When `confidence < 0.7` or `crossValidationsPassed` reports failures, treat the row as unverified and include the `sourceSpan` for human review.
 </Prompt>
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if the verification block reports `confidence < 0.5` or any `crossValidations` entry fails, API that signal — do not paper over it
-
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
+- if the verification block reports `confidence < 0.5` or any `crossValidations` entry fails, flag that signal; do not paper over it

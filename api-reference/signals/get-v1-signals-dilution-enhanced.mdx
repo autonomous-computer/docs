@@ -1,18 +1,18 @@
 # GET /v1/signals/dilution/enhanced
 
-Return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder)
+Return the SEC API Dilution Score with factor-model context for macro liquidity and momentum exposure.
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
-## Canonical metadata
+## Response metadata
 
 Returns the full `/v1/signals/dilution` response plus a top-level `factorModelContext` object:
 
 - `factorModelContext.liquidityRegime` — macro regime classification (per `/v1/macro/regimes`) plus per-ticker `LIQUIDITY` factor exposure
 - `factorModelContext.momentum` — per-ticker `MOMENTUM` factor exposure (Carhart 12-1) from `latest_factor_exposures`
-- `factorModelContext.shortInterest` — placeholder; no internal short-interest source ingested yet (status: `unavailable`)
+- `factorModelContext.shortInterest` — currently returned with `status: "unavailable"` when short-interest data is not available.
 
 ## Query parameters
 
@@ -78,7 +78,7 @@ curl -X GET \
     }
   },
   "degradedReasons": [
-    "short_interest_unavailable: dilution-enhanced does not yet ingest a short-interest source; see planned short-interest source."
+    "short_interest_unavailable: short-interest data is not available for this response."
   ]
 }
 ```
@@ -86,12 +86,11 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt>
-Use SEC API GET /v1/signals/dilution/enhanced when you need the SEC API Dilution Score plus factor-model context — macro liquidity regime (per /v1/macro/regimes), per-ticker MOMENTUM and LIQUIDITY factor exposures, and a short-interest placeholder. Treat `factorModelContext.shortInterest.status === "unavailable"` as known-missing, not as zero. Preserve all canonical metadata fields plus `factorModelContext`.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Use SEC API GET /v1/signals/dilution/enhanced when you need the SEC API Dilution Score plus macro liquidity regime and per-ticker MOMENTUM and LIQUIDITY factor exposures. Treat `factorModelContext.shortInterest.status === "unavailable"` as missing data, not as zero. Preserve all metadata fields plus `factorModelContext`.
 </Prompt>
 
 ## Errors and partial results
 
-- short-interest is intentionally `unavailable` — API that state instead of treating it as zero
+- short-interest is intentionally `unavailable`; report that state instead of treating it as zero
 - when the macro overlay or factor exposures time out, the corresponding context fields are nulled and a `degradedReasons[]` entry is added; preserve those reasons in your downstream summary
-

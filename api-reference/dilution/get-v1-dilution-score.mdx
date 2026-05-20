@@ -3,10 +3,10 @@
 Per-issuer Dilution Score — singleton view returning the latest dilution rating row for a ticker. Requires `?ticker`.
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -74,13 +74,13 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt>
-Use SEC API `GET /v1/dilution/score?ticker={TICKER}` to fetch the latest composite Dilution Score for a single issuer. Preserve `requestId`, `traceparent`, and `verification`. Surface `numericScore`, `overallRisk`, and the sub-factor map so the human reviewer sees the breakdown.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Use SEC API `GET /v1/dilution/score?ticker={TICKER}` to fetch the latest composite Dilution Score for a single issuer. Preserve `requestId`, `traceparent`, and `verification`. Show `numericScore`, `overallRisk`, and the sub-factor map so the human reviewer sees the breakdown.
 </Prompt>
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
+- Treat non-2xx responses as API errors and log the response body for debugging
 - preserve `requestId` and `traceparent`
 - on `404 dilution_score_not_found`, fall back to `GET /v1/dilution/ratings?ticker=…` for the historical timeseries
 

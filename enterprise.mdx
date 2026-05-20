@@ -1,22 +1,26 @@
+---
+title: "Enterprise Features"
+---
+
 # Enterprise Features
 
-SEC API ships enterprise-grade infrastructure from the first request. Audit logging, entitlement reporting, key rotation, and multi-seat organizations are built into the platform today. OAuth/SSO via WorkOS is on the enterprise roadmap for 2026 Q3+.
+SEC API ships enterprise-grade infrastructure from the first request. Audit logging, entitlement reporting, key rotation, and multi-seat organizations are built into the platform today. Enterprise SSO is handled through the enterprise rollout path.
 
 ## Authentication
 
 API keys are the primary authentication method for all plans. Org-scoped credentials are issued through `POST /v1/api_keys` and used via the `x-api-key` header. See [Auth, Billing, and First Utility](/auth-and-pricing) for the full model.
 
-Hosted MCP clients use WorkOS OAuth discovery through `api.secapi.ai`. OAuth discovery endpoints are published at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`. This is the only customer-visible WorkOS integration today.
+Hosted MCP clients use WorkOS OAuth discovery through `api.secapi.ai`. OAuth discovery endpoints are published at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`. This is the only  WorkOS integration today.
 
-### OAuth/SSO — enterprise roadmap
+### Enterprise SSO
 
-OAuth/SSO via [WorkOS](https://workos.com) is planned for the enterprise tier in 2026 Q3+. When it ships, it will cover SAML and OIDC federation with Okta, Azure AD, Google Workspace, and other SAML 2.0 / OIDC identity providers for customers who require corporate-IdP-backed human login. Contact the SEC API team to register interest and coordinate rollout timing.
+OAuth/SSO via [WorkOS](https://workos.com) supports enterprise rollout planning for customers who require corporate-IdP-backed human login. Contact the SEC API team to discuss SAML or OIDC federation requirements for Okta, Microsoft Entra ID, Google Workspace, or another identity provider.
 
 ## Audit Logs
 
-Every API request generates a traceable event chain. SEC API provides multiple customer-safe APIs for inspecting activity after the fact.
+Every API request generates a traceable event chain. SEC API provides multiple APIs for inspecting activity after the fact.
 
-### Request diagnostics
+### Request Diagnostics
 
 Drill into a single request by its `Request-Id`:
 
@@ -36,7 +40,7 @@ curl "$SEC_API_URL/v1/diagnostics/deliveries/summary?since=2026-01-01T00:00:00Z&
   -H "x-api-key: $SEC_API_KEY"
 ```
 
-### Event export
+### Event Export
 
 Export the full event log in JSON or NDJSON for ingestion into external SIEM, log aggregation, or compliance tooling:
 

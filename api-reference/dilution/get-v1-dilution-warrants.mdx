@@ -3,10 +3,10 @@
 List warrant schedules parsed from offering exhibits, including price-protection and ratchet metadata, with the full verification block on every row.
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -85,13 +85,13 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt>
+<Prompt description="Copy this SEC API prompt for your agent.">
 Use SEC API `GET /v1/dilution/warrants` to list warrant schedules and assess overhang. Preserve `requestId`, `traceparent`, and the per-row `verification` block. Flag warrants whose `priceProtection` is true (price-reset / ratchet exposure) and report total potential dilutive shares from `underlyingSharesCalculated` when present.
 </Prompt>
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - when `verification.confidence < 0.7`, treat the row as advisory only
 

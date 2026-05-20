@@ -1,3 +1,8 @@
+---
+title: "Migrate from AskEdgar"
+sidebarTitle: "Migrate from AskEdgar"
+---
+
 # Migrate from AskEdgar
 
 <Info>
@@ -16,7 +21,7 @@ This guide maps every AskEdgar dilution endpoint onto SEC API and walks through 
   <Card title="Predictable subscription option" icon="credit-card" href="/plans-and-pricing">
     SEC API offers PAYG and flat subscriptions ($55/mo or $588/yr Personal, $239/mo or $2,388/yr Team). AskEdgar's API is per-KB only.
   </Card>
-  <Card title="Broader API surface" icon="layers-2" href="/api-reference">
+  <Card title="Broader API" icon="layers-2" href="/api-reference">
     14 dilution endpoints plus 38 other endpoint families (filings, statements, factors, insiders, macro). One key, 39 families.
   </Card>
   <Card title="Hosted MCP and SDKs" icon="bot" href="/mcp-workflows">
@@ -86,8 +91,8 @@ curl "https://api.secapi.ai/v1/dilution/share-float-history?ticker=MULN" \
   -H "x-api-key: $SEC_API_KEY"
 ```
 
-<Prompt>
-Migrate this AskEdgar integration to SEC API. Replace the host `api.askedgar.com` with `api.secapi.ai` (the existing paths already carry `/v1/...`, so the cutover is host-only — do NOT add `/v1` to the host or you will get `/v1/v1/...`). Swap the `API-KEY` header for `x-api-key`. Map `/v1/dilution-data` to `/v1/dilution/events`, split warrants/convertibles into `/v1/dilution/warrants` and `/v1/dilution/convertibles`, and replace any `verified === true` check with `verification.confidence >= 0.9 && verification.sourceSpanResolved`. Add `?view=agent` for token-efficient summaries on token-sensitive paths. Keep `Request-Id` logging and any current fallback gaps in the final implementation notes.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Migrate this AskEdgar integration to SEC API. Replace the host `api.askedgar.com` with `api.secapi.ai` (the existing paths already carry `/v1/...`, so the cutover is host-only — do not add `/v1` to the host or you will get `/v1/v1/...`). Swap the `API-KEY` header for `x-api-key`. Map `/v1/dilution-data` to `/v1/dilution/events`, split warrants/convertibles into `/v1/dilution/warrants` and `/v1/dilution/convertibles`, and replace any `verified === true` check with `verification.confidence >= 0.9 && verification.sourceSpanResolved`. Add `?view=agent` for token-efficient summaries on token-sensitive paths. Keep `Request-Id` logging and document any workflows that still need a temporary fallback during cutover.
 </Prompt>
 
 ## Verification model migration

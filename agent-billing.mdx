@@ -2,7 +2,7 @@
 
 ## Principle
 
-Agents should not treat billing as an afterthought. They should inspect billing posture before expensive loops, preserve billing metadata in outputs, and warn before they cross from cheap reads into repeated or heavy workflows.
+Agents should check billing before expensive loops, preserve billing metadata in outputs, and warn before they move from inexpensive reads into repeated or heavy workflows.
 
 ## Required checks
 
@@ -25,11 +25,10 @@ Before a multi-step workflow:
 
 - administrators create sponsor tokens with `POST /v1/agent/bootstrap_tokens`
 - agents exchange those tokens exactly once with `POST /v1/agent/bootstrap`
-- the bootstrap response returns the first API key, billing posture, limits, and MCP install metadata in one payload
+- the bootstrap response returns the first API key, billing state, limits, and MCP install metadata in one payload
 
 ## Good pattern
 
 ```text
-Check billing posture first. Quote the expensive step before repeating it. If the org is in payg_pending_card, stop and ask the administrator to activate PAYG before continuing. If the server requires approval or reports a hard cap, stop instead of retrying blindly.
+Check billing state first. Quote the expensive step before repeating it. If the org is in payg_pending_card, stop and ask the administrator to activate PAYG before continuing. If the server requires approval or reports a hard cap, stop instead of retrying blindly.
 ```
-

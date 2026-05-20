@@ -3,14 +3,14 @@
 Return official SEC litigation releases and administrative proceedings with explicit release-source semantics and shared trace references
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
 ## Agent mode
 
 Pass `?view=agent` to receive the compact agent shape: release metadata (sourceType, publishedAt, releaseNumber, title, excerpt) + citation URLs (`documentUrl`, `htmlUrl`). The `summaryMd` prose digest (~3–6kb per action), capability, statusNote, trace, and metadata envelopes are dropped. Typical reduction: **~85%**. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -39,14 +39,14 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt>
-Use SEC API GET /v1/events/enforcement to return official sec litigation releases and administrative proceedings with explicit release-source semantics and shared trace references. Preserve `requestId`, `traceparent` in the output. Return a concise summary and preserve the structured fields your application needs for follow-up requests.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Use SEC API GET /v1/events/enforcement to return official sec litigation releases and administrative proceedings with explicit release-source semantics and shared trace references. Preserve `requestId`, `traceparent` in the output. Return a concise summary and keep the structured fields your application needs for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
 
 
