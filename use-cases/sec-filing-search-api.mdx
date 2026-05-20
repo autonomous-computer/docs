@@ -1,6 +1,6 @@
 ---
 title: "SEC Filing Search API — Find Any Filing in Seconds"
-description: "Search SEC filings by company, form type, date range, and content. Full-text and semantic search across millions of EDGAR documents. Start free."
+description: "Search SEC filings by company, form type, date range, and content. Full-text and semantic search across millions of EDGAR documents."
 ---
 
 # SEC Filing Search API
@@ -23,16 +23,8 @@ SEC API handles all of this. You get a single API endpoint that supports:
 Search for filings mentioning "artificial intelligence" in recent 10-K risk factors:
 
 ```bash
-curl -X POST \
-  -H "x-api-key: $SEC_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "artificial intelligence risks and regulation",
-    "form_types": ["10-K"],
-    "section": "risk_factors",
-    "limit": 5
-  }' \
-  "https://api.secapi.ai/v1/search/semantic"
+curl -H "x-api-key: $SEC_API_KEY" \
+  "https://api.secapi.ai/v1/search/semantic?q=artificial+intelligence+risks+and+regulation&form=10-K&limit=5"
 ```
 
 ```json
@@ -58,7 +50,7 @@ curl -X POST \
 | Semantic search | `/v1/search/semantic` | AI-powered search that matches meaning |
 | Filing lookup | `/v1/filings` | Filter by ticker, form type, date range |
 | Latest filing | `/v1/filings/latest` | Get the most recent filing matching criteria |
-| Section extraction | `/v1/sections` | Pull specific sections from any filing |
+| Section extraction | `/v1/filings/{accession_number}/sections/{section_key}` | Pull specific sections from any filing |
 
 ## Common use cases
 
@@ -72,16 +64,8 @@ curl -H "x-api-key: $SEC_API_KEY" \
 ### Search across all 8-K filings for M&A activity
 
 ```bash
-curl -X POST \
-  -H "x-api-key: $SEC_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "merger acquisition definitive agreement",
-    "form_types": ["8-K"],
-    "date_from": "2024-01-01",
-    "limit": 10
-  }' \
-  "https://api.secapi.ai/v1/search/semantic"
+curl -H "x-api-key: $SEC_API_KEY" \
+  "https://api.secapi.ai/v1/search/semantic?q=merger+acquisition+definitive+agreement&form=8-K&limit=10"
 ```
 
 ### List all filings for a company
@@ -118,10 +102,9 @@ See [Filing Types and Exhibits](/filing-types-and-exhibits) for the complete lis
 ## Get Started
 
 <Card title="Get your API key" icon="key" href="/getting-started">
-  Create a free account and start searching filings in under 60 seconds.
+  Create an API key and start searching filings in under 60 seconds.
 </Card>
 
 - [Semantic Search Tutorial](/tutorials/semantic-search-risk-factors)
 - [API Reference](/api-reference/search)
 - [Full documentation](/api-overview)
-

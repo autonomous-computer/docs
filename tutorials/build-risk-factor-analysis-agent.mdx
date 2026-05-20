@@ -80,9 +80,8 @@ def fetch_annual_filings(ticker: str, limit: int = 5) -> list[dict]:
         headers=HEADERS,
         params={
             "ticker": ticker,
-            "form_type": "10-K",
+            "form": "10-K",
             "limit": limit,
-            "sort": "filed_at:desc",
         },
     )
     resp.raise_for_status()
@@ -92,7 +91,7 @@ def fetch_annual_filings(ticker: str, limit: int = 5) -> list[dict]:
 def fetch_risk_factors(accession_number: str) -> str:
     """Fetch the Item 1A (Risk Factors) section from a filing."""
     resp = requests.get(
-        f"{API_BASE}/v1/filings/{accession_number}/sections/1A",
+        f"{API_BASE}/v1/filings/{accession_number}/sections/item_1a",
         headers=HEADERS,
     )
     if resp.status_code == 404:
@@ -128,18 +127,14 @@ def search_risk_factors(query: str, ticker: str = None, limit: int = 10) -> list
         ticker: Optional ticker to scope the search.
         limit: Maximum number of results.
     """
-    payload = {
-        "query": query,
-        "section": "1A",
-        "limit": limit,
-    }
+    params = {"q": query, "section_key": "item_1a", "limit": limit}
     if ticker:
-        payload["ticker"] = ticker
+        params["ticker"] = ticker
 
-    resp = requests.post(
+    resp = requests.get(
         f"{API_BASE}/v1/sections/search",
-        headers={**HEADERS, "Content-Type": "application/json"},
-        json=payload,
+        headers=HEADERS,
+        params=params,
     )
     resp.raise_for_status()
     return resp.json().get("data", [])
@@ -514,4 +509,3 @@ on global supply chains and consumer demand...
 - **Quantify risk sentiment**: Use the SEC API intelligence query endpoint to score the severity and likelihood of each risk factor.
 
 See the [Find Risk Factors with Semantic Search](/tutorials/semantic-search-risk-factors) tutorial for more on the semantic search capabilities.
-
