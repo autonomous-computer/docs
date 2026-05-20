@@ -1,63 +1,52 @@
 ---
 title: "SEC Filing Download & CDN API — Fast PDF and Document Retrieval"
-description: "Download SEC filing documents at 100+ requests per second from a global CDN. PDF, HTML, and XML filings mirrored from EDGAR with no rate limits. Start free."
+description: "Download SEC filing documents through SEC API. PDF, HTML, and XML filings are available through accession-number download and export endpoints."
 ---
 
 # SEC Filing Download & CDN API
 
-EDGAR's 10 requests-per-second rate limit makes bulk document retrieval painfully slow. SEC API mirrors every filing document to a global Cloudflare R2 CDN, so you can download PDFs, HTML filings, and XML exhibits at 100+ requests per second with sub-100ms latency worldwide.
+EDGAR's 10 requests-per-second rate limit makes bulk document retrieval painful. SEC API gives you accession-number download and export endpoints so you can fetch filing documents through the same authenticated API surface you use for filing search.
 
 ## Capabilities
 
 <CardGroup cols={2}>
-  <Card title="100+ req/sec throughput" icon="gauge">
-    No rate limiting. Download thousands of filing documents in minutes instead of hours.
+  <Card title="API-first downloads" icon="gauge">
+    Download filing documents by accession number without screen-scraping EDGAR archive pages.
   </Card>
-  <Card title="Global CDN" icon="globe">
-    Documents served from Cloudflare R2 edge locations worldwide. Sub-100ms latency from any region.
+  <Card title="Export workflows" icon="globe">
+    Use export endpoints when you need filing artifacts packaged for downstream storage or analysis.
   </Card>
   <Card title="All document types" icon="file-text">
     PDFs, HTML filings, XML/XBRL exhibits, and all associated documents for every filing since 1993.
   </Card>
-  <Card title="Direct URL resolution" icon="link">
-    Pass an accession number and get permanent, stable URLs for every document in the filing package.
+  <Card title="Direct accession lookup" icon="link">
+    Pass an accession number and retrieve the filing document through a stable API route.
   </Card>
 </CardGroup>
 
 ## Quick start
 
-Get download URLs for all documents in a filing:
+Download a filing by accession number:
 
 ```bash
 curl -H "x-api-key: $SEC_API_KEY" \
-  "https://api.secapi.ai/v1/filings/documents?accession_number=0000320193-24-000081"
+  "https://api.secapi.ai/v1/filings/0000320193-24-000081/download" -o filing.html
 ```
 
 ```json
 {
   "accession_number": "0000320193-24-000081",
-  "documents": [
-    {
-      "filename": "aapl-20240928.htm",
-      "type": "10-K",
-      "size_bytes": 2845000,
-      "cdn_url": "https://cdn.secapi.ai/0000320193-24-000081/aapl-20240928.htm"
-    },
-    {
-      "filename": "R1.htm",
-      "type": "EX-21",
-      "size_bytes": 45000,
-      "cdn_url": "https://cdn.secapi.ai/0000320193-24-000081/R1.htm"
-    }
-  ]
+  "content_type": "text/html",
+  "filename": "aapl-20240928.htm",
+  "requestId": "req_..."
 }
 ```
 
-Download a specific document directly:
+Export a filing package for downstream processing:
 
 ```bash
 curl -H "x-api-key: $SEC_API_KEY" \
-  "https://cdn.secapi.ai/0000320193-24-000081/aapl-20240928.htm" -o filing.html
+  "https://api.secapi.ai/v1/filings/0000320193-24-000081/export"
 ```
 
 ## Use cases
@@ -82,15 +71,15 @@ Maintain auditable copies of all filings from counterparties or portfolio compan
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /v1/filings/documents` | List all documents for a filing |
-| `GET /cdn.secapi.ai/:path` | Direct CDN download for a document |
+| `GET /v1/filings/{accession_number}/download` | Download a filing document by accession number |
+| `GET /v1/filings/{accession_number}/export` | Export a filing package for downstream processing |
 
 ## Why SEC API for filing downloads
 
 | Feature | SEC API | Raw EDGAR | sec-api.io |
 |---------|-----------|-----------|------------|
-| Download speed | 100+ req/sec | 10 req/sec | Varies |
-| Global CDN | Yes (R2) | No (US only) | No |
+| Download speed | API-managed throughput | 10 req/sec | Varies |
+| Authenticated API access | Yes | No | Yes |
 | Stable URLs | Yes | Subject to change | Yes |
 | All document types | Yes | Yes | Partial |
 | Bulk download support | Yes | No | Partial |
@@ -99,10 +88,9 @@ Maintain auditable copies of all filings from counterparties or portfolio compan
 ## Get Started
 
 <Card title="Get your API key" icon="key" href="/getting-started">
-  Start downloading SEC filings at full speed. 250 free API calls per month.
+  Create an API key and start downloading SEC filings through the API.
 </Card>
 
 - [SEC EDGAR API](/use-cases/sec-edgar-api)
 - [Filing Search API](/use-cases/sec-filing-search-api)
 - [API Reference](/api-reference)
-

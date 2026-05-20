@@ -9,7 +9,7 @@ Use LangChain's MCP adapters to register SEC API as a streamable HTTP tool serve
 
 ## Prerequisites
 
-- SEC API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Set `SEC_API_KEY`.
+- SEC API key. Sign up at [secapi.ai](https://secapi.ai). Set `SEC_API_KEY`.
 - Python: `langchain-mcp-adapters`, `langchain`, `langgraph`, and a model provider package.
 - JavaScript / TypeScript: `@langchain/mcp-adapters`, `@langchain/core`, `@langchain/langgraph`, and a model provider package.
 
@@ -73,7 +73,7 @@ Run either snippet. The agent should call the `filings.latest` tool with `ticker
 - **`401 Unauthorized`** — `x-api-key` is missing or wrong. Sanity check: `curl https://api.secapi.ai/v1/limits -H "x-api-key: $SEC_API_KEY"`.
 - **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
 - **No tools returned** — confirm the URL ends in `/mcp` (not `/sse`); the SSE transport is deprecated as of MCP 2025-03-26.
-- **Streaming notifications missing** — if your adapter version does not API MCP progress events, tool calls can still complete while long-running progress updates are omitted.
+- **Streaming notifications missing** — if your adapter version does not support MCP progress events, tool calls can still complete while long-running progress updates are omitted.
 
 ## Next
 
