@@ -1,31 +1,31 @@
 # Migrate from financialdatasets.ai
 
 <Info>
-This guide helps you swap `financialdatasets.ai` workflows onto Datastream without losing the normalized statement views you already depend on.
+This guide helps you swap `financialdatasets.ai` workflows onto SEC API without losing the normalized statement views you already depend on.
 </Info>
 
 ## What changes when you switch
 
 <CardGroup cols={2}>
   <Card title="Primary-source lineage" icon="badge-info" href="/freshness-and-trust">
-    Datastream exposes SEC-backed provenance and freshness alongside normalized rows.
+    SEC API exposes SEC-backed provenance and freshness alongside normalized rows.
   </Card>
-  <Card title="More than statements" icon="layers-3" href="/datastream-docs">
+  <Card title="More than statements" icon="layers-3" href="/sec-api-docs">
     Filings, sections, ownership, compensation, webhooks, streams, and MCP all live in the same product.
   </Card>
   <Card title="Usage signals in every response" icon="gauge" href="/auth-and-pricing">
     Meter and plan headers stay visible while you migrate and benchmark.
   </Card>
   <Card title="Better section and filing context" icon="file-search" href="/api-reference/filings">
-    Datastream gives you normalized financials plus the filing context that produced them.
+    SEC API gives you normalized financials plus the filing context that produced them.
   </Card>
 </CardGroup>
 
 ## Route mapping
 
-- `/financials/income-statement` -> `/v1/statements/income_statement`
-- `/financials/balance-sheet` -> `/v1/statements/balance_sheet`
-- `/financials/cash-flow-statement` -> `/v1/statements/cash_flow_statement`
+- `/financials/income-statements` -> `/v1/statements/income_statement`
+- `/financials/balance-sheets` -> `/v1/statements/balance_sheet`
+- `/financials/cash-flow-statements` -> `/v1/statements/cash_flow_statement`
 - `/financial-metrics` -> `/v1/facts` plus statement endpoints
 - `/sec-filings` -> `/v1/filings` and `/v1/filings/latest`
 - `/insider-trades` -> `/v1/insiders`
@@ -35,33 +35,33 @@ This guide helps you swap `financialdatasets.ai` workflows onto Datastream witho
 ### Income statement
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/statements/income_statement?ticker=AAPL&period=annual&limit=4"
 ```
 
 ### Balance sheet
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/statements/balance_sheet?ticker=AAPL&period=annual&limit=4"
 ```
 
 ### Filing retrieval
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 ```
 
 <Prompt>
-Translate this financialdatasets.ai integration to Omni Datastream. Replace statement calls with the matching statement endpoints, use /v1/facts when tag-level values matter, move filing retrieval to /v1/filings, and preserve requestId, provenance, freshness, and plan headers in the integration layer.
+Translate this financialdatasets.ai integration to SEC API. Replace statement calls with the matching statement endpoints, use /v1/facts when tag-level values matter, move filing retrieval to /v1/filings, and preserve requestId, provenance, freshness, and plan headers in the integration layer.
 </Prompt>
 
 ## Migration notes
 
-- Pin `omni-version` and compare statement-level fields before swapping production dashboards
+- Pin `secapi-version` and compare statement-level fields before swapping production dashboards
 - Use `/v1/facts` when you need tag-level primary-source values instead of a pre-aggregated metrics bundle
-- Expect larger payloads than financialdatasets.ai on some statement calls because Omni includes provenance and richer structure
+- Expect larger payloads than financialdatasets.ai on some statement calls because SEC API includes provenance and richer structure
 - If you only need a token-efficient machine summary, prefer compact section mode and the statement-specific endpoints instead of full rendered filings
 
 ## Recommended cutover order
@@ -85,4 +85,3 @@ Translate this financialdatasets.ai integration to Omni Datastream. Replace stat
     Understand plan headers, usage posture, and onboarding before cutover.
   </Card>
 </CardGroup>
-

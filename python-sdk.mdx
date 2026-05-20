@@ -8,7 +8,7 @@ The Python SDK is built for research, ETL, notebooks, and backend services that 
 
 <Steps>
   <Step title="Install the SDK">
-    Add the package to the environment where your notebook, worker, or service will run.
+    Use the public Python package name once it is available in your package index.
   </Step>
   <Step title="Set the API key and base URL">
     Default to `https://api.secapi.ai` unless you are testing a local or staging environment.
@@ -19,8 +19,10 @@ The Python SDK is built for research, ETL, notebooks, and backend services that 
 </Steps>
 
 ```bash
-pip install omni-datastream-py
+pip install secapi-client
 ```
+
+If the package is not visible in your index yet, use the REST example below. The SDK mirrors the same endpoints and `x-api-key` authentication.
 
 ## What it is good for
 
@@ -32,38 +34,60 @@ pip install omni-datastream-py
     Useful when you need benchmarkable workflows with explicit freshness and provenance metadata.
   </Card>
   <Card title="ETL and enrichment" icon="database" href="/api-reference/artifacts">
-    Fit for downstream enrichment services that need Datastream payloads and artifact workflows.
+    Fit for downstream enrichment services that need SEC API payloads and artifact workflows.
   </Card>
   <Card title="Backend jobs" icon="server" href="/operations">
     Works well in recurring workers that need the same contract shape as the public API.
   </Card>
 </CardGroup>
 
-## First useful calls
+## First useful calls with REST
 
 ```python
-from omni_datastream_py import OmniDatastreamClient
+import os
+import requests
 
-client = OmniDatastreamClient(
-    api_key="ods_test_...",
-    base_url="https://api.secapi.ai",
+BASE_URL = "https://api.secapi.ai"
+HEADERS = {"x-api-key": os.environ["SEC_API_KEY"]}
+
+def get_json(path, params=None):
+    response = requests.get(f"{BASE_URL}{path}", params=params, headers=HEADERS, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+issuer = get_json("/v1/entities/resolve", {"ticker": "AAPL"})
+filing = get_json("/v1/filings/latest", {"ticker": "AAPL", "form": "10-K"})
+statements = get_json("/v1/statements/all", {"ticker": "AAPL", "period": "annual", "limit": 1})
+market = get_json("/v1/market/snapshots", {"symbols": "AAPL"})
+
+answer_response = requests.post(
+    f"{BASE_URL}/v1/intelligence/query",
+    headers={**HEADERS, "Content-Type": "application/json"},
+    json={
+        "query": "Give me a recommendation for how to make this portfolio factor neutral.",
+        "portfolio": [
+            {"symbol": "AAPL", "weight": 0.4},
+            {"symbol": "MSFT", "weight": 0.35},
+            {"symbol": "NVDA", "weight": 0.25},
+        ],
+        "responseMode": "compact_json_and_md",
+    },
+    timeout=60,
 )
+answer_response.raise_for_status()
+answer = answer_response.json()
+```
 
-issuer = client.resolve_entity(ticker="AAPL")
+## SDK shape
+
+When the public SDK package is available, the intended package name is `secapi-client`:
+
+```python
+import os
+from secapi import SecApiClient
+
+client = SecApiClient(api_key=os.environ["SEC_API_KEY"])
 filing = client.latest_filing(ticker="AAPL", form="10-K")
-statements = client.all_statements(ticker="AAPL", period="annual", limit=1)
-market = client.market_snapshots(symbols=["AAPL"])
-macro = client.macro_indicators(country="JP", indicator_key="CPIAUCSL", limit=3)
-factors = client.factor_returns(keys=["MKT_US", "QUALITY"], lookback="6m", window="1m")
-answer = client.intelligence_query({
-    "query": "Give me a recommendation for how to make this portfolio factor neutral.",
-    "portfolio": [
-        {"symbol": "AAPL", "weight": 0.4},
-        {"symbol": "MSFT", "weight": 0.35},
-        {"symbol": "NVDA", "weight": 0.25},
-    ],
-    "responseMode": "compact_json_and_md",
-})
 ```
 
 ## Reliability defaults
@@ -77,7 +101,7 @@ The Python SDK retries transient failures with exponential backoff and a per-cli
 Disable SDK retries when your application already owns retry behavior:
 
 ```python
-client = OmniDatastreamClient(api_key="ods_test_...", retry=False, telemetry=False)
+client = SecApiClient(api_key=os.environ["SEC_API_KEY"], retry=False, telemetry=False)
 ```
 
 Opt into mutating retries only when the operation is idempotent:
@@ -113,7 +137,7 @@ The full surface — `dilution_events`, `dilution_event_detail`, `dilution_warra
 Use the Python SDK to build a research workflow around AAPL. Resolve the issuer, fetch the latest 10-K, read the latest market snapshot, read Japan CPI, run the portfolio factor-neutralization query, and write the results into a markdown brief that preserves requestId, provenance, freshness, and materialization metadata.
 </Prompt>
 
-## Operator paths
+## Artifact paths
 
 ```python
 artifact = client.create_artifact({
@@ -123,7 +147,6 @@ artifact = client.create_artifact({
     "kind": "markdown_bundle",
 })
 manifest = client.artifact_manifest(artifact["id"])
-observability = client.observability()
 ```
 
 <Warning>
@@ -140,7 +163,6 @@ If you are caching responses in a notebook or long-running worker, keep the fres
     Compare Python with the other runtime surfaces before standardizing.
   </Card>
   <Card title="Benchmark workflows" icon="gauge" href="/benchmark-workflows">
-    See how OMNI measures latency, freshness, and workflow parity.
+    See how SEC API measures latency, freshness, and workflow parity.
   </Card>
 </CardGroup>
-

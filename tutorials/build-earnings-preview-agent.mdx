@@ -1,25 +1,25 @@
 ---
 title: "Build an Earnings Preview Agent"
-description: "Build a Node.js agent that generates pre-earnings research briefs using OMNI intelligence bundles, factor decomposition, and insider activity data."
+description: "Build a Node.js agent that generates pre-earnings research briefs using SEC API intelligence bundles, factor decomposition, and insider activity data."
 ---
 
 # Build an Earnings Preview Agent
 
-Before a company reports earnings, analysts need a quick-hit research brief covering the company's fundamentals, factor exposures, and recent insider activity. This tutorial builds a Node.js agent that pulls data from multiple OMNI Datastream endpoints and assembles a pre-earnings research brief you can share with your team.
+Before a company reports earnings, analysts need a quick-hit research brief covering the company's fundamentals, factor exposures, and recent insider activity. This tutorial builds a Node.js agent that pulls data from multiple SEC API endpoints and assembles a pre-earnings research brief you can share with your team.
 
 ## What you will build
 
 - A Node.js script that generates pre-earnings research briefs
-- Company intelligence summary from the OMNI intelligence bundle
+- Company intelligence summary from the SEC API intelligence bundle
 - Factor decomposition showing what is driving the stock
 - Recent insider transactions leading up to earnings
 - A formatted markdown report ready for distribution
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - Node.js 18+
-- Basic familiarity with the OMNI Datastream API
+- Basic familiarity with the SEC API
 
 ## Step 1 — Set up the project
 
@@ -42,7 +42,7 @@ Create `package.json`:
     "preview": "node index.js"
   },
   "dependencies": {
-    "@omni-datastream/sdk-js": "latest",
+    "@secapi/sdk": "latest",
     "dotenv": "^16.4.0"
   }
 }
@@ -57,20 +57,20 @@ npm install
 Create a `.env` file:
 
 ```
-OMNI_DATASTREAM_API_KEY=your-api-key
+SEC_API_KEY=your-api-key
 ```
 
 ## Step 2 — Build the data fetchers
 
-Create `index.js` with functions that pull data from each OMNI Datastream endpoint.
+Create `index.js` with functions that pull data from each SEC API endpoint.
 
 ```javascript
 import "dotenv/config";
 import { writeFileSync } from "fs";
-import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+import { SecApiClient } from "@secapi/sdk";
 
-const client = new OmniDatastreamClient({
-  apiKey: process.env.OMNI_DATASTREAM_API_KEY,
+const client = new SecApiClient({
+  apiKey: process.env.SEC_API_KEY,
 });
 
 const ticker = process.argv[2] || "AAPL";
@@ -283,7 +283,7 @@ function generateReport(ticker, intel, preview, factors, insiders, earnings) {
   // Footer
   lines.push("---");
   lines.push(
-    "*Data sourced from SEC EDGAR via OMNI Datastream API. This is not investment advice.*"
+    "*Data sourced from SEC EDGAR via SEC API. This is not investment advice.*"
   );
 
   return lines.join("\n");
@@ -460,7 +460,7 @@ if (process.argv.includes("--batch")) {
 
 ## Step 7 — Extend with custom queries
 
-Use the OMNI intelligence query endpoint to add custom research questions to the brief.
+Use the SEC API intelligence query endpoint to add custom research questions to the brief.
 
 ```javascript
 async function askQuestion(ticker, question) {

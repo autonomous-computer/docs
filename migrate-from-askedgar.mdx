@@ -1,20 +1,20 @@
 # Migrate from AskEdgar
 
 <Info>
-This guide maps every AskEdgar dilution endpoint onto OMNI Datastream and walks through the auth, verification-model, and pricing changes you'll see at cutover.
+This guide maps every AskEdgar dilution endpoint onto SEC API and walks through the auth, verification-model, and pricing changes you'll see at cutover.
 </Info>
 
 ## What changes when you switch
 
 <CardGroup cols={2}>
   <Card title="Per-field verification, not a boolean" icon="shield-check" href="/freshness-and-trust">
-    Replace `verified === true` checks with the OMNI `verification` block (`confidence`, `crossValidationsPassed`, `sourceSpanResolved`).
+    Replace `verified === true` checks with the SEC API `verification` block (`confidence`, `crossValidationsPassed`, `sourceSpanResolved`).
   </Card>
   <Card title="Auth header swap" icon="key" href="/auth-and-pricing">
-    AskEdgar uses `API-KEY: …`; OMNI uses `x-api-key: …`. Same per-request shape, different header name.
+    AskEdgar uses `API-KEY: …`; SEC API uses `x-api-key: …`. Same per-request shape, different header name.
   </Card>
   <Card title="Predictable subscription option" icon="credit-card" href="/plans-and-pricing">
-    OMNI offers PAYG and flat subscriptions ($55 Personal, $239 Team). AskEdgar's API is per-KB only.
+    SEC API offers PAYG and flat subscriptions ($55/mo or $588/yr Personal, $239/mo or $2,388/yr Team). AskEdgar's API is per-KB only.
   </Card>
   <Card title="Broader API surface" icon="layers-2" href="/api-reference">
     14 dilution endpoints plus 38 other endpoint families (filings, statements, factors, insiders, macro). One key, 39 families.
@@ -27,7 +27,7 @@ This guide maps every AskEdgar dilution endpoint onto OMNI Datastream and walks 
 ## Route mapping
 
 <Warning>
-AskEdgar bundles warrants and convertibles into a single `DilutionEntity`. OMNI splits them into dedicated `/v1/dilution/warrants` and `/v1/dilution/convertibles` routes. Plan for a small shape change in your client when you cut over those reads.
+AskEdgar bundles warrants and convertibles into a single `DilutionEntity`. SEC API splits them into dedicated `/v1/dilution/warrants` and `/v1/dilution/convertibles` routes. Plan for a small shape change in your client when you cut over those reads.
 </Warning>
 
 - `/v1/dilution-data` -> `/v1/dilution/events`
@@ -57,9 +57,9 @@ AskEdgar bundles warrants and convertibles into a single `DilutionEntity`. OMNI 
 curl "https://api.askedgar.com/v1/dilution-data?ticker=MULN" \
   -H "API-KEY: $ASKEDGAR_API_KEY"
 
-# OMNI Datastream
+# SEC API
 curl "https://api.secapi.ai/v1/dilution/events?ticker=MULN" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+  -H "x-api-key: $SEC_API_KEY"
 ```
 
 ### Latest dilution score
@@ -69,9 +69,9 @@ curl "https://api.secapi.ai/v1/dilution/events?ticker=MULN" \
 curl "https://api.askedgar.com/v1/dilution-rating?ticker=MULN" \
   -H "API-KEY: $ASKEDGAR_API_KEY"
 
-# OMNI Datastream
+# SEC API
 curl "https://api.secapi.ai/v1/dilution/score?ticker=MULN" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+  -H "x-api-key: $SEC_API_KEY"
 ```
 
 ### Share-float history (full series)
@@ -81,25 +81,25 @@ curl "https://api.secapi.ai/v1/dilution/score?ticker=MULN" \
 curl "https://api.askedgar.com/v1/historical-float-pro?ticker=MULN" \
   -H "API-KEY: $ASKEDGAR_API_KEY"
 
-# OMNI Datastream
+# SEC API
 curl "https://api.secapi.ai/v1/dilution/share-float-history?ticker=MULN" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+  -H "x-api-key: $SEC_API_KEY"
 ```
 
 <Prompt>
-Migrate this AskEdgar integration to OMNI Datastream. Replace the host `api.askedgar.com` with `api.secapi.ai` (the existing paths already carry `/v1/...`, so the cutover is host-only — do NOT add `/v1` to the host or you will get `/v1/v1/...`). Swap the `API-KEY` header for `x-api-key`. Map `/v1/dilution-data` to `/v1/dilution/events`, split warrants/convertibles into `/v1/dilution/warrants` and `/v1/dilution/convertibles`, and replace any `verified === true` check with `verification.confidence >= 0.9 && verification.sourceSpanResolved`. Add `?view=agent` for token-efficient summaries on token-sensitive paths. Keep `Request-Id` logging and any current fallback gaps in the final implementation notes.
+Migrate this AskEdgar integration to SEC API. Replace the host `api.askedgar.com` with `api.secapi.ai` (the existing paths already carry `/v1/...`, so the cutover is host-only — do NOT add `/v1` to the host or you will get `/v1/v1/...`). Swap the `API-KEY` header for `x-api-key`. Map `/v1/dilution-data` to `/v1/dilution/events`, split warrants/convertibles into `/v1/dilution/warrants` and `/v1/dilution/convertibles`, and replace any `verified === true` check with `verification.confidence >= 0.9 && verification.sourceSpanResolved`. Add `?view=agent` for token-efficient summaries on token-sensitive paths. Keep `Request-Id` logging and any current fallback gaps in the final implementation notes.
 </Prompt>
 
 ## Verification model migration
 
-AskEdgar exposes a single boolean. OMNI exposes the components an agent
+AskEdgar exposes a single boolean. SEC API exposes the components an agent
 can reason about:
 
 ```json
 // AskEdgar
 { "verified": true }
 
-// OMNI
+// SEC API
 {
   "verification": {
     "confidence": 0.94,
@@ -107,7 +107,7 @@ can reason about:
     "sourceSpanResolved": true,
     "verifiedAt": "2026-04-22T14:31:08Z",
     "modelVersion": "claude-opus-4-7",
-    "reviewer": "human:operator-id-184"
+    "reviewer": "human:reviewer-184"
   }
 }
 ```
@@ -118,22 +118,22 @@ Tighten or relax the threshold per workflow.
 
 ## Pricing impact
 
-AskEdgar's API is strictly per-KB. OMNI offers PAYG (per-call) and flat
+AskEdgar's API is strictly per-KB. SEC API offers PAYG (per-call) and flat
 subscriptions. The conversion lever depends on payload size and call
 volume:
 
-| Profile                 | Volume                   | AskEdgar API (PAYG, per-KB) | OMNI option                 | OMNI $/mo |
+| Profile                 | Volume                   | AskEdgar API (PAYG, per-KB) | SEC API option                 | SEC API $/mo |
 | ----------------------- | ------------------------ | --------------------------- | --------------------------- | --------- |
 | Light researcher        | 100 dilution-data calls  | ~$10.80 (≈$0.108/call)      | PAYG (250 free grant)       | **$0**    |
 | Hedge-fund analyst      | 600 dilution-data calls  | ~$64.80                     | PAYG (250 free + 350 × $0.01) | **$3.50** |
-| Hedge-fund analyst      | 600 dilution-data calls  | ~$64.80                     | Personal (predictable)      | **$55**   |
-| Small-cap research team | 5,000 dilution-data calls| ~$540                       | Team (predictable)          | **$239**  |
+| Hedge-fund analyst      | 600 dilution-data calls  | ~$64.80                     | Personal (predictable)      | **$55/mo or $588/yr**   |
+| Small-cap research team | 5,000 dilution-data calls| ~$540                       | Team (predictable)          | **$239/mo or $2,388/yr**  |
 | Small-cap research team | 5,000 dilution-data calls| ~$540                       | PAYG (4,750 × $0.01)        | **$47.50**|
 
 AskEdgar API costs assume the published `/v1/dilution-data` rate of
-$0.018/KB and a typical ~6 KB response. OMNI quotas verified against
-`infra/stripe/pricing-plans.json`. The 250 included calls renew monthly
-per `apps/docs/content/billing-faq.md`.
+$0.018/KB and a typical ~6 KB response. SEC API prices are from the public
+`GET /v1/billing/rates` catalog verified on 2026-04-27.
+calls renew monthly.
 
 ## Migration script template
 
@@ -147,7 +147,7 @@ shopt -s globstar nullglob
 # carry /v1/... so combining the two would produce /v1/v1/... (broken).
 sed -i.bak \
   -e 's|https://api\.askedgar\.com|https://api.secapi.ai|g' \
-  -e 's|API-KEY: \${ASKEDGAR_API_KEY}|x-api-key: ${OMNI_DATASTREAM_API_KEY}|g' \
+  -e 's|API-KEY: \${ASKEDGAR_API_KEY}|x-api-key: ${SEC_API_KEY}|g' \
   -e 's|/v1/dilution-data|/v1/dilution/events|g' \
   -e 's|/v1/dilution-rating|/v1/dilution/score|g' \
   -e 's|/v1/historical-float-pro|/v1/dilution/share-float-history|g' \
@@ -166,11 +166,11 @@ sed -i.bak \
 
 ## Migration notes
 
-- Pin `omni-version` in production clients before cutover.
+- Pin `secapi-version` in production clients before cutover.
 - Capture `Request-Id` during dual-run testing so request diagnostics stay comparable across the two providers.
-- AskEdgar's `verified: boolean` collapses 6 dimensions into 1. Expect richer per-row metadata on OMNI; build your gating logic around the `verification` block, not a single flag.
-- AskEdgar's API is metered per-KB; OMNI's is per-call. For payload-heavy workloads the unit-cost story flips — re-benchmark before locking the pricing tier.
-- `askedgar_url` is preserved on every OMNI dilution row, so you can keep a back-link to the AskEdgar Copilot UI if your operators want to dual-source during cutover.
+- AskEdgar's `verified: boolean` collapses 6 dimensions into 1. Expect richer per-row metadata on SEC API; build your gating logic around the `verification` block, not a single flag.
+- AskEdgar's API is metered per-KB; SEC API's is per-call. For payload-heavy workloads the unit-cost story flips — re-benchmark before locking the pricing tier.
+- `askedgar_url` is preserved on every SEC API dilution row, so you can keep a back-link to the AskEdgar Copilot UI if your teams want to dual-source during cutover.
 
 ## Recommended cutover order
 
@@ -187,14 +187,13 @@ sed -i.bak \
 ## Read next
 
 <CardGroup cols={3}>
-  <Card title="Compare OMNI Datastream and AskEdgar" icon="git-compare-arrows" href="/compare-askedgar">
+  <Card title="Compare SEC API and AskEdgar" icon="git-compare-arrows" href="/compare-askedgar">
     Side-by-side feature, schema, and pricing comparison.
   </Card>
   <Card title="Dilution endpoints" icon="square-terminal" href="/api-reference/dilution">
-    Open the 14 OMNI dilution routes with realistic examples.
+    Open the 14 SEC API dilution routes with realistic examples.
   </Card>
   <Card title="Auth and pricing" icon="key" href="/auth-and-pricing">
     Provision an org-scoped API key and review the PAYG ladder.
   </Card>
 </CardGroup>
-

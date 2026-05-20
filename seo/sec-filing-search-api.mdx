@@ -5,13 +5,13 @@ description: "Search SEC filings by company, form type, date range, and content.
 
 # SEC Filing Search API
 
-Search across every filing on SEC EDGAR without building your own index. Datastream provides keyword search, filtered queries, and AI-powered semantic search across millions of documents.
+Search across every filing on SEC EDGAR without building your own index. SEC API provides keyword search, filtered queries, and AI-powered semantic search across millions of documents.
 
 ## The problem with searching EDGAR directly
 
 EDGAR's full-text search (EFTS) is limited: no structured filters, inconsistent ranking, no semantic understanding, and aggressive rate limits. Building your own search index means downloading terabytes of filings, parsing SGML/HTML, and maintaining infrastructure.
 
-Datastream handles all of this. You get a single API endpoint that supports:
+SEC API handles all of this. You get a single API endpoint that supports:
 
 - **Keyword search** across filing text
 - **Semantic search** that understands meaning, not just keywords
@@ -24,7 +24,7 @@ Search for filings mentioning "artificial intelligence" in recent 10-K risk fact
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "artificial intelligence risks and regulation",
@@ -65,7 +65,7 @@ curl -X POST \
 ### Find a company's latest annual report
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=TSLA&form=10-K"
 ```
 
@@ -73,7 +73,7 @@ curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "merger acquisition definitive agreement",
@@ -87,17 +87,17 @@ curl -X POST \
 ### List all filings for a company
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=NVDA&limit=20"
 ```
 
-## Why Datastream over alternatives
+## Why SEC API over alternatives
 
-| Feature | Datastream | EDGAR EFTS | Bloomberg | Refinitiv |
+| Feature | SEC API | EDGAR EFTS | Bloomberg | Refinitiv |
 |---------|-----------|-----------|-----------|-----------|
 | Semantic search | Yes | No | No | No |
 | Section-level search | Yes | No | Partial | Partial |
-| API access | REST + SDKs | Limited | Terminal only | Proprietary |
+| API access | REST + SDKs | Limited | closed workstation | Proprietary |
 | Real-time indexing | Minutes | Hours | Varies | Varies |
 | Pricing | Pay-as-you-go | Free (limited) | $24k+/year | $22k+/year |
 

@@ -1,6 +1,6 @@
 ---
 title: "Search SEC Enforcement Actions"
-description: "Find and filter SEC enforcement actions by violation type, date range, and respondent using the Datastream API. Includes curl, Python, and JavaScript examples."
+description: "Find and filter SEC enforcement actions by violation type, date range, and respondent using the SEC API. Includes curl, Python, and JavaScript examples."
 ---
 
 # Search SEC Enforcement Actions
@@ -9,7 +9,7 @@ The SEC publishes enforcement actions for securities fraud, insider trading, acc
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - Basic familiarity with REST APIs
 - (Optional) Python 3.8+ or Node.js 18+ for SDK examples
 
@@ -20,16 +20,16 @@ The `/v1/events/enforcement` endpoint returns enforcement actions with structure
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/events/enforcement?limit=5"
 ```
 
 ### Python
 
 ```python
-from omni_datastream_py import OmniDatastreamClient
+from secapi_client import SecApiClient
 
-client = OmniDatastreamClient(api_key="your-api-key")
+client = SecApiClient(api_key="your-api-key")
 
 actions = client.events.enforcement(limit=5)
 
@@ -40,10 +40,10 @@ for action in actions.data:
 ### JavaScript
 
 ```ts
-import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+import { SecApiClient } from "@secapi/sdk";
 
-const client = new OmniDatastreamClient({
-  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+const client = new SecApiClient({
+  apiKey: process.env.SEC_API_KEY!,
 });
 
 const actions = await client.events.enforcement({ limit: 5 });
@@ -72,7 +72,7 @@ Narrow your search to specific violation categories. Common types include `fraud
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/events/enforcement?violation_type=insider_trading&limit=10"
 ```
 
@@ -115,7 +115,7 @@ Search enforcement actions within a specific time window.
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/events/enforcement?date_from=2024-01-01&date_to=2024-12-31&limit=20"
 ```
 

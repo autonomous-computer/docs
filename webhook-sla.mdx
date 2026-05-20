@@ -5,7 +5,7 @@ description: "99.9% webhook delivery guarantee with signed payloads, automatic r
 
 # Webhook Delivery SLA
 
-OMNI Datastream guarantees 99.9% webhook delivery for all configured endpoints.
+SEC API guarantees 99.9% webhook delivery for all configured endpoints.
 
 ## Delivery Guarantee
 
@@ -36,7 +36,7 @@ After 8 failed attempts, the delivery is marked as `failed` and can be manually 
 
 ## Signed Payloads
 
-Every webhook delivery includes an `Omni-Signature` header with an HMAC-SHA256 signature. Verify the signature to ensure the payload is authentic:
+Every webhook delivery includes an `secapi-signature` header with an HMAC-SHA256 signature. Verify the signature to ensure the payload is authentic:
 
 ```typescript
 import { createHmac, timingSafeEqual } from "crypto"
@@ -64,23 +64,16 @@ Every delivery attempt is logged and queryable:
 ```bash
 # List recent deliveries
 curl "https://api.secapi.ai/v1/webhook_endpoints/{id}/deliveries?limit=10" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+  -H "x-api-key: $SEC_API_KEY"
 
 # Replay a failed delivery
 curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/{id}/deliveries/{delivery_id}/replay" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+  -H "x-api-key: $SEC_API_KEY"
 ```
 
 ## Monitoring
 
-Track webhook health via the observability endpoint:
-
-```bash
-curl "https://api.secapi.ai/v1/observability" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
-```
-
-Response includes delivery success rate, average latency, and recent failures.
+Track webhook health from the delivery history endpoint. Store delivery IDs and request IDs so failed events can be replayed without guessing which payload failed.
 
 ## Secret Rotation
 
@@ -88,7 +81,7 @@ Rotate your webhook signing secret without downtime:
 
 ```bash
 curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/{id}/rotate_secret" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY"
+  -H "x-api-key: $SEC_API_KEY"
 ```
 
 The old secret remains valid for 24 hours after rotation.

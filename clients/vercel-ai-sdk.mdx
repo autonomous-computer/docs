@@ -1,16 +1,16 @@
 ---
-title: "Install Omni in Vercel AI SDK"
-description: "Register OMNI Datastream as an MCP tool source in the Vercel AI SDK using @ai-sdk/mcp — copy-paste TypeScript snippet for any AI SDK 6 project."
+title: "Install SEC API in Vercel AI SDK"
+description: "Register SEC API as an MCP tool source in the Vercel AI SDK using @ai-sdk/mcp."
 ---
 
-# Install Omni in Vercel AI SDK
+# Install SEC API in Vercel AI SDK
 
-AI SDK 6 split MCP support out of the `ai` core into the dedicated `@ai-sdk/mcp` package. It speaks streamable HTTP, accepts custom headers, and returns AI-SDK-compatible tools that any Anthropic, OpenAI, or other model can call.
+Use `@ai-sdk/mcp` to register SEC API as a streamable HTTP MCP server with an `x-api-key` header. The returned tools can be passed to your AI SDK model call.
 
 ## Prerequisites
 
-- Omni API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Set `OMNI_DATASTREAM_API_KEY`.
-- Node.js ≥ 18 with `ai` ≥ 6.0, `@ai-sdk/mcp` ≥ 1.0, and a model SDK (e.g. `@ai-sdk/anthropic` ≥ 3.0).
+- SEC API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Set `SEC_API_KEY`.
+- Node.js plus `ai`, `@ai-sdk/mcp`, and a model provider package.
 
 ## Install
 
@@ -27,7 +27,7 @@ const mcp = await createMCPClient({
   transport: {
     type: "http",
     url: "https://api.secapi.ai/mcp",
-    headers: { "x-api-key": process.env.OMNI_DATASTREAM_API_KEY! },
+    headers: { "x-api-key": process.env.SEC_API_KEY! },
   },
 });
 
@@ -50,10 +50,10 @@ Run the snippet. The agent should call the `filings.latest` tool with `ticker: A
 
 ## Troubleshooting
 
-- **`401 Unauthorized`** — `x-api-key` is missing or wrong. Sanity check: `curl https://api.secapi.ai/v1/limits -H "x-api-key: $OMNI_DATASTREAM_API_KEY"`.
+- **`401 Unauthorized`** — `x-api-key` is missing or wrong. Sanity check: `curl https://api.secapi.ai/v1/limits -H "x-api-key: $SEC_API_KEY"`.
 - **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
 - **Process hangs after first call** — always `await mcp.close()` in a `finally` block (or in `onFinish` and `onError` if you use streaming). Open SSE connections will keep the event loop alive.
-- **`Cannot find module '@ai-sdk/mcp'`** — you're on AI SDK ≤ 5; either upgrade to `ai` ≥ 6 or use the legacy `experimental_createMCPClient` import from `ai`.
+- **`Cannot find module '@ai-sdk/mcp'`** — install the MCP package or check your AI SDK version's MCP client import path.
 
 ## Streaming variant
 
@@ -73,4 +73,3 @@ const { textStream } = await streamText({
 
 - [Available tools](/mcp-install#available-tools) — SEC + market data tools
 - [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
-

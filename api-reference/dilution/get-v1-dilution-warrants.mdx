@@ -31,8 +31,8 @@ Audience: application and coding agent.
 <RequestExample>
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/dilution/warrants?ticker=ACME&limit=5"
 ```
 </RequestExample>
@@ -86,10 +86,10 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream `GET /v1/dilution/warrants` to list warrant schedules and assess overhang. Preserve `requestId`, `traceparent`, and the per-row `verification` block. Flag warrants whose `priceProtection` is true (price-reset / ratchet exposure) and report total potential dilutive shares from `underlyingSharesCalculated` when present.
+Use SEC API `GET /v1/dilution/warrants` to list warrant schedules and assess overhang. Preserve `requestId`, `traceparent`, and the per-row `verification` block. Flag warrants whose `priceProtection` is true (price-reset / ratchet exposure) and report total potential dilutive shares from `underlyingSharesCalculated` when present.
 </Prompt>
 
-## Failure posture
+## Errors and partial results
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports

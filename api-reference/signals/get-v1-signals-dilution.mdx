@@ -1,6 +1,6 @@
 # GET /v1/signals/dilution
 
-Return the OMNI Dilution Score: factor-weighted 0-100 derived metric with sub-ratings, percentile, and optional rolling history
+Return the SEC API Dilution Score: factor-weighted 0-100 derived metric with sub-ratings, percentile, and optional rolling history
 
 <Info>
 Audience: application and coding agent.
@@ -33,8 +33,8 @@ Audience: application and coding agent.
 <RequestExample>
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/signals/dilution?ticker=MULN"
 ```
 </RequestExample>
@@ -46,7 +46,7 @@ curl -X GET \
 {
   "object": "dilution_signal",
   "id": "sig_dil_muln",
-  "signalKey": "omni_dilution_score",
+  "signalKey": "secapi_dilution_score",
   "methodologyVersion": "2026-04-26.1",
   "entityId": "ent_muln",
   "ticker": "MULN",
@@ -56,7 +56,7 @@ curl -X GET \
   "score": 88.5,
   "band": "high",
   "confidence": "medium",
-  "summaryMd": "## OMNI Dilution Score for Mullen Automotive, Inc.\n\nScore: 88.5 (high). Strongest contributor: Active Offering Pressure.",
+  "summaryMd": "## SEC API Dilution Score for Mullen Automotive, Inc.\n\nScore: 88.5 (high). Strongest contributor: Active Offering Pressure.",
   "factors": [
     {
       "key": "active_offering_pressure",
@@ -105,13 +105,13 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/signals/dilution to return the OMNI Dilution Score for an issuer. The response is a single 0-100 derived metric with a band (low/moderate/elevated/high), confidence rating, factor breakdown, six categorical sub-ratings (overallRisk, offeringAbilityRisk, dilutionRisk, historicalRisk, cashNeedLevel, warrantExerciseRating), regsho boolean, percentile rank, and provenance. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `methodologyVersion`, `factors`, `subRatings`, `regsho`, `percentile`, `degradedReasons` in the output. Use `?history=30d|90d|1y` for rolling timeseries reads.
+Use SEC API GET /v1/signals/dilution to return the SEC API Dilution Score for an issuer. The response is a single 0-100 derived metric with a band (low/moderate/elevated/high), confidence rating, factor breakdown, six categorical sub-ratings (overallRisk, offeringAbilityRisk, dilutionRisk, historicalRisk, cashNeedLevel, warrantExerciseRating), regsho boolean, percentile rank, and provenance. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `methodologyVersion`, `factors`, `subRatings`, `regsho`, `percentile`, `degradedReasons` in the output. Use `?history=30d|90d|1y` for rolling timeseries reads.
 </Prompt>
 
-## Failure posture
+## Errors and partial results
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- when `confidence` is `low` or `freshness.status` is `stale`/`degraded`, surface the `degradedReasons[]` to the user verbatim so trust is not lost in the handoff
+- when `confidence` is `low` or `freshness.status` is `stale`/`degraded`, API the `degradedReasons[]` to the user verbatim so trust is not lost in the handoff
 - the score is deterministic given (inputs, methodologyVersion); a methodology bump is recorded in the persisted history table without overwriting prior rows
 

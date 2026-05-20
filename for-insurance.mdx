@@ -1,10 +1,10 @@
 # SEC Data for Insurance and Risk
 
 <Info>
-Omni Datastream gives insurance and risk teams programmatic access to financial health indicators, restatement and auditor change alerts, executive compensation data, and enforcement history -- all through a single API with webhook-driven monitoring and full provenance.
+SEC API gives insurance and risk teams programmatic access to financial health indicators, restatement and auditor change alerts, executive compensation data, and enforcement history -- all through a single API with webhook-driven monitoring and full provenance.
 </Info>
 
-## Why insurance and risk teams use Datastream
+## Why insurance and risk teams use SEC API
 
 <CardGroup cols={2}>
   <Card title="Financial health monitoring" icon="heart-pulse" href="/investment-intelligence">
@@ -42,21 +42,21 @@ Omni Datastream gives insurance and risk teams programmatic access to financial 
 Check whether a counterparty has any SEC enforcement history:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/events/enforcement?query=Acme+Corp&limit=25"
 ```
 
 Pull the company intelligence bundle for a financial health overview:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/intelligence/company?ticker=XYZ&includeGovernance=true"
 ```
 
 Review executive compensation for red flags:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/compensation?ticker=XYZ&limit=10"
 ```
 
@@ -71,7 +71,7 @@ Register a webhook to receive alerts when material events are filed:
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -d '{"url":"https://your-system.example.com/webhooks/sec","events":["filing.published","enforcement.published"],"filter":{"tickers":["XYZ","ABC","DEF"]}}' \
   "https://api.secapi.ai/v1/webhooks"
 ```
@@ -79,7 +79,7 @@ curl -X POST \
 Monitor for restatements by extracting auditor opinion sections from new filings:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=XYZ&form=10-K&mode=compact"
 ```
 
@@ -102,7 +102,7 @@ These Claude Code skills accelerate insurance and risk workflows:
 Install via MCP for agent-driven risk assessment:
 
 ```bash
-omni-sec mcp install
+secapi mcp install
 ```
 
 ---
@@ -119,7 +119,7 @@ omni-sec mcp install
 </CardGroup>
 
 <Prompt>
-You are a risk assessment agent with access to Omni Datastream. For any company under review, check enforcement history, pull the company intelligence bundle for financial health, review executive compensation structures, and extract auditor opinion and risk-factor sections from the latest 10-K. Flag restatements, auditor changes, and enforcement actions as high-priority findings. Always include requestId references for compliance documentation.
+You are a risk assessment agent with access to SEC API. For any company under review, check enforcement history, pull the company intelligence bundle for financial health, review executive compensation structures, and extract auditor opinion and risk-factor sections from the latest 10-K. Flag restatements, auditor changes, and enforcement actions as high-priority findings. Always include requestId references for compliance documentation.
 </Prompt>
 
 _See the full 6-prompt [Insurance & risk library](/agents/prompt-library/insurance)._

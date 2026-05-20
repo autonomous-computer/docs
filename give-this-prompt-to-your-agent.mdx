@@ -1,13 +1,11 @@
 # Give this prompt to your agent
 
-Generated from the Omni Datastream contract and prompt asset registry.
-
-<Note>For persona-tuned prompts (50 prompts × 5 customer segments — law firms, investment managers, sophisticated investors, insurance, PR firms), see the [agent prompt library](/agents/prompt-library).</Note>
+Use this prompt to give a coding agent the SEC API base URLs, safety rules, and evidence requirements before it starts calling endpoints.
 
 ## Setup prompt
 
 ```text
-You are using Omni Datastream as the SEC data system of record.
+You are using SEC API as the SEC data system of record.
 
 Base URLs:
 - REST API: https://api.secapi.ai
@@ -17,12 +15,12 @@ Base URLs:
 - Docs root: https://docs.secapi.ai
 
 Rules:
-- Prefer structured Omni Datastream endpoints and MCP tools over raw filing text when possible.
+- Prefer structured SEC API endpoints and MCP tools over raw filing text when possible.
 - Check GET /v1/billing and GET /v1/limits before expensive or repeated workflows.
 - Use POST /v1/billing/quote before repeated heavy workflows, and stop if the server returns `billing_budget_approval_required` or `billing_budget_hard_cap_exceeded`.
-- If the client does not already have a long-lived API key, have a human operator mint a sponsor token via POST /v1/agent/bootstrap_tokens and exchange it through POST /v1/agent/bootstrap before repeated machine workflows.
-- Preserve requestId, traceparent, Omni-Plan-Key, Omni-Billing-State, Omni-Free-Grant-Remaining, provenance, freshness, and materialization metadata on every downstream artifact.
-- Warn before repeated loops when the org is close to exhausting the starter grant or is in payg_pending_card.
+- If the client does not already have a long-lived API key, have an administrator mint a sponsor token via POST /v1/agent/bootstrap_tokens and exchange it through POST /v1/agent/bootstrap before repeated machine workflows.
+- Preserve requestId, traceparent, secapi-plan-key, secapi-billing-state, secapi-free-grant-remaining, provenance, freshness, and materialization metadata on every artifact.
+- Warn before repeated loops when the org is approaching a budget limit or is in payg_pending_card.
 - Use the generated prompt snippets below before improvising generic SEC workflows.
 ```
 
@@ -34,7 +32,7 @@ Rules:
 - Summary: Resolve an issuer, pull the latest 10-K, and extract the risk sections.
 
 ```text
-Use Omni Datastream to resolve AAPL, fetch the latest 10-K, extract Item 1A and Item 7, and return a concise markdown research brief with requestId, billing headers, provenance, and freshness metadata for every section.
+Use SEC API to resolve AAPL, fetch the latest 10-K, extract Item 1A and Item 7, and return a concise markdown research brief with requestId, billing headers, provenance, and freshness metadata for every section.
 ```
 
 ### Statement Workflow
@@ -43,7 +41,7 @@ Use Omni Datastream to resolve AAPL, fetch the latest 10-K, extract Item 1A and 
 - Summary: Fetch the all-statements bundle and segmented revenue history.
 
 ```text
-Use Omni Datastream to fetch the annual all-statements bundle and segmented revenue history for AAPL, then summarize the last three periods with the key changes, source accession numbers, and the billing posture used during the workflow.
+Use SEC API to fetch the annual all-statements bundle and segmented revenue history for AAPL, then summarize the last three periods with the key changes, source accession numbers, and the billing posture used during the workflow.
 ```
 
 ### Ownership Workflow
@@ -52,7 +50,7 @@ Use Omni Datastream to fetch the annual all-statements bundle and segmented reve
 - Summary: Inspect a manager portfolio and the latest holder graph for an issuer.
 
 ```text
-Use Omni Datastream to pull Berkshire Hathaway's latest institutional investor portfolio, then fetch the ticker-centric institutional holder graph for AAPL and highlight the biggest positions with quarter-over-quarter changes while preserving requestId and plan metadata.
+Use SEC API to pull Berkshire Hathaway's latest institutional investor portfolio, then fetch the ticker-centric institutional holder graph for AAPL and highlight the biggest positions with quarter-over-quarter changes while preserving requestId and plan metadata.
 ```
 
 ### Offerings Workflow
@@ -61,7 +59,7 @@ Use Omni Datastream to pull Berkshire Hathaway's latest institutional investor p
 - Summary: Monitor recent S-1 and 424B activity.
 
 ```text
-Use Omni Datastream to search recent S-1 and 424B4 filings, then return the newest issuers, accession numbers, offering family, prospectus URLs, and billing headers from the request sequence in a sortable markdown table.
+Use SEC API to search recent S-1 and 424B4 filings, then return the newest issuers, accession numbers, offering family, prospectus URLs, and billing headers from the request sequence in a sortable markdown table.
 ```
 
 ### Corporate Actions Workflow
@@ -70,7 +68,7 @@ Use Omni Datastream to search recent S-1 and 424B4 filings, then return the newe
 - Summary: Inspect recent SEC-native M&A events and SEC-furnished earnings materials.
 
 ```text
-Use Omni Datastream to fetch recent M&A events and SEC-furnished earnings materials for AAPL, then return the latest filings, event or coverage classification, accession numbers, concise traceable summaries, and any billing posture warnings encountered.
+Use SEC API to fetch recent M&A events and SEC-furnished earnings materials for AAPL, then return the latest filings, event or coverage classification, accession numbers, concise traceable summaries, and any billing posture warnings encountered.
 ```
 
 ## Contract coverage

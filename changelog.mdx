@@ -1,457 +1,60 @@
 # Changelog
 
-<Info>
-The changelog is part of the trust surface. It keeps shipped changes, release rhythm, and the why behind each update visible.
-</Info>
+Public release notes for SEC API. Entries focus on customer-visible behavior, new endpoints, compatibility changes, and documentation updates.
 
-## Publishing cadence
+<Update label="May 20, 2026" description="Docs renamed to SEC API and prepared for public launch" tags={["Docs", "Launch"]}>
 
-- The site changelog is regenerated from first-parent production history.
-- The weekly automation runs each Sunday, regenerates the changelog, and opens a draft review PR before anything publishes.
+- Renamed the documentation site, navigation, OpenAPI title, examples, and LLM entrypoint to SEC API.
+- Removed non-public docs, admin routes, provider webhooks, and restricted pages from the public documentation set.
+- Updated the Mintlify API playground configuration and public OpenAPI file path.
+- Added a glossary and LLM/agent guide.
 
-## Release trail
-
-<Update label="April 26, 2026" description="OMNI Dilution Score — single 0-100 derived metric with sub-ratings, percentile, and rolling history (OMNI-3090)" tags={["OMNI", "Release"]}>
-New `GET /v1/signals/dilution` and `GET /v1/signals/dilution/enhanced` endpoints surface the OMNI Dilution Score: a factor-weighted 0-100 derived metric expressing near-term dilution risk per issuer, mirroring the volatility-score surface family. The enhanced variant adds factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder).
-
-### Highlights
-
-- New: `GET /v1/signals/dilution` returns a `dilution_signal` envelope with score (0-100), band (low/moderate/elevated/high), confidence (high/medium/low), 6 categorical sub-ratings (overallRisk, offeringAbilityRisk, dilutionRisk, historicalRisk, cashNeedLevel, warrantExerciseRating), `regsho` boolean, percentile rank, and full factor breakdown
-- New: `GET /v1/signals/dilution/enhanced` adds `factorModelContext` (macro regime + per-ticker MOMENTUM/LIQUIDITY exposures from `latest_factor_exposures`)
-- New: MCP tools `signals.dilution.get` and `signals.dilution.enhanced.get`
-- New: `dilution_score_history` table (migration 024) with `(ticker, methodology_version, as_of)` UPSERT key — daily Dagster materialization, methodology versions don't overwrite each other
-- Factor weights (v1, methodology version `2026-04-26.1`): active offering pressure 0.30, cash runway pressure 0.25, convertible/warrant overhang 0.20, share float velocity 0.15, compliance pressure 0.10
-- Optional `?history=30d|90d|1y` rolling timeseries from the daily-Dagster persisted table
-- `?view=agent` drops the factor breakdown for token-efficient agent consumption
 </Update>
 
-<Update label="April 26, 2026" description="W5 Stream H — /compare-askedgar competitive landing page + /migrate-from-askedgar engineering migration guide" tags={["OMNI", "Release"]}>
-Two new pages for customers evaluating AskEdgar (askedgar.io) — a focused dilution-intelligence SaaS that launched 2026-04-22 with parity on the 42-field DilutionEntity. OMNI matches their dilution schema field-for-field, ships per-field programmatic verification (vs their binary `verified: boolean`), and adds 38 endpoint families they don't touch. Each OMNI dilution row carries an `askedgar_url` field so customers running both can dual-source during cutover.
+<Update label="April 27, 2026" description="Public pricing catalog" tags={["Billing", "Pricing"]}>
 
-### Highlights
+- Published `GET /v1/billing/rates` as the source of truth for public plan metadata and meter-family rates.
+- Added Pay As You Go, Personal, Team, and Commercial plan metadata.
+- Added public meter prices for light reads, standard reads, heavy extracts, artifact jobs, delivery events, intelligence queries, market data reads, and semantic search.
 
-- New: [compare-askedgar](/compare-askedgar) — entity-by-entity dilution parity table, 14×14 endpoint mapping (theirs → ours), verification-model JSON shape diff, three-product pricing comparison (Copilot UI / per-KB API / OMNI), and where-each-wins decision criteria
-- New: [migrate-from-askedgar](/migrate-from-askedgar) — endpoint mapping with literal arrows, `API-KEY` → `x-api-key` auth migration, verification-model rewrite, 5-row pricing-impact scenario table, sed cutover script, agent-runnable migration `<Prompt>`, recommended cutover order
-- Sourced from a 2026-04-26 live capture of askedgar.io (pricing + readme.io docs); auth header, host, and endpoint paths verified against their live API
-- Closing snapshot footnote on the comparison page (`*as of 2026-04-26*`) so future refreshes are auditable
-- All numerics verified live against the repo: 39 endpoint families, 186 endpoints, 47 MCP tools, 4 SDKs, 8 Skills, FinanceBench 150/150, 3.7-6.4× faster vs sec-api.io, 14 dilution endpoints + 14 dilution.* MCP tools (OMNI-3089)
 </Update>
 
-<Update label="April 25, 2026" description="W4 Stream B — 14 /v1/dilution/* endpoints, 14 MCP tools, 7 webhook event types, WS event_types filter" tags={["OMNI", "Release"]}>
-Productization of the dilution data pipeline (OMNI-3071 schema → OMNI-3079 extractors → OMNI-3081 verification → OMNI-3083 citations). Customers can now query 14 dilution endpoints — events, warrants, convertibles, RoFR, lockups, cash-position, corporate-actions, Nasdaq compliance, ratings, reverse-splits, score, share-float-history, coverage — each row carrying the full programmatic verification block (`confidence`, `crossValidations`, `sourceSpan`, `verifiedAt`).
+<Update label="April 26, 2026" description="Dilution score and enhanced dilution signal" tags={["Signals", "Dilution"]}>
 
-### Highlights
+- Added `GET /v1/signals/dilution` for issuer-level dilution risk scoring.
+- Added `GET /v1/signals/dilution/enhanced` for richer factor context and explanation metadata.
+- Added dilution-specific documentation and examples for events, warrants, convertibles, lockups, cash position, corporate actions, Nasdaq compliance, ratings, reverse splits, share float history, and coverage.
 
-- New: 14 GET endpoints under `/v1/dilution/*` mirroring the dilution schema; all support `?view=agent` for token-efficient summaries via `summarizeVerification`
-- New: 14 dotted-namespace MCP tools (`dilution.events.{list,get}`, `dilution.{warrants,convertibles,rofr,lockups,cash_position,corporate_actions,nasdaq_compliance,ratings,reverse_splits,share_float_history}.list`, `dilution.score.get`, `dilution.coverage.get`) — always return full payload (REST `?view=agent` is REST-only by design; MCP context is already an agent context)
-- Webhook registry: 7 new dilution event types (`dilution.{warrant,convertible,rofr,lockup,corporate_action,reverse_split}.created` + `dilution.nasdaq_compliance.status_changed`); customers can subscribe today, producer wiring lands in a follow-up
-- WebSocket: new `?event_types=` filter param accepts literal types and single-segment wildcards (`dilution.*`) — forward-compatible plumbing so SDK contracts stay stable while the dilution NOTIFY producer comes online
-- Verification block exposed by default; agent-mode summary follows the canonical contract `{ confidence, crossValidationsPassed, sourceSpanResolved, modelVersion }` from OMNI-3081
-- Cursor pagination shared with the rest of the API (integer offset, default 10, max 50); cost headers (`Omni-Token-Count`, `Omni-Estimated-Cost`) inherit globally
-- Mintlify reference pages live for all 14 endpoints with realistic examples and agent prompts
 </Update>
 
-<Update label="April 24, 2026" description="Structured 8-K Item 5.07 voting results — first-in-market parser" tags={["OMNI", "Release"]}>
-New GET /v1/events/voting-results endpoint and events.voting_results MCP tool return structured voting results from 8-K Item 5.07 filings with per-proposal vote counts, approval outcomes, and proposal-type classification. sec-api.io has had an open bug on 5.07 parsing since July 2025 — OMNI ships the structured route first.
+<Update label="April 24, 2026" description="Market data and index utilities" tags={["Market data"]}>
 
-### Highlights
+- Added market calendar, market bars, market snapshots, market search, corporate actions, estimates, earnings calendar, reference, index inventory, and index constituent documentation.
+- Added contract-gated language for provider-backed market data routes.
+- Clarified rights and coverage boundaries for public index constituent exports.
 
-- New: GET /v1/events/voting-results with ticker, cik, date range, meeting_type (annual|special), and cursor pagination
-- New: MCP tool events.voting_results bootstraps the events.* namespace
-- Structured proposals with votesFor, votesAgainst, abstain, brokerNonVotes, approved outcome, and proposal_type classification (elect_directors, ratify_auditor, say_on_pay, say_on_pay_frequency, approve_merger, shareholder_proposal, and more)
-- parsing_confidence: high | medium | low — low-confidence events preserve the raw 5.07 summary and emit a Sentry breadcrumb so precision regressions are observable
-- Vote counts are integers; null is semantically distinct from zero (null = not reported; zero = explicit zero votes)
-- First in market — sec-api.io has had this parser broken since July 2025
 </Update>
 
-<Update label="April 23, 2026" description="decision(auth): API keys are the primary authentication method; OAuth (WorkOS) deferred to enterprise tier roadmap for 2026 Q3+" tags={["OMNI", "Release"]}>
-Product-direction decision published for customers and partners. API keys cover every REST, SDK, CLI, and dashboard client today; OAuth/SSO via WorkOS is planned for the enterprise tier in 2026 Q3+.
+<Update label="April 22, 2026" description="AskEdgar migration and dilution comparison" tags={["Migration", "Dilution"]}>
 
-### Highlights
+- Added AskEdgar migration guidance for dilution workflows.
+- Added pricing and schema comparison notes using public AskEdgar pricing and API references.
+- Clarified verification metadata differences and cutover considerations.
 
-- API keys are the primary authentication method for all plans
-- OAuth/SSO via WorkOS is planned for the enterprise tier in 2026 Q3+
-- Hosted MCP continues to use WorkOS OAuth discovery for the MCP surface
 </Update>
 
-<Update label="April 22, 2026" description="docs/ops(fast-follow): address bot findings on PR #363 (OMNI-3060)" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
+<Update label="April 18, 2026" description="Webhooks, streams, and monitors" tags={["Webhooks", "Streams"]}>
 
-### Highlights
+- Added monitor lifecycle documentation for saved searches and alert delivery.
+- Added webhook endpoint, delivery history, replay, and signing secret rotation docs.
+- Added stream subscription and cursor polling docs for replay-safe event delivery.
 
-- docs/ops(fast-follow): address bot findings on PR #363 (OMNI-3060)
 </Update>
 
-<Update label="April 20, 2026" description="chore(deps): bump dagster-cloud-action from 1.13.0 to 1.13.1" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
+<Update label="April 12, 2026" description="Macro, factors, and intelligence workflows" tags={["Macro", "Factors", "Intelligence"]}>
 
-### Highlights
+- Added macro calendar, indicators, regimes, releases, forecasts, search, and high-signal pack documentation.
+- Added factor catalog, returns, exposures, correlations, dashboards, and strategy workflow documentation.
+- Added intelligence endpoints for company, security, portfolio, country report, earnings preview, footnotes query, and watchlist workflows.
 
-- chore(deps): bump dagster-io/dagster-cloud-action from 1.13.0 to 1.13.1 in the actions-all group
 </Update>
-
-<Update label="April 19, 2026" description="fix(ingest-worker): default concurrency back to 1 after #350 regression" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix(ingest-worker): default concurrency back to 1 after #350 regression
-</Update>
-
-<Update label="April 18, 2026" description="fix(sec-pipeline): suppress benign Dagster restart signals in Sentry" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix(sec-pipeline): suppress benign Dagster restart signals in Sentry
-</Update>
-
-<Update label="April 17, 2026" description="perf(xbrl, ingest-worker): parallelize hot loops + incremental upsert + 3 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include perf(xbrl): cache permanent-miss verdict for non-filer tickers; perf(xbrl): incremental upsert — ON CONFLICT DO UPDATE WHERE changed; perf(ingest-worker): parallelize claimed-item loop (sec_freshness_daily 440min → target 75-110min).
-
-### Highlights
-
-- perf(ingest-worker): parallelize claimed-item loop (sec_freshness_daily 440min → target 75-110min)
-- perf(xbrl): incremental upsert — ON CONFLICT DO UPDATE WHERE changed (follow-up C)
-- perf(xbrl): cache permanent-miss verdict for non-filer tickers (follow-up A)
-- fix(ingest-worker): default concurrency back to 1 after PR #350 regression
-</Update>
-
-<Update label="April 16, 2026" description="fix(xbrl, factor-intraday, ingest-worker): classify permanent misses + surface failures + 4 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix(xbrl): classify permanent misses separately from real errors; fix(ingest-worker): don't kill the pass when a status-update DB call fails; fix(factor-intraday): surface failure details in Sentry + admin response.
-
-### Highlights
-
-- fix(xbrl): classify permanent misses separately from real errors
-- fix(ingest-worker): don't kill the pass when a status-update DB call fails
-- fix(factor-intraday): surface failure details in Sentry + admin response
-- perf(xbrl): skip DELETE+INSERT on unchanged tickers (content-hash short-circuit)
-</Update>
-
-<Update label="April 15, 2026" description="fix: include infra/env in Railway deploy (fixes production crash loop)" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix: include infra/env in Railway deploy (fixes production crash loop)
-</Update>
-
-<Update label="April 14, 2026" description="feat: add 16 curated thematic baskets + FT parity map + 2 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include feat: add 16 curated thematic baskets + FT parity map + methodology docs; feat: add ~70 thematic stock basket factors for FT parity; OMNI-2710 Add KOSIS/ECOS API keys to env registry + Dagster provisioning.
-
-### Highlights
-
-- feat: add 16 curated thematic baskets + FT parity map + methodology docs
-- feat: add ~70 thematic stock basket factors for FT parity
-- OMNI-2710 Add KOSIS/ECOS API keys to env registry + Dagster provisioning
-</Update>
-
-<Update label="April 13, 2026" description="fix: fast-follow fixes for joint regression bot review findings + 1 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: fast-follow fixes for joint regression bot review findings; fix stale BR UNRATE DBnomics alias frequency.
-
-### Highlights
-
-- fix: fast-follow fixes for joint regression bot review findings
-- fix stale BR UNRATE DBnomics alias frequency
-</Update>
-
-<Update label="April 12, 2026" description="OMNI-2503 fix production macro workflow" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- OMNI-2503 fix production macro workflow
-</Update>
-
-<Update label="April 11, 2026" description="OMNI-2254 official macro source sync + 3 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include OMNI-2254 official macro source sync; OMNI-2253 Factor V2 Dagster assets; fix: Form D structured extraction — fallback to DB CIK when accession prefix differs.
-
-### Highlights
-
-- OMNI-2254 official macro source sync
-- OMNI-2253 Factor V2 Dagster assets
-- fix: Form D structured extraction — fallback to DB CIK when accession prefix differs
-- fix: CDN load test default URL + edge case test results
-</Update>
-
-<Update label="April 10, 2026" description="feat: install 4 launch skills into .claude/skills/ for auto-discovery + 3 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include feat: install 4 launch skills into .claude/skills/ for auto-discovery; fix: restore Form 144 route + fix entity exchange CIK padding; fix: use pg8000 instead of psycopg2 in Dagster enforcement asset.
-
-### Highlights
-
-- feat: install 4 launch skills into .claude/skills/ for auto-discovery
-- fix: restore Form 144 route + fix entity exchange CIK padding
-- fix: use pg8000 instead of psycopg2 in Dagster enforcement asset
-- fix: NaN-safe parsing + remove unused import in edgar routes
-</Update>
-
-<Update label="April 9, 2026" description="fix: return undefined for invalid year input instead of silently defaulting to 2000 (fast-follow from PR #231 bot review) + 3 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: return undefined for invalid year input instead of silently defaulting to 2000 (fast-follow from PR #231 bot review); fix: remove dead rerankEnvDefault and shouldRerank variables (fast-follow from PR #232 bot review); fix: output webhook secret to stderr in CI where .secret file is lost (fast-follow from PR #251 bot review).
-
-### Highlights
-
-- fix: return undefined for invalid year input instead of silently defaulting to 2000 (fast-follow from PR #231 bot review)
-- fix: remove dead rerankEnvDefault and shouldRerank variables (fast-follow from PR #232 bot review)
-- fix: output webhook secret to stderr in CI where .secret file is lost (fast-follow from PR #251 bot review)
-- fix: propagate filingDate to Pinecone metadata in fullindex backfill (fast-follow from PR #279 bot review)
-</Update>
-
-<Update label="April 8, 2026" description="fix: remove hot-lane steps from canonical freshness job + 1 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: remove hot-lane steps from canonical freshness job; fix: restore legacy fullindex variant filtering.
-
-### Highlights
-
-- fix: remove hot-lane steps from canonical freshness job
-- fix: restore legacy fullindex variant filtering
-</Update>
-
-<Update label="April 7, 2026" description="fix: increase ECS run resources to 4 vCPU / 16GB for fullindex render" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix: increase ECS run resources to 4 vCPU / 16GB for fullindex render
-</Update>
-
-<Update label="April 6, 2026" description="fix: prevent interleaveMerge from exceeding odd limit values" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix: prevent interleaveMerge from exceeding odd limit values
-</Update>
-
-<Update label="April 5, 2026" description="fix: add DNS preflight check before launching investor bun subprocesses + 2 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: add DNS preflight check before launching investor bun subprocesses; fix: remove step-level RetryPolicy and reduce DNS retry overhead; fix: use persisted snapshots for standalone intraday materialization.
-
-### Highlights
-
-- fix: add DNS preflight check before launching investor bun subprocesses
-- fix: remove step-level RetryPolicy and reduce DNS retry overhead
-- fix: use persisted snapshots for standalone intraday materialization
-</Update>
-
-<Update label="April 4, 2026" description="fix: retry Dagster job launches on DNS failure to get fresh ECS tasks + 6 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: retry Dagster job launches on DNS failure to get fresh ECS tasks; fix: harden extraction HTML stripping; deps(docker): bump python from 3.11-slim to 3.12-slim in /pipelines/sec-pipeline.
-
-### Highlights
-
-- fix: retry Dagster job launches on DNS failure to get fresh ECS tasks
-- fix: harden extraction HTML stripping
-- deps(docker): bump python from 3.11-slim to 3.12-slim in /pipelines/sec-pipeline
-- deps(py): update certifi requirement in /autoresearch
-</Update>
-
-<Update label="April 4, 2026" description="deps(deps): bump lucide-react from 0.511.0 to 0.577.0 + 6 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include deps(deps): bump lucide-react from 0.511.0 to 0.577.0; deps(rs): update markup5ever_rcdom requirement; deps(rs): update reqwest requirement from 0.12 to 0.13 in /packages/sdk-rust.
-
-### Highlights
-
-- deps(deps): bump lucide-react from 0.511.0 to 0.577.0
-- deps(rs): update markup5ever_rcdom requirement
-- deps(rs): update reqwest requirement from 0.12 to 0.13 in /packages/sdk-rust
-- deps(py): update anthropic requirement in /autoresearch
-</Update>
-
-<Update label="April 3, 2026" description="Geographic segment depth detection + preferred stock deduction" tags={["OMNI", "Release"]}>
-Segmented revenues now recognize geographic acronyms (EMEA, APAC, LACC) at depth 2 for proper isMostGranularSibling filtering. Company financials pipeline now deducts PreferredStockValue from StockholdersEquity when CommonStockholdersEquity is not filed separately.
-
-### Highlights
-
-- inferSegmentHierarchyDepth: added EMEA, APAC, LACC, Americas patterns
-- PREFERRED_STOCK_CONCEPT_TAGS: PreferredStockValue, PreferredStockLiquidationPreference, PreferredStockCarryingAmount
-- Common equity derivation: statement-level > supplemental > preferred stock deduction
-</Update>
-
-<Update label="April 2, 2026" description="fix: address 33 unresolved bot review comments from last 72h" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix: address 33 unresolved bot review comments from last 72h
-</Update>
-
-<Update label="April 2, 2026" description="fix: broaden health care row key match for pension table extraction + 3 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: broaden health care row key match for pension table extraction; Fix historical ATVI PPE and 3M MD&A retrieval; fix: derive mcp facts form from period.
-
-### Highlights
-
-- fix: broaden health care row key match for pension table extraction
-- Fix historical ATVI PPE and 3M MD&A retrieval
-- fix: derive mcp facts form from period
-- fix: datastream answer quality fast follow
-</Update>
-
-<Update label="April 1, 2026" description="fix: supplement sparse statement history + 9 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: supplement sparse statement history; feat: expose stock repurchases in statements; fix: carry filing quarters through sec lookups.
-
-### Highlights
-
-- fix: supplement sparse statement history
-- feat: expose stock repurchases in statements
-- fix: carry filing quarters through sec lookups
-- fix: reject xbrl noise in filing sections
-</Update>
-
-<Update label="April 1, 2026" description="Fix datastream historical filing truth + 9 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include Fix datastream historical filing truth; fix: preserve exact sec ticker resolution; fix: honor accession in risk categories.
-
-### Highlights
-
-- Fix datastream historical filing truth
-- fix: preserve exact sec ticker resolution
-- fix: honor accession in risk categories
-- fix: invalidate stale statement cache
-</Update>
-
-<Update label="March 31, 2026" description="fix: hide readiness bootstrap errors" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix: hide readiness bootstrap errors
-</Update>
-
-<Update label="March 29, 2026" description="fix: include evals/fixtures in Railway deploy (second missing module) + 2 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: include evals/fixtures in Railway deploy (second missing module); fix: include infra/stripe in Railway deploy (fixes production crash loop); fix: reduce Sentry noise for expected errors.
-
-### Highlights
-
-- fix: include evals/fixtures in Railway deploy (second missing module)
-- fix: include infra/stripe in Railway deploy (fixes production crash loop)
-- fix: reduce Sentry noise for expected errors
-</Update>
-
-<Update label="March 27, 2026" description="bias section search to latest filing + 2 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include bias section search to latest filing; Remove FMP from company mapping audit; fix: add GHCR repository_credentials for Dagster Cloud ECS.
-
-### Highlights
-
-- bias section search to latest filing
-- Remove FMP from company mapping audit
-- fix: add GHCR repository_credentials for Dagster Cloud ECS
-</Update>
-
-<Update label="March 26, 2026" description="fix: regenerate OpenAPI spec and add Companies to Mintlify navigation + 2 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: regenerate OpenAPI spec and add Companies to Mintlify navigation; fix: normalize generated openapi schema bounds; fix: improve financebench filing search paths.
-
-### Highlights
-
-- fix: regenerate OpenAPI spec and add Companies to Mintlify navigation
-- fix: normalize generated openapi schema bounds
-- fix: improve financebench filing search paths
-</Update>
-
-<Update label="March 25, 2026" description="Fast-follow intelligence materialization fixes" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- Fast-follow intelligence materialization fixes
-</Update>
-
-<Update label="March 24, 2026" description="Fix npm publish provenance and stale changelog baseline + 1 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include Fix npm publish provenance and stale changelog baseline; Fix npm publish provenance for private repo.
-
-### Highlights
-
-- Fix npm publish provenance and stale changelog baseline
-- Fix npm publish provenance for private repo
-</Update>
-
-<Update label="March 23, 2026" description="chore: mark stripe live account dedicated + 8 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include chore: mark stripe live account dedicated; fix: authenticate final signoff factor check; chore: sync tracked stripe test state.
-
-### Highlights
-
-- chore: mark stripe live account dedicated
-- fix: authenticate final signoff factor check
-- chore: sync tracked stripe test state
-- feat: add stripe state sync workflow
-</Update>
-
-<Update label="March 23, 2026" description="fix: align factor catalog release checks + 8 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: align factor catalog release checks; fix: align launch signoff api key env; Fix merged bugbot fast-follows.
-
-### Highlights
-
-- fix: align factor catalog release checks
-- fix: align launch signoff api key env
-- Fix merged bugbot fast-follows
-- feat: ship market estimates end-to-end
-</Update>
-
-<Update label="March 20, 2026" description="fix: align site browser smoke with local auth base + 1 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: align site browser smoke with local auth base; fix: close auth rollout fast follows.
-
-### Highlights
-
-- fix: align site browser smoke with local auth base
-- fix: close auth rollout fast follows
-</Update>
-
-<Update label="March 19, 2026" description="fix: fast-follow merged bugbot findings + 1 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: fast-follow merged bugbot findings; Clarify entity fallback guard precedence.
-
-### Highlights
-
-- fix: fast-follow merged bugbot findings
-- Clarify entity fallback guard precedence
-</Update>
-
-<Update label="March 18, 2026" description="fix: normalize company mapping backfill identifiers" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- fix: normalize company mapping backfill identifiers
-</Update>
-
-<Update label="March 16, 2026" description="fix: close PR 29 fast-follow bugs + 3 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include fix: close PR 29 fast-follow bugs; Ship ownership history backfill support; Relax stored filing manifest timestamp typing.
-
-### Highlights
-
-- fix: close PR 29 fast-follow bugs
-- Ship ownership history backfill support
-- Relax stored filing manifest timestamp typing
-- Fix latest filing and section storage fast paths
-</Update>
-
-<Update label="March 16, 2026" description="Advance section extraction moat work + 1 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include Advance section extraction moat work; Add Omni Datastream 2.0 strategy plan.
-
-### Highlights
-
-- Advance section extraction moat work
-- Add Omni Datastream 2.0 strategy plan
-</Update>
-
-<Update label="March 15, 2026" description="Fix statement alias and cache normalization + 3 more" tags={["OMNI", "Release"]}>
-Highlights from this shipping window include Fix statement alias and cache normalization; Harden SEC entity and replay handling; Port extraction autoresearch boundary win.
-
-### Highlights
-
-- Fix statement alias and cache normalization
-- Harden SEC entity and replay handling
-- Port extraction autoresearch boundary win
-- Fix Python SDK parity and CI action versions
-</Update>
-
-<Update label="March 15, 2026" description="Close final Stripe signoff gaps" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- Close final Stripe signoff gaps
-</Update>
-
-<Update label="March 13, 2026" description="Initialize repository" tags={["OMNI", "Release"]}>
-A focused product or platform improvement shipped to OMNI.
-
-### Highlights
-
-- Initialize repository
-</Update>
-
-

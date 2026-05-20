@@ -1,11 +1,11 @@
 ---
 title: "MCP Server Installation"
-description: "Connect OMNI Datastream to Claude Desktop, Claude Code, Cursor, and other MCP clients"
+description: "Connect SEC API to Claude Desktop, Claude Code, Cursor, and other MCP clients"
 ---
 
 # MCP Server Installation
 
-OMNI Datastream provides a hosted MCP server for AI agents. Connect once, get access to 155+ SEC data tools.
+SEC API provides a hosted MCP server for AI agents. Connect once to expose the SEC API tool set in an MCP-aware client.
 
 ## Claude Desktop
 
@@ -14,10 +14,10 @@ Add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "omni-datastream": {
+    "sec-api": {
       "url": "https://api.secapi.ai/mcp",
       "headers": {
-        "x-api-key": "YOUR_API_KEY"
+        "x-api-key": "${SEC_API_KEY}"
       }
     }
   }
@@ -29,8 +29,8 @@ On macOS, the config is at `~/Library/Application Support/Claude/claude_desktop_
 ## Claude Code
 
 ```bash
-claude mcp add omni-datastream https://api.secapi.ai/mcp \
-  --header "x-api-key: YOUR_API_KEY"
+claude mcp add sec-api https://api.secapi.ai/mcp \
+  --header "x-api-key: $SEC_API_KEY"
 ```
 
 ## Cursor
@@ -40,10 +40,10 @@ Add to your `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "omni-datastream": {
+    "sec-api": {
       "url": "https://api.secapi.ai/mcp",
       "headers": {
-        "x-api-key": "YOUR_API_KEY"
+        "x-api-key": "${SEC_API_KEY}"
       }
     }
   }
@@ -52,9 +52,9 @@ Add to your `.cursor/mcp.json`:
 
 ## Get Your API Key
 
-1. Sign up at [secapi.ai](https://secapi.ai) (free — 250 calls/month)
-2. Your API key is auto-generated on first login
-3. Set it as `OMNI_DATASTREAM_API_KEY` in your environment
+1. Get an API key at [secapi.ai](https://secapi.ai/login)
+2. Create or copy an API key from your account
+3. Set it as `SEC_API_KEY` in your environment
 
 ## Available Tools
 
@@ -79,7 +79,7 @@ Once connected, your agent has access to:
 
 Ask your agent:
 
-> "Use OMNI Datastream to look up Apple's latest 10-K filing"
+> "Use SEC API to look up Apple's latest 10-K filing"
 
 The agent should call `filings.latest` with `ticker: AAPL, form: 10-K`.
 
@@ -88,15 +88,14 @@ The agent should call `filings.latest` with `ticker: AAPL, form: 10-K`.
 For automated agent workflows, use sponsor tokens for short-lived credentials:
 
 ```bash
-# Create a bootstrap token (valid for 1 hour)
+# Create a bootstrap token from a server-side workflow.
 curl -X POST https://api.secapi.ai/v1/agent/bootstrap_tokens \
   -H "Authorization: Bearer YOUR_BEARER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"ttlSeconds": 3600}'
 
-# Agent uses the token to get ephemeral credentials
+# Exchange the token for ephemeral agent credentials.
 curl -X POST https://api.secapi.ai/v1/agent/bootstrap \
   -H "Content-Type: application/json" \
   -d '{"token": "BOOTSTRAP_TOKEN"}'
 ```
-

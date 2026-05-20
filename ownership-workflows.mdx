@@ -5,8 +5,8 @@
 ### API
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  "$OMNI_DATASTREAM_BASE_URL/v1/owners/13f?cik=0001067983&limit=10"
+curl -H "x-api-key: $SEC_API_KEY" \
+  "$SEC_API_URL/v1/owners/13f?cik=0001067983&limit=10"
 ```
 
 For quarter-specific retrieval, add `reportDate=YYYY-MM-DD`, for example
@@ -15,14 +15,14 @@ For quarter-specific retrieval, add `reportDate=YYYY-MM-DD`, for example
 ### SDK
 
 ```ts
-const client = new OmniDatastreamClient({ apiKey: process.env.OMNI_DATASTREAM_API_KEY })
+const client = new SecApiClient({ apiKey: process.env.SEC_API_KEY })
 const report = await client.latest13F({ cik: "0001067983", limit: 10 })
 ```
 
 ### CLI
 
 ```bash
-omni-sec owners 13f --cik 0001067983 --limit 10
+secapi owners 13f --cik 0001067983 --limit 10
 ```
 
 ## Compare the latest two 13F reports
@@ -32,9 +32,9 @@ omni-sec owners 13f --cik 0001067983 --limit 10
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -d '{"cik":"0001067983","limit":10}' \
-  "$OMNI_DATASTREAM_BASE_URL/v1/owners/13f/compare"
+  "$SEC_API_URL/v1/owners/13f/compare"
 ```
 
 ### SDK
@@ -46,7 +46,7 @@ const comparison = await client.compare13F({ cik: "0001067983", limit: 10 })
 ### CLI
 
 ```bash
-omni-sec owners compare-13f --cik 0001067983 --limit 10
+secapi owners compare-13f --cik 0001067983 --limit 10
 ```
 
 ## Historical institutional ownership extract
@@ -54,8 +54,8 @@ omni-sec owners compare-13f --cik 0001067983 --limit 10
 ### API
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  "$OMNI_DATASTREAM_BASE_URL/v1/owners/institutional/extract?cik=0001067983&year=2025&quarter=4&limit=25"
+curl -H "x-api-key: $SEC_API_KEY" \
+  "$SEC_API_URL/v1/owners/institutional/extract?cik=0001067983&year=2025&quarter=4&limit=25"
 ```
 
 ### SDK
@@ -72,6 +72,6 @@ const extract = await client.institutionalOwnershipExtract({
 ## Recent insider trades
 
 ```bash
-omni-sec insiders list --ticker AAPL --limit 10
+secapi insiders list --ticker AAPL --limit 10
 ```
 

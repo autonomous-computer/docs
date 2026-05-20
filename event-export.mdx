@@ -1,6 +1,6 @@
 # Event export
 
-Operators need a support-friendly way to inspect request, webhook, and stream event history outside the live API response path. Omni Datastream supports filtered event listing and JSON or NDJSON exports.
+Use event export to inspect request, webhook, and stream event history outside the live API response path. SEC API supports filtered event listing and JSON or NDJSON exports.
 
 ## Endpoints
 
@@ -10,8 +10,8 @@ Operators need a support-friendly way to inspect request, webhook, and stream ev
 ## Filtered event inspection
 
 ```bash
-curl "$OMNI_DATASTREAM_URL/v1/events?kind=event&type=artifact.created&requestId=req_123&limit=20" \
-  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+curl "$SEC_API_URL/v1/events?kind=event&type=artifact.created&requestId=req_123&limit=20" \
+  -H "Authorization: Bearer $SEC_API_KEY"
 ```
 
 Useful filters:
@@ -25,15 +25,15 @@ Useful filters:
 ## Export JSON
 
 ```bash
-curl "$OMNI_DATASTREAM_URL/v1/events/export?kind=event&limit=100&format=json" \
-  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+curl "$SEC_API_URL/v1/events/export?kind=event&limit=100&format=json" \
+  -H "Authorization: Bearer $SEC_API_KEY"
 ```
 
 ## Export NDJSON
 
 ```bash
-curl "$OMNI_DATASTREAM_URL/v1/events/export?kind=webhook_delivery&since=2026-03-14T00:00:00Z&format=ndjson" \
-  -H "Authorization: Bearer $OMNI_DATASTREAM_API_KEY"
+curl "$SEC_API_URL/v1/events/export?kind=webhook_delivery&since=2026-03-14T00:00:00Z&format=ndjson" \
+  -H "Authorization: Bearer $SEC_API_KEY"
 ```
 
 Use NDJSON when downstream tooling wants line-oriented ingestion into log processors or ad hoc support scripts.
@@ -41,8 +41,8 @@ Use NDJSON when downstream tooling wants line-oriented ingestion into log proces
 ## CLI
 
 ```bash
-omni-sec events list --kind event --request-id req_123 --limit 20
-omni-sec events export --kind webhook_delivery --since 2026-03-14T00:00:00Z --format ndjson
+secapi events list --kind event --request-id req_123 --limit 20
+secapi events export --kind webhook_delivery --since 2026-03-14T00:00:00Z --format ndjson
 ```
 
 ## Operational notes

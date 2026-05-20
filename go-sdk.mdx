@@ -8,7 +8,7 @@ The Go SDK is deliberately thin. It mirrors the canonical REST contract and stay
 
 <CardGroup cols={3}>
   <Card title="Bootstrap client" icon="package" href="/libraries-and-sdks">
-    A lightweight Go client is available in `packages/sdk-go`.
+    The planned public module path is `go.secapi.dev/secapi` if that domain is controlled at launch.
   </Card>
   <Card title="REST parity" icon="equal" href="/api-reference">
     The Go surface mirrors the public wire format instead of inventing Go-only semantics.
@@ -22,7 +22,7 @@ The Go SDK is deliberately thin. It mirrors the canonical REST contract and stay
 
 <Steps>
   <Step title="Set the key">
-    Export `OMNI_DATASTREAM_API_KEY`.
+    Export `SEC_API_KEY`.
   </Step>
   <Step title="Verify one market or entity call">
     Confirm auth and connectivity before adding more surface area.
@@ -35,16 +35,45 @@ The Go SDK is deliberately thin. It mirrors the canonical REST contract and stay
 ## Example
 
 ```go
-client := sdkgo.NewClient(os.Getenv("OMNI_DATASTREAM_API_KEY"))
-client.BaseURL = "https://api.secapi.ai"
+package main
 
-calendar, err := client.MarketCalendar(map[string]string{
-  "market": "XNYS",
-  "duration": "5",
-})
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+)
+
+func main() {
+	params := url.Values{"ticker": {"AAPL"}}
+	req, err := http.NewRequest("GET", "https://api.secapi.ai/v1/entities/resolve?"+params.Encode(), nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("x-api-key", os.Getenv("SEC_API_KEY"))
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}
 ```
 
-## Dilution intelligence
+When the Go module is published, prefer the public module path:
+
+```bash
+go get go.secapi.dev/secapi
+```
+
+## Dilution intelligence SDK shape
 
 ```go
 // Top 10 highest-dilution-risk issuers
@@ -75,7 +104,7 @@ Wire the Go SDK into this service. Start with one entity or market calendar call
 ## Smoke path
 
 ```bash
-bun run smoke:sdk-go
+go test ./...
 ```
 
 ## Read next
@@ -88,4 +117,3 @@ bun run smoke:sdk-go
     Use the release verification and readiness checks before shipping a backend integration.
   </Card>
 </CardGroup>
-

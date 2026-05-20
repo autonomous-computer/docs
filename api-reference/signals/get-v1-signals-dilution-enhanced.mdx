@@ -1,6 +1,6 @@
 # GET /v1/signals/dilution/enhanced
 
-Return the OMNI Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder)
+Return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder)
 
 <Info>
 Audience: application and coding agent.
@@ -27,8 +27,8 @@ Returns the full `/v1/signals/dilution` response plus a top-level `factorModelCo
 <RequestExample>
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/signals/dilution/enhanced?ticker=MULN"
 ```
 </RequestExample>
@@ -40,7 +40,7 @@ curl -X GET \
 {
   "object": "dilution_signal",
   "id": "sig_dil_muln",
-  "signalKey": "omni_dilution_score",
+  "signalKey": "secapi_dilution_score",
   "methodologyVersion": "2026-04-26.1",
   "ticker": "MULN",
   "score": 88.5,
@@ -78,7 +78,7 @@ curl -X GET \
     }
   },
   "degradedReasons": [
-    "short_interest_unavailable: dilution-enhanced does not yet ingest a short-interest source; see OMNI-3090 follow-up."
+    "short_interest_unavailable: dilution-enhanced does not yet ingest a short-interest source; see planned short-interest source."
   ]
 }
 ```
@@ -87,11 +87,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/signals/dilution/enhanced when you need the OMNI Dilution Score plus factor-model context — macro liquidity regime (per /v1/macro/regimes), per-ticker MOMENTUM and LIQUIDITY factor exposures, and a short-interest placeholder. Treat `factorModelContext.shortInterest.status === "unavailable"` as known-missing, not as zero. Preserve all canonical metadata fields plus `factorModelContext`.
+Use SEC API GET /v1/signals/dilution/enhanced when you need the SEC API Dilution Score plus factor-model context — macro liquidity regime (per /v1/macro/regimes), per-ticker MOMENTUM and LIQUIDITY factor exposures, and a short-interest placeholder. Treat `factorModelContext.shortInterest.status === "unavailable"` as known-missing, not as zero. Preserve all canonical metadata fields plus `factorModelContext`.
 </Prompt>
 
-## Failure posture
+## Errors and partial results
 
-- short-interest is intentionally `unavailable` — surface that state instead of treating it as zero
+- short-interest is intentionally `unavailable` — API that state instead of treating it as zero
 - when the macro overlay or factor exposures time out, the corresponding context fields are nulled and a `degradedReasons[]` entry is added; preserve those reasons in your downstream summary
 

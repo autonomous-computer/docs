@@ -22,8 +22,8 @@ Pick the surface that matches your runtime. Then prove it with one real entity l
   <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
     Best for coding agents and MCP-aware runtimes that need grounded investor workflows.
   </Card>
-  <Card title="OMNI Agent CLI" icon="terminal" href="#omni-agent-cli">
-    Best when you want agent workflows from the terminal without opening a browser or wiring up an SDK.
+  <Card title="SEC API CLI" icon="terminal" href="#sec-api-cli">
+    Best when you want quick REST calls from the terminal without wiring up an SDK.
   </Card>
   <Card title="REST API" icon="globe" href="/api-reference">
     Best when you want exact HTTP control or your own runtime wrapper.
@@ -34,7 +34,7 @@ Pick the surface that matches your runtime. Then prove it with one real entity l
 
 <Steps>
   <Step title="Set the API key">
-    Export `OMNI_DATASTREAM_API_KEY` first. Every other surface will fail in ways that look less clear if auth is not in place.
+    Export `SEC_API_KEY` first. Every other surface will fail in ways that look less clear if auth is not in place.
   </Step>
   <Step title="Verify one entity lookup">
     Confirm the surface can resolve a company or filer you already know, ideally through the identifier type you expect to use in production.
@@ -50,38 +50,29 @@ Pick the surface that matches your runtime. Then prove it with one real entity l
 ## Give this prompt to your agent
 
 <Prompt>
-Install the right Omni Datastream integration surface for this project. Prefer the native SDK if the runtime matches, otherwise use the REST API. Then verify one entity lookup, one filing workflow, one semantic investor workflow such as `intelligence.query`, and one trace lookup while preserving requestId, provenance, freshness, materialization metadata, and trace references.
+Install the right SEC API integration surface for this project. Prefer the native SDK if the runtime matches, otherwise use the REST API. Then verify one entity lookup, one filing workflow, one semantic investor workflow such as `intelligence.query`, and one trace lookup while preserving requestId, provenance, freshness, materialization metadata, and trace references.
 </Prompt>
 
-## OMNI Agent CLI
+## SEC API CLI
 
-The CLI connects to the same agent backend as OMNI Pulse. It speaks the same WebSocket protocol, uses the same auth token, and has access to the same skills, tools, and data.
+The public CLI package name is `@secapi/cli`, with the `secapi` binary. Use it for quick REST calls from a terminal when the package is available in your registry.
 
 ### Installation
 
 ```bash
-# Homebrew (recommended on macOS/Linux)
-brew install autonomous-computer/omni-datastream/omni-sec
-
-# or tap first, then install
-brew tap autonomous-computer/omni-datastream
-brew install omni-sec
-
-# npm (any platform with Node.js)
-npm install -g @omni-datastream/cli
+npm install -g @secapi/cli
 ```
 
 ### Usage
 
 ```bash
-omni auth login            # Store your auth token
-omni chat "hello"          # One-shot query
-omni chat                  # Interactive REPL
-omni sessions list         # View session history
-omni config set thinking-level max
+export SEC_API_KEY=your_key_here
+secapi entities resolve --ticker AAPL --json
+secapi filings search --ticker AAPL --form 10-K --limit 3 --json
+secapi intelligence company --ticker AAPL --json
 ```
 
-Best when you want agent workflows from the terminal without opening a browser or wiring up an SDK. Streaming, permission prompts, plan approval, and session persistence all carry over from the product.
+Prefer direct REST commands for launch-critical examples. Use hosted MCP for agent workflows that need tool discovery.
 
 ## Read next
 
@@ -96,4 +87,3 @@ Best when you want agent workflows from the terminal without opening a browser o
     Exact endpoint behavior when you need wire-level precision.
   </Card>
 </CardGroup>
-

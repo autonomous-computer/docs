@@ -20,8 +20,8 @@ Audience: application and coding agent.
 <RequestExample>
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/market/indices/constituents?index=NDX&limit=2"
 ```
 </RequestExample>
@@ -92,7 +92,7 @@ curl -X GET \
     "constituentSourceUrl": "https://www.nasdaq.com/solutions/global-indexes/nasdaq-100/companies",
     "syncCadence": "daily_midnight_local",
     "lastReviewedAt": "2026-03-17",
-    "notes": "Constituent roster is parsed from Nasdaq's public Nasdaq-100 companies table. Weights are not published on the source page, so OMNI returns rank order and symbol-level golden-record mapping only.",
+    "notes": "Constituent roster is parsed from Nasdaq's public Nasdaq-100 companies table. Weights are not published on the source page, so SEC API returns rank order and symbol-level golden-record mapping only.",
     "provenance": {
       "source": "index_provider",
       "accessionNumber": null,
@@ -118,10 +118,10 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/market/indices/constituents to return rights-safe index constituents for supported benchmark families with canonical entity mapping when available. Preserve `requestId`, `traceparent`, `index object`, `per-row provenance`, `per-row freshness`, `per-row materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/market/indices/constituents to return rights-safe index constituents for supported benchmark families with canonical entity mapping when available. Preserve `requestId`, `traceparent`, `index object`, `per-row provenance`, `per-row freshness`, `per-row materialization` in the output. Return a concise summary and preserve the structured fields your application needs for follow-up requests.
 </Prompt>
 
-## Failure posture
+## Errors and partial results
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports

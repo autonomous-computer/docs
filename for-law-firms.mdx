@@ -1,10 +1,10 @@
 # SEC Data for Legal Teams
 
 <Info>
-Omni Datastream gives law firms programmatic access to SEC enforcement actions, filing histories, entity resolution, and compliance-grade event monitoring -- all through a single API with full provenance and request traceability.
+SEC API gives law firms programmatic access to SEC enforcement actions, filing histories, entity resolution, and compliance-grade event monitoring -- all through a single API with full provenance and request traceability.
 </Info>
 
-## Why legal teams use Datastream
+## Why legal teams use SEC API
 
 <CardGroup cols={2}>
   <Card title="Enforcement action search" icon="shield" href="/api-reference/events">
@@ -41,21 +41,21 @@ Omni Datastream gives law firms programmatic access to SEC enforcement actions, 
 Search for all SEC enforcement actions that reference a specific company:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/events/enforcement?query=Acme+Corp&limit=25"
 ```
 
 Combine with entity resolution to find the canonical CIK first:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/entities/resolve?query=Acme+Corp"
 ```
 
 Then monitor filings for that entity:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings?cik=0001234567&form=8-K&limit=10"
 ```
 
@@ -68,7 +68,7 @@ Every response includes `requestId` and `traceparent` for downstream audit trail
 Pull the legal proceedings section directly from the latest annual filing:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest/sections/item_3?ticker=AAPL&form=10-K&mode=compact"
 ```
 
@@ -90,7 +90,7 @@ These Claude Code skills accelerate legal research workflows:
 Install via MCP for agent-driven legal research:
 
 ```bash
-omni-sec mcp install
+secapi mcp install
 ```
 
 ---
@@ -107,7 +107,7 @@ omni-sec mcp install
 </CardGroup>
 
 <Prompt>
-You are a legal research assistant with access to Omni Datastream. For any client target company, resolve the entity to a canonical CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and surface any 8-K Item 5.02 (officer/director departures) events. Output a dossier with one section per finding category and inline requestId references for auditability.
+You are a legal research assistant with access to SEC API. For any client target company, resolve the entity to a canonical CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and surface any 8-K Item 5.02 (officer/director departures) events. Output a dossier with one section per finding category and inline requestId references for auditability.
 </Prompt>
 
 _See the full 12-prompt [Law firm library](/agents/prompt-library/law-firm)._

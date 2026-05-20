@@ -1,21 +1,21 @@
 ---
-title: "OMNI Datastream vs AskEdgar"
-description: "Feature-by-feature comparison of OMNI Datastream and AskEdgar — schema, verification, endpoints, and agent support"
+title: "SEC API vs AskEdgar"
+description: "Feature-by-feature comparison of SEC API and AskEdgar — schema, verification, endpoints, and agent support"
 ---
 
-# OMNI Datastream vs AskEdgar
+# SEC API vs AskEdgar
 
 [AskEdgar](https://askedgar.io) launched 2026-04-22 as a focused
-dilution-intelligence product for small-cap operators. It ships a curated
+dilution-intelligence product for small-cap teams. It ships a curated
 dilution schema, an AI Copilot UI, and a per-KB API priced for tactical
-workflows. OMNI ships parity on the dilution data — every entity AskEdgar
+workflows. SEC API ships parity on the dilution data — every entity AskEdgar
 models, plus a few they don't — and adds 38 endpoint families they don't
-touch. Each OMNI dilution row carries an `askedgar_url` field, so customers
+touch. Each SEC API dilution row carries an `askedgar_url` field, so customers
 running both products can dual-source during cutover.
 
 ## Dilution data model
 
-| Entity                                              | OMNI fields                                          | AskEdgar fields     |
+| Entity                                              | SEC API fields                                          | AskEdgar fields     |
 | --------------------------------------------------- | ---------------------------------------------------- | ------------------- |
 | Dilution event                                      | 42 (`dilution_events`)                               | 42 (DilutionEntity) |
 | Warrants and convertibles                           | split: `dilution_warrants` + `dilution_convertibles` | bundled fields      |
@@ -33,11 +33,11 @@ Forms covered: S-1, S-3, 424B*, FWP, 8-K (parity).
 
 ## Dilution endpoint coverage
 
-OMNI ships 14 REST endpoints under `/v1/dilution/*` plus 14 mirrored
+SEC API ships 14 REST endpoints under `/v1/dilution/*` plus 14 mirrored
 `dilution.*` MCP tools. AskEdgar productizes a related but smaller set
 under `https://api.askedgar.com/v1`. Mapping for the most common queries:
 
-| AskEdgar route               | OMNI route(s)                                                    |
+| AskEdgar route               | SEC API route(s)                                                    |
 | ---------------------------- | ---------------------------------------------------------------- |
 | `/v1/dilution-data`          | `/v1/dilution/events`                                            |
 | `/v1/dilution-rating`        | `/v1/dilution/score` (latest) + `/v1/dilution/ratings` (history) |
@@ -56,7 +56,7 @@ Full migration table at [migrate-from-askedgar](/migrate-from-askedgar).
 
 ## Verification model
 
-OMNI returns a 6-dimension verification block on every dilution row.
+SEC API returns a 6-dimension verification block on every dilution row.
 AskEdgar returns a single boolean. The shape difference matters when an
 agent needs to gate downstream actions on confidence or trace a number
 back to a source span:
@@ -65,7 +65,7 @@ back to a source span:
 // AskEdgar
 { "verified": true }
 
-// OMNI
+// SEC API
 {
   "verification": {
     "confidence": 0.94,
@@ -73,37 +73,35 @@ back to a source span:
     "sourceSpanResolved": true,
     "verifiedAt": "2026-04-22T14:31:08Z",
     "modelVersion": "claude-opus-4-7",
-    "reviewer": "human:operator-id-184"
+    "reviewer": "human:reviewer-184"
   }
 }
 ```
 
-The OMNI verification surface is shipping behind two staged-rollout flags
-(`OMNI_DILUTION_EXTRACTORS_ENABLED`, `OMNI_DILUTION_VERIFICATION_ENABLED`)
-documented in `docs/operations/feature-flag-inventory.md`. Schema and
-contract are live on every response; the production extraction pipeline
-ramps in stages (OMNI-3081).
+The SEC API verification surface is available in the public response schema.
+Customers should treat confidence, source-span resolution, and review metadata
+as separate signals rather than collapsing verification to a single boolean.
 
 ## Pricing
 
 AskEdgar splits its surface into two products: an AI Copilot UI (priced
 per-month with included AI questions) and an API (priced per-KB,
-pay-as-you-go only). OMNI is API-first and offers a unified PAYG plus
+pay-as-you-go only). SEC API is API-first and offers a unified PAYG plus
 subscription ladder.
 
-| Tier              | OMNI                                            | AskEdgar Copilot                       | AskEdgar API     |
+| Tier              | SEC API                                            | AskEdgar Copilot                       | AskEdgar API     |
 | ----------------- | ----------------------------------------------- | -------------------------------------- | ---------------- |
 | **Free**          | 250 calls/month (renewable)                     | Limited AI questions                   | None             |
 | **Pay-as-you-go** | From $0.01/call                                 | n/a                                    | $0.004–$0.019/KB |
-| **Personal/Pro**  | $55/month                                       | $59/month — 600 AI Q (7-day trial)     | n/a              |
-| **Team/Pro+**     | $239/month                                      | $199/month — 1,000 AI Q (7-day trial)  | n/a              |
-| **Enterprise**    | Custom (SLA, support, dedicated capacity)       | Custom                                 | Custom           |
+| **Personal/Pro**  | $55/mo or $588/yr                               | $59/month — 600 AI Q (7-day trial)     | n/a              |
+| **Team/Pro+**     | $239/mo or $2,388/yr                            | $199/month — 1,000 AI Q (7-day trial)  | n/a              |
+| **Commercial/Enterprise** | From $18,000/yr                         | Custom                                 | Custom           |
 
 **Cost example** for a small dilution-research workload (300 API calls/month, ~6 KB returned per `dilution-data` call):
 
 - AskEdgar API PAYG (`/v1/dilution-data` at $0.018/KB) ≈ **$32.40/month**
-- OMNI PAYG (250 free + 50 × $0.01) ≈ **$0.50/month**
-- OMNI Personal **$55/month** (predictable, includes the rest of the 39-family API surface)
+- SEC API PAYG at light-read pricing for 50 calls ≈ **-e.50/month**
+- SEC API Personal **$55/month** or **$588/year** (predictable, includes the rest of the 39-family API surface)
 
 The PAYG arithmetic is the conversion lever for any agent at small-to-medium
 volume. The subscription is the right call once dilution data is embedded
@@ -114,27 +112,27 @@ in a workflow that touches the rest of the API surface.
 AskEdgar has genuine strengths and a visible head start on dilution
 specifically. Customers evaluating both should know:
 
-- **Polished AI Copilot UI** for non-engineer operators. OMNI is API-first
+- **Polished AI Copilot UI** for non-engineer teams. SEC API is API-first
   and does not ship a Copilot UI in the same shape today.
 - **Tight vertical scope** — schema, screener, alerts, and Discord
   integrations tuned for one workflow (small-cap dilution forensics)
   feel cohesive end-to-end.
-- **7-day free trial** on Pro and Pro+ Copilot tiers. OMNI does not offer
-  a separate trial; every new organization receives 250 included calls
+- **7-day free trial** on Pro and Pro+ Copilot tiers. SEC API does not offer
+  a separate public trial in the pricing catalog; use `GET /v1/billing` to inspect any account-specific evaluation credit
   renewable monthly.
 - **Marquee small-cap testimonials.** Aegis Capital is named on the home
   page alongside Trillium, Seven Points Capital, SMB Capital, and others.
 - **Strict per-endpoint per-KB API pricing.** Some buyers prefer a metered
   API with no monthly floor.
 
-## Where OMNI wins
+## Where SEC API wins
 
-OMNI is broader (39 endpoint families vs AskEdgar's dilution-only wedge),
+SEC API is broader (39 endpoint families vs AskEdgar's dilution-only wedge),
 ships per-field verification rather than a binary flag, and treats agents
-as a first-class surface (4 SDKs, 8 Skills, MCP server, FinanceBench
-score, signed webhooks, structured CLI).
+as a first-class surface (4 SDKs, 8 Skills, MCP server, signed webhooks,
+structured CLI).
 
-| Dimension                                               | OMNI                                  | AskEdgar                          |
+| Dimension                                               | SEC API                                  | AskEdgar                          |
 | ------------------------------------------------------- | ------------------------------------- | --------------------------------- |
 | Endpoint families                                       | **39**                                | dilution-only (~5 productized)    |
 | Endpoints                                               | **186**                               | ~12 productized                   |
@@ -142,12 +140,12 @@ score, signed webhooks, structured CLI).
 | MCP server                                              | yes (47 tools, 14 dilution.*)         | no                                |
 | SDKs                                                    | 4 (JS/TS, Python, Go, Rust)           | none published                    |
 | Custom Skills (Claude / agent-runnable)                 | 8 canonical skills                    | none                              |
-| FinanceBench score                                      | 150 / 150 (100%)                      | none published                    |
+| FinanceBench                                            | canary status published separately    | none published                    |
 | Filing search / sections / XBRL                         | yes                                   | no                                |
 | 13F holdings + comparison                               | yes                                   | no                                |
 | Insider trading + Form 144                              | yes                                   | no                                |
 | Executive compensation                                  | yes                                   | no                                |
-| 8-K 5.07 voting (structured)                            | yes (first in market)                 | no                                |
+| 8-K 5.07 voting (structured)                            | yes                                   | no                                |
 | Form ADV (+ AUM filters)                                | yes                                   | no                                |
 | Enforcement (5,993+ records)                            | yes                                   | no                                |
 | Semantic search (Pinecone + Voyage)                     | yes                                   | no                                |
@@ -156,21 +154,21 @@ score, signed webhooks, structured CLI).
 | Webhooks (signed, replay, cursor)                       | yes (7 dilution event types)          | Discord automation only           |
 | Direct row-level back-link to competitor                | yes (`askedgar_url` field)            | n/a                               |
 
-Latency benchmarks vs AskEdgar are scheduled for a follow-up ticket; OMNI's
-published p50 across the 4-workflow harness is at
-[/benchmark-results](/benchmark-results).
+SEC API's published p50 across the current 4-workflow harness is available at
+[/benchmark-results](/benchmark-results). AskEdgar-specific latency has not
+yet been published.
 
 ## When to choose which
 
 **Choose AskEdgar when:**
 
-- You are a small-cap operator who wants an AI Copilot UI today and dilution
+- You are a small-cap team who wants an AI Copilot UI today and dilution
   is your only need.
 - You want to start with a 7-day free trial on the Copilot tier.
 - You are billing-compliant with strictly-metered per-KB API charges and
   do not need broader SEC data.
 
-**Choose OMNI Datastream when:**
+**Choose SEC API when:**
 
 - You are building agents or integrations that touch dilution AND broader
   SEC data (filings, statements, factors, insiders, board, comp, macro).
@@ -180,47 +178,46 @@ published p50 across the 4-workflow harness is at
   (subscription) billing as your workload grows.
 
 **Use both** if your dilution research happens in the AskEdgar Copilot UI
-and your agent layer reads directly from OMNI for everything else — the
-`askedgar_url` field on each OMNI dilution row gives you a one-click return
+and your agent layer reads directly from SEC API for everything else — the
+`askedgar_url` field on each SEC API dilution row gives you a one-click return
 path to the AskEdgar UI for verification.
 
 ## Developer experience
 
-| Capability                       | OMNI                                | AskEdgar                       |
+| Capability                       | SEC API                                | AskEdgar                       |
 | -------------------------------- | ----------------------------------- | ------------------------------ |
 | API auth header                  | `x-api-key`                         | `API-KEY`                      |
 | API base URL                     | `https://api.secapi.ai/v1`          | `https://api.askedgar.com/v1`  |
-| Onboarding                       | 250 calls auto-provisioned, no card | API-key request flow + per-KB billing |
+| Onboarding                       | API-key signup; billing state returned by `GET /v1/billing` | API-key request flow + per-KB billing |
 | OpenAPI                          | yes (Zod-generated)                 | not publicly linked from /docs |
 | MCP server                       | yes (47 tools)                      | no                             |
 | Multi-language SDKs              | JS/TS, Python, Go, Rust             | none published                 |
 | Skills (Claude / agent-runnable) | 8 canonical                         | none published                 |
 | Webhooks                         | signed + replay + cursor            | Discord-only                   |
-| FinanceBench                     | 150 / 150                           | not published                  |
+| FinanceBench                     | canary status published separately  | not published                  |
 
 ## Migration
 
 ```bash
-# AskEdgar                                              ->  OMNI Datastream
+# AskEdgar                                              ->  SEC API
 # /v1/dilution-data?ticker=MULN                         ->  /v1/dilution/events?ticker=MULN
 # /v1/dilution-rating?ticker=MULN                       ->  /v1/dilution/score?ticker=MULN
 # /v1/float-outstanding?ticker=MULN                     ->  /v1/dilution/share-float-history?ticker=MULN&limit=1
-# API-KEY: $ASKEDGAR_API_KEY                            ->  x-api-key: $OMNI_DATASTREAM_API_KEY
+# API-KEY: $ASKEDGAR_API_KEY                            ->  x-api-key: $SEC_API_KEY
 ```
 
 Full guide at [migrate-from-askedgar](/migrate-from-askedgar) — endpoint
 mapping, auth diff, verification-model rewrite, pricing-impact table.
 
-## Try OMNI Datastream
+## Try SEC API
 
 ```bash
 curl "https://api.secapi.ai/v1/dilution/events?ticker=MULN" \
   -H "x-api-key: YOUR_API_KEY"
 ```
 
-[Get your free API key →](https://secapi.ai/login) — 250 calls/month, no card required.
+[Get an API key →](https://secapi.ai/login).
 
 ---
 
-*All numeric claims in this comparison reflect data captured as of 2026-04-26. AskEdgar facts re-verified at askedgar.io on 2026-04-26. See `benchmarks/METHODOLOGY.md` for sign-off.*
-
+*All numeric claims in this comparison reflect data captured as of 2026-04-26. AskEdgar facts re-verified at askedgar.io on 2026-04-26. See `benchmarks/METHODOLOGY.md` for benchmark methodology.*

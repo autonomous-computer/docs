@@ -1,12 +1,12 @@
 # API Overview
 
 <Info>
-The API is built for real investor work. It keeps the contract compact, the source trail visible, partial-state behavior explicit, and the surface consistent across REST, SDKs, CLI, and hosted MCP.
+The API is built for real investor work. It keeps the contract compact, the source trail visible, partial-state behavior explicit, and the model consistent across REST, SDKs, CLI, and hosted MCP.
 </Info>
 
 ## Authentication
 
-API keys are the primary authentication method for all plans. Use the `x-api-key` header on every REST request; the same credential works across SDK and CLI clients. See [Auth, Billing, and First Utility](/auth-and-pricing) for the full model. OAuth/SSO via WorkOS is planned for the enterprise tier in 2026 Q3+; hosted MCP clients use WorkOS OAuth discovery today and that surface is unchanged.
+API keys are the primary authentication method for all plans. Use the `x-api-key` header on every REST request; the same credential works across SDK and CLI clients. See [Auth, Billing, and First Utility](/auth-and-pricing) for the full model. Hosted MCP clients use OAuth discovery through the documented `.well-known` endpoints.
 
 ## What the API is optimized for
 
@@ -29,7 +29,7 @@ API keys are the primary authentication method for all plans. Use the `x-api-key
 
 <Steps>
   <Step title="Version requests">
-    Use `Omni-Version` so production behavior does not shift underneath you.
+    Use `secapi-version` so production behavior does not shift underneath you.
   </Step>
   <Step title="Correlate requests">
     Keep `Request-Id` in logs and downstream artifacts.
@@ -41,7 +41,7 @@ API keys are the primary authentication method for all plans. Use the `x-api-key
     Provenance, freshness, materialization, and trace references belong with the data.
   </Step>
   <Step title="Prefer structured contracts">
-    Datastream favors useful structured workflows over raw passthroughs.
+    SEC API favors useful structured workflows over raw passthroughs.
   </Step>
   <Step title="Respect explicit partial states">
     Treat values like `supported`, `degraded`, `unavailable`, and rights-scoped coverage flags as part of the contract, not edge-case trivia.
@@ -59,12 +59,12 @@ These fields matter because investor agents need more than a value. They need th
 
 ## Event delivery rules
 
-- webhook delivery uses signed `POST` requests with `x-omni-signature`
-- delivery headers include `x-omni-event-id`, `x-omni-event-type`, and `x-request-id`
+- webhook delivery uses signed `POST` requests with `x-secapi-signature`
+- delivery headers include `x-secapi-event-id`, `x-secapi-event-type`, and `x-request-id`
 - current event families include artifacts, webhooks, and stream subscriptions
 
 <Warning>
-Datastream is not trying to be a generic raw filing tunnel. It is designed around the workflows serious investors and investor agents actually repeat.
+SEC API is not trying to be a generic raw filing tunnel. It is designed around the workflows serious investors and investor agents actually repeat.
 </Warning>
 
 ## Read next
@@ -73,11 +73,10 @@ Datastream is not trying to be a generic raw filing tunnel. It is designed aroun
   <Card title="API conventions" icon="book-text" href="/api-conventions">
     Read the wire-level defaults and shared rules.
   </Card>
-  <Card title="API Reference" icon="square-terminal" href="/api-reference">
+  <Card title="API Reference" icon="braces" href="/api-reference">
     Jump to the exact call you need.
   </Card>
   <Card title="Freshness and trust" icon="shield-check" href="/freshness-and-trust">
-    See how the source trail and freshness posture stay visible.
+    See how the source trail and freshness metrics stay visible.
   </Card>
 </CardGroup>
-

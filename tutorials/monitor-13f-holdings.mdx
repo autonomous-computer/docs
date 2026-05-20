@@ -1,6 +1,6 @@
 ---
 title: "Monitor Institutional Holdings Changes"
-description: "Track 13F institutional holdings changes quarter over quarter using the Datastream API. Includes curl, Python, and JavaScript examples."
+description: "Track 13F institutional holdings changes quarter over quarter using the SEC API. Includes curl, Python, and JavaScript examples."
 ---
 
 # Monitor Institutional Holdings Changes
@@ -9,7 +9,7 @@ Institutional investors managing over $100M must disclose their equity holdings 
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - Basic familiarity with REST APIs
 - (Optional) Python 3.8+ or Node.js 18+ for SDK examples
 
@@ -20,16 +20,16 @@ Use `/v1/owners/13f` to pull the latest holdings for an institutional investor b
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
 ```
 
 ### Python
 
 ```python
-from omni_datastream_py import OmniDatastreamClient
+from secapi_client import SecApiClient
 
-client = OmniDatastreamClient(api_key="your-api-key")
+client = SecApiClient(api_key="your-api-key")
 
 holdings = client.owners.thirteenf(cik="0001067983", limit=20)
 
@@ -40,10 +40,10 @@ for holding in holdings.data:
 ### JavaScript
 
 ```ts
-import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+import { SecApiClient } from "@secapi/sdk";
 
-const client = new OmniDatastreamClient({
-  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+const client = new SecApiClient({
+  apiKey: process.env.SEC_API_KEY!,
 });
 
 const holdings = await client.owners.thirteenF({
@@ -74,7 +74,7 @@ The `/v1/owners/13f/compare` endpoint shows what changed between two filing peri
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f/compare?cik=0001067983&period_a=2024-Q3&period_b=2024-Q4"
 ```
 

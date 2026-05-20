@@ -1,15 +1,15 @@
 ---
 title: "Automate SEC Monitoring with n8n"
-description: "Build an n8n workflow that receives OMNI Datastream webhook events for new SEC filings and routes alerts to Slack. Includes importable workflow JSON."
+description: "Build an n8n workflow that receives SEC API webhook events for new SEC filings and routes alerts to Slack. Includes importable workflow JSON."
 ---
 
 # Automate SEC Monitoring with n8n
 
-n8n is an open-source workflow automation tool you can self-host or run in the cloud. In this tutorial you will wire an n8n webhook node to the OMNI Datastream API so that every time an 8-K filing is published for a watchlist of companies, n8n extracts the key data and posts a summary to a Slack channel.
+n8n is an open-source workflow automation tool you can self-host or run in the cloud. In this tutorial you will wire an n8n webhook node to the SEC API so that every time an 8-K filing is published for a watchlist of companies, n8n extracts the key data and posts a summary to a Slack channel.
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - An n8n instance (self-hosted or [n8n Cloud](https://n8n.io))
 - A Slack workspace with an incoming webhook URL or the n8n Slack credential configured
 - (Optional) Familiarity with the [Build a Filing Monitor](/tutorials/build-filing-monitor) tutorial
@@ -20,7 +20,7 @@ n8n is an open-source workflow automation tool you can self-host or run in the c
 EDGAR filing published
         |
         v
-OMNI Datastream monitor (8-K filings, watchlist tickers)
+SEC API monitor (8-K filings, watchlist tickers)
         |
         v
 Webhook POST --> n8n Webhook node
@@ -37,34 +37,34 @@ n8n Slack node (post formatted alert)
 1. Open your n8n instance and create a new workflow.
 2. Add a **Webhook** node as the trigger.
 3. Set **HTTP Method** to `POST`.
-4. Set **Path** to `omni-filings` (or any path you prefer).
+4. Set **Path** to `sec-api-filings` (or any path you prefer).
 5. Under **Authentication**, select **None** for now (you will add signature verification in Step 4).
 6. Click **Listen for Test Event** to put the node in listening mode. Copy the **Test URL** --- you will need it in the next step.
 
 The test URL looks like:
 
 ```
-https://your-n8n.example.com/webhook-test/omni-filings
+https://your-n8n.example.com/webhook-test/sec-api-filings
 ```
 
 Once the workflow is active, use the **Production URL** instead:
 
 ```
-https://your-n8n.example.com/webhook/omni-filings
+https://your-n8n.example.com/webhook/sec-api-filings
 ```
 
-## Step 2 --- Register the webhook with OMNI Datastream
+## Step 2 --- Register the webhook with SEC API
 
-Point the OMNI Datastream monitor at your n8n webhook URL.
+Point the SEC API monitor at your n8n webhook URL.
 
 ### Create a webhook endpoint
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://your-n8n.example.com/webhook/omni-filings",
+    "url": "https://your-n8n.example.com/webhook/sec-api-filings",
     "description": "n8n filing alerts",
     "events": ["filing.new"]
   }' \
@@ -77,7 +77,7 @@ Save the returned `signing_secret` --- you will use it to verify payloads.
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "n8n 8-K Watchlist",
@@ -134,7 +134,7 @@ return [
 
 ## Step 4 --- Verify the webhook signature (recommended)
 
-Add a second **Function** node between the Webhook node and the extraction node to verify the OMNI signing secret. If verification fails, the workflow stops.
+Add a second **Function** node between the Webhook node and the extraction node to verify the SEC API signing secret. If verification fails, the workflow stops.
 
 ```javascript
 const crypto = require("crypto");
@@ -183,12 +183,12 @@ Copy this JSON and import it via **Workflow > Import from File** in n8n:
 
 ```json
 {
-  "name": "OMNI SEC Filing Alerts",
+  "name": "SEC API SEC Filing Alerts",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "omni-filings",
+        "path": "sec-api-filings",
         "responseMode": "onReceived",
         "responseCode": 200
       },
@@ -252,15 +252,15 @@ Accession: 0000320193-24-000095
 | Problem | Solution |
 |---------|----------|
 | n8n webhook never fires | Make sure the workflow is **active** (toggle in top-right). Use the production URL, not the test URL. |
-| 401 or signature mismatch | Verify you are using the correct `signing_secret` from the OMNI webhook endpoint. |
+| 401 or signature mismatch | Verify you are using the correct `signing_secret` from the SEC API webhook endpoint. |
 | Slack message is empty | Check that the Function node output includes all fields (`ticker`, `company`, etc.). Run the node in isolation with test data. |
-| Duplicate alerts | OMNI retries failed deliveries. Make the workflow idempotent by checking `accession_number` against a dedup store (e.g., n8n's built-in static data). |
+| Duplicate alerts | SEC API retries failed deliveries. Make the workflow idempotent by checking `accession_number` against a dedup store (e.g., n8n's built-in static data). |
 | Monitor not triggering | Confirm the monitor is `active` with `GET /v1/monitors`. Check that the `form_types` and `tickers` match what you expect. |
 
 ## Next steps
 
 - **Add more channels**: Route different form types to different Slack channels using an n8n Switch node.
-- **Enrich with intelligence**: After receiving a filing event, call the OMNI `/v1/intelligence/query` endpoint to get an AI summary before posting.
+- **Enrich with intelligence**: After receiving a filing event, call the SEC API `/v1/intelligence/query` endpoint to get an AI summary before posting.
 - **Store in a database**: Add a Postgres or Airtable node to log every filing for historical analysis.
 
 See the [Webhook Stream Workflows](/webhook-stream-workflows) guide for advanced webhook patterns.
