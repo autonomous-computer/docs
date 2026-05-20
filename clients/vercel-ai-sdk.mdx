@@ -9,7 +9,7 @@ Use `@ai-sdk/mcp` to register SEC API as a streamable HTTP MCP server with an `x
 
 ## Prerequisites
 
-- SEC API key. Sign up at [secapi.ai](https://secapi.ai). Set `SEC_API_KEY`.
+- SEC API key. Sign up at [secapi.ai](https://secapi.ai). Set `SECAPI_API_KEY`.
 - Node.js plus `ai`, `@ai-sdk/mcp`, and a model provider package.
 
 ## Install
@@ -27,7 +27,7 @@ const mcp = await createMCPClient({
   transport: {
     type: "http",
     url: "https://api.secapi.ai/mcp",
-    headers: { "x-api-key": process.env.SEC_API_KEY! },
+    headers: { "x-api-key": process.env.SECAPI_API_KEY! },
   },
 });
 
@@ -50,7 +50,7 @@ Run the snippet. The agent should call the `filings.latest` tool with `ticker: A
 
 ## Troubleshooting
 
-- **`401 Unauthorized`** — `x-api-key` is missing or wrong. Sanity check: `curl https://api.secapi.ai/v1/limits -H "x-api-key: $SEC_API_KEY"`.
+- **`401 Unauthorized`** — `x-api-key` is missing or wrong. Sanity check: `curl https://api.secapi.ai/v1/limits -H "x-api-key: $SECAPI_API_KEY"`.
 - **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
 - **Process hangs after first call** — always `await mcp.close()` in a `finally` block (or in `onFinish` and `onError` if you use streaming). Open SSE connections will keep the event loop alive.
 - **`Cannot find module '@ai-sdk/mcp'`** — install the MCP package or check your AI SDK version's MCP client import path.

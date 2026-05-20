@@ -27,7 +27,7 @@ Use SEC API from async Rust services with direct REST calls today. The examples 
 
 <Steps>
   <Step title="Add an HTTP client">
-    Use `reqwest`, `serde`, and `SEC_API_KEY` to call the public REST API.
+    Use `reqwest`, `serde`, and `SECAPI_API_KEY` to call the public REST API.
   </Step>
   <Step title="Exercise one fast path">
     Start with a volatility or entity lookup to confirm the runtime wiring.
@@ -40,7 +40,7 @@ Use SEC API from async Rust services with direct REST calls today. The examples 
 ## Example
 
 ```rust
-let api_key = std::env::var("SEC_API_KEY")?;
+let api_key = std::env::var("SECAPI_API_KEY")?;
 let client = reqwest::Client::new();
 let response = client
     .get("https://api.secapi.ai/v1/entities/resolve")
@@ -54,25 +54,49 @@ let entity: serde_json::Value = response.json().await?;
 println!("{entity:#?}");
 ```
 
-Use these examples until the public Rust crate is available.
+Use direct REST requests when you want explicit control over retries, logging, and response metadata in Rust.
 
 ## Dilution intelligence
 
 ```rust
 // Top 10 highest-dilution-risk issuers
-let ratings = client.dilution_ratings(&[("overall_risk", "high"), ("limit", "10")]).await?;
+let response = client
+    .get("https://api.secapi.ai/v1/dilution/ratings")
+    .query(&[("overall_risk", "high"), ("limit", "10")])
+    .header("x-api-key", api_key)
+    .send()
+    .await?
+    .error_for_status()?;
 
 // Single-ticker dilution rollup
-let score = client.dilution_score(&[("ticker", "BBBB")]).await?;
+let response = client
+    .get("https://api.secapi.ai/v1/dilution/score")
+    .query(&[("ticker", "BBBB")])
+    .header("x-api-key", api_key)
+    .send()
+    .await?
+    .error_for_status()?;
 
 // ATM offerings only (boolean filter on the events list)
-let atms = client.dilution_events(&[("ticker", "BBBB"), ("is_atm", "true")]).await?;
+let response = client
+    .get("https://api.secapi.ai/v1/dilution/events")
+    .query(&[("ticker", "BBBB"), ("is_atm", "true")])
+    .header("x-api-key", api_key)
+    .send()
+    .await?
+    .error_for_status()?;
 
 // Coverage + freshness rollup (no agent shape — already compact)
-let coverage = client.dilution_coverage(&[("ticker", "BBBB")]).await?;
+let response = client
+    .get("https://api.secapi.ai/v1/dilution/coverage")
+    .query(&[("ticker", "BBBB")])
+    .header("x-api-key", api_key)
+    .send()
+    .await?
+    .error_for_status()?;
 ```
 
-The full API — `dilution_events`, `dilution_event_detail`, `dilution_warrants`, `dilution_convertibles`, `dilution_rofr`, `dilution_lockups`, `dilution_cash_position`, `dilution_corporate_actions`, `dilution_nasdaq_compliance`, `dilution_ratings`, `dilution_reverse_splits`, `dilution_score`, `dilution_share_float_history`, `dilution_coverage` — mirrors the REST routes 1:1. Pass `("view", "agent")` in any list call (except `dilution_coverage`) for the compact agent-mode shape.
+The full dilution API is available under `/v1/dilution/*`. Pass `("view", "agent")` in list-call query params, except `/v1/dilution/coverage`, for the compact agent-mode shape.
 
 <Prompt description="Copy this SEC API prompt for your agent.">
 Integrate SEC API REST calls with this Rust service. Verify the base auth path with a volatility or entity call, then add one filing or statement workflow and preserve requestId, traceparent, freshness, and provenance in the service logs.

@@ -16,7 +16,7 @@ Build an autonomous agent that checks for new 8-K filings every day and sends Sl
 
 ## Prerequisites
 
-- An SEC API key (set as `SEC_API_KEY`)
+- An SEC API key (set as `SECAPI_API_KEY`)
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
 - A Slack workspace with an incoming webhook URL
 - Node.js 18+ installed
@@ -38,7 +38,7 @@ sec-api auth login
 Set your API key as an environment variable for non-interactive use:
 
 ```bash
-export SEC_API_KEY="your-api-key"
+export SECAPI_API_KEY="your-api-key"
 ```
 
 ## Step 2 — Create the project structure
@@ -90,7 +90,7 @@ const WATCHLIST = JSON.parse(
 );
 const STATE_PATH = join(__dirname, "state.json");
 const API_BASE = "https://api.secapi.ai";
-const API_KEY = process.env.SEC_API_KEY;
+const API_KEY = process.env.SECAPI_API_KEY;
 
 function loadState() {
   try {
@@ -263,7 +263,7 @@ Add a cron entry to run the skill daily. You can use `crontab` on Linux/macOS or
 crontab -e
 
 # Add this line to run at 6:00 PM ET (23:00 UTC) every weekday
-0 23 * * 1-5 cd /path/to/sec-filing-monitor-agent && SEC_API_KEY="your-api-key" node skill.js >> /var/log/sec-monitor.log 2>&1
+0 23 * * 1-5 cd /path/to/sec-filing-monitor-agent && SECAPI_API_KEY="your-api-key" node skill.js >> /var/log/sec-monitor.log 2>&1
 ```
 
 Alternatively, use Claude Code's built-in scheduling:

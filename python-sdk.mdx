@@ -13,7 +13,7 @@ The Python SDK is built for research, ETL, notebooks, and backend services that 
 
 <Steps>
   <Step title="Install the SDK">
-    Use the public Python package name once it is available in your package index.
+    Install the public Python package.
   </Step>
   <Step title="Set the API key and base URL">
     Default to `https://api.secapi.ai` unless you are testing a local or staging environment.
@@ -27,7 +27,7 @@ The Python SDK is built for research, ETL, notebooks, and backend services that 
 pip install secapi-client
 ```
 
-If the package is not visible in your index yet, use the REST example below. The SDK mirrors the same endpoints and `x-api-key` authentication.
+The SDK mirrors the same endpoints and `x-api-key` authentication as the REST examples below.
 
 ## What it is good for
 
@@ -53,7 +53,7 @@ import os
 import requests
 
 BASE_URL = "https://api.secapi.ai"
-HEADERS = {"x-api-key": os.environ["SEC_API_KEY"]}
+HEADERS = {"x-api-key": os.environ["SECAPI_API_KEY"]}
 
 def get_json(path, params=None):
     response = requests.get(f"{BASE_URL}{path}", params=params, headers=HEADERS, timeout=30)
@@ -85,13 +85,13 @@ answer = answer_response.json()
 
 ## SDK shape
 
-When the public SDK package is available, the intended package name is `secapi-client`:
+The public Python package name is `secapi-client`:
 
 ```python
 import os
-from secapi import SecApiClient
+from secapi_client import SecApiClient
 
-client = SecApiClient(api_key=os.environ["SEC_API_KEY"])
+client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
 filing = client.latest_filing(ticker="AAPL", form="10-K")
 ```
 
@@ -106,7 +106,7 @@ The Python SDK retries transient failures with exponential backoff and a per-cli
 Disable SDK retries when your application already owns retry behavior:
 
 ```python
-client = SecApiClient(api_key=os.environ["SEC_API_KEY"], retry=False, telemetry=False)
+client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"], retry=False, telemetry=False)
 ```
 
 Opt into mutating retries only when the operation is idempotent:

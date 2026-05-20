@@ -9,7 +9,7 @@ Stop polling for new filings. Instead, register a webhook endpoint and create a 
 
 ## Prerequisites
 
-- An SEC API key (set as `SEC_API_KEY`)
+- An SEC API key (set as `SECAPI_API_KEY`)
 - A publicly accessible HTTPS endpoint to receive webhooks (use [webhook.site](https://webhook.site) for testing)
 - (Optional) Python 3.8+ or Node.js 18+ for SDK examples
 
@@ -21,7 +21,7 @@ Tell the API where to send events by creating a webhook endpoint with `/v1/webho
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $SEC_API_KEY" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://your-server.com/webhooks/filings",
@@ -51,10 +51,10 @@ print(f"Signing secret: {endpoint.signing_secret}")
 ### JavaScript
 
 ```ts
-import { SecApiClient } from "@secapi/sdk";
+import { SecApiClient } from "@secapi/sdk-js";
 
 const client = new SecApiClient({
-  apiKey: process.env.SEC_API_KEY!,
+  apiKey: process.env.SECAPI_API_KEY!,
 });
 
 const endpoint = await client.webhookEndpoints.create({
@@ -89,7 +89,7 @@ A monitor defines what filings trigger a webhook delivery. Use `/v1/monitors` to
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $SEC_API_KEY" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "FAANG 8-K Monitor",
@@ -229,19 +229,19 @@ app.listen(3000);
 
 ```bash
 # List all active monitors
-curl -H "x-api-key: $SEC_API_KEY" \
+curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors"
 
 # Pause a monitor
 curl -X PATCH \
-  -H "x-api-key: $SEC_API_KEY" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"status": "paused"}' \
   "https://api.secapi.ai/v1/monitors/mon_xyz789"
 
 # Delete a monitor
 curl -X DELETE \
-  -H "x-api-key: $SEC_API_KEY" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors/mon_xyz789"
 ```
 

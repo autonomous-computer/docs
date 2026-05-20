@@ -25,8 +25,8 @@ Every API request generates a traceable event chain. SEC API provides multiple A
 Drill into a single request by its `Request-Id`:
 
 ```bash
-curl "$SEC_API_URL/v1/diagnostics/requests/req_abc123" \
-  -H "x-api-key: $SEC_API_KEY"
+curl "$SECAPI_BASE_URL/v1/diagnostics/requests/req_abc123" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 Returns usage events, canonical events, webhook deliveries, stream events, artifacts, and grouped meter-class counts for that request. See [Request Diagnostics](/request-diagnostics) for the full reference.
@@ -36,8 +36,8 @@ Returns usage events, canonical events, webhook deliveries, stream events, artif
 Aggregate webhook and stream delivery activity over a time window:
 
 ```bash
-curl "$SEC_API_URL/v1/diagnostics/deliveries/summary?since=2026-01-01T00:00:00Z&limit=200" \
-  -H "x-api-key: $SEC_API_KEY"
+curl "$SECAPI_BASE_URL/v1/diagnostics/deliveries/summary?since=2026-01-01T00:00:00Z&limit=200" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 ### Event Export
@@ -45,8 +45,8 @@ curl "$SEC_API_URL/v1/diagnostics/deliveries/summary?since=2026-01-01T00:00:00Z&
 Export the full event log in JSON or NDJSON for ingestion into external SIEM, log aggregation, or compliance tooling:
 
 ```bash
-curl "$SEC_API_URL/v1/events/export?kind=event&format=ndjson&limit=100" \
-  -H "x-api-key: $SEC_API_KEY"
+curl "$SECAPI_BASE_URL/v1/events/export?kind=event&format=ndjson&limit=100" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 Filters: `kind`, `type`, `requestId`, `since`, `limit`, `format` (`json` or `ndjson`). See [Event Export](/event-export) for details.
@@ -58,8 +58,8 @@ Billing state, usage, and plan limits are always available through the API. Use 
 ### Billing snapshot
 
 ```bash
-curl "$SEC_API_URL/v1/billing" \
-  -H "x-api-key: $SEC_API_KEY"
+curl "$SECAPI_BASE_URL/v1/billing" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 Returns the current plan key, billing state, spend caps, budget alerts, and Stripe subscription status.
@@ -67,8 +67,8 @@ Returns the current plan key, billing state, spend caps, budget alerts, and Stri
 ### Usage summary
 
 ```bash
-curl "$SEC_API_URL/v1/usage" \
-  -H "x-api-key: $SEC_API_KEY"
+curl "$SECAPI_BASE_URL/v1/usage" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 Returns metered usage events grouped by meter class for the current billing period.
@@ -76,8 +76,8 @@ Returns metered usage events grouped by meter class for the current billing peri
 ### Plan limits
 
 ```bash
-curl "$SEC_API_URL/v1/limits" \
-  -H "x-api-key: $SEC_API_KEY"
+curl "$SECAPI_BASE_URL/v1/limits" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 Returns the rate limits, API key limits, and throughput ceilings for the current plan.
@@ -87,8 +87,8 @@ Returns the rate limits, API key limits, and throughput ceilings for the current
 Set spend caps and alert thresholds to prevent runaway costs:
 
 ```bash
-curl -X PUT "$SEC_API_URL/v1/billing/budget" \
-  -H "x-api-key: $SEC_API_KEY" \
+curl -X PUT "$SECAPI_BASE_URL/v1/billing/budget" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"spendCapCents": 50000, "softCapCents": 30000, "approvalThresholdCents": 40000}'
 ```
@@ -100,8 +100,8 @@ Budget events are recorded with the acting principal, previous values, and reque
 Webhook signing secrets can be rotated without downtime. The old secret is invalidated immediately and a new secret is returned in the response.
 
 ```bash
-curl -X POST "$SEC_API_URL/v1/webhook_endpoints/whe_abc123/rotate_secret" \
-  -H "x-api-key: $SEC_API_KEY" \
+curl -X POST "$SECAPI_BASE_URL/v1/webhook_endpoints/whe_abc123/rotate_secret" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
@@ -127,12 +127,12 @@ Each plan tier has a key limit. Team plans include more keys than Personal or PA
 
 ```bash
 # List existing keys
-curl "$SEC_API_URL/v1/api_keys" \
-  -H "x-api-key: $SEC_API_KEY"
+curl "$SECAPI_BASE_URL/v1/api_keys" \
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # Create a new key with specific scopes
-curl -X POST "$SEC_API_URL/v1/api_keys" \
-  -H "x-api-key: $SEC_API_KEY" \
+curl -X POST "$SECAPI_BASE_URL/v1/api_keys" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"label": "CI pipeline", "scopes": ["read:sec"], "livemode": true}'
 ```
