@@ -13,7 +13,7 @@ If you are connecting an MCP-aware client, start with the hosted MCP metadata be
 
 ## Before you make a request
 
-1. Export `SEC_API_KEY`
+1. Export `SECAPI_API_KEY`
 2. Verify health at `https://api.secapi.ai/healthz`
 3. Verify readiness at `https://api.secapi.ai/readyz`
 4. Decide whether you are starting with REST, SDK, CLI, or MCP
@@ -22,15 +22,15 @@ If you are connecting an MCP-aware client, start with the hosted MCP metadata be
 ## REST quickstart
 
 ```bash
-curl -H "x-api-key: $SEC_API_KEY" \
+curl -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
 
-curl -H "x-api-key: $SEC_API_KEY" \
+curl -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 
-curl -H "x-api-key: $SEC_API_KEY" \
+curl -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
 ```
@@ -38,14 +38,14 @@ curl -H "x-api-key: $SEC_API_KEY" \
 ## JavaScript quickstart
 
 ```bash
-npm install @secapi/sdk
+npm install @secapi/sdk-js
 ```
 
 ```ts
-import { SecApiClient } from "@secapi/sdk"
+import { SecApiClient } from "@secapi/sdk-js"
 
 const client = new SecApiClient({
-  apiKey: process.env.SEC_API_KEY!,
+  apiKey: process.env.SECAPI_API_KEY!,
 })
 
 const issuer = await client.resolveEntity({ ticker: "AAPL" })
@@ -58,10 +58,10 @@ const statements = await client.allStatements({ ticker: "AAPL", period: "annual"
 ```python
 import os
 
-from secapi import SecApiClient
+from secapi_client import SecApiClient
 
 client = SecApiClient(
-    api_key=os.environ["SEC_API_KEY"],
+    api_key=os.environ["SECAPI_API_KEY"],
     base_url="https://api.secapi.ai",
 )
 
@@ -95,7 +95,7 @@ secapi statements get --ticker AAPL --statement all --period annual --json
 When a filing-derived response includes trace references, hydrate them by trace id.
 
 ```bash
-curl -H "x-api-key: $SEC_API_KEY" \
+curl -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/traces/<trace_id>"
 ```

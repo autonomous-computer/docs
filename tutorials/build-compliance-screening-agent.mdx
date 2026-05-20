@@ -17,7 +17,7 @@ Compliance teams need to stay on top of regulatory actions and corporate governa
 
 ## Prerequisites
 
-- An SEC API key (set as `SEC_API_KEY`)
+- An SEC API key (set as `SECAPI_API_KEY`)
 - Python 3.9+ (for the webhook handler)
 - A publicly accessible HTTPS endpoint (use [ngrok](https://ngrok.com) for local development)
 - (Optional) Node.js 18+ for the JavaScript handler variant
@@ -64,7 +64,7 @@ Set up webhook endpoints with the SEC API to receive push notifications for comp
 ```bash
 # Register a webhook endpoint for compliance events
 curl -X POST \
-  -H "x-api-key: $SEC_API_KEY" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://your-server.com/webhooks/compliance",
@@ -101,7 +101,7 @@ app = Flask(__name__)
 
 # Configuration
 SIGNING_SECRET = os.environ.get("WEBHOOK_SIGNING_SECRET", "whsec_...")
-SEC_API_KEY = os.environ["SEC_API_KEY"]
+SECAPI_API_KEY = os.environ["SECAPI_API_KEY"]
 API_BASE = "https://api.secapi.ai"
 
 with open("config.json") as f:
@@ -277,9 +277,9 @@ from datetime import datetime, timedelta
 
 import requests
 
-SEC_API_KEY = os.environ["SEC_API_KEY"]
+SECAPI_API_KEY = os.environ["SECAPI_API_KEY"]
 API_BASE = "https://api.secapi.ai"
-HEADERS = {"x-api-key": SEC_API_KEY}
+HEADERS = {"x-api-key": SECAPI_API_KEY}
 
 with open("config.json") as f:
     CONFIG = json.load(f)
@@ -424,7 +424,7 @@ Copy the ngrok URL and update your webhook endpoint:
 
 ```bash
 curl -X PATCH \
-  -H "x-api-key: $SEC_API_KEY" \
+  -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://your-ngrok-url.ngrok.io/webhooks/compliance"}' \
   "https://api.secapi.ai/v1/webhook_endpoints/we_abc123"
@@ -457,7 +457,7 @@ Build and run:
 ```bash
 docker build -t compliance-agent .
 docker run -d -p 5000:5000 \
-  -e SEC_API_KEY="your-api-key" \
+  -e SECAPI_API_KEY="your-api-key" \
   -e WEBHOOK_SIGNING_SECRET="whsec_..." \
   compliance-agent
 ```

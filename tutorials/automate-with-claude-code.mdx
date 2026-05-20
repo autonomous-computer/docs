@@ -9,7 +9,7 @@ Claude Code can run scheduled tasks using cron skills, combining the SEC API wit
 
 ## Prerequisites
 
-- An SEC API key (set as `SEC_API_KEY`)
+- An SEC API key (set as `SECAPI_API_KEY`)
 - [Claude Code](https://claude.com/claude-code) installed and authenticated
 - Familiarity with [Custom Skills](/custom-skills) (recommended)
 - (Optional) Familiarity with the [Monitor 13F Holdings](/tutorials/monitor-13f-holdings) tutorial
@@ -52,13 +52,13 @@ description: >
 
 1. For each fund in the watchlist, fetch the most recent 13F filing:
    ```bash
-curl -H "x-api-key: $SEC_API_KEY" \
+curl -H "x-api-key: $SECAPI_API_KEY" \
      "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=1"
    ```
 
 2. Fetch the previous quarter 13F for comparison:
    ```bash
-curl -H "x-api-key: $SEC_API_KEY" \
+curl -H "x-api-key: $SECAPI_API_KEY" \
      "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=1&offset=1"
    ```
 
@@ -169,13 +169,13 @@ Make sure your API key is available to scheduled runs. Add it to your shell prof
 
 ```bash
 # In ~/.zshrc or ~/.bashrc
-export SEC_API_KEY="your-api-key-here"
+export SECAPI_API_KEY="your-api-key-here"
 ```
 
 Or create a `.env` file in your project root:
 
 ```bash
-SEC_API_KEY=your-api-key-here
+SECAPI_API_KEY=your-api-key-here
 ```
 
 ## Step 6 --- Verify the schedule
@@ -270,7 +270,7 @@ Extend the skill to look at trends over multiple quarters instead of just the mo
 | Problem | Solution |
 |---------|----------|
 | Skill not found | Verify the file is in `.claude/skills/` and the frontmatter `name` field is correct. Run `claude skill list` to confirm. |
-| API key not available in cron | Make sure `SEC_API_KEY` is exported in your shell profile, not just the current session. |
+| API key not available in cron | Make sure `SECAPI_API_KEY` is exported in your shell profile, not just the current session. |
 | Report is empty | Check that the CIKs in the watchlist are correct. Test with a single fund first using `curl` directly. |
 | Cron not firing | Verify the cron expression `0 18 * * 5` is correct for your timezone. Check `claude skill list --scheduled`. |
 | Stale data | 13F filings are quarterly. If no new filing has been published since the last run, the report will show no changes. This is expected. |

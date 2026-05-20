@@ -27,7 +27,7 @@ Use SEC API from Go services with direct REST calls today. The Go examples mirro
 
 <Steps>
   <Step title="Set the key">
-    Export `SEC_API_KEY`.
+    Export `SECAPI_API_KEY`.
   </Step>
   <Step title="Verify one market or entity call">
     Confirm auth and connectivity before adding more API coverage.
@@ -56,7 +56,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Set("x-api-key", os.Getenv("SEC_API_KEY"))
+	req.Header.Set("x-api-key", os.Getenv("SECAPI_API_KEY"))
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -72,31 +72,33 @@ func main() {
 }
 ```
 
-Use these examples until the public Go package is available.
+Use these direct REST examples when you want explicit control over retries, logging, and response metadata in Go.
 
-## Dilution intelligence SDK shape
+## Dilution intelligence REST calls
 
 ```go
 // Top 10 highest-dilution-risk issuers
-ratings, err := client.DilutionRatings(map[string]string{
-  "overall_risk": "high",
-  "limit":        "10",
-})
+req, err := http.NewRequest("GET", "https://api.secapi.ai/v1/dilution/ratings?overall_risk=high&limit=10", nil)
+req.Header.Set("x-api-key", apiKey)
+res, err := http.DefaultClient.Do(req)
 
 // Single-ticker dilution rollup
-score, err := client.DilutionScore(map[string]string{"ticker": "BBBB"})
+req, err = http.NewRequest("GET", "https://api.secapi.ai/v1/dilution/score?ticker=BBBB", nil)
+req.Header.Set("x-api-key", apiKey)
+res, err = http.DefaultClient.Do(req)
 
 // ATM offerings only (boolean filter on the events list)
-atms, err := client.DilutionEvents(map[string]string{
-  "ticker": "BBBB",
-  "is_atm": "true",
-})
+req, err = http.NewRequest("GET", "https://api.secapi.ai/v1/dilution/events?ticker=BBBB&is_atm=true", nil)
+req.Header.Set("x-api-key", apiKey)
+res, err = http.DefaultClient.Do(req)
 
 // Coverage + freshness rollup (no agent shape — already compact)
-coverage, err := client.DilutionCoverage(map[string]string{"ticker": "BBBB"})
+req, err = http.NewRequest("GET", "https://api.secapi.ai/v1/dilution/coverage?ticker=BBBB", nil)
+req.Header.Set("x-api-key", apiKey)
+res, err = http.DefaultClient.Do(req)
 ```
 
-The full API — `DilutionEvents`, `DilutionEventDetail`, `DilutionWarrants`, `DilutionConvertibles`, `DilutionRofr`, `DilutionLockups`, `DilutionCashPosition`, `DilutionCorporateActions`, `DilutionNasdaqCompliance`, `DilutionRatings`, `DilutionReverseSplits`, `DilutionScore`, `DilutionShareFloatHistory`, `DilutionCoverage` — mirrors the REST routes 1:1. Pass `"view": "agent"` in any list call (except `DilutionCoverage`) for the compact agent-mode shape.
+The full dilution API is available under `/v1/dilution/*`. Pass `view=agent` in list-call query params, except `/v1/dilution/coverage`, for the compact agent-mode shape.
 
 <Prompt description="Copy this SEC API prompt for your agent.">
 Wire SEC API REST calls into this Go service. Start with one entity or market calendar call to confirm auth, then add a filing or ownership workflow that preserves requestId and freshness metadata in structured logs.

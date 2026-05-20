@@ -17,18 +17,18 @@ Resolve a company by ticker, CIK, FIGI, or name:
 
 ```bash
 curl "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 <Expandable title="Try more identifiers">
 ```bash
 # By CIK
 curl "https://api.secapi.ai/v1/entities/resolve?cik=0000320193" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # By name
 curl "https://api.secapi.ai/v1/entities/resolve?name=Tesla" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 </Expandable>
 
@@ -38,22 +38,22 @@ Search SEC filings with 20+ filters:
 
 ```bash
 curl "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=3" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 <Expandable title="Advanced filtering">
 ```bash
 # Full-text search
 curl "https://api.secapi.ai/v1/search/fulltext?q=revenue+recognition+policy&ticker=AAPL&limit=5" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # Semantic search (AI-powered)
 curl "https://api.secapi.ai/v1/search/semantic?q=what+are+the+main+business+risks&ticker=MSFT&limit=3" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # By date range
 curl "https://api.secapi.ai/v1/filings?ticker=TSLA&form=8-K&date_from=2025-01-01&date_to=2025-12-31" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 </Expandable>
 
@@ -64,18 +64,18 @@ Get structured XBRL financial data:
 ```bash
 # All statements for the latest annual period
 curl "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 <Expandable title="Individual statements">
 ```bash
 # Income statement
 curl "https://api.secapi.ai/v1/statements/income_statement?ticker=AAPL&period=annual" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # Balance sheet
 curl "https://api.secapi.ai/v1/statements/balance_sheet?ticker=MSFT&period=quarterly" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 </Expandable>
 
@@ -84,15 +84,15 @@ curl "https://api.secapi.ai/v1/statements/balance_sheet?ticker=MSFT&period=quart
 ```bash
 # Insider trades
 curl "https://api.secapi.ai/v1/insiders?ticker=AAPL&limit=5" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # 13F institutional holdings
 curl "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=10" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # Executive compensation
 curl "https://api.secapi.ai/v1/compensation?ticker=AAPL" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 ## Enforcement Actions
@@ -100,11 +100,11 @@ curl "https://api.secapi.ai/v1/compensation?ticker=AAPL" \
 ```bash
 # Recent enforcement actions
 curl "https://api.secapi.ai/v1/events/enforcement?limit=5" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # Filter by type
 curl "https://api.secapi.ai/v1/events/enforcement?source_type=aaer&limit=5" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 ## Intelligence Bundles
@@ -114,23 +114,23 @@ One-call pre-computed analysis:
 ```bash
 # Company intelligence bundle
 curl "https://api.secapi.ai/v1/intelligence/company?ticker=AAPL" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 
 # Security analysis
 curl "https://api.secapi.ai/v1/intelligence/security?ticker=TSLA" \
-  -H "x-api-key: $SEC_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 ## Using the CLI
 
-The public CLI package name is `@secapi/cli`, with the `secapi` binary. Use these commands once the package is available in your registry:
+The public CLI package name is `@secapi/cli`, with the `secapi` binary:
 
 ```bash
 # Install
 npm install -g @secapi/cli
 
 # Set your key
-export SEC_API_KEY=your_key_here
+export SECAPI_API_KEY=your_key_here
 
 # Try it
 secapi entities resolve --ticker AAPL --json
@@ -140,13 +140,13 @@ secapi insiders list --ticker AAPL --json
 
 ## Using the SDK
 
-When the public JavaScript package is available, the intended npm package name is `@secapi/sdk`:
+The public JavaScript SDK package name is `@secapi/sdk-js`:
 
 ```typescript
-import { SecApiClient } from "@secapi/sdk"
+import { SecApiClient } from "@secapi/sdk-js"
 
 const client = new SecApiClient({
-  apiKey: process.env.SEC_API_KEY,
+  apiKey: process.env.SECAPI_API_KEY,
 })
 
 const entity = await client.resolveEntity({ ticker: "AAPL" })
