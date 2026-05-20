@@ -1,19 +1,19 @@
 ---
 title: "Competitive Benchmarks"
-description: "Latency, payload size, and token efficiency comparisons: OMNI Datastream vs sec-api.io, financialdatasets.ai, and edgartools"
+description: "Latency, payload size, and token efficiency comparisons: SEC API vs sec-api.io, financialdatasets.ai, and edgartools"
 ---
 
 # Competitive Benchmarks
 
-OMNI Datastream is independently benchmarked against three peers — sec-api.io and financialdatasets.ai (hosted APIs) and edgartools (open-source Python library) — across core SEC data operations. All benchmarks are reproducible and run from the same network location against production endpoints.
+SEC API is benchmarked against three peers — sec-api.io and financialdatasets.ai (hosted APIs) and edgartools (open-source Python library) — across core SEC data operations. All benchmarks are reproducible and run from the same network location against production endpoints.
 
 <Info>
-Last updated: 2026-03-18 (vs sec-api.io and financialdatasets.ai); 2026-04-23 preliminary (vs edgartools, pending external methodology review — OMNI-3064). Methodology and reproduction scripts are in the [benchmarks/](https://github.com/autonomous-computer/omni-datastream/tree/main/benchmarks) directory; see [`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/omni-datastream/blob/main/benchmarks/METHODOLOGY.md) for the peer-reviewable methodology doc.
+Last updated: 2026-03-18 (vs sec-api.io and financialdatasets.ai); 2026-04-23 preliminary (vs edgartools, pending external methodology review). Methodology and reproduction scripts are in the [benchmarks/](https://github.com/autonomous-computer/sec-api/tree/main/benchmarks) directory; see [`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/sec-api/blob/main/benchmarks/METHODOLOGY.md) for the peer-reviewable methodology doc.
 </Info>
 
 ## vs sec-api.io
 
-| Operation | OMNI p50 | sec-api.io p50 | Speedup | OMNI tokens | sec-api.io tokens | Token savings |
+| Operation | SEC API p50 | sec-api.io p50 | Speedup | SEC API tokens | sec-api.io tokens | Token savings |
 |---|---|---|---|---|---|---|
 | **Entity resolve** | 62ms | 231ms | **3.7x** | 68 | 103 | **34%** |
 | **Filing search** | 64ms | 281ms | **4.4x** | 125 | 198 | **37%** |
@@ -28,7 +28,7 @@ Token estimates are based on payload size ÷ 4 (average characters per token). S
 
 ## vs financialdatasets.ai
 
-| Operation | OMNI p50 | FD.ai p50 | Speedup |
+| Operation | SEC API p50 | FD.ai p50 | Speedup |
 |---|---|---|---|
 | **Income statement** | 57ms | 414ms | **7.3x** |
 | **Balance sheet** | 62ms | 292ms | **4.7x** |
@@ -38,14 +38,14 @@ Token estimates are based on payload size ÷ 4 (average characters per token). S
 ## vs edgartools (preliminary)
 
 <Warning>
-**Preliminary — pending external methodology review (OMNI-3064)**. Numbers below
-will be re-verified by an external SRE before the full comparison is linked
-from the docs sidebar. See [`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/omni-datastream/blob/main/benchmarks/METHODOLOGY.md).
+**Preliminary — pending external methodology review.** Numbers below come from
+the reproducible benchmark harness described in
+[`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/sec-api/blob/main/benchmarks/METHODOLOGY.md).
 </Warning>
 
 [edgartools](https://github.com/dgunning/edgartools) is a well-designed, MIT-licensed Python library that talks directly to SEC EDGAR. Same four workflows, N=5 iterations, each iteration runs in a fresh subprocess with all caches cleared so every call is a truly cold SEC fetch:
 
-| Operation | OMNI p50 | edgartools p50 | Speedup | OMNI wire bytes | edgartools wire bytes |
+| Operation | SEC API p50 | edgartools p50 | Speedup | SEC API wire bytes | edgartools wire bytes |
 |---|---|---|---|---|---|
 | **Entity resolve** | 34ms | 471ms | **13.9x** | 273 | 164,686 |
 | **Filing search** | 38ms | 688ms | **18.1x** | 1,033 | 362,459 |
@@ -56,9 +56,9 @@ from the docs sidebar. See [`benchmarks/METHODOLOGY.md`](https://github.com/auto
 **Wire bytes are measured at the HTTP transport layer for every comparand** — including edgartools, where a monkey-patched `httpx.Client.send` sums real SEC bytes per logical case. This makes payload numbers directly comparable across hosted APIs and client-side libraries. edgartools fetches raw SEC documents client-side (e.g., ~3 MB of 10-K HTML to extract Item 1A text) — that's an architectural choice behind its `pip install, zero API key, SEC direct` posture, not an inefficiency.
 </Tip>
 
-See [Compare OMNI vs edgartools](/compare-edgartools) for the full feature matrix and positioning, including edgartools' legitimate strengths (it's free, MIT-licensed, and community-supported).
+See [Compare SEC API vs edgartools](/compare-edgartools) for the full feature matrix and positioning, including edgartools' legitimate strengths (it's free, MIT-licensed, and community-supported).
 
-## Why OMNI is faster
+## Why SEC API is faster
 
 1. **Purpose-built for the SEC domain.** Dedicated Postgres schema with filing-aware indexes, not a generic data warehouse.
 2. **Edge-cached with tiered storage.** Hot data served from Postgres + Typesense; historical data in R2 with Cloudflare CDN.
@@ -72,44 +72,32 @@ A typical "company briefing" workflow requires:
 | Approach | API calls | Tokens consumed |
 |---|---|---|
 | sec-api.io (manual assembly) | 8-12 calls | ~3,500 tokens |
-| OMNI intelligence bundle | 1 call | ~800 tokens |
+| SEC API intelligence bundle | 1 call | ~800 tokens |
 
 The intelligence bundle pre-computes what agents would otherwise assemble from multiple API calls, reducing both latency and token cost by 75%+.
 
-## FinanceBench canary-25 (datastream-api MCP regression-check)
+## FinanceBench status
 
 <Warning>
-**Preliminary — datastream-api MCP regression-check, NOT the agent-chat-routed benchmark.** Bridge-50 numbers below were produced by an eval harness that instantiates the Anthropic SDK directly and routes tool calls into datastream-api's MCP surface. This validates the *data layer*. The agent-chat-routed full-stack benchmark (which exercises OMNI's agent-chat WebSocket path end-to-end) is tracked separately under [OMNI-3286](https://linear.app/arcadegroup/issue/OMNI-3286) and dispatches as soon as PR #394 merges. See [`evals/financebench-canary-25/2026-04-25-iter5/REPORT.md`](https://github.com/autonomous-computer/omni-datastream/blob/main/evals/financebench-canary-25/2026-04-25-iter5/REPORT.md) for the full methodology + per-question breakdown.
+Do not use historical full-corpus FinanceBench runs as a launch claim without
+their dated harness context. The current public-safe claim is the canary result
+below.
 </Warning>
 
 [FinanceBench](https://github.com/patronus-ai/financebench) (Patronus AI) is a 150-question benchmark over 10-K / 10-Q / 8-K filings that tests an AI system's ability to answer real financial-analyst questions with citations to source documents.
 
-| Gate | Target | OMNI canary-25 (post-data-drift) | Methodology |
+| Gate | Target | SEC API canary-25 (2026-04-25) | Methodology |
 |---|---|---|---|
-| 25-q canary (datastream-api MCP, judge-correct) | ≥23/25 (92%) | **18/25 (72%)** | Sonnet-4.5 + extended thinking (10k); reflection disabled; OMNI-3083 citations active |
-| 25-q canary (datastream-api MCP, rule-based) | ≥23/25 (92%) | 19/25 (76%) | Same harness; structural API-correctness scoring |
-| 50-q bridge (regression vs 2026-04-02 baseline) | ≥86% | *(not run; held pending OMNI-3286)* | Same harness, expanded suite |
+| 25-question canary, judge-correct | ≥23/25 (92%) | **18/25 (72%)** | SEC API data-layer tool harness |
+| 25-question canary, rule-based | ≥23/25 (92%) | 19/25 (76%) | Same harness; structural API-correctness scoring |
 
-**What the 72% reflects:** OMNI's datastream-api MCP surface scored 18/25 judge-correct on canary-25 against current production data on 2026-04-25. Compared to the 2026-04-02 baseline (25/25 judge), the gap is dominated by **production data drift** — new 10-Q/8-K filings ingested in the intervening 23 days now return as "latest" for queries that don't pin a fiscal period. The agent's tool-calling strategy and the canonical_calls hint shape don't fully compensate. Five iterations of prompt + thinking + reflection + canonical_calls fixes plateaued at this number.
-
-**What the 72% is NOT:** the W6 launch claim. The legitimate W6 anchor is the agent-chat-routed run that OMNI-3286 will execute against the same suite — that exercises the full agent-chat surface (WebSocket transport, MCP wiring from OMNI-3087, dilution-aware system prompt, OMNI-3083 citations end-to-end), not just the data layer. Expect the agent-chat number to differ; both are valid measurements of different surfaces.
-
-**Failure decomposition (5 chronic + 2 reasoning-bound):**
-
-| Pattern | Questions | Investigation |
-|---|---|---|
-| `section_snippets` granularity gap | fb_055, fb_056 (BBY Q2 FY24) | [OMNI-3298](https://linear.app/arcadegroup/issue/OMNI-3298) |
-| Sonnet-4.5 reasoning ceiling | fb_054, fb_141 | [OMNI-3299](https://linear.app/arcadegroup/issue/OMNI-3299) — re-test on Opus-4.7 |
-| Wrong-source (GAAP vs Non-GAAP) | fb_029 | Pending OMNI-3286 (agent-chat may resolve via better RAG path) |
-| Production data drift | fb_028 | Pending OMNI-3300 URL-pin diagnostic |
-
-**Cost / latency (improvements vs original harness):** $0.44 / Q (down 41%), p95 latency 88s (down 8%). Cost guard ($20 / run) held throughout the iteration ladder.
-
-**Reproducibility:** every run writes a `reproducibility` block at the top of the artifact JSON (commit_sha, agent_chat_version, datastream_api_version, model_version, run_date, harness_version, fixture_baseline_commit, fixture_baseline_date, `harness_routes_through_agent_chat: false` honesty flag). The flag flips to `true` when OMNI-3286 lands.
+The 72% canary result reflects a dated regression check against production
+data. It should not be generalized to the full 150-question corpus or quoted as
+an agent-chat benchmark.
 
 ## Methodology
 
-- Hosted APIs (OMNI, sec-api.io, financialdatasets.ai) use production endpoints with authenticated API keys
+- Hosted APIs (SEC API, sec-api.io, financialdatasets.ai) use production endpoints with authenticated API keys
 - edgartools (MIT-licensed Python library) calls SEC EDGAR directly; no API key
 - edgartools' persistent on-disk cache at `~/.edgar/_tcache/` is cleared between iterations so every run is a cold SEC fetch (without this, iteration 2+ would measure disk I/O on the runner rather than SEC latency)
 - Latency measured as wall-clock time from request start to result returned (client-side parsing included for edgartools)
@@ -120,7 +108,7 @@ The intelligence bundle pre-computes what agents would otherwise assemble from m
 - Network: same region, same machine, concurrent execution
 - Scripts: `scripts/bench/benchmark_sec_api.py`, `scripts/bench/benchmark_financialdatasets.py`, `scripts/bench/benchmark_edgartools.py`
 - Scorecard: `scripts/bench/competitive_scorecard.py`
-- Full peer-reviewable methodology: [`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/omni-datastream/blob/main/benchmarks/METHODOLOGY.md)
+- Full peer-reviewable methodology: [`benchmarks/METHODOLOGY.md`](https://github.com/autonomous-computer/sec-api/blob/main/benchmarks/METHODOLOGY.md)
 
 ## Reproduce
 
@@ -137,4 +125,3 @@ bun run bench:edgartools
 # Generate 4-way scorecard
 bun run bench:scorecard
 ```
-

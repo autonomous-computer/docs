@@ -1,16 +1,16 @@
 ---
-title: "Install Omni in LlamaIndex"
-description: "Add OMNI Datastream as a tool spec in LlamaIndex using llama-index-tools-mcp and a custom httpx client for x-api-key auth."
+title: "Install SEC API in LlamaIndex"
+description: "Add SEC API as a tool spec in LlamaIndex using MCP over streamable HTTP."
 ---
 
-# Install Omni in LlamaIndex
+# Install SEC API in LlamaIndex
 
-LlamaIndex ships first-party MCP support via `llama-index-tools-mcp`. The `BasicMCPClient` constructor doesn't take a `headers=` kwarg directly, so we pass auth through a custom `httpx.AsyncClient`.
+Use LlamaIndex's MCP tooling to register SEC API as a streamable HTTP server. The example passes auth through a custom `httpx.AsyncClient`.
 
 ## Prerequisites
 
-- Omni API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Set `OMNI_DATASTREAM_API_KEY`.
-- `llama-index-tools-mcp` ≥ 0.4 with `llama-index-core` ≥ 0.13 and `llama-index-llms-anthropic`.
+- SEC API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Set `SEC_API_KEY`.
+- `llama-index-tools-mcp`, `llama-index-core`, `llama-index-llms-anthropic`, and `httpx`.
 
 ## Install
 
@@ -26,7 +26,7 @@ from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.llms.anthropic import Anthropic
 
 async def main():
-    http = httpx.AsyncClient(headers={"x-api-key": os.environ["OMNI_DATASTREAM_API_KEY"]})
+    http = httpx.AsyncClient(headers={"x-api-key": os.environ["SEC_API_KEY"]})
     mcp = BasicMCPClient("https://api.secapi.ai/mcp", http_client=http)
     tools = await McpToolSpec(client=mcp).to_tool_list_async()
 
@@ -43,9 +43,9 @@ Run the snippet. The agent should call the `filings.latest` tool with `ticker: A
 
 ## Troubleshooting
 
-- **`401 Unauthorized`** — the `httpx.AsyncClient` headers didn't reach the server. Verify the env var is set in the same shell that runs Python: `echo $OMNI_DATASTREAM_API_KEY`.
+- **`401 Unauthorized`** — the `httpx.AsyncClient` headers didn't reach the server. Verify the env var is set in the same shell that runs Python: `echo $SEC_API_KEY`.
 - **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
-- **`AttributeError: BasicMCPClient` has no attribute `headers`** — you're passing `headers=` to the constructor; that kwarg doesn't exist. Always wrap auth in a custom `httpx.AsyncClient` as shown above.
+- **`AttributeError: BasicMCPClient` has no attribute `headers`** — if your installed version does not accept `headers=`, wrap auth in a custom `httpx.AsyncClient` as shown above.
 - **Connection timeout** — verify the URL ends in `/mcp` (note the `/mcp` suffix, not `/sse`).
 
 ## OAuth alternative
@@ -56,4 +56,3 @@ For longer-lived workflows that need rotating credentials, swap `BasicMCPClient(
 
 - [Available tools](/mcp-install#available-tools) — SEC + market data tools
 - [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
-

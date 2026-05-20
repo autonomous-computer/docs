@@ -1,14 +1,14 @@
 # Rust SDK
 
 <Info>
-The Rust SDK is for async, performance-sensitive services that still want the Datastream contract to look like Datastream, not like a bespoke Rust dialect.
+The Rust SDK is for async, performance-sensitive services that still want the SEC API contract to look like SEC API, not like a bespoke Rust dialect.
 </Info>
 
 ## Status
 
 <CardGroup cols={3}>
   <Card title="Bootstrap client" icon="package" href="/libraries-and-sdks">
-    A starter Rust client is available in `packages/sdk-rust`.
+    The planned public crate name is `sec-api`.
   </Card>
   <Card title="Async-first" icon="zap" href="/api-reference">
     Built around `reqwest` and `serde` for async service workloads.
@@ -22,7 +22,7 @@ The Rust SDK is for async, performance-sensitive services that still want the Da
 
 <Steps>
   <Step title="Add the client">
-    Bring the Rust package into your service and set the Datastream API key through the environment.
+    Add the public crate once it is available, or use direct REST calls with `SEC_API_KEY`.
   </Step>
   <Step title="Exercise one fast path">
     Start with a volatility or entity lookup to confirm the runtime wiring.
@@ -35,10 +35,24 @@ The Rust SDK is for async, performance-sensitive services that still want the Da
 ## Example
 
 ```rust
-let client = omni_datastream_sdk_rust::OmniDatastreamClient::new(
-    std::env::var("OMNI_DATASTREAM_API_KEY").ok(),
-);
-let signal = client.volatility_signal(&[("ticker", "AAPL")]).await?;
+let api_key = std::env::var("SEC_API_KEY")?;
+let client = reqwest::Client::new();
+let response = client
+    .get("https://api.secapi.ai/v1/entities/resolve")
+    .query(&[("ticker", "AAPL")])
+    .header("x-api-key", api_key)
+    .send()
+    .await?
+    .error_for_status()?;
+
+let entity: serde_json::Value = response.json().await?;
+println!("{entity:#?}");
+```
+
+When the crate is published, prefer the public crate name:
+
+```bash
+cargo add sec-api
 ```
 
 ## Dilution intelligence
@@ -66,7 +80,7 @@ Integrate the Rust SDK with this service. Verify the base auth path with a volat
 ## Smoke path
 
 ```bash
-bun run smoke:sdk-rust
+cargo test
 ```
 
 ## Read next
@@ -79,4 +93,3 @@ bun run smoke:sdk-rust
     Compare the Rust surface with the other runtime options.
   </Card>
 </CardGroup>
-

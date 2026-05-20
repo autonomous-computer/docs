@@ -1,14 +1,14 @@
 # Migrate from FactorsToday
 
-This guide helps FactorsToday users map their existing workflows to OMNI Datastream equivalents. OMNI provides a broader factor catalog with deeper macro and credit factor coverage, plus unique portfolio intelligence overlays.
+This guide helps FactorsToday users map their existing workflows to SEC API equivalents. SEC API provides a broader factor catalog with deeper macro and credit factor coverage, plus portfolio intelligence overlays.
 
 For a detailed comparison of factor construction methodologies, see [Factor Model Methodology](factor-model-methodology).
 
 ## Endpoint mapping
 
-| FactorsToday | OMNI Datastream | Notes |
+| FactorsToday | SEC API | Notes |
 |---|---|---|
-| `GET /api/factors/catalog` | `GET /v1/factors/catalog` | 84 factors (vs FT's 147) — OMNI leads on macro/style/sector |
+| `GET /api/factors/catalog` | `GET /v1/factors/catalog` | 84 factors (vs FT's 147) — SEC API leads on macro/style/sector |
 | `GET /api/factor-returns/intraday` | `GET /v1/factors/intraday` | Live intraday factor returns |
 | `GET /api/factor-returns/historic` | `GET /v1/factors/returns` | Historical daily factor returns |
 | `GET /api/factor-loadings/:factor` | `GET /v1/factors/exposures` | Per-stock factor loadings |
@@ -20,24 +20,24 @@ For a detailed comparison of factor construction methodologies, see [Factor Mode
 | `GET /api/hedge/calculate` | `POST /v1/portfolio/optimize` | Portfolio optimization with hedging |
 | `GET /api/screener/stocks-by-factor` | `GET /v1/factors/screen` | Factor-based stock screening |
 | `GET /api/stocks/search` | `GET /v1/entities/resolve` | Entity resolution |
-| N/A | `POST /v1/portfolio/stress-test` | Scenario-based stress testing — no FT equivalent |
-| N/A | `GET /v1/factors/regime-performance` | Factor returns by macro regime — no FT equivalent |
-| N/A | `GET /v1/factors/dashboard` | Consolidated factor dashboard — no FT equivalent |
-| N/A | `POST /v1/strategies/factor-rotation` | Factor rotation signals — no FT equivalent |
+| N/A | `POST /v1/portfolio/stress-test` | Scenario-based stress testing |
+| N/A | `GET /v1/factors/regime-performance` | Factor returns by macro regime |
+| N/A | `GET /v1/factors/dashboard` | Consolidated factor dashboard |
+| N/A | `POST /v1/strategies/factor-rotation` | Factor rotation signals |
 
 ## Factor catalog comparison
 
-| Category | FactorsToday | OMNI | Notes |
+| Category | FactorsToday | SEC API | Notes |
 |---|---|---|---|
-| Market/Macro | 7 | 17 | OMNI leads — includes credit, HY, TIPS, commodities, crypto, FX |
-| Style | 11 | 23 | OMNI leads — includes intl variants, buyback, profitability, earnings revisions |
-| Sectors | 11 | 26 | OMNI leads — GICS sectors + 15 sub-sectors |
-| Industry | 34 | 18 | FT leads — OMNI has 18 industry factors, expanding |
+| Market/Macro | 7 | 17 | SEC API leads — includes credit, HY, TIPS, commodities, crypto, FX |
+| Style | 11 | 23 | SEC API leads — includes intl variants, buyback, profitability, earnings revisions |
+| Sectors | 11 | 26 | SEC API leads — GICS sectors + 15 sub-sectors |
+| Industry | 34 | 18 | FT leads — SEC API has 18 industry factors, expanding |
 | Countries | 42 | 0 | FT leads — country equity factors planned for Phase 2 |
-| Custom Baskets | 42 | 0 | FT exclusive — thematic AI-discovered baskets |
+| Custom Baskets | 42 | 0 | FactorsToday offers thematic AI-discovered baskets |
 | **Total** | **147** | **84** | |
 
-### Where OMNI leads
+### Where SEC API leads
 
 - **Macro factor depth**: 17 macro factors covering rates, credit spreads, currencies, commodities, and crypto versus FT's 7.
 - **Style factor breadth**: 23 style factors including international variants, buyback, profitability, multi-factor, and earnings revisions.
@@ -46,39 +46,39 @@ For a detailed comparison of factor construction methodologies, see [Factor Mode
 
 ## Authentication
 
-FactorsToday uses a query parameter API key. OMNI uses a Bearer token:
+FactorsToday uses a query parameter API key. SEC API uses the `x-api-key` header:
 
 ```bash
 # FactorsToday
 curl "https://api.factorstoday.com/api/factors/catalog?apiKey=YOUR_KEY"
 
-# OMNI Datastream
-curl -H "Authorization: Bearer $OMNI_API_KEY" \
+# SEC API
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/factors/catalog"
 ```
 
 ## Example: factor catalog
 
 ```bash
-curl -H "Authorization: Bearer $OMNI_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/factors/catalog"
 
 # Filter by category
-curl -H "Authorization: Bearer $OMNI_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/factors/catalog?category=industry"
 ```
 
 ## Example: historical factor returns
 
 ```bash
-curl -H "Authorization: Bearer $OMNI_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/factors/returns?keys=VALUE,MOMENTUM,QUALITY&lookback=6m"
 ```
 
 ## Example: portfolio factor decomposition
 
 ```bash
-curl -X POST -H "Authorization: Bearer $OMNI_API_KEY" \
+curl -X POST -H "x-api-key: $SEC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "holdings": [
@@ -92,12 +92,11 @@ curl -X POST -H "Authorization: Bearer $OMNI_API_KEY" \
   "https://api.secapi.ai/v1/portfolio/analyze"
 ```
 
-## Example: factor rotation strategy (OMNI exclusive)
+## Example: factor rotation strategy
 
 ```bash
-curl -X POST -H "Authorization: Bearer $OMNI_API_KEY" \
+curl -X POST -H "x-api-key: $SEC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"country": "US", "lookback": "6m"}' \
   "https://api.secapi.ai/v1/strategies/factor-rotation"
 ```
-

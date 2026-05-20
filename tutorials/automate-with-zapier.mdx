@@ -1,15 +1,15 @@
 ---
 title: "SEC Data Automation with Zapier"
-description: "Create a Zapier Zap that tracks insider trades via OMNI Datastream webhooks and logs them to Google Sheets with Slack notifications. Step-by-step configuration included."
+description: "Create a Zapier Zap that tracks insider trades via SEC API webhooks and logs them to Google Sheets with Slack notifications. Step-by-step configuration included."
 ---
 
 # SEC Data Automation with Zapier
 
-Zapier connects thousands of apps with no-code automations called Zaps. In this tutorial you will build a Zap that receives OMNI Datastream webhook events for new insider trades (Form 4 filings), logs each trade to a Google Sheets spreadsheet, and sends a Slack notification.
+Zapier connects thousands of apps with no-code automations called Zaps. In this tutorial you will build a Zap that receives SEC API webhook events for new insider trades (Form 4 filings), logs each trade to a Google Sheets spreadsheet, and sends a Slack notification.
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - A [Zapier](https://zapier.com) account (free tier supports single-step Zaps; multi-step requires a paid plan)
 - A Google account with Google Sheets access
 - A Slack workspace where you can post messages
@@ -18,7 +18,7 @@ Zapier connects thousands of apps with no-code automations called Zaps. In this 
 ## Architecture overview
 
 ```
-OMNI Datastream insider trade monitor
+SEC API insider trade monitor
         |
         v
 Webhook POST --> Zapier Catch Hook trigger
@@ -42,16 +42,16 @@ Zapier Formatter (clean data)
 https://hooks.zapier.com/hooks/catch/123456/abcdef/
 ```
 
-5. Copy this URL --- you will register it with OMNI Datastream next.
+5. Copy this URL --- you will register it with SEC API next.
 6. Click **Test trigger** and leave the page open. Zapier is now listening for a test event.
 
-## Step 2 --- Register the webhook with OMNI Datastream
+## Step 2 --- Register the webhook with SEC API
 
 ### Create a webhook endpoint
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://hooks.zapier.com/hooks/catch/123456/abcdef/",
@@ -65,7 +65,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Insider Trade Tracker",
@@ -157,14 +157,14 @@ Filed: {{data__filed_at}}
 
 ## Step 6 --- Turn on the Zap
 
-1. Name your Zap (e.g., "OMNI Insider Trade Tracker").
+1. Name your Zap (e.g., "SEC API Insider Trade Tracker").
 2. Click **Publish** to activate it.
 
 ## Zapier step summary
 
 ```
 Step 1: Webhooks by Zapier - Catch Hook
-        Receives POST from OMNI Datastream
+        Receives POST from SEC API
 
 Step 2: Google Sheets - Create Spreadsheet Row
         Logs trade to "Insider Trade Tracker" sheet
@@ -206,7 +206,7 @@ Filed: 2024-12-15
 - **Add a Filter step**: Only track purchases (insider buys are often more meaningful than sales).
 - **Add a Formatter step**: Convert `value` to a human-readable currency format (e.g., `$49,700,000`).
 - **Multi-sheet routing**: Use a **Paths by Zapier** step to log buys and sells to different sheets.
-- **Enrich with OMNI data**: Add a **Webhooks by Zapier > GET** step to call `/v1/insiders?ticker={ticker}` and pull additional context before logging.
+- **Enrich with SEC API data**: Add a **Webhooks by Zapier > GET** step to call `/v1/insiders?ticker={ticker}` and pull additional context before logging.
 
 See the [Analyze Insider Trading](/tutorials/analyze-insider-trading) tutorial for more on working with insider trade data.
 

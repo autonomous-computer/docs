@@ -1,19 +1,19 @@
 # Migrate from sec-api.io
 
 <Info>
-This guide translates common `sec-api.io` jobs onto Datastream without forcing you to relearn the whole product in one sitting.
+This guide translates common `sec-api.io` jobs onto SEC API without forcing you to relearn the whole product in one sitting.
 </Info>
 
 ## What changes when you switch
 
 <CardGroup cols={2}>
   <Card title="One normalized object model" icon="layers-2" href="/freshness-and-trust">
-    Datastream keeps provenance, freshness, and materialization visible instead of treating them like optional extras.
+    SEC API keeps provenance, freshness, and materialization visible instead of treating them like optional extras.
   </Card>
   <Card title="Filing types and exhibits map" icon="files" href="/filing-types-and-exhibits">
-    Check which filing families Datastream retrieves generically, normalizes directly, or only supports inside workflow-specific parsers.
+    Check which filing families SEC API retrieves generically, normalizes directly, or only supports inside workflow-specific parsers.
   </Card>
-  <Card title="Request diagnostics" icon="search-code" href="/operations">
+  <Card title="Request diagnostics" icon="search-code" href="/status">
     `Request-Id` is first-class across the REST surface so support and debugging workflows stay sane.
   </Card>
   <Card title="Shared REST and MCP surface" icon="bot" href="/mcp-workflows">
@@ -27,7 +27,7 @@ This guide translates common `sec-api.io` jobs onto Datastream without forcing y
 ## Route mapping
 
 <Warning>
-If you depend on arbitrary historical filing URLs or HTML extractor output, keep a temporary fallback path while you finish historical filing-target support. Datastream is stronger on normalized workflows than on raw URL-style extractor parity.
+If you depend on arbitrary historical filing URLs or HTML extractor output, keep a temporary fallback path while you finish historical filing-target support. SEC API is stronger on normalized workflows than on raw URL-style extractor parity.
 </Warning>
 
 - `/mapping/ticker/{ticker}` -> `/v1/entities/resolve?ticker={ticker}`
@@ -44,31 +44,31 @@ If you depend on arbitrary historical filing URLs or HTML extractor output, keep
 ### Ticker mapping
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
 ```
 
 ### Filing search
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10"
 ```
 
 ### Machine-first section extraction
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact"
 ```
 
 <Prompt>
-Migrate this sec-api.io workflow to Omni Datastream. Replace mapping calls with entity resolution, replace filing search with /v1/filings query params, and replace extractor workflows with Datastream section endpoints where possible. Keep requestId, freshness, provenance, and any current fallback gaps in the final implementation notes.
+Migrate this sec-api.io workflow to SEC API. Replace mapping calls with entity resolution, replace filing search with /v1/filings query params, and replace extractor workflows with SEC API section endpoints where possible. Keep requestId, freshness, provenance, and any current fallback gaps in the final implementation notes.
 </Prompt>
 
 ## Migration notes
 
-- Pin `omni-version` in production clients before cutover
+- Pin `secapi-version` in production clients before cutover
 - Keep recording `Request-Id` during dual-run testing so request diagnostics stay comparable
 - If you depend on arbitrary historical filing URLs for extractor-style requests, keep that path on a temporary fallback until the historical lookup backlog lands
 - If you depend on HTML extractor output, treat that as a current gap and stay on the temporary fallback path

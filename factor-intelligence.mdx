@@ -2,7 +2,7 @@
 
 ## What this surface covers
 
-OMNI Factor Intelligence provides a structured factor model spanning 84 factors across 5 categories. The surface supports factor catalog retrieval, historical and intraday returns, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
+SEC API Factor Intelligence provides a structured factor model spanning 84 factors across 5 categories. The surface supports factor catalog retrieval, historical and intraday returns, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
 
 Every response includes `requestId` and `traceparent` for downstream traceability.
 
@@ -26,8 +26,8 @@ For the full factor construction methodology, including purification architectur
 
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/catalog"
 ```
 
@@ -49,8 +49,8 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/returns?category=style&start_date=2025-01-01&end_date=2025-12-31&frequency=daily"
 ```
 
@@ -70,8 +70,8 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/correlations?factors=momentum,value,quality&lookback_days=252"
 ```
 
@@ -92,8 +92,8 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/exposures?ticker=AAPL"
 ```
 
@@ -105,8 +105,8 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/returns/intraday"
 ```
 
@@ -124,8 +124,8 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/dashboard?ticker=AAPL"
 ```
 
@@ -144,8 +144,8 @@ curl -X GET \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/regime-performance"
 ```
 
@@ -157,8 +157,8 @@ curl -X GET \
 
 ```bash
 curl -X POST \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
   -d '{
     "positions": [
@@ -180,8 +180,8 @@ curl -X POST \
 
 ```bash
 curl -X GET \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/model-portfolios/{portfolioId}/factor-view"
 ```
 
@@ -199,7 +199,7 @@ curl -X GET \
 | `POST` | `/v1/portfolio/analyze` | portfolio factor decomposition |
 | `GET` | `/v1/model-portfolios/:id/factor-view` | model portfolio factor view |
 
-## Failure posture
+## Errors and partial results
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports

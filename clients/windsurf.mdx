@@ -1,15 +1,15 @@
 ---
-title: "Install Omni in Windsurf"
-description: "Connect OMNI Datastream to Windsurf's Cascade agent by editing one JSON config file — full MCP support with environment-variable auth interpolation."
+title: "Install SEC API in Windsurf"
+description: "Connect SEC API to Windsurf's Cascade agent by editing one JSON config file — full MCP support with environment-variable auth interpolation."
 ---
 
-# Install Omni in Windsurf
+# Install SEC API in Windsurf
 
 Windsurf's Cascade agent has native MCP support over streamable HTTP. Auth headers can pull values from environment variables, so you don't have to hard-code your key into the config file.
 
 ## Prerequisites
 
-- Omni API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Export `OMNI_DATASTREAM_API_KEY` in your shell.
+- SEC API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Export `SEC_API_KEY` in your shell.
 - Windsurf installed and signed in.
 
 ## Install
@@ -19,17 +19,17 @@ Open (or create) `~/.codeium/windsurf/mcp_config.json` on macOS/Linux, or `%USER
 ```json
 {
   "mcpServers": {
-    "omni-datastream": {
+    "sec-api": {
       "serverUrl": "https://api.secapi.ai/mcp",
       "headers": {
-        "x-api-key": "${env:OMNI_DATASTREAM_API_KEY}"
+        "x-api-key": "${env:SEC_API_KEY}"
       }
     }
   }
 }
 ```
 
-Open the Cascade chat, click the MCP icon, and hit **Refresh** — Windsurf does not auto-watch the config file. The Omni MCP tools should appear in the tool list.
+Open the Cascade chat, click the MCP icon, and hit **Refresh**. If the config is loaded and the key is valid, the SEC API MCP tools appear in the tool list.
 
 ## Verify
 
@@ -42,7 +42,7 @@ Cascade should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and
 ## Troubleshooting
 
 - **Server doesn't appear in the MCP panel** — click **Refresh** in the panel; Windsurf reads the config on demand, not on save.
-- **`401 Unauthorized`** — environment variable is unset or unreadable from Windsurf's process. Restart Windsurf after `export OMNI_DATASTREAM_API_KEY=…`, or replace `${env:OMNI_DATASTREAM_API_KEY}` with the literal key for a quick test.
+- **`401 Unauthorized`** — environment variable is unset or unreadable from Windsurf's process. Restart Windsurf after `export SEC_API_KEY=…`, or replace `${env:SEC_API_KEY}` with the literal key for a quick test.
 - **Old config path doesn't work** — older guides reference `~/.codeium/mcp_config.json` (without `windsurf/`). The current canonical path includes the `windsurf/` segment.
 - **`url` vs `serverUrl`** — both keys are accepted, but `serverUrl` is canonical in current Windsurf docs.
 
@@ -50,4 +50,3 @@ Cascade should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and
 
 - [Available tools](/mcp-install#available-tools) — SEC + market data tools
 - [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
-

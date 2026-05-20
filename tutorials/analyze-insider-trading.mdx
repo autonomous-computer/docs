@@ -1,6 +1,6 @@
 ---
 title: "Analyze Insider Trading Patterns"
-description: "Track insider buys and sells using SEC Form 4 data from the Datastream API. Identify patterns in executive transactions. Includes curl, Python, and JavaScript examples."
+description: "Track insider buys and sells using SEC Form 4 data from the SEC API. Identify patterns in executive transactions. Includes curl, Python, and JavaScript examples."
 ---
 
 # Analyze Insider Trading Patterns
@@ -9,7 +9,7 @@ Corporate insiders (officers, directors, and 10% shareholders) must report their
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - Basic familiarity with REST APIs
 - (Optional) Python 3.8+ or Node.js 18+ for SDK examples
 
@@ -20,16 +20,16 @@ Use `/v1/insiders` to retrieve recent insider transactions for a given ticker.
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/insiders?ticker=AAPL&limit=10"
 ```
 
 ### Python
 
 ```python
-from omni_datastream_py import OmniDatastreamClient
+from secapi_client import SecApiClient
 
-client = OmniDatastreamClient(api_key="your-api-key")
+client = SecApiClient(api_key="your-api-key")
 
 transactions = client.insiders.list(ticker="AAPL", limit=10)
 
@@ -43,10 +43,10 @@ for txn in transactions.data:
 ### JavaScript
 
 ```ts
-import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+import { SecApiClient } from "@secapi/sdk";
 
-const client = new OmniDatastreamClient({
-  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+const client = new SecApiClient({
+  apiKey: process.env.SEC_API_KEY!,
 });
 
 const transactions = await client.insiders.list({
@@ -84,7 +84,7 @@ Insider purchases are often considered more meaningful than sales (insiders sell
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/insiders?ticker=JPM&transaction_type=purchase&limit=10"
 ```
 
@@ -184,7 +184,7 @@ Focus on a single insider to understand their trading history.
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/insiders?ticker=JPM&insider_name=Jamie+Dimon&limit=20"
 ```
 

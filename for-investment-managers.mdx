@@ -1,10 +1,10 @@
 # SEC Data for Investment Managers
 
 <Info>
-Omni Datastream delivers structured SEC data, factor analytics, ownership tracking, and intelligence bundles through a single API built for agent-driven investment research. Every response carries provenance, freshness metadata, and request traceability.
+SEC API delivers structured SEC data, factor analytics, ownership tracking, and intelligence bundles through a single API built for agent-driven investment research. Every response carries provenance, freshness metadata, and request traceability.
 </Info>
 
-## Why investment managers use Datastream
+## Why investment managers use SEC API
 
 <CardGroup cols={2}>
   <Card title="Factor decomposition" icon="chart-line" href="/factor-intelligence">
@@ -45,7 +45,7 @@ Compare the latest two 13F filings for a major institution:
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+  -H "x-api-key: $SEC_API_KEY" \
   -d '{"cik":"0001067983","limit":20}' \
   "https://api.secapi.ai/v1/owners/13f/compare"
 ```
@@ -53,15 +53,15 @@ curl -X POST \
 Pull current factor exposures for a ticker in your portfolio:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+curl -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/exposures?ticker=NVDA"
 ```
 
 Run a pre-earnings intelligence bundle before a reporting date:
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=TSLA&includeGuidance=true"
 ```
 
@@ -74,8 +74,8 @@ Decompose a portfolio across all 84 factors in a single call:
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   -d '{"positions":[{"ticker":"AAPL","weight":0.25},{"ticker":"MSFT","weight":0.25},{"ticker":"NVDA","weight":0.25},{"ticker":"GOOGL","weight":0.25}]}' \
   "https://api.secapi.ai/v1/intelligence/portfolio"
 ```
@@ -99,7 +99,7 @@ These Claude Code skills accelerate investment research workflows:
 Install via MCP for agent-driven portfolio research:
 
 ```bash
-omni-sec mcp install
+secapi mcp install
 ```
 
 ---
@@ -116,8 +116,8 @@ omni-sec mcp install
 </CardGroup>
 
 <Prompt>
-You are an investment research agent with access to Omni Datastream. For any portfolio or watchlist of US equities, pull a security-intelligence bundle for each name, run factor exposure decomposition (momentum, value, quality, low-volatility, size), compare quarter-over-quarter 13F ownership changes for key institutional holders, and flag material insider transactions from the past 90 days. Output a per-name memo with factor weights, top three institutional rotations, top three insider clusters, and one paragraph of analyst commentary. Always cite requestId and provenance for every figure.
+You are an investment research agent with access to SEC API. For any portfolio or watchlist of US equities, pull a security-intelligence bundle for each name, run factor exposure decomposition (momentum, value, quality, low-volatility, size), compare quarter-over-quarter 13F ownership changes for key institutional holders, and flag material insider transactions from the past 90 days. Output a per-name memo with factor weights, top three institutional rotations, top three insider clusters, and one paragraph of analyst commentary. Always cite requestId and provenance for every figure.
 </Prompt>
 
-_See the full 12-prompt [Investment manager library](/agents/prompt-library/investment-manager)._
+_See the full 12-prompt [Investment manager library](/give-this-prompt-to-your-agent)._
 

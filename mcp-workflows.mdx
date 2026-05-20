@@ -1,17 +1,17 @@
 # Hosted MCP Workflows
 
 <Info>
-Hosted MCP lets coding agents call Datastream directly. That means less glue code, less local wrapper drift, and faster time from prompt to useful investor workflow.
+Hosted MCP lets coding agents call SEC API directly. That means less glue code, less local wrapper drift, and faster time from prompt to useful investor workflow.
 </Info>
 
 ## Why use hosted MCP
 
 <CardGroup cols={3}>
   <Card title="Less wrapper code" icon="cable">
-    Your agent can call the Datastream tool surface directly instead of waiting on a custom wrapper layer.
+    Your agent can call the SEC API tool surface directly instead of waiting on a custom wrapper layer.
   </Card>
   <Card title="Same workflows" icon="equal">
-    REST and hosted MCP sit on top of the same underlying Datastream workflows.
+    REST and hosted MCP sit on top of the same underlying SEC API workflows.
   </Card>
   <Card title="Faster setup" icon="rocket">
     A working MCP install gets you to a useful issuer, filing, or section workflow quickly.
@@ -36,8 +36,8 @@ That payload includes:
   <Step title="Fetch the install metadata">
     Confirm the hosted MCP endpoint is live and returning its transport and auth metadata.
   </Step>
-  <Step title="Bootstrap the machine identity">
-    Have a human operator mint a sponsor token first, then exchange it through `POST /v1/agent/bootstrap` before you start repeated MCP work.
+  <Step title="Set the API key">
+    Export `SEC_API_KEY` or configure the same value as an `x-api-key` header in your MCP client.
   </Step>
   <Step title="Register the server in your client">
     Add the streamable HTTP MCP endpoint to Claude Code, Cursor, or another MCP-aware client.
@@ -52,17 +52,18 @@ That payload includes:
 ### Claude Code
 
 ```bash
-claude mcp add --transport streamable-http omni-datastream https://api.secapi.ai/mcp
+claude mcp add --transport streamable-http sec-api https://api.secapi.ai/mcp \
+  --header "x-api-key: $SEC_API_KEY"
 ```
 
 ### Cursor
 
 ```json
 {
-  "omni-datastream": {
+  "sec-api": {
     "url": "https://api.secapi.ai/mcp",
     "headers": {
-      "x-api-key": "${OMNI_DATASTREAM_API_KEY}"
+      "x-api-key": "${SEC_API_KEY}"
     }
   }
 }
@@ -83,14 +84,14 @@ claude mcp add --transport streamable-http omni-datastream https://api.secapi.ai
 
 ## AI query quota
 
-MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhanced.get` count toward the monthly `ai_queries` quota. Successful calls include a top-level `_omni.quota` envelope with projected post-call usage:
+MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhanced.get` count toward the monthly `ai_queries` quota. Successful calls include a top-level `_secapi.quota` envelope with projected post-call usage:
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": "quota_example",
   "result": {},
-  "_omni": {
+  "_secapi": {
     "quota": {
       "family": "ai_queries",
       "mcpToolName": "intelligence.query",
@@ -103,10 +104,10 @@ MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhance
 }
 ```
 
-When the quota is exhausted, hosted MCP returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`. Treat `-32004` as retryable timeout and `-32005` as non-retryable until quota reset or plan upgrade. If a tool circuit is open, hosted MCP returns HTTP `503` with JSON-RPC error code `-32006` and `error.data.code: "mcp_tool_circuit_open"`; retry it only after availability backoff.
+When the quota is exhausted, hosted MCP returns HTTP `429` with JSON-RPC error data such as `code: "ai_query_quota_exceeded"`. Treat quota exhaustion as non-retryable until reset or plan upgrade. If a tool circuit is open, retry only after availability backoff.
 
 <Prompt>
-Set up Omni Datastream hosted MCP in this MCP-aware client. Register the streamable HTTP MCP endpoint, resolve AAPL, fetch the latest 10-K, extract Item 1A, and return the result with requestId, provenance, freshness, and materialization metadata intact.
+Set up SEC API hosted MCP in this MCP-aware client. Register the streamable HTTP MCP endpoint, resolve AAPL, fetch the latest 10-K, extract Item 1A, and return the result with requestId, provenance, freshness, and materialization metadata intact.
 </Prompt>
 
 ## Example tool call
@@ -127,4 +128,3 @@ Set up Omni Datastream hosted MCP in this MCP-aware client. Register the streama
   }
 }
 ```
-

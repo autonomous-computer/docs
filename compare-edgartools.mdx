@@ -1,21 +1,21 @@
 ---
-title: "OMNI Datastream vs edgartools"
-description: "Feature-by-feature comparison of OMNI Datastream and edgartools — speed, cost, agent support, and commercial posture"
+title: "SEC API vs edgartools"
+description: "Feature-by-feature comparison of SEC API and edgartools — speed, cost, agent support, and commercial posture"
 hidden: true
 ---
 
 <Warning>
-**Preliminary — pending external methodology review (OMNI-3064)**. Numbers on
-this page will be re-verified by an external SRE before this comparison is
-linked from the docs sidebar. See `benchmarks/METHODOLOGY.md`.
+**Preliminary — pending external methodology review.** Numbers on this page
+come from the reproducible benchmark harness described in
+`benchmarks/METHODOLOGY.md`.
 </Warning>
 
-# OMNI Datastream vs edgartools
+# SEC API vs edgartools
 
 [edgartools](https://github.com/dgunning/edgartools) is a well-designed
 open-source Python library (MIT-licensed) that talks directly to SEC EDGAR.
 It's the OSS peer most agent-builders evaluate alongside hosted APIs. This
-comparison puts OMNI head-to-head against edgartools on the same four
+comparison puts SEC API head-to-head against edgartools on the same four
 workflows we use to benchmark against sec-api.io and financialdatasets.ai.
 
 ## Speed
@@ -24,9 +24,9 @@ From a `ubuntu-latest` GitHub Actions runner, N=5 iterations per case.
 Every edgartools iteration runs in a **fresh subprocess** with all caches
 cleared, so each measurement is a truly cold SEC fetch — no in-memory or
 on-disk cache hits skew the p50
-([methodology](https://github.com/autonomous-computer/omni-datastream/blob/main/benchmarks/METHODOLOGY.md)):
+([methodology](https://github.com/autonomous-computer/sec-api/blob/main/benchmarks/METHODOLOGY.md)):
 
-| Operation           | OMNI p50 | edgartools p50 | Speedup  | OMNI wire bytes | edgartools wire bytes |
+| Operation           | SEC API p50 | edgartools p50 | Speedup  | SEC API wire bytes | edgartools wire bytes |
 | ------------------- | -------- | -------------- | -------- | --------------- | --------------------- |
 | **Entity resolve**  | 34ms     | 471ms          | **13.9×**| 273             | 164,686               |
 | **Filing search**   | 38ms     | 688ms          | **18.1×**| 1,033           | 362,459               |
@@ -37,30 +37,30 @@ on-disk cache hits skew the p50
 edgartools fetches raw SEC documents client-side (e.g., ~3 MB of 10-K HTML
 to extract Item 1A text) before parsing. That's an architectural difference
 — edgartools optimizes for `pip install, zero API key, SEC direct` and
-accepts the bandwidth cost. OMNI pre-parses once in its cluster and returns
+accepts the bandwidth cost. SEC API pre-parses once in its cluster and returns
 compact JSON.
 </Tip>
 
 ## Pricing
 
-| Tier             | OMNI                                        | edgartools              |
+| Tier             | SEC API                                        | edgartools              |
 | ---------------- | ------------------------------------------- | ----------------------- |
-| **Free**         | 250 calls/month (renewable)                 | Unlimited (truly free)  |
+| **Free**         | Check current billing state after signup       | Unlimited (truly free)  |
 | **Pay-as-you-go**| From $0.01/call                             | Not applicable          |
-| **Personal**     | $55/month                                   | $0                      |
-| **Business**     | $239/month                                  | $0                      |
-| **Enterprise**   | Custom (SLA, support, dedicated capacity)   | None (community-supported) |
+| **Personal**     | $55/mo or $588/yr                           | $0                      |
+| **Team**         | $239/mo or $2,388/yr                        | $0                      |
+| **Commercial**   | From $18,000/yr                             | None (community-supported) |
 
 **The honest take:** edgartools is **genuinely free**. If you can tolerate
 client-side parsing of multi-megabyte SEC documents, aren't running at agent
 scale where token cost or latency matters, and don't need an SLA — it's a
-great option. OMNI costs money; the value is operational:
+great option. SEC API costs money; the value is operational:
 
 - Latency 13.9-90.6× faster on the same queries
 - Payloads 600-1,000× smaller (fewer LLM tokens)
 - SLA, support, dedicated capacity
 - Commercial redistribution rights
-- Hosted semantic search, dilution intelligence, MCP server, monitors, etc.
+- Hosted semantic search, dilution intelligence, hosted MCP surface, monitors, etc.
 - Native JS/TS + Go + Rust SDKs (edgartools is Python-only)
 
 ## Where edgartools wins
@@ -75,12 +75,12 @@ edgartools has genuine strengths. Customers evaluating both should know:
 - **Permissive redistribution** for the library itself (MIT).
 
 If your SEC-data workload is research-scale (one ticker at a time, small
-number of filings), edgartools is often the right choice. OMNI's value
+number of filings), edgartools is often the right choice. SEC API's value
 compounds with scale, agents, and production requirements.
 
-## Where OMNI wins
+## Where SEC API wins
 
-| Dimension                                   | OMNI                            | edgartools                      |
+| Dimension                                   | SEC API                            | edgartools                      |
 | ------------------------------------------- | ------------------------------- | ------------------------------- |
 | Latency (hot path)                          | 34-38ms p50                     | 300-2,100ms p50                 |
 | Payload size (agent-ingestable)             | Compact JSON                    | Raw 10-K HTML / full XBRL       |
@@ -88,9 +88,9 @@ compounds with scale, agents, and production requirements.
 | Intelligence bundles                        | Yes (company, security, earnings) | No (build it yourself)       |
 | Filing diff / amendment tracking            | Yes                             | No                              |
 | Monitors + webhooks                         | Yes (signed, replay, cursor)    | No                              |
-| MCP native server                           | Yes                             | No                              |
+| Hosted MCP surface                          | Yes                             | Not in the edgartools Python library |
 | SDKs                                        | JS, Python, Go, Rust            | Python-only                     |
-| CLI (`omni-sec` on npm)                     | Yes                             | No (Python import only)         |
+| CLI (`secapi` on npm)                     | Yes                             | No (Python import only)         |
 | Status page / SLA                           | Yes                             | No (best-effort OSS)            |
 | Commercial redistribution license           | Yes (via commercial agreement)  | No (library itself: MIT; SEC data: public) |
 | **8-K 5.07 voting results (structured)**    | **Yes**                         | **No**                          |
@@ -108,7 +108,7 @@ compounds with scale, agents, and production requirements.
 - You want to read/modify the library source.
 - You're comfortable parsing raw SEC documents client-side.
 
-**Choose OMNI Datastream when:**
+**Choose SEC API when:**
 - You're running an agent workload (latency + token cost compound).
 - You need SLA, support, or commercial redistribution.
 - You want semantic search, monitors, intelligence bundles, or MCP out of the box.
@@ -117,12 +117,12 @@ compounds with scale, agents, and production requirements.
   edgartools doesn't extract.
 
 **Use both** if you're prototyping in a notebook (edgartools) and shipping in
-production (OMNI) — that's a common pattern.
+production (SEC API) — that's a common pattern.
 
 ## Migration sketch
 
 ```python
-# edgartools → OMNI
+# edgartools → SEC API
 
 # 1. Entity resolve
 # edgartools
@@ -131,23 +131,23 @@ set_identity("You you@example.com")
 c = Company("AAPL")
 cik, name = c.cik, c.name
 
-# OMNI Datastream (JS/TS)
-const entity = await omni.entities.resolve({ ticker: "AAPL" });
+# SEC API (JS/TS)
+const entity = await secapi.entities.resolve({ ticker: "AAPL" });
 // returns { cik, name, ticker, ... }
 
 # 2. Latest 10-K
 # edgartools
 filing = c.get_filings(form="10-K").latest(1)
 
-# OMNI
-const latest = await omni.filings.latest({ ticker: "AAPL", form: "10-K" });
+# SEC API
+const latest = await secapi.filings.latest({ ticker: "AAPL", form: "10-K" });
 
 # 3. Item 1A
 # edgartools (pulls full 10-K HTML client-side)
 item_1a = filing.obj().risk_factors
 
-# OMNI
-const item1A = await omni.filings.sections.latest({
+# SEC API
+const item1A = await secapi.filings.sections.latest({
   ticker: "AAPL", form: "10-K", item: "item_1a"
 });
 
@@ -155,8 +155,8 @@ const item1A = await omni.filings.sections.latest({
 # edgartools
 bs = filing.xbrl().statements.balance_sheet()
 
-# OMNI
-const balanceSheet = await omni.statements.balance_sheet({
+# SEC API
+const balanceSheet = await secapi.statements.balance_sheet({
   ticker: "AAPL", period: "annual", limit: 2
 });
 ```
@@ -165,10 +165,9 @@ const balanceSheet = await omni.statements.balance_sheet({
 
 All numbers on this page come from public scripts:
 
-- `scripts/bench/benchmark_search.py` (OMNI)
+- `scripts/bench/benchmark_search.py` (SEC API)
 - `scripts/bench/benchmark_edgartools.py` (edgartools)
 - `scripts/bench/competitive_scorecard.py` (4-way aggregator)
 - `benchmarks/METHODOLOGY.md` (reviewable methodology doc)
 
-Run them yourself. If you find a methodology flaw, file an issue or open a PR.
-
+Run them yourself to compare the same operations in your own environment.

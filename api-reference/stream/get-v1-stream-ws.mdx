@@ -15,13 +15,13 @@ Audience: application and coding agent.
 
 <RequestExample>
 ```bash
-npx wscat -c "wss://api.secapi.ai/v1/stream/ws?ticket=$OMNI_STREAM_TICKET" \
-  -H "omni-version: 2026-03-19"
+npx wscat -c "wss://api.secapi.ai/v1/stream/ws?ticket=$SEC_API_STREAM_TICKET" \
+  -H "secapi-version: 2026-03-19"
 
 # Mint the short-lived ticket first:
 curl -X POST \
-  -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
-  -H "omni-version: 2026-03-19" \
+  -H "x-api-key: $SEC_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
   -d '{}' \
   "https://api.secapi.ai/v1/stream/tickets"
@@ -29,7 +29,7 @@ curl -X POST \
 </RequestExample>
 
 <Info>
-Mint the short-lived `$OMNI_STREAM_TICKET` first with `POST /v1/stream/tickets` so you do not expose a long-lived API key in a browser-visible WebSocket URL.
+Mint the short-lived `$SEC_API_STREAM_TICKET` first with `POST /v1/stream/tickets` so you do not expose a long-lived API key in a browser-visible WebSocket URL.
 </Info>
 
 ## Example response
@@ -46,10 +46,10 @@ Mint the short-lived `$OMNI_STREAM_TICKET` first with `POST /v1/stream/tickets` 
 ## Give this prompt to your agent
 
 <Prompt>
-Use Omni Datastream GET /v1/stream/ws to upgrade to a websocket connection for real-time filing event streaming. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/stream/ws to upgrade to a websocket connection for real-time filing event streaming. Preserve `requestId`, `traceparent` in the output. Return a concise summary and preserve the structured fields your application needs for follow-up requests.
 </Prompt>
 
-## Failure posture
+## Errors and partial results
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports

@@ -1,6 +1,6 @@
 ---
 title: "Compare Executive Compensation"
-description: "Compare executive compensation across companies using the Datastream API. Pull salary, bonus, stock awards, and total comp data. Includes curl, Python, and JavaScript examples."
+description: "Compare executive compensation across companies using the SEC API. Pull salary, bonus, stock awards, and total comp data. Includes curl, Python, and JavaScript examples."
 ---
 
 # Compare Executive Compensation
@@ -9,7 +9,7 @@ Proxy statements (DEF 14A) contain detailed executive compensation tables. This 
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - Basic familiarity with REST APIs
 - (Optional) Python 3.8+ or Node.js 18+ for SDK examples
 
@@ -20,16 +20,16 @@ Use `/v1/compensation` to get the latest executive compensation data for a compa
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/compensation?ticker=AAPL"
 ```
 
 ### Python
 
 ```python
-from omni_datastream_py import OmniDatastreamClient
+from secapi_client import SecApiClient
 
-client = OmniDatastreamClient(api_key="your-api-key")
+client = SecApiClient(api_key="your-api-key")
 
 comp = client.compensation.get(ticker="AAPL")
 
@@ -45,10 +45,10 @@ for exec in comp.data:
 ### JavaScript
 
 ```ts
-import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+import { SecApiClient } from "@secapi/sdk";
 
-const client = new OmniDatastreamClient({
-  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+const client = new SecApiClient({
+  apiKey: process.env.SEC_API_KEY!,
 });
 
 const comp = await client.compensation.get({ ticker: "AAPL" });
@@ -86,7 +86,7 @@ The `/v1/compensation/compare` endpoint lets you compare CEO or C-suite compensa
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/compensation/compare?tickers=AAPL,MSFT,GOOG,AMZN&role=ceo"
 ```
 

@@ -1,44 +1,44 @@
 ---
 title: "Build an SEC Filing Monitor Agent"
-description: "Build an autonomous agent that monitors SEC 8-K filings daily using Claude Code and the OMNI Datastream CLI, then sends Slack alerts for your watchlist."
+description: "Build an autonomous agent that monitors SEC 8-K filings daily using Claude Code and the SEC API CLI, then sends Slack alerts for your watchlist."
 ---
 
 # Build an SEC Filing Monitor Agent
 
-Build an autonomous agent that checks for new 8-K filings every day and sends Slack notifications when companies on your watchlist file material events. This tutorial uses Claude Code skills and the OMNI Datastream CLI to create a fully automated filing monitor you can run on a schedule.
+Build an autonomous agent that checks for new 8-K filings every day and sends Slack notifications when companies on your watchlist file material events. This tutorial uses Claude Code skills and the SEC API CLI to create a fully automated filing monitor you can run on a schedule.
 
 ## What you will build
 
 - A Claude Code skill that runs on a cron schedule
-- Daily checks against the OMNI Datastream API for new 8-K filings
+- Daily checks against the SEC API for new 8-K filings
 - Slack alerts with filing details for your watchlist companies
 - A persistent state file to avoid duplicate notifications
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
 - A Slack workspace with an incoming webhook URL
 - Node.js 18+ installed
 
-## Step 1 — Install the OMNI Datastream CLI
+## Step 1 — Install the SEC API CLI
 
 Install the CLI globally so your agent skill can call it directly.
 
 ```bash
-npm install -g @omni-datastream/cli
+npm install -g @secapi/cli
 
 # Verify the installation
-omni-datastream --version
+sec-api --version
 
 # Authenticate with your API key
-omni-datastream auth login
+sec-api auth login
 ```
 
 Set your API key as an environment variable for non-interactive use:
 
 ```bash
-export OMNI_DATASTREAM_API_KEY="your-api-key"
+export SEC_API_KEY="your-api-key"
 ```
 
 ## Step 2 — Create the project structure
@@ -76,7 +76,7 @@ Initialize the state file to track what you have already seen:
 
 ## Step 3 — Write the filing check logic
 
-Create `skill.js` with the core logic that queries the OMNI Datastream API for recent 8-K filings.
+Create `skill.js` with the core logic that queries the SEC API for recent 8-K filings.
 
 ```javascript
 import { readFileSync, writeFileSync } from "fs";
@@ -90,7 +90,7 @@ const WATCHLIST = JSON.parse(
 );
 const STATE_PATH = join(__dirname, "state.json");
 const API_BASE = "https://api.secapi.ai";
-const API_KEY = process.env.OMNI_DATASTREAM_API_KEY;
+const API_KEY = process.env.SEC_API_KEY;
 
 function loadState() {
   try {
@@ -243,7 +243,7 @@ Run daily at 6:00 PM ET (after market close and EDGAR processing).
 ## Steps
 
 1. Read the watchlist from `watchlist.json`
-2. Query the OMNI Datastream API for recent 8-K and 8-K/A filings for each ticker
+2. Query the SEC API for recent 8-K and 8-K/A filings for each ticker
 3. Compare against previously seen accession numbers in `state.json`
 4. Send a Slack notification for each new filing
 5. Update the state file with the new accession numbers
@@ -263,7 +263,7 @@ Add a cron entry to run the skill daily. You can use `crontab` on Linux/macOS or
 crontab -e
 
 # Add this line to run at 6:00 PM ET (23:00 UTC) every weekday
-0 23 * * 1-5 cd /path/to/sec-filing-monitor-agent && OMNI_DATASTREAM_API_KEY="your-api-key" node skill.js >> /var/log/sec-monitor.log 2>&1
+0 23 * * 1-5 cd /path/to/sec-filing-monitor-agent && SEC_API_KEY="your-api-key" node skill.js >> /var/log/sec-monitor.log 2>&1
 ```
 
 Alternatively, use Claude Code's built-in scheduling:

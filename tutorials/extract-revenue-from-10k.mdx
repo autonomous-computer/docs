@@ -1,6 +1,6 @@
 ---
 title: "Extract Revenue Metrics from 10-K Filings"
-description: "Learn how to pull structured revenue data from SEC 10-K filings using the Datastream API. Includes curl, Python, and JavaScript examples."
+description: "Learn how to pull structured revenue data from SEC 10-K filings using the SEC API. Includes curl, Python, and JavaScript examples."
 ---
 
 # Extract Revenue Metrics from 10-K Filings
@@ -9,7 +9,7 @@ Pull structured revenue, net income, and other financial metrics directly from 1
 
 ## Prerequisites
 
-- An Omni Datastream API key (set as `OMNI_DATASTREAM_API_KEY`)
+- An SEC API key (set as `SEC_API_KEY`)
 - Basic familiarity with REST APIs
 - (Optional) Python 3.8+ or Node.js 18+ for SDK examples
 
@@ -20,16 +20,16 @@ Start by fetching the most recent 10-K for a given ticker. The `/v1/filings/late
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 ```
 
 ### Python
 
 ```python
-from omni_datastream_py import OmniDatastreamClient
+from secapi_client import SecApiClient
 
-client = OmniDatastreamClient(api_key="your-api-key")
+client = SecApiClient(api_key="your-api-key")
 
 filing = client.filings.latest(ticker="AAPL", form="10-K")
 print(filing.accession_number)
@@ -39,10 +39,10 @@ print(filing.filed_at)
 ### JavaScript
 
 ```ts
-import { OmniDatastreamClient } from "@omni-datastream/sdk-js";
+import { SecApiClient } from "@secapi/sdk";
 
-const client = new OmniDatastreamClient({
-  apiKey: process.env.OMNI_DATASTREAM_API_KEY!,
+const client = new SecApiClient({
+  apiKey: process.env.SEC_API_KEY!,
 });
 
 const filing = await client.filings.latest({
@@ -72,7 +72,7 @@ With the filing identified, pull the structured income statement using `/v1/stat
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
 ```
 
@@ -128,7 +128,7 @@ For granular control, use `/v1/facts` to pull individual XBRL concepts. This is 
 ### curl
 
 ```bash
-curl -H "x-api-key: $OMNI_DATASTREAM_API_KEY" \
+curl -H "x-api-key: $SEC_API_KEY" \
   "https://api.secapi.ai/v1/facts?ticker=AAPL&concept=Revenues&period=annual&limit=4"
 ```
 
