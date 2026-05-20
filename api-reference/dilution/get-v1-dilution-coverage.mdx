@@ -3,10 +3,10 @@
 Dilution-domain coverage and freshness summary across the 11 underlying tables. Returns row counts, verified-row counts, and latest filing/verification timestamps per table.
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -60,11 +60,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API `GET /v1/dilution/coverage` to answer "do we have data for this ticker yet?" without polling 11 endpoints. Preserve `requestId` and `traceparent`. Surface `totalVerifiedRowCount / totalRowCount` as a coverage ratio and use `latestVerifiedAt` per table to spot stale series.
+Use SEC API `GET /v1/dilution/coverage` to answer "do we have data for this ticker yet?" without polling 11 endpoints. Preserve `requestId` and `traceparent`. Show `totalVerifiedRowCount / totalRowCount` as a coverage ratio and use `latestVerifiedAt` per table to spot stale series.
 </Prompt>
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
+- Treat non-2xx responses as API errors and log the response body for debugging
 - preserve `requestId` and `traceparent`
 

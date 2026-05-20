@@ -3,14 +3,14 @@
 Return the list of subsidiaries extracted from the latest 10-K Exhibit 21 for a given entity
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
 ## Agent mode
 
 Pass `?view=agent` to receive the compact agent shape: per-subsidiary fields (name, jurisdiction, ownershipPercent) + envelope citation fields (accessionNumber, filingDate, filingUrl). The `lineage` metadata block is dropped. The per-item shape is already narrow, so this endpoint is an API-consistency win rather than a byte-size win — reduction is approximately **0%** but the agent envelope matches the contract exposed by every other agent-mode endpoint. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -40,13 +40,13 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/companies/subsidiaries to return the list of subsidiaries extracted from the latest 10-k exhibit 21 for a given entity. Preserve `requestId`, `traceparent` in the output. Return a concise summary and preserve the structured fields your application needs for follow-up requests.
+Use SEC API GET /v1/companies/subsidiaries to return the list of subsidiaries extracted from the latest 10-K exhibit 21 for a given entity. Preserve `requestId`, `traceparent` in the output. Return a concise summary and keep the structured fields your application needs for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
 
 

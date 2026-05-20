@@ -34,12 +34,12 @@
     },
     "/v1/billing": {
       "get": {
-        "summary": "Return the current organization's billing snapshot, including pricing posture, budget controls, and settlement provider state"
+        "summary": "Return the current organization's billing snapshot, including pricing state, budget controls, and settlement provider state"
       }
     },
     "/v1/billing/rates": {
       "get": {
-        "summary": "Return the public pricing catalog, plan metadata, and meter-family launch rates"
+        "summary": "Return the public pricing catalog, plan metadata, and current meter-family rates"
       }
     },
     "/v1/billing/payg/activate": {
@@ -386,7 +386,7 @@
     },
     "/v1/events/voting-results": {
       "get": {
-        "summary": "Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes — first-in-market parser ahead of sec-api.io's open bug"
+        "summary": "Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes."
       }
     },
     "/v1/earnings/transcripts": {
@@ -540,7 +540,7 @@
     },
     "/v1/macro/high-signal-pack": {
       "get": {
-        "summary": "Return the launch-ring Tier-1 high-signal macro pack with explicit source, fallback, and release-calendar posture for supported countries",
+        "summary": "Return the high-signal macro pack with explicit source, fallback, and release-calendar metadata for supported countries",
         "responses": {
           "200": {
             "description": "Successful response",
@@ -615,7 +615,7 @@
     },
     "/v1/factors/returns/intraday": {
       "get": {
-        "summary": "Return intraday factor snapshots for live dashboards using the latest benchmark proxy surface",
+        "summary": "Return intraday factor snapshots for live dashboards using the latest benchmark proxy inputs",
         "responses": {
           "200": {
             "description": "Successful response",
@@ -688,7 +688,7 @@
     },
     "/v1/factors/correlations": {
       "get": {
-        "summary": "Return factor-to-factor and factor-to-security correlation surfaces for strategy and risk workflows"
+        "summary": "Return factor-to-factor and factor-to-security correlations for strategy and risk workflows"
       }
     },
     "/v1/factors/screen": {
@@ -1168,7 +1168,7 @@
     },
     "/v1/signals/dilution/enhanced": {
       "get": {
-        "summary": "Return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder)",
+        "summary": "Return the SEC API Dilution Score with factor-model context for macro liquidity and momentum exposure.",
         "parameters": [
           {
             "name": "ticker",
@@ -1997,7 +1997,7 @@
           "Platform"
         ],
         "summary": "Get plan limits",
-        "description": "Returns current organization limits, budget gates, and entitlement posture.",
+        "description": "Returns current organization limits, budget gates, and entitlement state.",
         "operationId": "get_v1_limits",
         "parameters": [],
         "responses": {
@@ -3331,7 +3331,7 @@
           "Market data"
         ],
         "summary": "Get market bars coverage",
-        "description": "Returns market bar coverage and entitlement posture. Market data is provider-backed and may require contract approval.\n\nThis route may be contract-gated or provider-backed. Availability depends on your plan and market-data entitlements.",
+        "description": "Returns market bar coverage and entitlement state. Market data is provider-backed and may require contract approval.\n\nThis route may be contract-gated or provider-backed. Availability depends on your plan and market-data entitlements.",
         "operationId": "get_v1_market_bars_coverage",
         "parameters": [
           {
@@ -16026,12 +16026,11 @@
           "fallbackPolicy": {
             "type": "string"
           },
-          "posture": {
+          "status": {
             "type": "string",
             "enum": [
               "public_safe",
               "contract_gated",
-              "internal_only",
               "inventory_only",
               "review_required"
             ]
@@ -16041,7 +16040,6 @@
             "enum": [
               "public",
               "contract_gated",
-              "internal_only",
               "inventory_only"
             ]
           },
@@ -16077,7 +16075,7 @@
         },
         "required": [
           "source",
-          "posture",
+          "status",
           "publicAvailability",
           "contractStatus"
         ],
@@ -16431,12 +16429,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -16446,7 +16443,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -16482,7 +16478,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -16794,12 +16790,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -16809,7 +16804,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -16845,7 +16839,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -17249,12 +17243,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -17264,7 +17257,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -17300,7 +17292,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -17587,12 +17579,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -17602,7 +17593,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -17638,7 +17628,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -17939,12 +17929,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -17954,7 +17943,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -17990,7 +17978,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -18299,12 +18287,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -18314,7 +18301,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -18350,7 +18336,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -18645,12 +18631,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -18660,7 +18645,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -18696,7 +18680,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -19000,12 +18984,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -19015,7 +18998,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -19051,7 +19033,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -19348,12 +19330,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -19363,7 +19344,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -19399,7 +19379,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -19744,12 +19724,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -19759,7 +19738,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -19795,7 +19773,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -20130,12 +20108,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -20145,7 +20122,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -20181,7 +20157,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -20496,12 +20472,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -20511,7 +20486,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -20547,7 +20521,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -20851,12 +20825,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -20866,7 +20839,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -20902,7 +20874,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -21211,12 +21183,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -21226,7 +21197,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -21262,7 +21232,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -21560,12 +21530,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -21575,7 +21544,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -21611,7 +21579,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -21910,12 +21878,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -21925,7 +21892,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -21961,7 +21927,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -22250,12 +22216,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -22265,7 +22230,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -22301,7 +22265,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -23097,12 +23061,11 @@
                         "fallbackPolicy": {
                           "type": "string"
                         },
-                        "posture": {
+                        "status": {
                           "type": "string",
                           "enum": [
                             "public_safe",
                             "contract_gated",
-                            "internal_only",
                             "inventory_only",
                             "review_required"
                           ]
@@ -23112,7 +23075,6 @@
                           "enum": [
                             "public",
                             "contract_gated",
-                            "internal_only",
                             "inventory_only"
                           ]
                         },
@@ -23148,7 +23110,7 @@
                       },
                       "required": [
                         "source",
-                        "posture",
+                        "status",
                         "publicAvailability",
                         "contractStatus"
                       ],
@@ -23832,12 +23794,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -23847,7 +23808,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -23883,7 +23843,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -24183,12 +24143,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -24198,7 +24157,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -24234,7 +24192,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -24535,12 +24493,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -24550,7 +24507,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -24586,7 +24542,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -24876,12 +24832,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -24891,7 +24846,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -24927,7 +24881,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -25244,12 +25198,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -25259,7 +25212,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -25295,7 +25247,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -25605,12 +25557,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -25620,7 +25571,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -25656,7 +25606,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -26007,12 +25957,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -26022,7 +25971,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -26058,7 +26006,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -27247,12 +27195,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -27262,7 +27209,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -27298,7 +27244,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -27649,12 +27595,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -27664,7 +27609,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -27700,7 +27644,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -28263,12 +28207,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -28278,7 +28221,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -28314,7 +28256,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -28688,12 +28630,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -28703,7 +28644,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -28739,7 +28679,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -29069,12 +29009,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -29084,7 +29023,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -29120,7 +29058,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -29460,12 +29398,11 @@
                   "fallbackPolicy": {
                     "type": "string"
                   },
-                  "posture": {
+                  "status": {
                     "type": "string",
                     "enum": [
                       "public_safe",
                       "contract_gated",
-                      "internal_only",
                       "inventory_only",
                       "review_required"
                     ]
@@ -29475,7 +29412,6 @@
                     "enum": [
                       "public",
                       "contract_gated",
-                      "internal_only",
                       "inventory_only"
                     ]
                   },
@@ -29511,7 +29447,7 @@
                 },
                 "required": [
                   "source",
-                  "posture",
+                  "status",
                   "publicAvailability",
                   "contractStatus"
                 ],
@@ -30458,12 +30394,11 @@
                   "fallbackPolicy": {
                     "type": "string"
                   },
-                  "posture": {
+                  "status": {
                     "type": "string",
                     "enum": [
                       "public_safe",
                       "contract_gated",
-                      "internal_only",
                       "inventory_only",
                       "review_required"
                     ]
@@ -30473,7 +30408,6 @@
                     "enum": [
                       "public",
                       "contract_gated",
-                      "internal_only",
                       "inventory_only"
                     ]
                   },
@@ -30509,7 +30443,7 @@
                 },
                 "required": [
                   "source",
-                  "posture",
+                  "status",
                   "publicAvailability",
                   "contractStatus"
                 ],
@@ -31636,12 +31570,11 @@
                   "fallbackPolicy": {
                     "type": "string"
                   },
-                  "posture": {
+                  "status": {
                     "type": "string",
                     "enum": [
                       "public_safe",
                       "contract_gated",
-                      "internal_only",
                       "inventory_only",
                       "review_required"
                     ]
@@ -31651,7 +31584,6 @@
                     "enum": [
                       "public",
                       "contract_gated",
-                      "internal_only",
                       "inventory_only"
                     ]
                   },
@@ -31687,7 +31619,7 @@
                 },
                 "required": [
                   "source",
-                  "posture",
+                  "status",
                   "publicAvailability",
                   "contractStatus"
                 ],
@@ -32332,12 +32264,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -32347,7 +32278,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -32383,7 +32313,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -33225,12 +33155,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -33240,7 +33169,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -33276,7 +33204,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -33674,12 +33602,11 @@
                         "fallbackPolicy": {
                           "type": "string"
                         },
-                        "posture": {
+                        "status": {
                           "type": "string",
                           "enum": [
                             "public_safe",
                             "contract_gated",
-                            "internal_only",
                             "inventory_only",
                             "review_required"
                           ]
@@ -33689,7 +33616,6 @@
                           "enum": [
                             "public",
                             "contract_gated",
-                            "internal_only",
                             "inventory_only"
                           ]
                         },
@@ -33725,7 +33651,7 @@
                       },
                       "required": [
                         "source",
-                        "posture",
+                        "status",
                         "publicAvailability",
                         "contractStatus"
                       ],
@@ -34400,12 +34326,11 @@
                         "fallbackPolicy": {
                           "type": "string"
                         },
-                        "posture": {
+                        "status": {
                           "type": "string",
                           "enum": [
                             "public_safe",
                             "contract_gated",
-                            "internal_only",
                             "inventory_only",
                             "review_required"
                           ]
@@ -34415,7 +34340,6 @@
                           "enum": [
                             "public",
                             "contract_gated",
-                            "internal_only",
                             "inventory_only"
                           ]
                         },
@@ -34451,7 +34375,7 @@
                       },
                       "required": [
                         "source",
-                        "posture",
+                        "status",
                         "publicAvailability",
                         "contractStatus"
                       ],
@@ -35544,12 +35468,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -35559,7 +35482,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -35595,7 +35517,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -36530,12 +36452,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -36545,7 +36466,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -36581,7 +36501,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -37245,12 +37165,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -37260,7 +37179,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -37296,7 +37214,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -38164,12 +38082,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -38179,7 +38096,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -38215,7 +38131,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -38714,12 +38630,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -38729,7 +38644,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -38765,7 +38679,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -39231,12 +39145,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -39246,7 +39159,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -39282,7 +39194,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -39737,12 +39649,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -39752,7 +39663,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -39788,7 +39698,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -40253,12 +40163,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -40268,7 +40177,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -40304,7 +40212,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -40759,12 +40667,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -40774,7 +40681,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -40810,7 +40716,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -41215,12 +41121,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -41230,7 +41135,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -41266,7 +41170,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -41660,12 +41564,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -41675,7 +41578,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -41711,7 +41613,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -42122,12 +42024,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -42137,7 +42038,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -42173,7 +42073,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -42575,12 +42475,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -42590,7 +42489,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -42626,7 +42524,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -43017,12 +42915,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -43032,7 +42929,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -43068,7 +42964,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -43446,12 +43342,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -43461,7 +43356,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -43497,7 +43391,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -43870,12 +43764,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -43885,7 +43778,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -43921,7 +43813,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -44283,12 +44175,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -44298,7 +44189,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -44334,7 +44224,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -44753,12 +44643,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -44768,7 +44657,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -44804,7 +44692,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -45213,12 +45101,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -45228,7 +45115,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -45264,7 +45150,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -45670,12 +45556,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -45685,7 +45570,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -45721,7 +45605,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -46119,12 +46003,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -46134,7 +46017,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -46170,7 +46052,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -46557,12 +46439,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -46572,7 +46453,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -46608,7 +46488,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -46984,12 +46864,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -46999,7 +46878,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -47035,7 +46913,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],
@@ -47401,12 +47279,11 @@
               "fallbackPolicy": {
                 "type": "string"
               },
-              "posture": {
+              "status": {
                 "type": "string",
                 "enum": [
                   "public_safe",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only",
                   "review_required"
                 ]
@@ -47416,7 +47293,6 @@
                 "enum": [
                   "public",
                   "contract_gated",
-                  "internal_only",
                   "inventory_only"
                 ]
               },
@@ -47452,7 +47328,7 @@
             },
             "required": [
               "source",
-              "posture",
+              "status",
               "publicAvailability",
               "contractStatus"
             ],
@@ -47809,12 +47685,11 @@
                     "fallbackPolicy": {
                       "type": "string"
                     },
-                    "posture": {
+                    "status": {
                       "type": "string",
                       "enum": [
                         "public_safe",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only",
                         "review_required"
                       ]
@@ -47824,7 +47699,6 @@
                       "enum": [
                         "public",
                         "contract_gated",
-                        "internal_only",
                         "inventory_only"
                       ]
                     },
@@ -47860,7 +47734,7 @@
                   },
                   "required": [
                     "source",
-                    "posture",
+                    "status",
                     "publicAvailability",
                     "contractStatus"
                   ],

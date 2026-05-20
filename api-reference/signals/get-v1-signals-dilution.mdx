@@ -3,10 +3,10 @@
 Return the SEC API Dilution Score: factor-weighted 0-100 derived metric with sub-ratings, percentile, and optional rolling history
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -110,8 +110,8 @@ Use SEC API GET /v1/signals/dilution to return the SEC API Dilution Score for an
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - when `confidence` is `low` or `freshness.status` is `stale`/`degraded`, API the `degradedReasons[]` to the user verbatim so trust is not lost in the handoff
 - the score is deterministic given (inputs, methodologyVersion); a methodology bump is recorded in the persisted history table without overwriting prior rows
 

@@ -5,7 +5,7 @@ title: "Auth, Billing, and First Utility"
 # Auth, Billing, and First Utility
 
 <Info>
-API keys are the primary authentication method for all plans. Create an org, mint an org-scoped key, make a real request, then attach billing only when the workflow proves itself. OAuth/SSO via WorkOS is planned for the enterprise tier in 2026 Q3+.
+API keys are the primary authentication method for all plans. Create an org, mint an org-scoped key, make a real request, then attach billing only after a successful test request. Enterprise SSO is available through the enterprise rollout path; contact sales to discuss requirements.
 </Info>
 
 ## Auth model
@@ -15,10 +15,10 @@ API keys are the primary authentication method for all plans. Create an org, min
     All REST, SDK, and CLI clients use org-scoped `x-api-key` credentials. This is the primary authentication method for every plan.
   </Card>
   <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
-    MCP clients use WorkOS OAuth discovery through `api.secapi.ai`. This is the only surface where WorkOS is customer-visible today.
+    MCP clients use WorkOS OAuth discovery through `api.secapi.ai`.
   </Card>
   <Card title="Enterprise SSO" icon="shield-check" href="/enterprise">
-    OAuth/SSO via WorkOS is planned for the enterprise tier in 2026 Q3+. Contact sales for roadmap details.
+    Enterprise SSO is available through the enterprise rollout path. Contact sales to discuss requirements.
   </Card>
 </CardGroup>
 
@@ -74,7 +74,7 @@ API keys are the primary authentication method for all plans. Create an org, min
   </Card>
 </CardGroup>
 
-## Launch pricing posture
+## Launch Pricing
 
 - `GET /v1/billing/rates` is the source of truth for public plan and meter pricing
 - Pay As You Go is the default paid path
@@ -82,11 +82,11 @@ API keys are the primary authentication method for all plans. Create an org, min
 - Team and Commercial are for shared or externalized usage, not just more requests
 - redistribution, embedding, resale, and broader commercial rights begin at `Commercial`
 
-## WebSocket rate posture
+## WebSocket Rate Limits
 
 Chat messages sent through the SEC API Agent WebSocket runtime are rate-limited per user at a configurable requests-per-minute ceiling (default: 30 RPM). Non-chat messages — permission responses, plan approvals, label and source operations — are exempt because they are responses to server-initiated prompts, not user-initiated load.
 
-Rate-limited requests receive a clear error message with a retry-after interval. The WebSocket connection stays open. This posture protects shared infrastructure without punishing interactive workflows.
+Rate-limited requests receive a clear error message with a retry-after interval. The WebSocket connection stays open, so interactive workflows can continue after the backoff window.
 
 - `RATE_LIMIT_CHAT_RPM`: per-user ceiling (default 30)
 - `RATE_LIMIT_ENABLED`: feature flag (default true in production)
@@ -123,7 +123,7 @@ Preserve billing and plan headers in logs and traces so entitlement changes are 
 
 ## MCP OAuth discovery endpoints
 
-These endpoints back the hosted MCP surface. They are not part of the primary human-auth flow — API keys cover every REST, SDK, and CLI client.
+These endpoints support hosted MCP. They are not part of the primary human-auth flow: API keys cover every REST, SDK, and CLI client.
 
 - protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
 - authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
@@ -141,7 +141,7 @@ Set up SEC API auth with an org-scoped API key. Verify health, readiness, billin
     Review PAYG, commit plans, and rights boundaries.
   </Card>
   <Card title="Agent Billing" icon="bot" href="/agent-billing">
-    Learn how agents should reason about billing posture before expensive loops.
+    Learn how agents should check billing before expensive loops.
   </Card>
   <Card title="Pay As You Go" icon="credit-card" href="/pay-as-you-go">
     See the PAYG activation flow and the billing state transition after the grant is exhausted.

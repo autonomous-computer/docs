@@ -3,14 +3,14 @@
 Return the latest SEC N-PORT holdings roster with explicit capability semantics and balance-unit metadata
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
 ## Agent mode
 
 Pass `?view=agent` to receive the compact agent shape: fund identifiers (ticker, cik, fundName, form, filingDate, accessionNumber, holdingCount) + lifted `filingUrl` + nested `holdings[]` trimmed to 6 fields per holding (issuer, cusip, valueUsd, balance, balanceUnit, pctNetAssets). Title, isin, assetType, issuerType, country, currency, `summaryMd`, and metadata envelopes are dropped. Typical reduction: **~60%**. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -40,13 +40,13 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/funds/nport/holdings to return the latest sec n-port holdings roster with explicit capability semantics and balance-unit metadata. Preserve `requestId`, `traceparent` in the output. Return a concise summary and preserve the structured fields your application needs for follow-up requests.
+Use SEC API GET /v1/funds/nport/holdings to return the latest SEC N-PORT holdings roster with explicit capability semantics and balance-unit metadata. Preserve `requestId`, `traceparent` in the output. Return a concise summary and keep the structured fields your application needs for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
 
 

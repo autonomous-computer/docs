@@ -4,9 +4,9 @@ title: "Factor Intelligence"
 
 # Factor Intelligence
 
-## What this surface covers
+## What Factor Intelligence Covers
 
-SEC API Factor Intelligence provides a structured factor model spanning 84 factors across 5 categories. The surface supports factor catalog retrieval, historical and intraday returns, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
+SEC API Factor Intelligence provides a structured factor model spanning 84 factors across 5 categories. The API supports factor catalog retrieval, historical and intraday returns, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
 
 Every response includes `requestId` and `traceparent` for downstream traceability.
 
@@ -103,7 +103,7 @@ curl -X GET \
 
 ## Factor intraday
 
-- live intraday factor return snapshots derived from the latest benchmark proxy surface
+- live intraday factor return snapshots derived from the latest benchmark proxy inputs
 - intended for dashboards and real-time factor monitoring during market hours
 - returns are updated throughout the trading day as proxy prices move
 
@@ -205,7 +205,6 @@ curl -X GET \
 
 ## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
