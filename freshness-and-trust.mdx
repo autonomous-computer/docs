@@ -9,7 +9,7 @@ description: "How SEC API represents freshness, provenance, materialization, and
 Trust comes from source-backed answers, explicit freshness, stable contracts, and enough metadata to keep the trail intact after the data leaves the API.
 </Info>
 
-The current trust evidence supports scoped claims around benchmark performance, provenance-first contracts, filing-page traceability, and a 9-year searchable filing and section floor. It does not support minute-level freshness, universal real-time coverage, or a claim that years 10-20 carry the same hot-path density guarantee. Freshness is measured, not implied.
+SEC API publishes the evidence behind freshness, provenance, traceability, and benchmark claims. Freshness is measured from source timestamps and successful API availability, so you can decide whether a response is current enough for your workflow.
 
 ## Measurement policy
 
@@ -27,18 +27,18 @@ The current trust evidence supports scoped claims around benchmark performance, 
 
 ## Current trust signals
 
-- freshness dashboard status is currently `monitor`, with form-level telemetry and alert counts
-- benchmark validation passes for the current investor workflow suite
+- freshness telemetry is measured by form and workflow
+- benchmark validation passes for the current documented workflow suite
 - FinanceBench evaluation: historical benchmark artifacts are documented separately and should be read with their methodology date
-- FIGI-aware company-resolution inputs are live, while canonical-store completeness proof is tracked separately from the public claim set
-- page-level filing traceability is live for filing-derived datapoints, with HTML-first exact fact-region anchors now available on supported segmented revenue traces
-- non-filing trace hydration now extends to SEC enforcement source records, market price snapshots, and analyst estimate datapoints through the same `/v1/traces` API
-- sentiment is not part of the public API
+- FIGI-aware company-resolution inputs are available for supported entity-resolution workflows
+- page-level filing traceability is available for filing-derived datapoints, with HTML-first exact fact-region anchors on supported segmented revenue traces
+- non-filing trace records cover SEC enforcement source records, market price snapshots, and analyst estimate datapoints through the same `/v1/traces` API
+- sentiment endpoints are not currently available
 
 ## What makes a response trustworthy
 
 <CardGroup cols={2}>
-  <Card title="Provenance" icon="badge-info">
+  <Card title="Provenance" icon="shield-check">
     If SEC API gives you a structured answer, it should also tell you which filing or source object it came from.
   </Card>
   <Card title="Freshness" icon="clock-3">
@@ -54,23 +54,17 @@ The current trust evidence supports scoped claims around benchmark performance, 
 
 ## Current health
 
-- freshness dashboard status: `monitor`
 - freshness claims use form-level telemetry, not generic real-time language
 - benchmark scorecard: `18 wins`, `0 losses`, `2 ties` on the current suite
 - traceability: filing-derived datapoints can resolve to the correct filing document and page, supported segmented revenue traces can preserve exact HTML fact ranges, SEC enforcement releases expose shared non-filing trace records, and market prices and analyst estimates carry full source-record traces with provider attribution
-- remaining caveat: some freshness signals publish warnings when coverage is degraded
+- some freshness signals publish warnings when coverage is degraded
 
-## XBRL facts architecture
+## XBRL Facts Coverage
 
-Financial data queries (facts and statements) use a DB-first architecture. Over 95 million pre-parsed XBRL facts across 9,600+ SEC-registered companies are stored in SEC API's database and refreshed daily at 07:00 UTC.
+Financial data queries for facts and statements are backed by over 95 million pre-parsed XBRL facts across 9,600+ SEC-registered companies and refreshed daily at 07:00 UTC.
 
-The query path:
-1. Check if the company has data in the `xbrl_facts` table
-2. If data exists, query directly from the database (fast path)
-3. If no data exists, fall back to live SEC EDGAR fetch (slow path)
-
-Every response includes a `source` field in its provenance or completeness object: `"xbrl_facts"` for database-served responses, `"company_facts"` for SEC-served responses.
+Every response includes source metadata in its provenance or completeness object so you can distinguish stored XBRL facts from SEC-served fallback data.
 
 ## Evidence used for claims
 
-SEC API trust claims are based on freshness telemetry, external-reference validation, benchmark scorecards, and coverage evidence. Treat claims without matching evidence as unsupported.
+SEC API trust claims are based on freshness telemetry, external-reference validation, benchmark scorecards, and coverage evidence. Use the metadata in each response to evaluate whether a result fits your workflow.
