@@ -1,27 +1,19 @@
 ---
-title: "Go REST Guide"
-description: "Use SEC API from Go services with direct REST calls."
+title: "Go SDK"
+description: "Install and use the official SEC API Go SDK."
 ---
 
-# Go REST Guide
+# Go SDK
 
 <Info>
-Use SEC API from Go services with direct REST calls today. The Go examples mirror the canonical REST contract so request IDs, freshness, provenance, and error handling stay visible in your application.
+Use the official SEC API Go SDK from backend services, workers, and command-line tools.
 </Info>
 
-## Status
+## Install
 
-<CardGroup cols={3}>
-  <Card title="Direct REST today" icon="braces" href="/api-reference">
-    Use the documented REST contract from any Go HTTP client.
-  </Card>
-  <Card title="SDK-ready contract" icon="package" href="/libraries-and-sdks">
-    The examples use the same request and response model the SDK will expose.
-  </Card>
-  <Card title="Backend fit" icon="server" href="/status">
-    Best for services that want typed helpers and explicit control over retries and logging.
-  </Card>
-</CardGroup>
+```bash
+go get github.com/secapi-ai/secapi-go@v0.2.1
+```
 
 ## First useful path
 
@@ -29,8 +21,11 @@ Use SEC API from Go services with direct REST calls today. The Go examples mirro
   <Step title="Set the key">
     Export `SECAPI_API_KEY`.
   </Step>
-  <Step title="Verify one market or entity call">
-    Confirm auth and connectivity before adding more API coverage.
+  <Step title="Install the SDK">
+    Add `github.com/secapi-ai/secapi-go` to your module.
+  </Step>
+  <Step title="Verify one entity call">
+    Confirm auth and connectivity before adding broader API coverage.
   </Step>
   <Step title="Move to a filing or ownership workflow">
     The value is in real investor tasks, not just a single ping.
@@ -44,70 +39,72 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
+
+	secapi "github.com/secapi-ai/secapi-go"
 )
 
 func main() {
-	params := url.Values{"ticker": {"AAPL"}}
-	req, err := http.NewRequest("GET", "https://api.secapi.ai/v1/entities/resolve?"+params.Encode(), nil)
-	if err != nil {
-		panic(err)
-	}
-	req.Header.Set("x-api-key", os.Getenv("SECAPI_API_KEY"))
+	client := secapi.NewClient(os.Getenv("SECAPI_API_KEY"))
 
-	res, err := http.DefaultClient.Do(req)
+	entity, err := client.ResolveEntity(map[string]string{"ticker": "AAPL"})
 	if err != nil {
 		panic(err)
 	}
-	defer res.Body.Close()
 
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(body))
+	fmt.Println(entity["name"])
 }
 ```
 
-Use these direct REST examples when you want explicit control over retries, logging, and response metadata in Go.
+The SDK preserves the SEC API response payloads as maps so request IDs, freshness, provenance, and trace metadata remain visible.
 
-## Dilution intelligence REST calls
+## Filing workflow
 
 ```go
-// Top 10 highest-dilution-risk issuers
-req, err := http.NewRequest("GET", "https://api.secapi.ai/v1/dilution/ratings?overall_risk=high&limit=10", nil)
-req.Header.Set("x-api-key", apiKey)
-res, err := http.DefaultClient.Do(req)
+filing, err := client.LatestFiling(map[string]string{
+	"ticker": "AAPL",
+	"form": "10-K",
+})
+if err != nil {
+	panic(err)
+}
 
-// Single-ticker dilution rollup
-req, err = http.NewRequest("GET", "https://api.secapi.ai/v1/dilution/score?ticker=BBBB", nil)
-req.Header.Set("x-api-key", apiKey)
-res, err = http.DefaultClient.Do(req)
+fmt.Println(filing["title"], filing["filingDate"])
+```
 
-// ATM offerings only (boolean filter on the events list)
-req, err = http.NewRequest("GET", "https://api.secapi.ai/v1/dilution/events?ticker=BBBB&is_atm=true", nil)
-req.Header.Set("x-api-key", apiKey)
-res, err = http.DefaultClient.Do(req)
+## Dilution intelligence
 
-// Coverage + freshness rollup (no agent shape — already compact)
-req, err = http.NewRequest("GET", "https://api.secapi.ai/v1/dilution/coverage?ticker=BBBB", nil)
-req.Header.Set("x-api-key", apiKey)
-res, err = http.DefaultClient.Do(req)
+```go
+ratings, err := client.DilutionRatings(map[string]string{
+	"overall_risk": "high",
+	"limit": "10",
+})
+if err != nil {
+	panic(err)
+}
+
+events, err := client.DilutionEvents(map[string]string{
+	"ticker": "AAPL",
+	"limit": "3",
+})
+if err != nil {
+	panic(err)
+}
+
+fmt.Println(ratings["object"], events["object"])
 ```
 
 The full dilution API is available under `/v1/dilution/*`. Pass `view=agent` in list-call query params, except `/v1/dilution/coverage`, for the compact agent-mode shape.
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Wire SEC API REST calls into this Go service. Start with one entity or market calendar call to confirm auth, then add a filing or ownership workflow that preserves requestId and freshness metadata in structured logs.
+Install `github.com/secapi-ai/secapi-go` in this Go service. Start with one entity lookup to confirm auth, then add a filing or ownership workflow that preserves requestId, freshness, provenance, and trace metadata in structured logs.
 </Prompt>
 
 ## Smoke path
 
 ```bash
 go test ./...
+go list -m github.com/secapi-ai/secapi-go
 ```
 
 ## Read next
