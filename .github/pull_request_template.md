@@ -4,22 +4,19 @@
 
 Closes #
 
-## Monorepo Scope
+## Scope
 
 <!-- Check ALL areas this PR touches. Reviewers and CI use this to gauge blast radius. -->
 
-- [ ] `apps/omni-web/` — Vite + TanStack Router web app
-- [ ] `apps/omni-desktop/` — Electron desktop app
-- [ ] `services/agent-backend/` — Agent WebSocket backend
-- [ ] `services/omni-api/` — Python REST API
-- [ ] `pipelines/merlin-etl/` — Dagster ETL pipelines
-- [ ] `pipelines/tws-api/` — IBKR TWS integration
-- [ ] `packages/*` — Shared libraries
-- [ ] `sdk/*` — Public SDK packages
-- [ ] `vendor/` — Upstream dependencies
-- [ ] `infra/` — Infrastructure configs
-- [ ] `.github/` — CI/CD workflows
-- [ ] `docs/` — Documentation
+- [ ] `docs.json` — Mintlify navigation, theme, redirects, API config, SEO, footer
+- [ ] `openapi/` — public OpenAPI source used by the API reference and playground
+- [ ] `api-reference/` — generated or hand-edited API reference pages
+- [ ] `tutorials/` — step-by-step implementation guides
+- [ ] `use-cases/` — customer workflow and industry pages
+- [ ] `clients/` / SDK pages — SDK, CLI, MCP, and client setup docs
+- [ ] `llms.txt` / LLM guide — agent-facing docs entrypoints
+- [ ] `.github/` — repository workflows, templates, or automation
+- [ ] Other docs pages
 
 ## Changes
 
@@ -33,26 +30,17 @@ Closes #
 <!-- What you ran locally. Paste actual commands and their outcomes. -->
 
 ```bash
-bun run typecheck   # ✅ / ❌
-bun run lint        # ✅ / ❌
-bun run build       # ✅ / ❌
-bun run test        # ✅ / ❌
+# Paste exact commands and outcomes here.
 ```
 
 <details>
 <summary>Additional verification (expand if applicable)</summary>
 
 ```bash
-# Python (pipelines/services)
-uv run ruff check merlin_etl --statistics
-uv run pytest merlin_etl_tests -v
-uv run mypy merlin_etl
-
-# Desktop
-bun run dev:desktop
-
-# Agent backend
-bun run dev:backend
+# Examples:
+npx mintlify broken-links
+npx mintlify dev
+rg -n "<legacy brand regex>" .
 ```
 
 </details>
@@ -61,11 +49,11 @@ bun run dev:backend
 
 <!-- Skip this section entirely for code-only changes with no infra impact. -->
 
-- [ ] Environment variables added/changed → listed in `docs/agents-reference/09-env-vars.md`
-- [ ] Database migration required
-- [ ] Feature flag added/changed → registered in `apps/omni-web/lib/feature-flags/registry.ts`
-- [ ] Worker/service redeployment needed
-- [ ] Secrets to configure (AWS SM / CF / GH Actions)
+- [ ] Mintlify deploy expected
+- [ ] Navigation/sidebar changes
+- [ ] OpenAPI/API playground changes
+- [ ] Redirects or removed pages
+- [ ] SEO metadata, sitemap, or canonical URL changes
 
 ## Completion Attestation
 
