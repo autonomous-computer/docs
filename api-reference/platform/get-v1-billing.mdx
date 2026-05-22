@@ -1,12 +1,12 @@
 # GET /v1/billing
 
-Return the current organization's billing snapshot, including pricing state, budget controls, and billing provider state
+Return the current organization's billing snapshot, including pricing posture, budget controls, and settlement provider state
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -28,33 +28,19 @@ curl -X GET \
 ```json
 {
   "requestId": "req_example_123",
-  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-  "publicPlanKey": "personal",
-  "billingState": "personal_active",
-  "monthlyQuotas": {
-    "ai_queries": {
-      "family": "ai_queries",
-      "limit": 600,
-      "used": 142,
-      "remaining": 458,
-      "resetAt": "2026-05-01T00:00:00.000Z",
-      "graceUntil": null
-    }
-  }
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/billing to return the current organization's billing snapshot, including pricing state, budget controls, and billing provider state. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/billing to return the current organization's billing snapshot, including pricing posture, budget controls, and settlement provider state. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-

@@ -1,17 +1,17 @@
 ---
 title: "Install SEC API in LangChain"
-description: "Wire SEC API into a LangChain agent in Python or JavaScript using MCP adapters."
+description: "Wire SEC API into a LangChain agent in Python or JavaScript using langchain-mcp-adapters — copy-paste-able snippets for both runtimes."
 ---
 
 # Install SEC API in LangChain
 
-Use LangChain's MCP adapters to register SEC API as a streamable HTTP tool server with an `x-api-key` header.
+LangChain has first-party MCP support via `langchain-mcp-adapters` (Python) and `@langchain/mcp-adapters` (JS). Both speak streamable HTTP and pass headers verbatim, so wiring up SEC API is one config block.
 
 ## Prerequisites
 
-- SEC API key. Sign up at [secapi.ai](https://secapi.ai). Set `SECAPI_API_KEY`.
-- Python: `langchain-mcp-adapters`, `langchain`, `langgraph`, and a model provider package.
-- JavaScript / TypeScript: `@langchain/mcp-adapters`, `@langchain/core`, `@langchain/langgraph`, and a model provider package.
+- SEC API key (free — 250 calls/month). Sign up at [secapi.ai](https://secapi.ai). Set `SECAPI_API_KEY`.
+- Python: `langchain-mcp-adapters` ≥ 0.2 with `langchain` ≥ 1.0 and `langgraph`.
+- JavaScript / TypeScript (Node only): `@langchain/mcp-adapters` ≥ 1.1 with `@langchain/core` ≥ 0.3.
 
 ## Python
 
@@ -26,7 +26,7 @@ from langchain.agents import create_agent
 
 async def main():
     client = MultiServerMCPClient({
-        "sec-api": {
+        "secapi": {
             "transport": "streamable_http",
             "url": "https://api.secapi.ai/mcp",
             "headers": {"x-api-key": os.environ["SECAPI_API_KEY"]},
@@ -52,7 +52,7 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 
 const client = new MultiServerMCPClient({
-  "sec-api": {
+  "secapi": {
     transport: "streamable_http",
     url: "https://api.secapi.ai/mcp",
     headers: { "x-api-key": process.env.SECAPI_API_KEY! },
@@ -73,7 +73,7 @@ Run either snippet. The agent should call the `filings.latest` tool with `ticker
 - **`401 Unauthorized`** — `x-api-key` is missing or wrong. Sanity check: `curl https://api.secapi.ai/v1/limits -H "x-api-key: $SECAPI_API_KEY"`.
 - **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
 - **No tools returned** — confirm the URL ends in `/mcp` (not `/sse`); the SSE transport is deprecated as of MCP 2025-03-26.
-- **Streaming notifications missing** — if your adapter version does not support MCP progress events, tool calls can still complete while long-running progress updates are omitted.
+- **JS only: streaming notifications missing** — `@langchain/mcp-adapters` does not yet propagate real-time MCP notifications over streamable HTTP. Tool calls and results work; long-running progress events do not.
 
 ## Next
 

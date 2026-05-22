@@ -1,19 +1,14 @@
----
-title: "Hosted MCP Workflows"
-description: "Use SEC API from MCP-aware coding agents and clients."
----
-
 # Hosted MCP Workflows
 
 <Info>
-Hosted MCP lets coding agents call SEC API directly from MCP-aware tools. Use it when you want agents to resolve issuers, fetch filings, extract sections, and run intelligence workflows without writing a custom integration first.
+Hosted MCP lets coding agents call SEC API directly. That means less glue code, less local wrapper drift, and faster time from prompt to useful investor workflow.
 </Info>
 
-## Why Use Hosted MCP
+## Why use hosted MCP
 
 <CardGroup cols={3}>
-  <Card title="Less wrapper code" icon="braces">
-    Your agent can call SEC API tools directly from its MCP client.
+  <Card title="Less wrapper code" icon="cable">
+    Your agent can call the SEC API tool surface directly instead of waiting on a custom wrapper layer.
   </Card>
   <Card title="Same workflows" icon="equal">
     REST and hosted MCP sit on top of the same underlying SEC API workflows.
@@ -23,7 +18,7 @@ Hosted MCP lets coding agents call SEC API directly from MCP-aware tools. Use it
   </Card>
 </CardGroup>
 
-## Install Metadata
+## Install metadata
 
 ```bash
 curl https://api.secapi.ai/mcp
@@ -41,14 +36,14 @@ That payload includes:
   <Step title="Fetch the install metadata">
     Confirm the hosted MCP endpoint is live and returning its transport and auth metadata.
   </Step>
-  <Step title="Set the API key">
-    Export `SECAPI_API_KEY` or configure the same value as an `x-api-key` header in your MCP client.
+  <Step title="Bootstrap the machine identity">
+    Have a human operator mint a sponsor token first, then exchange it through `POST /v1/agent/bootstrap` before you start repeated MCP work.
   </Step>
   <Step title="Register the server in your client">
     Add the streamable HTTP MCP endpoint to Claude Code, Cursor, or another MCP-aware client.
   </Step>
   <Step title="Exercise a real tool path">
-    Resolve an issuer, fetch a filing, and extract a section before using the server in production workflows.
+    Resolve an issuer, fetch a filing, and extract a section before calling the setup done.
   </Step>
 </Steps>
 
@@ -57,15 +52,14 @@ That payload includes:
 ### Claude Code
 
 ```bash
-claude mcp add --transport streamable-http sec-api https://api.secapi.ai/mcp \
-  --header "x-api-key: $SECAPI_API_KEY"
+claude mcp add --transport streamable-http secapi https://api.secapi.ai/mcp
 ```
 
 ### Cursor
 
 ```json
 {
-  "sec-api": {
+  "secapi": {
     "url": "https://api.secapi.ai/mcp",
     "headers": {
       "x-api-key": "${SECAPI_API_KEY}"
@@ -109,9 +103,9 @@ MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhance
 }
 ```
 
-When the quota is exhausted, hosted MCP returns HTTP `429` with JSON-RPC error data such as `code: "ai_query_quota_exceeded"`. Treat quota exhaustion as non-retryable until reset or plan upgrade. If a tool circuit is open, retry only after availability backoff.
+When the quota is exhausted, hosted MCP returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`. Treat `-32004` as retryable timeout and `-32005` as non-retryable until quota reset or plan upgrade. If a tool circuit is open, hosted MCP returns HTTP `503` with JSON-RPC error code `-32006` and `error.data.code: "mcp_tool_circuit_open"`; retry it only after availability backoff.
 
-<Prompt description="Copy this SEC API prompt for your agent.">
+<Prompt>
 Set up SEC API hosted MCP in this MCP-aware client. Register the streamable HTTP MCP endpoint, resolve AAPL, fetch the latest 10-K, extract Item 1A, and return the result with requestId, provenance, freshness, and materialization metadata intact.
 </Prompt>
 

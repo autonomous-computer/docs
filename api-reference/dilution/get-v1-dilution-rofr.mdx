@@ -1,29 +1,15 @@
 # GET /v1/dilution/rofr
 
-List right-of-first-refusal and tail-financing clauses parsed from underwriter agreements. Verification block on every row.
+List right-of-first-refusal and tail-financing clauses parsed from underwriter agreements
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
-- `verification`
-- `provenance`
-
-## Query parameters
-
-| Param | Type | Description |
-|---|---|---|
-| `ticker` | string | Issuer ticker. |
-| `cik` | string | SEC CIK. |
-| `accession_number` | string | Match a specific filing. |
-| `filed_at_from` / `filed_at_to` | ISO date | Bounds on `filed_at`. |
-| `cursor` | int | From prior page's `nextCursor`. |
-| `limit` | int (1–50, default 10) | Page size. |
-| `view` | enum | Response shape. |
 
 ## Example request
 
@@ -32,7 +18,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/rofr?ticker=ACME"
+  "https://api.secapi.ai/v1/dilution/rofr"
 ```
 </RequestExample>
 
@@ -41,37 +27,6 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "object": "list",
-  "data": [
-    {
-      "object": "dilution_rofr",
-      "id": "dil_rofr_acme_2026_a",
-      "ticker": "ACME",
-      "cik": "0001234567",
-      "accessionNumber": "0001234567-26-001234",
-      "rightOfFirstRefusalPresent": true,
-      "rightOfFirstRefusalDuration": "12 months",
-      "rightOfFirstRefusalType": "first_refusal",
-      "rightOfFirstRefusalEndDate": "2027-02-19",
-      "tailFinancingPaymentsPresent": true,
-      "tailFinancingPaymentsDuration": "18 months",
-      "offeringType": "atm",
-      "bankName": "Acme Securities LLC",
-      "filedAt": "2026-02-12T20:31:00.000Z",
-      "verification": {
-        "sourceSpan": "424b5#section-9#char[5400..5790]",
-        "extractionTraceId": "lf_2026q1_acme_rofr_extract",
-        "confidence": 0.88,
-        "crossValidations": [
-          { "name": "duration_parses", "passed": true }
-        ],
-        "modelVersion": "dilution-v1.4",
-        "verifiedAt": "2026-02-12T20:34:18.000Z"
-      }
-    }
-  ],
-  "hasMore": false,
-  "nextCursor": null,
   "requestId": "req_example_123",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
@@ -80,11 +35,12 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API `GET /v1/dilution/rofr` to assess right-of-first-refusal and tail-financing exposure. Preserve `requestId`, `traceparent`, and the `verification` block. Flag any clause where `rightOfFirstRefusalPresent` or `tailFinancingPaymentsPresent` is true and the duration extends past the next anticipated capital raise.
+<Prompt>
+Use SEC API GET /v1/dilution/rofr to list right-of-first-refusal and tail-financing clauses parsed from underwriter agreements. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- preserve `requestId` and `traceparent`
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

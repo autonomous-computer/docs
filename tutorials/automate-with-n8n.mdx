@@ -37,20 +37,20 @@ n8n Slack node (post formatted alert)
 1. Open your n8n instance and create a new workflow.
 2. Add a **Webhook** node as the trigger.
 3. Set **HTTP Method** to `POST`.
-4. Set **Path** to `sec-api-filings` (or any path you prefer).
+4. Set **Path** to `secapi-filings` (or any path you prefer).
 5. Under **Authentication**, select **None** for now (you will add signature verification in Step 4).
 6. Click **Listen for Test Event** to put the node in listening mode. Copy the **Test URL** --- you will need it in the next step.
 
 The test URL looks like:
 
 ```
-https://your-n8n.example.com/webhook-test/sec-api-filings
+https://your-n8n.example.com/webhook-test/secapi-filings
 ```
 
 Once the workflow is active, use the **Production URL** instead:
 
 ```
-https://your-n8n.example.com/webhook/sec-api-filings
+https://your-n8n.example.com/webhook/secapi-filings
 ```
 
 ## Step 2 --- Register the webhook with SEC API
@@ -64,7 +64,7 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://your-n8n.example.com/webhook/sec-api-filings",
+    "url": "https://your-n8n.example.com/webhook/secapi-filings",
     "description": "n8n filing alerts",
     "events": ["filing.new"]
   }' \
@@ -188,7 +188,7 @@ Copy this JSON and import it via **Workflow > Import from File** in n8n:
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "sec-api-filings",
+        "path": "secapi-filings",
         "responseMode": "onReceived",
         "responseCode": 200
       },
@@ -264,4 +264,3 @@ Accession: 0000320193-24-000095
 - **Store in a database**: Add a Postgres or Airtable node to log every filing for historical analysis.
 
 See the [Webhook Stream Workflows](/webhook-stream-workflows) guide for advanced webhook patterns.
-

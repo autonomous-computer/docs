@@ -1,7 +1,3 @@
----
-title: "SEC Data for Legal Teams"
----
-
 # SEC Data for Legal Teams
 
 <Info>
@@ -34,9 +30,9 @@ SEC API gives law firms programmatic access to SEC enforcement actions, filing h
 | `/v1/events/enforcement` | `GET` | Search enforcement actions by entity, date, or source type |
 | `/v1/filings` | `GET` | Filing search with form type, ticker, date filters |
 | `/v1/entities/resolve` | `GET` | Resolve ticker, CIK, or company name to a canonical entity |
-| `/v1/events/officer-changes` | `GET` | Officer and director change monitoring |
+| `/v1/events/8k` | `GET` | Material event monitoring (leadership, restatements, M&A) |
 | `/v1/insiders` | `GET` | Insider transaction history for a given entity |
-| `/v1/filings/latest/sections/{section_key}` | `GET` | Extract specific filing sections (risk factors, legal proceedings) |
+| `/v1/filings/latest/sections/{item}` | `GET` | Extract specific filing sections (risk factors, legal proceedings) |
 
 ---
 
@@ -73,10 +69,10 @@ Pull the legal proceedings section directly from the latest annual filing:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_3?ticker=AAPL&form=10-K&view=compact"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_3?ticker=AAPL&form=10-K&mode=compact"
 ```
 
-Use `view=compact` for machine-first payloads suited to downstream analysis pipelines.
+Use `mode=compact` for machine-first payloads suited to downstream analysis pipelines.
 
 ---
 
@@ -102,16 +98,16 @@ secapi mcp install
 ## Pricing for legal teams
 
 <CardGroup cols={2}>
-  <Card title="API evaluation" icon="rocket">
-    Create an API key to evaluate enforcement search, entity resolution, and filing lookups for a single matter.
+  <Card title="Free tier" icon="rocket">
+    Start with 100 requests per day at no cost. Enough to evaluate enforcement search, entity resolution, and filing lookups for a single matter.
   </Card>
   <Card title="Builder plan" icon="hammer" href="/plans-and-pricing">
     Self-serve API access with pay-as-you-go metering. Scale from one matter to firm-wide compliance monitoring without procurement friction.
   </Card>
 </CardGroup>
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-You are a legal research assistant with access to SEC API. For any client target company, resolve the entity to a canonical CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and flag any 8-K Item 5.02 officer or director departure events. Output a dossier with one section per finding category and inline requestId references for auditability.
+<Prompt>
+You are a legal research assistant with access to SEC API. For any client target company, resolve the entity to a canonical CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and surface any 8-K Item 5.02 (officer/director departures) events. Output a dossier with one section per finding category and inline requestId references for auditability.
 </Prompt>
 
-_See the full 12-prompt [Law firm library](/give-this-prompt-to-your-agent)._
+_See the full 12-prompt [Law firm library](/agents/prompt-library/law-firm)._

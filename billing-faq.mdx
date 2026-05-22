@@ -1,20 +1,16 @@
----
-title: "Billing FAQ"
----
-
 # Billing FAQ
 
 ## Is there a free trial?
 
-No separate public trial is listed in the pricing catalog. Create an organization and check `GET /v1/billing` for the current billing state and any account-specific evaluation credits.
+No separate trial. Every new organization receives `250` included calls.
 
-## What happens when billing is required?
+## What happens after the included calls run out?
 
 The org moves to `payg_pending_card`. Billable routes require card attachment through `POST /v1/billing/payg/activate`.
 
 ## Can an agent bootstrap itself?
 
-Not fully anonymously. An administrator creates a short-lived sponsor token with `POST /v1/agent/bootstrap_tokens`, then the agent exchanges it once through `POST /v1/agent/bootstrap`.
+Not fully anonymously. A human operator creates a short-lived sponsor token with `POST /v1/agent/bootstrap_tokens`, then the agent exchanges it once through `POST /v1/agent/bootstrap`.
 
 ## Do I need a subscription to use the API?
 
@@ -40,20 +36,28 @@ The `ai_queries` monthly quota covers semantic intelligence and AI-graded routes
 - `GET /v1/signals/dilution/enhanced` (and any sub-paths)
 - MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhanced.get`
 
-When chat endpoints become available, they will count as well. Other meter classes, including filing reads, factor lookups, and market data, do not consume `ai_queries` quota.
+When the chat surfaces (`/v1/copilot/chat`, `/v1/filings/chat`) ship, they will count as well. Other meter classes (filings reads, factor lookups, market data) do not consume `ai_queries` quota.
 
-## Where do I see my ai_queries limit?
+## What are the per-tier ai_queries limits?
 
-Use `GET /v1/billing` for the current organization's quota and usage values. Do not hardcode quota limits in clients; limits can vary by plan and commercial contract.
+| Plan | Monthly AI queries |
+| --- | --- |
+| Sandbox grant | 10 (trial allocation) |
+| Pay As You Go | 0 (PAYG charges per call instead) |
+| Personal ($55) | 600 |
+| Team ($239) | 3,000 |
+| Commercial ($1,500 floor) | 10,000 (configurable per-org) |
 
 ## When does my AI query quota reset?
 
-Calendar-month reset, in UTC. The `secapi-ai-quota-reset` response header carries the exact ISO timestamp (the first day of the next UTC month at `00:00:00Z`).
+Calendar-month reset, in UTC. The `SECAPI-AI-Quota-Reset` response header carries the exact ISO timestamp (the first day of the next UTC month at `00:00:00Z`).
 
 ## What happens when I exhaust my ai_queries quota?
 
-Quota-counted REST routes return `429 Too Many Requests` with `code: "ai_query_quota_exceeded"` and structured `details` (`aiQueryQuotaLimit`, `aiQueryQuotaUsed`, `aiQueryQuotaRemaining`, `aiQueryQuotaResetAt`, `upgradeUrl`, `docsUrl`). MCP quota exhaustion returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`. Inspect `secapi-ai-quota-*` headers on every quota-counted response for proactive monitoring.
+Quota-counted REST routes return `429 Too Many Requests` with `code: "ai_query_quota_exceeded"` and structured `details` (`aiQueryQuotaLimit`, `aiQueryQuotaUsed`, `aiQueryQuotaRemaining`, `aiQueryQuotaResetAt`, `upgradeUrl`, `docsUrl`). MCP quota exhaustion returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`. Inspect `SECAPI-AI-Quota-*` headers on every quota-counted response for proactive monitoring.
+
+During the post-launch grace window, `429s` are suppressed and the response includes an `SECAPI-AI-Quota-Grace-Until` header so clients can program against the upcoming enforcement date.
 
 ## Can I see my current ai_queries usage?
 
-`GET /v1/billing` includes a `monthlyQuotas.ai_queries` block: `{ limit, used, remaining, resetAt }`. The same information is mirrored on every quota-counted response via `secapi-ai-quota-*` headers.
+`GET /v1/billing` includes a `monthlyQuotas.ai_queries` block: `{ limit, used, remaining, resetAt }`. The same information is mirrored on every quota-counted response via `SECAPI-AI-Quota-*` headers.

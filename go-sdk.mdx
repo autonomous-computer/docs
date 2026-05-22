@@ -1,19 +1,22 @@
----
-title: "Go SDK"
-description: "Install and use the official SEC API Go SDK."
----
-
 # Go SDK
 
 <Info>
-Use the official SEC API Go SDK from backend services, workers, and command-line tools.
+The Go SDK is deliberately thin. It mirrors the canonical REST contract and stays useful when you want explicit request control without building a generated client jungle.
 </Info>
 
-## Install
+## Status
 
-```bash
-go get github.com/secapi-ai/secapi-go@v0.2.1
-```
+<CardGroup cols={3}>
+  <Card title="Bootstrap client" icon="package" href="/libraries-and-sdks">
+    A lightweight Go client is available in `packages/sdk-go`.
+  </Card>
+  <Card title="REST parity" icon="equal" href="/api-reference">
+    The Go surface mirrors the public wire format instead of inventing Go-only semantics.
+  </Card>
+  <Card title="Backend fit" icon="server" href="/operations">
+    Best for services that want typed helpers and explicit control over retries and logging.
+  </Card>
+</CardGroup>
 
 ## First useful path
 
@@ -21,11 +24,8 @@ go get github.com/secapi-ai/secapi-go@v0.2.1
   <Step title="Set the key">
     Export `SECAPI_API_KEY`.
   </Step>
-  <Step title="Install the SDK">
-    Add `github.com/secapi-ai/secapi-go` to your module.
-  </Step>
-  <Step title="Verify one entity call">
-    Confirm auth and connectivity before adding broader API coverage.
+  <Step title="Verify one market or entity call">
+    Confirm auth and connectivity before adding more surface area.
   </Step>
   <Step title="Move to a filing or ownership workflow">
     The value is in real investor tasks, not just a single ping.
@@ -35,85 +35,56 @@ go get github.com/secapi-ai/secapi-go@v0.2.1
 ## Example
 
 ```go
-package main
+client := sdkgo.NewClient(os.Getenv("SECAPI_API_KEY"))
+client.BaseURL = "https://api.secapi.ai"
 
-import (
-	"fmt"
-	"os"
-
-	secapi "github.com/secapi-ai/secapi-go"
-)
-
-func main() {
-	client := secapi.NewClient(os.Getenv("SECAPI_API_KEY"))
-
-	entity, err := client.ResolveEntity(map[string]string{"ticker": "AAPL"})
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(entity["name"])
-}
-```
-
-The SDK preserves the SEC API response payloads as maps so request IDs, freshness, provenance, and trace metadata remain visible.
-
-## Filing workflow
-
-```go
-filing, err := client.LatestFiling(map[string]string{
-	"ticker": "AAPL",
-	"form": "10-K",
+calendar, err := client.MarketCalendar(map[string]string{
+  "market": "XNYS",
+  "duration": "5",
 })
-if err != nil {
-	panic(err)
-}
-
-fmt.Println(filing["title"], filing["filingDate"])
 ```
 
 ## Dilution intelligence
 
 ```go
+// Top 10 highest-dilution-risk issuers
 ratings, err := client.DilutionRatings(map[string]string{
-	"overall_risk": "high",
-	"limit": "10",
+  "overall_risk": "high",
+  "limit":        "10",
 })
-if err != nil {
-	panic(err)
-}
 
-events, err := client.DilutionEvents(map[string]string{
-	"ticker": "AAPL",
-	"limit": "3",
+// Single-ticker dilution rollup
+score, err := client.DilutionScore(map[string]string{"ticker": "BBBB"})
+
+// ATM offerings only (boolean filter on the events list)
+atms, err := client.DilutionEvents(map[string]string{
+  "ticker": "BBBB",
+  "is_atm": "true",
 })
-if err != nil {
-	panic(err)
-}
 
-fmt.Println(ratings["object"], events["object"])
+// Coverage + freshness rollup (no agent shape — already compact)
+coverage, err := client.DilutionCoverage(map[string]string{"ticker": "BBBB"})
 ```
 
-The full dilution API is available under `/v1/dilution/*`. Pass `view=agent` in list-call query params, except `/v1/dilution/coverage`, for the compact agent-mode shape.
+The full surface — `DilutionEvents`, `DilutionEventDetail`, `DilutionWarrants`, `DilutionConvertibles`, `DilutionRofr`, `DilutionLockups`, `DilutionCashPosition`, `DilutionCorporateActions`, `DilutionNasdaqCompliance`, `DilutionRatings`, `DilutionReverseSplits`, `DilutionScore`, `DilutionShareFloatHistory`, `DilutionCoverage` — mirrors the REST routes 1:1. Pass `"view": "agent"` in any list call (except `DilutionCoverage`) for the compact agent-mode shape.
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Install `github.com/secapi-ai/secapi-go` in this Go service. Start with one entity lookup to confirm auth, then add a filing or ownership workflow that preserves requestId, freshness, provenance, and trace metadata in structured logs.
+<Prompt>
+Wire the Go SDK into this service. Start with one entity or market calendar call to confirm auth, then add a filing or ownership workflow that preserves requestId and freshness metadata in structured logs.
 </Prompt>
 
 ## Smoke path
 
 ```bash
-go test ./...
-go list -m github.com/secapi-ai/secapi-go
+bun run smoke:sdk-go
 ```
 
 ## Read next
 
 <CardGroup cols={2}>
   <Card title="API Reference" icon="square-terminal" href="/api-reference">
-    Check the endpoint behavior behind the Go helpers.
+    Check the literal calls behind the Go helpers.
   </Card>
-  <Card title="Operations" icon="shield-check" href="/status">
+  <Card title="Operations" icon="shield-check" href="/operations">
     Use the release verification and readiness checks before shipping a backend integration.
   </Card>
 </CardGroup>

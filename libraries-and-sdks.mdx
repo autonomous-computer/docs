@@ -1,14 +1,10 @@
----
-title: "Libraries & SDKs"
----
-
 # Libraries & SDKs
 
 <Info>
-Pick the integration that matches your runtime. Then prove it with one real entity lookup, one filing workflow, one structured result, and one traceable source-backed read before you move to production.
+Pick the surface that matches your runtime. Then prove it with one real entity lookup, one filing workflow, one structured result, and one traceable source-backed read before you call the integration done.
 </Info>
 
-## Choose Your Integration
+## Choose your surface
 
 <CardGroup cols={2}>
   <Card title="JavaScript SDK" icon="file-code-2" href="/javascript-sdk">
@@ -18,16 +14,16 @@ Pick the integration that matches your runtime. Then prove it with one real enti
     Best for research notebooks, data workflows, and backend services.
   </Card>
   <Card title="Go SDK" icon="binary" href="/go-sdk">
-    Best for lightweight backend services and command-line tools.
+    Best for lightweight backend services and strongly typed API wrappers.
   </Card>
-  <Card title="Rust REST Guide" icon="cpu" href="/rust-sdk">
-    Best for async and performance-sensitive services using direct HTTP calls.
+  <Card title="Rust SDK" icon="cpu" href="/rust-sdk">
+    Best for async and performance-sensitive services.
   </Card>
   <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
     Best for coding agents and MCP-aware runtimes that need grounded investor workflows.
   </Card>
-  <Card title="SEC API CLI" icon="terminal" href="#sec-api-cli">
-    Best when you want quick REST calls from the terminal without wiring up an SDK.
+  <Card title="SEC API Agent CLI" icon="terminal" href="#secapi-agent-cli">
+    Best when you want agent workflows from the terminal without opening a browser or wiring up an SDK.
   </Card>
   <Card title="REST API" icon="globe" href="/api-reference">
     Best when you want exact HTTP control or your own runtime wrapper.
@@ -38,10 +34,10 @@ Pick the integration that matches your runtime. Then prove it with one real enti
 
 <Steps>
   <Step title="Set the API key">
-    Export `SECAPI_API_KEY` first. Authentication failures are easier to debug before adding SDK, CLI, or MCP layers.
+    Export `SECAPI_API_KEY` first. Every other surface will fail in ways that look less clear if auth is not in place.
   </Step>
   <Step title="Verify one entity lookup">
-    Confirm your integration can resolve a company or filer you already know, ideally through the identifier type you expect to use in production.
+    Confirm the surface can resolve a company or filer you already know, ideally through the identifier type you expect to use in production.
   </Step>
   <Step title="Verify one filing workflow and one semantic intelligence workflow">
     Pull a filing or statements bundle, then prove one-call market/macro/factor/intelligence output before you call the integration complete.
@@ -53,36 +49,37 @@ Pick the integration that matches your runtime. Then prove it with one real enti
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Install the right SEC API integration for this project. Prefer the native SDK if the runtime matches, otherwise use the REST API. Then verify one entity lookup, one filing workflow, one semantic investor workflow such as `intelligence.query`, and one trace lookup while preserving requestId, provenance, freshness, materialization metadata, and trace references.
+<Prompt>
+Install the right SEC API integration surface for this project. Prefer the native SDK if the runtime matches, otherwise use the REST API. Then verify one entity lookup, one filing workflow, one semantic investor workflow such as `intelligence.query`, and one trace lookup while preserving requestId, provenance, freshness, materialization metadata, and trace references.
 </Prompt>
 
 ## SEC API CLI
 
-The public CLI package name is `@secapi/cli`, with the `secapi` binary. Use it for quick REST calls from a terminal.
+The CLI wraps the same REST API surface for local scripts, smoke checks, and one-off workflows.
 
 ### Installation
 
 ```bash
 npm install -g @secapi/cli
+export SECAPI_API_KEY="your-api-key"
 ```
 
 ### Usage
 
 ```bash
-export SECAPI_API_KEY=your_key_here
-secapi entities resolve --ticker AAPL --json
-secapi filings search --ticker AAPL --form 10-K --limit 3 --json
-secapi intelligence company --ticker AAPL --json
+secapi entities resolve --ticker AAPL
+secapi filings latest --ticker AAPL --form 10-K
+secapi sections get --ticker AAPL --form 10-K --section item_1a
+secapi owners 13f --cik 0001067983 --limit 25
 ```
 
-Prefer direct REST commands for production examples. Use hosted MCP for agent workflows that need tool discovery.
+Best when you want exact API workflows from the terminal without writing a small SDK script.
 
 ## Read next
 
 <CardGroup cols={3}>
   <Card title="Auth and pricing" icon="key-round" href="/auth-and-pricing">
-    The auth model, version header, and plan state.
+    The auth model, version header, and plan posture.
   </Card>
   <Card title="MCP workflows" icon="plug-zap" href="/mcp-workflows">
     Hosted MCP setup and agent-facing usage patterns.

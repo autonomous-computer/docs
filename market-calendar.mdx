@@ -1,7 +1,3 @@
----
-title: "Market Calendar"
----
-
 # Market Calendar
 
 ## What it returns
@@ -15,9 +11,9 @@ title: "Market Calendar"
 ## Coverage model
 
 - `configured_holidays` means SEC API has an explicit holiday map and weekend rules for the exchange
-- `weekend_only` means SEC API knows the exchange weekend pattern and regular hours but may not reflect every local holiday closure
+- `weekend_only` means SEC API currently knows the exchange weekend pattern and regular hours but may not yet reflect every local holiday closure
 - `confidence=tentative` is returned when SEC API is inferring an open session from weekend-only coverage
-- this API returns coverage and confidence fields so applications do not silently treat all exchanges as equally complete
+- this surface is intentionally explicit about partiality so downstream tools do not silently treat all exchanges as equally hardened
 
 ## Source inventory
 
@@ -31,16 +27,16 @@ title: "Market Calendar"
 
 ## Rights and sync rules
 
-- `public_source_documented` means the exchange page and current usage state have been reviewed and recorded in the source inventory
-- `public_source_review_required` means SEC API has the public source mapped, but local holiday coverage still needs review before callers should assume full certainty
-- `daily_midnight_local`, `daily_manual_review`, and `manual_review_only` are source-review status values exported from the source market definitions
-- SEC API does not currently expose external sync status for every inventory row
+- `public_source_documented` means the exchange page and current usage posture have been reviewed and recorded in the source inventory
+- `public_source_review_required` means SEC API has the public source mapped, but local holiday coverage still needs explicit hardening before callers should assume full certainty
+- `daily_midnight_local`, `daily_manual_review`, and `manual_review_only` are source-review posture values exported from the checked-in market definitions
+- the current repo does not prove external sync jobs for every inventory row; the inventory artifacts are generated from in-repo source definitions
 
-## Sync Status
+## Sync posture
 
-- SEC API serves `/v1/market/calendar` from reviewed market definitions
-- coverage metadata is generated from the same source inventory used by the API
-- weekend-only exchanges are intentionally labeled as tentative on non-weekend weekdays until holiday coverage is complete
+- SEC API serves `/v1/market/calendar` from checked-in market definitions in `services/datastream-api/src/lib/market-calendar.ts`
+- ops artifacts are exported from that checked-in source inventory with `bun run ops:market-calendar-inventory` and `bun run ops:market-calendar-sources`
+- weekend-only exchanges are intentionally labeled as tentative on non-weekend weekdays until holiday coverage is hardened
 
 ## Supported markets
 
@@ -56,7 +52,7 @@ title: "Market Calendar"
 
 - `XNYS` and `XNAS` are safe for production assumptions about holiday-aware session state
 - the other listed exchanges are useful, but should be treated as documented public-hour utilities rather than fully holiday-complete calendars
-- SEC API applications and downstream agents should read `coverage`, `confidence`, and `statusNote` before making trade-window assumptions
+- client applications and downstream agents should read `coverage`, `confidence`, and `statusNote` before making trade-window assumptions
 
 ## Example
 

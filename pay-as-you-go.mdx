@@ -1,7 +1,3 @@
----
-title: "Pay As You Go"
----
-
 # Pay As You Go
 
 ## Why PAYG is the default
@@ -9,13 +5,13 @@ title: "Pay As You Go"
 PAYG keeps the path from signup to first utility short:
 
 - no fixed monthly fee
-- card attachment only when your organization is ready for paid usage
+- card attachment only when the starter grant is exhausted
 - public per-call pricing that maps cleanly to API usage
 
 ## Activation flow
 
 1. create an org and mint an org-scoped API key
-2. make initial evaluation requests
+2. use the starter grant
 3. call `POST /v1/billing/payg/activate`
 4. attach a card in Stripe Checkout
 5. continue in `payg_active`
@@ -27,7 +23,6 @@ PAYG keeps the path from signup to first utility short:
 - `POST /v1/billing/payg/activate`
 - `POST /v1/billing/portal`
 
-## Errors and partial results
+## Failure posture
 
-If billing is required and no card is attached, billable routes return `402 billing_required` with the current plan, billing state, and quota details.
-
+If the starter grant is exhausted and no card is attached, billable routes return `402 billing_required` with the current plan, billing state, and quota details.
