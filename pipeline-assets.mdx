@@ -1,0 +1,54 @@
+# Pipeline assets
+
+The SEC pipeline now has one canonical freshness owner plus a separate set of downstream derived-data refresh jobs.
+
+## Canonical freshness job
+
+- `sec_freshness_daily_job`
+
+This job runs the weekday SEC freshness chain in `America/New_York`:
+
+- `hot_lane_poller_summary`
+- `canonical_hot_lane_reconcile_report`
+- `fullindex_daily_ingest`
+- `fullindex_daily_archive`
+- `fullindex_daily_enqueue`
+- `canonical_ingest_worker_summary`
+
+The worker step materializes fresh filings into Postgres, Typesense, and Pinecone while preserving the normal `filing_published` behavior.
+
+## Scheduled jobs
+
+- `sec_freshness_daily_job` — weekdays at `02:30 America/New_York`
+- `sec_facts_statement_refresh_job` — weekdays at `05:45 UTC`
+- `sec_ownership_refresh_job` — weekdays at `06:00 UTC`
+- `sec_artifact_materialization_job` — weekdays at `06:15 UTC`
+- `sec_factor_model_refresh_job` — weekdays at `06:30 UTC`
+- `grouped_daily_bars_job` — weekdays at `06:35 UTC`
+- `bulk_reference_sync_job` — Mondays at `06:50 UTC`
+- `reference_detail_enrichment_job` — Mondays at `07:15 UTC`
+- `cross_identifier_enrichment_job` — monthly at `08:00 UTC`
+- `xbrl_facts_sync_job` — daily at `07:00 UTC`
+- `investor_market_materialization_job` — weekdays at `06:45 UTC`
+- `investor_macro_materialization_job` — weekdays at `07:00 UTC`
+- `investor_factor_materialization_job` — weekdays at `07:15 UTC`
+- `investor_factor_intraday_materialization_job` — every minute from `13:00-21:59 UTC` on weekdays
+- `investor_intelligence_materialization_job` — weekdays at `07:30 UTC`
+
+## Manual-only repair jobs
+
+These jobs remain defined for operator use, but they are no longer scheduled as part of production SEC freshness:
+
+- `sec_bulk_snapshot_job`
+- `sec_hot_index_refresh_job`
+- `sec_seeded_replay_job`
+- `sec_storage_replay_job`
+- `fullindex_daily_ingest_job`
+
+## Sensors
+
+Bulk-snapshot fanout sensors are no longer part of the active SEC freshness path. The remaining sensors coordinate downstream derived-data jobs:
+
+- `sec_facts_to_factor_models_sensor`
+- `sec_seeded_to_investor_market_sensor`
+- `investor_factor_to_intelligence_sensor`

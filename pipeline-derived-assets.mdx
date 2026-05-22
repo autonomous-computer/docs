@@ -1,0 +1,16 @@
+# Derived pipeline assets
+
+The Dagster graph now models derived refresh steps explicitly:
+- hot filing and section backfill
+- facts and statements refresh
+- ownership, insider, and compensation refresh
+- artifact materialization readiness
+
+These derived refresh assets are already wired into the live Dagster definitions and run on weekday schedules after the core SEC bulk snapshot.
+
+The current production posture is:
+
+- a daily bulk snapshot refreshes the base SEC corpus
+- asset sensors fan that snapshot into hot-index, facts/statements, and ownership refresh work
+- weekday replay/materialization jobs keep seeded issuers and downstream artifacts current
+- a weekly storage replay validates replayability against the broader filing corpus

@@ -3,10 +3,10 @@
 Export an artifact as structured JSON or a markdown-oriented download envelope
 
 <Info>
-Use this endpoint from server-side applications or SDKs.
+Audience: application and operator.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -48,7 +48,7 @@ curl -X GET \
   },
   "materialization": {
     "parserVersion": "2026-03-13.5",
-    "materializationVersion": "sec-api-3.0"
+    "materializationVersion": "datastream-3.0"
   }
 }
 ```
@@ -56,14 +56,12 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/artifacts/{artifact_id}/export to export an artifact as structured JSON or a markdown-oriented download envelope. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/artifacts/{artifact_id}/export to export an artifact as structured JSON or a markdown-oriented download envelope. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-

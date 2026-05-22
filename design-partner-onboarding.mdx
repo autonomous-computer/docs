@@ -1,0 +1,50 @@
+# Design partner onboarding
+
+## First session goals
+
+- confirm the partner's primary workflow: API, CLI, or hosted MCP
+- issue a live org-scoped API key
+- walk through `entities.resolve`, `filings.latest`, and one high-value structured workflow
+- confirm the partner can capture and share `Request-Id`
+- record the session against one named pilot cohort so the rollout is repeatable
+
+## Minimum onboarding sequence
+
+1. verify health at `https://api.secapi.ai/healthz`
+2. resolve an issuer with `/v1/entities/resolve?ticker=AAPL`
+3. fetch a latest filing or statement
+4. review plan and limits with `/v1/billing` and `/v1/limits`
+5. if needed, create webhook or stream subscriptions after billing is confirmed
+
+## Pilot cohorts
+
+- `Pilot Alpha Capital`
+  - interface: API
+  - target flow: entity resolve -> latest filing -> statement retrieval
+- `Pilot Bravo Research`
+  - interface: CLI
+  - target flow: filing retrieval -> statement retrieval
+- `Pilot Charlie Agents`
+  - interface: hosted MCP
+  - target flow: initialize -> tools/list -> filings.latest -> statements.get
+
+Run `bun run ops:design-partner-pilot` to provision a fresh partner-labeled key per cohort and record first-success results.
+
+## Support package
+
+- docs root: `https://secapi.ai/docs`
+- agent setup prompt: `https://secapi.ai/docs/give-this-prompt-to-your-agent`
+- status page: `https://secapi.ai/status`
+- changelog: `https://secapi.ai/changelog`
+- MCP docs: `https://secapi.ai/docs/mcp-workflows`
+- support packet: `https://secapi.ai/docs/design-partner-support-packet`
+- first-request flows: `https://secapi.ai/docs/first-request-flows`
+- support escalation requires `Request-Id`
+
+## Exit criteria
+
+- the partner completes one end-to-end workflow in their preferred interface
+- the partner knows where to find docs, status, and changelog
+- the partner can provide request correlation data for support
+- the partner has a named owner for billing/auth questions and operational escalation
+- the onboarding result is recorded in `benchmarks/design-partner/results/latest.json`

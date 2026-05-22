@@ -1,11 +1,6 @@
----
-title: "Stream Polling"
-description: "Use cursor-based stream polling for deterministic SEC API event replay."
----
+# Stream polling
 
-# Stream Polling
-
-Hosted webhooks are not the only delivery mechanism. SEC API also exposes cursor-based stream polling for applications and agents that want deterministic replay.
+Hosted webhooks are not the only delivery mechanism. SEC API also exposes cursor-based stream polling for operator and agent workflows that want deterministic replay.
 
 ## Endpoints
 
@@ -17,7 +12,7 @@ Hosted webhooks are not the only delivery mechanism. SEC API also exposes cursor
 
 ```bash
 curl "$SECAPI_BASE_URL/v1/stream_subscriptions/str_123/events?limit=25" \
-  -H "Authorization: Bearer $SECAPI_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 The response includes:
@@ -30,14 +25,14 @@ The response includes:
 
 ```bash
 curl "$SECAPI_BASE_URL/v1/stream_subscriptions/str_123/events?cursor=evt_987" \
-  -H "Authorization: Bearer $SECAPI_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 Use cursor polling when:
 
 - a tenant cannot expose a public webhook endpoint
 - an agent runtime wants explicit checkpoint control
-- your team needs to replay a recent stream window without replaying the entire subscription
+- support needs to replay a recent stream window without replaying the entire subscription
 
 ## CLI
 
@@ -51,4 +46,3 @@ secapi streams events --stream-id str_123 --cursor evt_987 --limit 25
 - stream events are filtered to the current org
 - `cursor` ordering is based on recorded event order, not the original SEC filing timestamp
 - replay should advance from `replayCursor`, not from the last array element a client happened to inspect
-
