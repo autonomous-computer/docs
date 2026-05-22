@@ -3,10 +3,10 @@
 Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -46,7 +46,7 @@ curl -X GET \
   "reportDate": "2025-12-31",
   "capability": "degraded",
   "sourceMode": "shares_outstanding_proxy",
-  "statusNote": "The latest SEC company-facts coverage exposes shares outstanding but not a same-surface public-float dollar fact, so SEC API is returning the shares-outstanding proxy.",
+  "statusNote": "The latest SEC company-facts coverage exposes shares outstanding but not a same-API public-float dollar fact, so SEC API is returning the shares-outstanding proxy.",
   "publicFloatUsd": null,
   "sharesOutstanding": 7433000000,
   "xbrlData": {
@@ -65,7 +65,7 @@ curl -X GET \
       "form": "10-Q"
     }
   },
-  "summaryMd": "## Share float coverage for Microsoft Corporation\n\nSEC API found 7,433,000,000 shares outstanding, but the issuer does not expose a same-surface public-float dollar fact in the latest company-facts coverage, so this response stays in degraded proxy mode.",
+  "summaryMd": "## Share float coverage for Microsoft Corporation\n\nSEC API found 7,433,000,000 shares outstanding, but the issuer does not expose a same-API public-float dollar fact in the latest company-facts coverage, so this response stays in degraded proxy mode.",
   "provenance": {
     "source": "sec",
     "accessionNumber": null,
@@ -91,12 +91,14 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt>
-Use SEC API GET /v1/statements/share-float to return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `capability`, `sourceMode` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Use SEC API GET /v1/statements/share-float to return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `capability`, `sourceMode` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
-## Failure posture
+## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+

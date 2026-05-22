@@ -5,7 +5,7 @@ description: Country-level macroeconomic data, regime classification, high-signa
 
 # Macro Intelligence
 
-SEC API provides a structured macro surface covering indicator time series, release history, forward estimates, regime classification, and curated high-signal country packs. All endpoints return `requestId` and `traceparent` for observability.
+SEC API provides a structured macro API covering indicator time series, release history, forward estimates, regime classification, and curated high-signal country packs. All endpoints return `requestId` and `traceparent` for observability.
 
 ## Macro indicators
 
@@ -80,7 +80,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 ## High-signal packs
 
-Curated country packs containing the highest-signal macro series with explicit source provenance, fallback posture, and release-calendar metadata. Each pack is scoped to a single country and returns the full set of configured series.
+Curated country packs containing the highest-signal macro series with explicit source provenance, fallback status, and release-calendar metadata. Each pack is scoped to a single country and returns the full set of configured series.
 
 ### Supported countries
 
@@ -148,8 +148,8 @@ curl -X POST \
   "https://api.secapi.ai/v1/intelligence/country-report"
 ```
 
-## Failure posture
+## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

@@ -1,3 +1,7 @@
+---
+title: "SEC Data for Insurance and Risk"
+---
+
 # SEC Data for Insurance and Risk
 
 <Info>
@@ -32,8 +36,8 @@ SEC API gives insurance and risk teams programmatic access to financial health i
 | `/v1/compensation/compare` | `POST` | Year-over-year compensation changes |
 | `/v1/intelligence/company` | `GET` | Financial health and governance analysis bundle |
 | `/v1/filings` | `GET` | Filing search with form type and date filters |
-| `/v1/filings/latest/sections/{item}` | `GET` | Extract specific sections (auditor report, risk factors) |
-| `/v1/webhooks` | `POST` | Register webhook endpoints for event-driven monitoring |
+| `/v1/filings/latest/sections/{section_key}` | `GET` | Extract specific sections (auditor report, risk factors) |
+| `/v1/webhook_endpoints` | `POST` | Register webhook endpoints for event-driven monitoring |
 
 ---
 
@@ -73,14 +77,14 @@ curl -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -d '{"url":"https://your-system.example.com/webhooks/sec","events":["filing.published","enforcement.published"],"filter":{"tickers":["XYZ","ABC","DEF"]}}' \
-  "https://api.secapi.ai/v1/webhooks"
+  "https://api.secapi.ai/v1/webhook_endpoints"
 ```
 
 Monitor for restatements by extracting auditor opinion sections from new filings:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=XYZ&form=10-K&mode=compact"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=XYZ&form=10-K&view=compact"
 ```
 
 Webhook deliveries include the same provenance and `requestId` metadata as direct API calls. Use `/v1/events/export` to audit delivery history.
@@ -118,8 +122,8 @@ secapi mcp install
   </Card>
 </CardGroup>
 
-<Prompt>
+<Prompt description="Copy this SEC API prompt for your agent.">
 You are a risk assessment agent with access to SEC API. For any company under review, check enforcement history, pull the company intelligence bundle for financial health, review executive compensation structures, and extract auditor opinion and risk-factor sections from the latest 10-K. Flag restatements, auditor changes, and enforcement actions as high-priority findings. Always include requestId references for compliance documentation.
 </Prompt>
 
-_See the full 6-prompt [Insurance & risk library](/agents/prompt-library/insurance)._
+_See the full 6-prompt [Insurance & risk library](/give-this-prompt-to-your-agent)._

@@ -1,3 +1,7 @@
+---
+title: "First Request Flows"
+---
+
 # First Request Flows
 
 <Info>
@@ -7,7 +11,7 @@ This page exists to get you to one clean success quickly. Do one real workflow, 
 ## Start in three steps
 
 <Steps>
-  <Step title="Check platform posture">
+  <Step title="Check platform status">
     Confirm health and readiness before you spend time debugging auth or payload shape.
   </Step>
   <Step title="Resolve one issuer you know">
@@ -24,24 +28,47 @@ This page exists to get you to one clean success quickly. Do one real workflow, 
 curl "https://api.secapi.ai/healthz"
 
 curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
 
 curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
 ```
 
-<Prompt>
+<Prompt description="Copy this SEC API prompt for your agent.">
 Verify SEC API in this environment. Check health and readiness, resolve AAPL, fetch the all-statements bundle, and return the requestId and freshness block from each successful call.
 </Prompt>
 
 ## CLI first request
 
 ```bash
-export SECAPI_API_KEY="your-api-key"
-secapi entities resolve --ticker AAPL
-secapi filings latest --ticker AAPL --form 10-K
-secapi sections get --ticker AAPL --form 10-K --section item_1a
+secapi entities resolve --ticker AAPL --json
+secapi filings latest --ticker AAPL --form 10-K --json
+secapi sections get --ticker AAPL --form 10-K --section item_1a --json
 ```
+
+## SDK first request
+
+```ts
+import { SecApiClient } from "@secapi/sdk-js"
+
+const client = new SecApiClient({
+  apiKey: process.env.SECAPI_API_KEY!,
+})
+
+const issuer = await client.resolveEntity({ ticker: "AAPL" })
+const filing = await client.latestFiling({ ticker: "AAPL", form: "10-K" })
+const section = await client.latestSection({
+  ticker: "AAPL",
+  form: "10-K",
+  section: "item_1a",
+})
+```
+
+<Prompt description="Copy this SEC API prompt for your agent.">
+Install the SEC API SDK for this project, resolve AAPL, fetch the latest 10-K, extract Item 1A, and return requestId, provenance, and freshness metadata with the result.
+</Prompt>
 
 ## MCP first request
 
@@ -63,7 +90,7 @@ secapi sections get --ticker AAPL --form 10-K --section item_1a
   <Card title="Interface used" icon="monitor-smartphone">
     Note whether the request came from REST, SDK, CLI, or MCP.
   </Card>
-  <Card title="Endpoint or tool" icon="square-terminal">
+  <Card title="Endpoint or tool" icon="braces">
     Record the literal endpoint or tool name.
   </Card>
   <Card title="Request metadata" icon="search-code">

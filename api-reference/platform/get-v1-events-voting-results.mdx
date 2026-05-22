@@ -1,16 +1,16 @@
 # GET /v1/events/voting-results
 
-Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes — first-in-market parser ahead of sec-api.io's open bug
+Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes.
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
 ## Agent mode
 
 Pass `?view=agent` to receive the compact agent shape: event identifiers (ticker, form, filingDate, accessionNumber, meetingDate, meetingType, headline) + lifted `filingUrl` + nested `proposals[]` trimmed to 7 fields per proposal (number, description, proposalType, votesFor, votesAgainst, abstain, approved). `brokerNonVotes`, `voteFormat`, `summaryMd`, parser version, superseded flag, and metadata envelopes are dropped. Typical reduction: **~85%**. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -39,12 +39,13 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt>
-Use SEC API GET /v1/events/voting-results to return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes — first-in-market parser ahead of sec-api.io's open bug. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Use SEC API `GET /v1/events/voting-results` to return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes. Preserve `requestId` and `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
-## Failure posture
+## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+

@@ -1,14 +1,19 @@
+---
+title: "Python SDK"
+description: "Install and use the SEC API Python SDK."
+---
+
 # Python SDK
 
 <Info>
 The Python SDK is built for research, ETL, notebooks, and backend services that want REST parity without turning every request into a small framework project.
 </Info>
 
-## Start here
+## Start Here
 
 <Steps>
   <Step title="Install the SDK">
-    Add the package to the environment where your notebook, worker, or service will run.
+    Install the public Python package.
   </Step>
   <Step title="Set the API key and base URL">
     Default to `https://api.secapi.ai` unless you are testing a local or staging environment.
@@ -22,6 +27,8 @@ The Python SDK is built for research, ETL, notebooks, and backend services that 
 pip install secapi-client
 ```
 
+The SDK mirrors the same endpoints and `x-api-key` authentication as the REST examples below.
+
 ## What it is good for
 
 <CardGroup cols={2}>
@@ -34,36 +41,58 @@ pip install secapi-client
   <Card title="ETL and enrichment" icon="database" href="/api-reference/artifacts">
     Fit for downstream enrichment services that need SEC API payloads and artifact workflows.
   </Card>
-  <Card title="Backend jobs" icon="server" href="/operations">
+  <Card title="Backend jobs" icon="server" href="/status">
     Works well in recurring workers that need the same contract shape as the public API.
   </Card>
 </CardGroup>
 
-## First useful calls
+## First useful calls with REST
 
 ```python
+import os
+import requests
+
+BASE_URL = "https://api.secapi.ai"
+HEADERS = {"x-api-key": os.environ["SECAPI_API_KEY"]}
+
+def get_json(path, params=None):
+    response = requests.get(f"{BASE_URL}{path}", params=params, headers=HEADERS, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+issuer = get_json("/v1/entities/resolve", {"ticker": "AAPL"})
+filing = get_json("/v1/filings/latest", {"ticker": "AAPL", "form": "10-K"})
+statements = get_json("/v1/statements/all", {"ticker": "AAPL", "period": "annual", "limit": 1})
+market = get_json("/v1/market/snapshots", {"symbols": "AAPL"})
+
+answer_response = requests.post(
+    f"{BASE_URL}/v1/intelligence/query",
+    headers={**HEADERS, "Content-Type": "application/json"},
+    json={
+        "query": "Give me a recommendation for how to make this portfolio factor neutral.",
+        "portfolio": [
+            {"symbol": "AAPL", "weight": 0.4},
+            {"symbol": "MSFT", "weight": 0.35},
+            {"symbol": "NVDA", "weight": 0.25},
+        ],
+        "responseMode": "compact_json_and_md",
+    },
+    timeout=60,
+)
+answer_response.raise_for_status()
+answer = answer_response.json()
+```
+
+## SDK shape
+
+The public Python package name is `secapi-client`:
+
+```python
+import os
 from secapi_client import SecApiClient
 
-client = SecApiClient(
-    api_key="ods_test_...",
-    base_url="https://api.secapi.ai",
-)
-
-issuer = client.resolve_entity(ticker="AAPL")
+client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
 filing = client.latest_filing(ticker="AAPL", form="10-K")
-statements = client.all_statements(ticker="AAPL", period="annual", limit=1)
-market = client.market_snapshots(symbols=["AAPL"])
-macro = client.macro_indicators(country="JP", indicator_key="CPIAUCSL", limit=3)
-factors = client.factor_returns(keys=["MKT_US", "QUALITY"], lookback="6m", window="1m")
-answer = client.intelligence_query({
-    "query": "Give me a recommendation for how to make this portfolio factor neutral.",
-    "portfolio": [
-        {"symbol": "AAPL", "weight": 0.4},
-        {"symbol": "MSFT", "weight": 0.35},
-        {"symbol": "NVDA", "weight": 0.25},
-    ],
-    "responseMode": "compact_json_and_md",
-})
 ```
 
 ## Reliability defaults
@@ -77,7 +106,7 @@ The Python SDK retries transient failures with exponential backoff and a per-cli
 Disable SDK retries when your application already owns retry behavior:
 
 ```python
-client = SecApiClient(api_key="ods_test_...", retry=False, telemetry=False)
+client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"], retry=False, telemetry=False)
 ```
 
 Opt into mutating retries only when the operation is idempotent:
@@ -107,18 +136,15 @@ atms = client.dilution_events(ticker="BBBB", is_atm=True)
 coverage = client.dilution_coverage(ticker="BBBB")
 ```
 
-The full surface — `dilution_events`, `dilution_event_detail`, `dilution_warrants`, `dilution_convertibles`, `dilution_rofr`, `dilution_lockups`, `dilution_cash_position`, `dilution_corporate_actions`, `dilution_nasdaq_compliance`, `dilution_ratings`, `dilution_reverse_splits`, `dilution_score`, `dilution_share_float_history`, `dilution_coverage` — mirrors the REST routes 1:1. Add `view="agent"` to any list call (except `dilution_coverage`) for the compact agent-mode shape.
+The full API — `dilution_events`, `dilution_event_detail`, `dilution_warrants`, `dilution_convertibles`, `dilution_rofr`, `dilution_lockups`, `dilution_cash_position`, `dilution_corporate_actions`, `dilution_nasdaq_compliance`, `dilution_ratings`, `dilution_reverse_splits`, `dilution_score`, `dilution_share_float_history`, `dilution_coverage` — mirrors the REST routes 1:1. Add `view="agent"` to any list call (except `dilution_coverage`) for the compact agent-mode shape.
 
-<Prompt>
+<Prompt description="Copy this SEC API prompt for your agent.">
 Use the Python SDK to build a research workflow around AAPL. Resolve the issuer, fetch the latest 10-K, read the latest market snapshot, read Japan CPI, run the portfolio factor-neutralization query, and write the results into a markdown brief that preserves requestId, provenance, freshness, and materialization metadata.
 </Prompt>
 
-## Operator paths
-
-The observability methods require an operator-scoped key (`admin:operator`).
+## Artifact paths
 
 ```python
-operator_client = SecApiClient(api_key=os.environ["SECAPI_OPERATOR_API_KEY"])
 artifact = client.create_artifact({
     "ticker": "AAPL",
     "form": "10-K",
@@ -126,7 +152,6 @@ artifact = client.create_artifact({
     "kind": "markdown_bundle",
 })
 manifest = client.artifact_manifest(artifact["id"])
-observability = operator_client.observability()
 ```
 
 <Warning>
@@ -140,7 +165,7 @@ If you are caching responses in a notebook or long-running worker, keep the fres
     Open the exact wire format behind the Python methods you are using.
   </Card>
   <Card title="Libraries & SDKs" icon="blocks" href="/libraries-and-sdks">
-    Compare Python with the other runtime surfaces before standardizing.
+    Compare Python with the other runtime options before standardizing.
   </Card>
   <Card title="Benchmark workflows" icon="gauge" href="/benchmark-workflows">
     See how SEC API measures latency, freshness, and workflow parity.
