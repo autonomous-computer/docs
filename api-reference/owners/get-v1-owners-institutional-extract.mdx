@@ -3,10 +3,10 @@
 Return a quarter-specific historical institutional ownership extract for a manager CIK over the SEC-native 13F family
 
 <Info>
-Audience: application and coding agent.
+Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
-## Canonical metadata
+## Response metadata
 
 - `requestId`
 - `traceparent`
@@ -99,12 +99,14 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt>
-Use SEC API GET /v1/owners/institutional/extract to return a quarter-specific historical institutional ownership extract for a manager CIK over the SEC-native 13F family. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `comparisonCoverage`, `statusNote` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Use SEC API GET /v1/owners/institutional/extract to return a quarter-specific historical institutional ownership extract for a manager CIK over the SEC-native 13F family. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `comparisonCoverage`, `statusNote` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
-## Failure posture
+## Errors and partial results
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
+- Treat non-2xx responses as API errors and log the response body for debugging
+- Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+
+

@@ -1,14 +1,17 @@
+---
+title: "Full-Text & Semantic Search API"
+---
+
 # Full-Text & Semantic Search API
 
-Search SEC filings and documents using keyword, semantic, or hybrid retrieval. Powered by Pinecone vector search with Voyage AI embeddings (ranked #1 in finance) and reciprocal rank fusion (RRF) for hybrid queries.
+Search SEC filings and documents using keyword, semantic, or hybrid retrieval. Use keyword, semantic, or hybrid retrieval with reciprocal rank fusion (RRF) for queries that benefit from both exact terms and conceptual matches.
 
 ## Why use this
 
-Traditional filing search is keyword-only. The SEC API Search surface adds semantic retrieval so you can find filings by concept, not just exact terms. Hybrid mode fuses keyword and vector results using RRF scoring for the best of both approaches.
+Traditional filing search is keyword-only. SEC API Search adds semantic retrieval so you can find filings by concept, not just exact terms. Hybrid mode fuses keyword and vector results using RRF scoring for the best of both approaches.
 
-- **Three retrieval modes** -- keyword, semantic, and hybrid (RRF fusion)
-- **Voyage AI embeddings** -- ranked #1 in finance by MTEB benchmarks
-- **Pinecone vector index** -- low-latency similarity search across the filing corpus
+- **Keyword and semantic retrieval** -- use full-text search for exact terms and semantic search for conceptual matches
+- **Semantic retrieval** -- find filing sections by concept, not only exact keyword matches
 - **Score transparency** -- every result includes a relevance score and the retrieval mode used
 - **Filing-scoped** -- results link directly to filing sections and source documents
 
@@ -17,21 +20,21 @@ Traditional filing search is keyword-only. The SEC API Search surface adds seman
 ```bash
 # Keyword search
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?query=revenue+recognition+policy&limit=5"
+  "https://api.secapi.ai/v1/search/fulltext?q=revenue+recognition+policy&limit=5"
 ```
 
 ## Example: semantic search
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?query=companies+discussing+supply+chain+risks+in+asia&retrievalMode=semantic&limit=10"
+  "https://api.secapi.ai/v1/search/semantic?q=companies+discussing+supply+chain+risks+in+asia&mode=semantic&limit=10"
 ```
 
-## Example: hybrid search with RRF
+## Example: semantic search in agent view
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?query=goodwill+impairment+risk+factors&retrievalMode=hybrid&limit=10"
+  "https://api.secapi.ai/v1/search/semantic?q=goodwill+impairment+risk+factors&mode=semantic&view=agent&limit=10"
 ```
 
 ## Response shape
@@ -47,7 +50,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
       "sectionKey": "item1a",
       "excerpt": "The Company is subject to risks associated with...",
       "score": 0.892,
-      "retrievalMode": "hybrid"
+      "retrievalMode": "semantic"
     }
   ],
   "pagination": {
@@ -57,7 +60,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   },
   "meta": {
     "queryTimeMs": 142,
-    "retrievalMode": "hybrid"
+    "retrievalMode": "semantic"
   }
 }
 ```
@@ -66,21 +69,17 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `query` | string | Search query (required) |
-| `retrievalMode` | string | `keyword`, `semantic`, or `hybrid` (default: keyword) |
+| `q` | string | Search query (required) |
+| `mode` | string | Retrieval mode for semantic search |
 | `ticker` | string | Scope to a specific company |
 | `form` | string | Filter by form type |
-| `dateFrom` | string | Start date (ISO 8601) |
-| `dateTo` | string | End date (ISO 8601) |
+| `filing_year` | string | Filter semantic search by filing year |
+| `view` | string | Use `agent` for compact agent-ready rows |
 | `limit` | number | Results per page (max 50) |
 
 ## Rate limits
 
-- **Standard plan**: 60 requests/minute
-- **Pro plan**: 300 requests/minute
-- **Enterprise**: Custom limits
-
-Semantic and hybrid queries consume more compute than keyword queries. Rate limits reflect this difference.
+Rate limits vary by plan and workload. Semantic queries consume more compute than keyword queries, so use the billing and usage endpoints to inspect your current quota.
 
 ## Related
 

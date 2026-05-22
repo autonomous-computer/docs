@@ -1,22 +1,26 @@
+---
+title: "Enterprise Features"
+---
+
 # Enterprise Features
 
-SEC API ships enterprise-grade infrastructure from the first request. Audit logging, entitlement reporting, key rotation, and multi-seat organizations are built into the platform today. OAuth/SSO via WorkOS is on the enterprise roadmap for 2026 Q3+.
+SEC API ships enterprise-grade infrastructure from the first request. Audit logging, entitlement reporting, key rotation, and multi-seat organizations are built into the platform today. Enterprise SSO is handled through the enterprise rollout path.
 
 ## Authentication
 
 API keys are the primary authentication method for all plans. Org-scoped credentials are issued through `POST /v1/api_keys` and used via the `x-api-key` header. See [Auth, Billing, and First Utility](/auth-and-pricing) for the full model.
 
-Hosted MCP clients use WorkOS OAuth discovery through `api.secapi.ai`. OAuth discovery endpoints are published at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`. This is the only surface where WorkOS is customer-visible today.
+Hosted MCP clients use WorkOS OAuth discovery through `api.secapi.ai`. OAuth discovery endpoints are published at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`. This is the only WorkOS integration today.
 
-### OAuth/SSO — enterprise roadmap
+### Enterprise SSO
 
-OAuth/SSO via [WorkOS](https://workos.com) is planned for the enterprise tier in 2026 Q3+. When it ships, it will cover SAML and OIDC federation with Okta, Azure AD, Google Workspace, and other SAML 2.0 / OIDC identity providers for customers who require corporate-IdP-backed human login. Contact the SEC API team to register interest and coordinate rollout timing.
+OAuth/SSO via [WorkOS](https://workos.com) supports enterprise rollout planning for customers who require corporate-IdP-backed human login. Contact the SEC API team to discuss SAML or OIDC federation requirements for Okta, Microsoft Entra ID, Google Workspace, or another identity provider.
 
 ## Audit Logs
 
-Every API request generates a traceable event chain. SEC API provides multiple surfaces for inspecting activity after the fact.
+Every API request generates a traceable event chain. SEC API provides multiple APIs for inspecting activity after the fact.
 
-### Request diagnostics
+### Request Diagnostics
 
 Drill into a single request by its `Request-Id`:
 
@@ -36,7 +40,7 @@ curl "$SECAPI_BASE_URL/v1/diagnostics/deliveries/summary?since=2026-01-01T00:00:
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-### Event export
+### Event Export
 
 Export the full event log in JSON or NDJSON for ingestion into external SIEM, log aggregation, or compliance tooling:
 
@@ -47,20 +51,9 @@ curl "$SECAPI_BASE_URL/v1/events/export?kind=event&format=ndjson&limit=100" \
 
 Filters: `kind`, `type`, `requestId`, `since`, `limit`, `format` (`json` or `ndjson`). See [Event Export](/event-export) for details.
 
-### Observability export
-
-Bundle observability config, usage summary, billing health, and recent events into a single operator-only response for support or pre-production validation:
-
-```bash
-curl "$SECAPI_BASE_URL/v1/observability/export?limit=20" \
-  -H "x-api-key: $SECAPI_OPERATOR_API_KEY"
-```
-
-See [Observability Exports](/observability-exports) for the full reference.
-
 ## Entitlement Reporting
 
-Billing state, usage, and plan limits are always available through the API. Use these endpoints to build internal dashboards or enforce organizational spend policies.
+Billing state, usage, and plan limits are always available through the API. Use these endpoints to build organization dashboards or enforce organizational spend policies.
 
 ### Billing snapshot
 
@@ -102,15 +95,6 @@ curl -X PUT "$SECAPI_BASE_URL/v1/billing/budget" \
 
 Budget events are recorded with the acting principal, previous values, and request ID for audit purposes.
 
-### Dashboard overview
-
-A single call that bundles organization, billing, usage, and API key data for dashboard rendering:
-
-```bash
-curl "$SECAPI_BASE_URL/v1/dashboard/overview" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
 ## Key Rotation
 
 Webhook signing secrets can be rotated without downtime. The old secret is invalidated immediately and a new secret is returned in the response.
@@ -130,7 +114,7 @@ API keys can be revoked and re-created through `DELETE /v1/api_keys/:keyId` and 
 
 The Team plan (`$239/mo` or `$2,388/yr`) supports up to five seats within a shared organization. All seats share:
 
-- org-scoped API keys with configurable scopes (`read:sec`, `write:sec`, `admin:operator`)
+- org-scoped API keys with configurable read and write scopes
 - a unified billing context with shared spend caps and budget alerts
 - shared webhook endpoints, stream subscriptions, and event history
 - a single billing relationship through Stripe
@@ -166,7 +150,7 @@ The Commercial plan (from `$18,000/yr`) is required for redistribution, embeddin
 - dedicated onboarding support
 - custom throughput and rate limit configuration
 
-See [Plans and Pricing](/plans-and-pricing) for the full plan comparison and [Enterprise and Commercial Posture](/enterprise-commercial) for the rights boundary and escalation path.
+See [Plans and Pricing](/plans-and-pricing) for the full plan comparison and commercial-use requirements.
 
 ## Enterprise endpoints summary
 
@@ -174,8 +158,7 @@ See [Plans and Pricing](/plans-and-pricing) for the full plan comparison and [En
 |---|---|
 | **Auth** | `GET /v1/me`, `GET /v1/org`, `POST /v1/api_keys`, `DELETE /v1/api_keys/:keyId` |
 | **Audit** | `GET /v1/diagnostics/requests/:requestId`, `GET /v1/diagnostics/deliveries/summary`, `GET /v1/events`, `GET /v1/events/export` |
-| **Observability** | Operator-only `GET /v1/observability`, `GET /v1/observability/export` |
-| **Entitlements** | `GET /v1/billing`, `GET /v1/usage`, `GET /v1/limits`, `GET /v1/billing/rates`, `GET /v1/dashboard/overview` |
+| **Entitlements** | `GET /v1/billing`, `GET /v1/usage`, `GET /v1/limits`, `GET /v1/billing/rates` |
 | **Budget** | `PUT /v1/billing/budget`, `POST /v1/billing/quote` |
 | **Key rotation** | `POST /v1/webhook_endpoints/:webhookId/rotate_secret` |
 | **Checkout** | `POST /v1/billing/checkout`, `POST /v1/billing/portal` |
@@ -183,9 +166,6 @@ See [Plans and Pricing](/plans-and-pricing) for the full plan comparison and [En
 ## Read next
 
 <CardGroup cols={3}>
-  <Card title="Audit Logs" icon="scroll" href="/audit-logs">
-    Detailed reference for all audit log and event export endpoints.
-  </Card>
   <Card title="Webhook Delivery SLA" icon="shield-check" href="/webhook-sla">
     99.9% delivery guarantee, retry policy, and replay support.
   </Card>

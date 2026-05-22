@@ -36,7 +36,7 @@ After 8 failed attempts, the delivery is marked as `failed` and can be manually 
 
 ## Signed Payloads
 
-Every webhook delivery includes an `x-secapi-signature` header with an HMAC-SHA256 signature. Verify the signature to ensure the payload is authentic:
+Every webhook delivery includes an `secapi-signature` header with an HMAC-SHA256 signature. Verify the signature to ensure the payload is authentic:
 
 ```typescript
 import { createHmac, timingSafeEqual } from "crypto"
@@ -73,14 +73,7 @@ curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/{id}/deliveries/{delive
 
 ## Monitoring
 
-Support operators can track webhook health via the observability endpoint:
-
-```bash
-curl "https://api.secapi.ai/v1/observability" \
-  -H "x-api-key: $SECAPI_OPERATOR_API_KEY"
-```
-
-Response includes delivery success rate, average latency, and recent failures.
+Track webhook health from the delivery history endpoint. Store delivery IDs and request IDs so failed events can be replayed without guessing which payload failed.
 
 ## Secret Rotation
 
@@ -92,3 +85,4 @@ curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/{id}/rotate_secret" \
 ```
 
 The old secret remains valid for 24 hours after rotation.
+

@@ -67,7 +67,7 @@ Total: 1 API call, ~800 tokens
 ## Why SEC API Responses Are Smaller
 
 1. **No wrapper bloat.** Responses contain data, not framework metadata.
-2. **Compact mode.** Use `?view=compact` to get minimal responses for agent consumption.
+2. **Compact mode.** Use `?view=compact` when your workflow only needs the fields required for the next step.
 3. **Pre-computed intelligence.** One bundle call replaces 8+ raw API calls.
 4. **Semantic search.** Find relevant content in one call instead of paginating through keyword results.
 
@@ -75,11 +75,11 @@ Total: 1 API call, ~800 tokens
 
 ```bash
 # Compare response sizes
-SECAPI_RESPONSE_SIZE=$(curl -s "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
-  -H "x-api-key: $SECAPI_KEY" | wc -c)
+SECAPI_SIZE=$(curl -s "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
+  -H "x-api-key: $SECAPI_API_KEY" | wc -c)
 
-SEC_API_SIZE=$(curl -s "https://api.sec-api.io/mapping/ticker/AAPL" \
-  -H "Authorization: $SEC_API_KEY" | wc -c)
+SEC_API_IO_SIZE=$(curl -s "https://api.sec-api.io/mapping/ticker/AAPL" \
+  -H "Authorization: $SECAPI_API_KEY" | wc -c)
 
-echo "SEC API: $SECAPI_RESPONSE_SIZE bytes, sec-api.io: $SEC_API_SIZE bytes"
+echo "SEC API: $SECAPI_SIZE bytes, sec-api.io: $SEC_API_IO_SIZE bytes"
 ```

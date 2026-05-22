@@ -1,6 +1,11 @@
-# Event export
+---
+title: "Event Export"
+description: "Export request, webhook, and stream event history from SEC API."
+---
 
-Operators need a support-friendly way to inspect request, webhook, and stream event history outside the live API response path. SEC API supports filtered event listing and JSON or NDJSON exports.
+# Event Export
+
+Use event export to inspect request, webhook, and stream event history outside the live API response path. SEC API supports filtered event listing and JSON or NDJSON exports.
 
 ## Endpoints
 
@@ -11,7 +16,7 @@ Operators need a support-friendly way to inspect request, webhook, and stream ev
 
 ```bash
 curl "$SECAPI_BASE_URL/v1/events?kind=event&type=artifact.created&requestId=req_123&limit=20" \
-  -H "x-api-key: $SECAPI_API_KEY"
+  -H "Authorization: Bearer $SECAPI_API_KEY"
 ```
 
 Useful filters:
@@ -26,17 +31,17 @@ Useful filters:
 
 ```bash
 curl "$SECAPI_BASE_URL/v1/events/export?kind=event&limit=100&format=json" \
-  -H "x-api-key: $SECAPI_API_KEY"
+  -H "Authorization: Bearer $SECAPI_API_KEY"
 ```
 
 ## Export NDJSON
 
 ```bash
 curl "$SECAPI_BASE_URL/v1/events/export?kind=webhook_delivery&since=2026-03-14T00:00:00Z&format=ndjson" \
-  -H "x-api-key: $SECAPI_API_KEY"
+  -H "Authorization: Bearer $SECAPI_API_KEY"
 ```
 
-Use NDJSON when downstream tooling wants line-oriented ingestion into log processors or ad hoc support scripts.
+Use NDJSON when downstream tooling needs line-oriented ingestion into log processors or audit and review tools.
 
 ## CLI
 
@@ -49,4 +54,4 @@ secapi events export --kind webhook_delivery --since 2026-03-14T00:00:00Z --form
 
 - exports are tenant-scoped
 - request correlation is driven by `Request-Id`
-- support should prefer exports over direct database access for routine inspections
+- use exports when support asks for request, webhook, or stream history during troubleshooting

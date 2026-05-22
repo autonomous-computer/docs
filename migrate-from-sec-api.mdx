@@ -1,3 +1,8 @@
+---
+title: "Migrate from sec-api.io"
+sidebarTitle: "Migrate from sec-api.io"
+---
+
 # Migrate from sec-api.io
 
 <Info>
@@ -13,13 +18,13 @@ This guide translates common `sec-api.io` jobs onto SEC API without forcing you 
   <Card title="Filing types and exhibits map" icon="files" href="/filing-types-and-exhibits">
     Check which filing families SEC API retrieves generically, normalizes directly, or only supports inside workflow-specific parsers.
   </Card>
-  <Card title="Request diagnostics" icon="search-code" href="/operations">
-    `Request-Id` is first-class across the REST surface so support and debugging workflows stay sane.
+  <Card title="Request diagnostics" icon="search-code" href="/status">
+    `Request-Id` is first-class across the REST API so support and debugging workflows stay sane.
   </Card>
-  <Card title="Shared REST and MCP surface" icon="bot" href="/mcp-workflows">
+  <Card title="Shared REST and MCP API" icon="bot" href="/mcp-workflows">
     Hosted MCP and REST share the same underlying workflows rather than diverging into two products.
   </Card>
-  <Card title="Compact extraction mode" icon="braces" href="/api-reference/sections">
+  <Card title="Compact extraction view" icon="braces" href="/api-reference/sections">
     Section extraction can return machine-first payloads when you want token efficiency instead of rendered prose.
   </Card>
 </CardGroup>
@@ -34,7 +39,7 @@ If you depend on arbitrary historical filing URLs or HTML extractor output, keep
 - `/mapping/cik/{cik}` -> `/v1/entities/resolve?cik={cik}`
 - `/` filing search POST body -> `/v1/filings` query params
 - `list of filing types and exhibits` -> [SEC Filing Types and Exhibits](/filing-types-and-exhibits)
-- `/extractor?url=...&item=1A&type=text` -> `/v1/filings/latest/sections/item_1a?...&mode=compact` when latest filing mapping is sufficient
+- `/extractor?url=...&item=1A&type=text` -> `/v1/filings/latest/sections/item_1a?...&view=compact` when latest filing mapping is sufficient
 - `/xbrl-to-json` -> `/v1/statements/{statement_key}` or `/v1/facts`
 - `/insider-trading` -> `/v1/insiders`
 - `/compensation/{ticker}` -> `/v1/compensation?ticker={ticker}`
@@ -59,18 +64,18 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=compact"
 ```
 
-<Prompt>
-Migrate this sec-api.io workflow to SEC API. Replace mapping calls with entity resolution, replace filing search with /v1/filings query params, and replace extractor workflows with SEC API section endpoints where possible. Keep requestId, freshness, provenance, and any current fallback gaps in the final implementation notes.
+<Prompt description="Copy this SEC API prompt for your agent.">
+Migrate this sec-api.io workflow to SEC API. Replace mapping calls with entity resolution, replace filing search with `/v1/filings` query params, and replace extractor workflows with SEC API section endpoints where possible. Keep `requestId`, freshness, provenance, and any temporary fallback requirements in the final implementation notes.
 </Prompt>
 
 ## Migration notes
 
 - Pin `secapi-version` in production clients before cutover
 - Keep recording `Request-Id` during dual-run testing so request diagnostics stay comparable
-- If you depend on arbitrary historical filing URLs for extractor-style requests, keep that path on a temporary fallback until the historical lookup backlog lands
+- If you depend on arbitrary historical filing URLs for extractor-style requests, keep that path on a temporary fallback until SEC API adds historical filing lookup support
 - If you depend on HTML extractor output, treat that as a current gap and stay on the temporary fallback path
 
 ## Recommended cutover order
@@ -78,13 +83,13 @@ Migrate this sec-api.io workflow to SEC API. Replace mapping calls with entity r
 1. issuer resolution
 2. filing search
 3. statements and facts
-4. section extraction in `compact` mode
+4. section extraction with `view=compact`
 5. compare and artifact flows once the target plan is enabled
 
 ## Read next
 
 <CardGroup cols={3}>
-  <Card title="Migrate from financialdatasets.ai" icon="git-compare-arrows" href="/migrate-from-financialdatasets-ai">
+  <Card title="Migrate from Financial Datasets" icon="git-compare-arrows" href="/migrate-from-financialdatasets-ai">
     Compare the second major migration path.
   </Card>
   <Card title="Benchmark workflows" icon="gauge" href="/benchmark-workflows">

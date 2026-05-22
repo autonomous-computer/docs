@@ -1,24 +1,47 @@
-# Traces
+---
+title: "Traces API"
+description: "Resolve filing page anchors and source-to-derived lineage for supported filing and non-filing datasets."
+---
 
-Trace hydration, filing page anchors, and source-to-derived lineage workflows. Traces cover filing-derived data (segmented revenues, section excerpts), SEC enforcement actions, market price snapshots, and analyst estimates.
+# Traces API
 
-Traces cover five data kinds:
+<Info>
+Resolve filing page anchors and source-to-derived lineage for supported filing and non-filing datasets.
+</Info>
 
-| Kind | Source | Description |
-|------|--------|-------------|
-| `filing_fact` | XBRL filings | Segmented revenue facts with page anchors and inline fact regions |
-| `filing_excerpt` | Filing sections | Section text excerpts with document region anchors |
-| `source_record` | SEC enforcement | Enforcement action source documents (litigation releases, administrative proceedings) |
-| `source_record` | Market data | Market price snapshots with provider attribution |
-| `source_record` | Market data | Analyst estimate datapoints with fiscal period and surprise metadata |
+## Use This API To
 
-<Note>
-The sidebar labels inside this family are the literal calls you make over HTTP. Descriptions stay in the body so the navigation stays sharp and scannable.
-</Note>
+- Resolve trace IDs back to source filings or supported non-filing records.
+- Batch hydrate trace records for stored datasets.
+- Show source context beside derived values in applications and agent outputs.
 
-## Operations in this family
+## Before You Call
+
+<Steps>
+  <Step title="Keep trace IDs from upstream responses">
+    Keep trace IDs from upstream responses.
+  </Step>
+  <Step title="Batch trace lookups when rendering many values">
+    Batch trace lookups when rendering many values.
+  </Step>
+  <Step title="Display source and freshness metadata with trace-derived views">
+    Display source and freshness metadata with trace-derived views.
+  </Step>
+</Steps>
+
+## Trace Kinds
+
+| Kind | Source | Use |
+|------|--------|-----|
+| Filing-derived | SEC filing sections and facts | Link normalized values back to source filings and pages. |
+| Enforcement | SEC enforcement releases | Show the official release behind an enforcement record. |
+| Market price | Market source records | Inspect the source record behind price snapshots. |
+| Analyst estimate | Analyst estimate source records | Preserve provider attribution and source context. |
+| Segmented revenue | Filing-derived segment disclosures | Link segment values to supported HTML fact regions. |
+
+## Endpoints
 
 <CardGroup cols={2}>
-<Card title="GET /v1/traces" href="/api-reference/traces/get-v1-traces">Batch resolve shared trace records by trace identifier across filing-derived and supported non-filing datasets</Card>
-<Card title="GET /v1/traces/{trace_id}" href="/api-reference/traces/get-v1-traces-trace-id">Resolve a single shared trace record by trace identifier across filing-derived and supported non-filing datasets</Card>
+<Card title="GET /v1/traces" icon="square-terminal" href="/api-reference/traces/get-v1-traces">Batch resolve shared trace records by trace identifier across filing-derived and supported non-filing datasets</Card>
+<Card title="GET /v1/traces/{trace_id}" icon="square-terminal" href="/api-reference/traces/get-v1-traces-trace-id">Resolve a single shared trace record by trace identifier across filing-derived and supported non-filing datasets</Card>
 </CardGroup>

@@ -1,6 +1,10 @@
+---
+title: "SEC API Dilution Score"
+---
+
 # SEC API Dilution Score
 
-A single 0-100 derived metric expressing near-term dilution risk per issuer. Built by composing five factor signals from the SEC API dilution dataset (filed offering events, outstanding warrants and convertibles, latest cash position, share-float trajectory, Nasdaq compliance status). Surfaces alongside six categorical sub-ratings, a `regsho` flag, and an optional rolling-history timeseries materialized daily.
+A single 0-100 derived metric expressing near-term dilution risk per issuer. Built by composing five factor signals from the SEC API dilution dataset (filed offering events, outstanding warrants and convertibles, latest cash position, share-float trajectory, Nasdaq compliance status). Returns six categorical sub-ratings, a `regsho` flag, and an optional rolling-history timeseries materialized daily.
 
 ## Methodology
 
@@ -20,7 +24,7 @@ Bands: `low` 0-34, `moderate` 35-54, `elevated` 55-74, `high` 75-100.
 
 - methodology version is returned in every payload (bumping the version invalidates persisted history without overwriting prior rows)
 - confidence drops when SEC API has to fall back because dilution events, warrants/convertibles, cash-position, share-float-history, or Nasdaq-compliance inputs are unavailable
-- degraded reasons are surfaced explicitly so consumers can reason about gaps instead of treating the score as full-confidence
+- degraded reasons are reported explicitly so consumers can reason about gaps instead of treating the score as full-confidence
 - score is deterministic given (inputs, methodology_version) — same inputs always produce the same envelope
 - score is always bounded `[0, 100]`; never NaN or Infinity even under extreme inputs
 
@@ -71,3 +75,4 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/signals/dilution/enhanced?ticker=MULN"
 ```
+

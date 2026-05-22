@@ -5,13 +5,13 @@ description: "Talk to SEC API about SEC filings, ownership, enforcement, and dil
 
 # SEC API Chat
 
-SEC API Chat is a public-beta chat surface at [secapi.ai/chat](https://secapi.ai/chat). It pairs a large language model with the same MCP-routed tools that power the SEC API: filings search, ownership graphs, enforcement events, dilution events, and section-level citations into the SEC corpus.
+SEC API Chat is a public-beta chat API at [secapi.ai/chat](https://secapi.ai/chat). It pairs a large language model with the same MCP-routed tools that power the SEC API: filings search, ownership graphs, enforcement events, dilution events, and section-level citations into the SEC corpus.
 
 ## What it can do
 
 - **Answer questions about specific filings** — e.g. "What did Apple disclose about supply chain risk in their latest 10-K?"
 - **Compare across companies** — e.g. "Show me dilution events for the top three EV manufacturers in the last 12 months."
-- **Surface citations inline** — every claim links back to the underlying filing section with a highlighted snippet.
+- **Inline citations** — every claim links back to the underlying filing section with a highlighted snippet.
 - **Run multi-step research workflows** — picks tools, fetches data, summarizes findings.
 
 ## Sign in
@@ -24,19 +24,19 @@ SEC API Chat is gated behind a WorkOS sign-in. Visit [secapi.ai/chat](https://se
 - **Tool call cards** — when SEC API calls a SEC API tool (e.g. `filings.search`), a status card shows the call, expands to show args and the result.
 - **Citation pills** — each citation links to a SEC.gov filing and includes the highlighted snippet that backed the claim.
 - **Cost meter** — running USD cost for the conversation, with the current model name (Claude Opus 4.6).
-- **Stop button** — interrupt mid-response. Display halts immediately; the backend may finish its current thought.
+- **Stop button** — interrupt mid-response. Display halts immediately; the in-flight model call may finish briefly after display stops.
 
 ## Limits and caveats
 
-- **Beta** — gated on `VITE_PUBLIC_FEATURE_CHAT_PUBLIC_BETA`. Day-30 checkpoint decides public flip.
-- **Read-only by default** — `permissionMode: "safe"` is the v1 default; tools that mutate state are not exposed in this surface.
-- **Single-session resumption** — the URL carries `?sessionId=` so a refresh resumes the active conversation. Multi-session history sidebar ships in a follow-up.
-- **Stop is local-only today** — the visible stop button halts display immediately; the backend may continue to bill the in-flight LLM call for ~30 seconds. Backend cancellation is a tracked follow-up.
+- **Beta availability** — chat access may be limited while SEC API expands public beta capacity.
+- **Read-only by default** — `permissionMode: "safe"` is the v1 default; tools that mutate state are not exposed in this API.
+- **Single-session resumption** — the URL carries `?sessionId=` so a refresh resumes the active conversation.
+- **Stop behavior** — the visible stop button halts display immediately. The in-flight model call may complete briefly after the display stops.
 
 ## Pricing
 
-Beta usage is billed against your existing SEC API quota. The cost meter in the chat header surfaces per-conversation USD running totals; per-org budget caps from the metering middleware (`SECAPI-Budget-Used` etc.) still apply.
+Beta usage is billed against your existing SEC API quota. The cost meter in the chat header shows per-conversation USD running totals, and organization budget controls still apply.
 
 ## Reporting issues
 
-File issues in the SEC API repo. For chat-specific problems, mention the `sessionId` from the URL in your report — it's how we trace state on the backend.
+For chat-specific support requests, include the `sessionId` from the URL so SEC API support can trace the session.
