@@ -1,6 +1,6 @@
-# POST /v1/portfolio/stress-test
+# GET /v1/factors/extreme-pairs
 
-Run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs
+Return factor pairs ranked by unusual rolling spread divergence with direction, threshold, and trust metadata
 
 <Info>
 Use this endpoint from server-side applications, SDKs, or agent workflows.
@@ -15,18 +15,10 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 
 <RequestExample>
 ```bash
-curl -X POST \
+curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  -H "content-type: application/json" \
-  -d '{
-    "holdings": [
-      {"symbol": "AAPL", "weight": 0.50},
-      {"symbol": "MSFT", "weight": 0.50}
-    ],
-    "scenarioKey": "us_recession"
-  }' \
-  "https://api.secapi.ai/v1/portfolio/stress-test"
+  "https://api.secapi.ai/v1/factors/extreme-pairs?category=style&window=1m&min_z_score=2&limit=10&response_mode=compact"
 ```
 </RequestExample>
 
@@ -44,7 +36,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API POST /v1/portfolio/stress-test to run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/factors/extreme-pairs to find factor pairs with unusual spread divergence. Preserve spread direction, z-score, window, pair identifiers, freshness, and methodology metadata. Use this before suggesting factor pair trades or mean-reversion watchlists.
 </Prompt>
 
 ## Errors and partial results

@@ -1,6 +1,6 @@
-# POST /v1/portfolio/stress-test
+# GET /v1/factors/history/{factorKey}
 
-Run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs
+Return a single factor's daily return history with 1D through MAX summary windows for chart and table workflows
 
 <Info>
 Use this endpoint from server-side applications, SDKs, or agent workflows.
@@ -15,18 +15,10 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 
 <RequestExample>
 ```bash
-curl -X POST \
+curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  -H "content-type: application/json" \
-  -d '{
-    "holdings": [
-      {"symbol": "AAPL", "weight": 0.50},
-      {"symbol": "MSFT", "weight": 0.50}
-    ],
-    "scenarioKey": "us_recession"
-  }' \
-  "https://api.secapi.ai/v1/portfolio/stress-test"
+  "https://api.secapi.ai/v1/factors/history/VALUE?range=1y&response_mode=compact"
 ```
 </RequestExample>
 
@@ -44,7 +36,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API POST /v1/portfolio/stress-test to run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/factors/history/{factorKey} to return one factor's daily return series and summary windows from 1D through MAX. Preserve `requestId`, `traceparent`, freshness, and methodology metadata. Prefer `response_mode=compact` when the next step is a chart, table, or model prompt.
 </Prompt>
 
 ## Errors and partial results

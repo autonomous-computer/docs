@@ -839,12 +839,38 @@
     "/v1/portfolio/optimize": {
       "post": {
         "summary": "Return portfolio optimization recommendations for factor neutrality, hedging, and regime-aware objectives",
+        "parameters": [
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PortfolioIntelligenceRequest"
+                "$ref": "#/components/schemas/PortfolioOptimizeRequest"
               }
             }
           }
@@ -856,11 +882,44 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PortfolioAnalysis"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "portfolio_analysis",
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "v1.default_authenticated",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
       }
     },
     "/v1/strategies/factor-rotation": {
@@ -3383,6 +3442,1354 @@
             "ApiKeyAuth": []
           }
         ]
+      }
+    },
+    "/v1/factors/history/{factorKey}": {
+      "get": {
+        "summary": "Return a single factor's daily return history with 1D through MAX summary windows for chart and table workflows",
+        "parameters": [
+          {
+            "name": "factorKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Canonical factor key or supported public alias such as VALUE_V2. Explicit keys do not broaden to other factors."
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "5d",
+                "10d",
+                "1m",
+                "3m",
+                "6m",
+                "1y",
+                "max"
+              ],
+              "default": "max"
+            },
+            "description": "Trailing observation window for the returned chart series. MAX is 2010-01-01 through the latest complete market date."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "minimum": "2010-01-01"
+            },
+            "description": "Optional inclusive ISO start date. Must be on or after 2010-01-01. When supplied, it overrides range for the returned series bounds."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional inclusive ISO end date. Must be on or before the latest complete XNYS market date."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorHistory"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "factor_history",
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "factors.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/factors/sparklines": {
+      "get": {
+        "summary": "Return compact multi-factor sparkline series with exact 1D through MAX summary windows for dashboard, sector, index, and model UIs",
+        "parameters": [
+          {
+            "name": "factors",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated canonical factor keys or supported public aliases. Alias normalization is explicit and does not broaden the selection."
+          },
+          {
+            "name": "keys",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for factors."
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional launch factor category filter such as style, sector, or industry."
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "5d",
+                "10d",
+                "1m",
+                "3m",
+                "6m",
+                "1y",
+                "max"
+              ],
+              "default": "max"
+            },
+            "description": "Trailing observation window for the returned sparkline points. MAX is 2010-01-01 through the latest complete market date."
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "scaled_return",
+                "pure_return",
+                "raw_return",
+                "z_score"
+              ],
+              "default": "scaled_return"
+            },
+            "description": "Metric used for sparkline point values. Return metrics are cumulative over the selected range; z_score returns point-in-time z-scores."
+          },
+          {
+            "name": "points",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 500,
+              "default": 120
+            },
+            "description": "Maximum chart points per factor. The first and last observations are preserved when downsampling."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "minimum": "2010-01-01"
+            },
+            "description": "Optional inclusive ISO start date. Must be on or after 2010-01-01 and overrides range for returned sparkline bounds."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional inclusive ISO end date. Must be on or before the latest complete XNYS market date."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorSparklineList"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "list",
+                      "data": [],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "factors.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/factors/extreme-moves": {
+      "get": {
+        "summary": "Return factor moves ranked by unusual z-score or absolute return with direction, threshold, and trust metadata",
+        "parameters": [
+          {
+            "name": "factors",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated canonical factor keys or supported public aliases."
+          },
+          {
+            "name": "keys",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for factors."
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional launch factor category filter such as style, sector, or industry."
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "5d",
+                "10d",
+                "1m",
+                "3m",
+                "6m",
+                "1y"
+              ],
+              "default": "1m"
+            },
+            "description": "Return window used to score the move."
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "6m"
+            },
+            "description": "History lookback used to compute z-scores. Automatically widens when shorter than window."
+          },
+          {
+            "name": "side",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "both",
+                "up",
+                "down",
+                "flat"
+              ],
+              "default": "both"
+            },
+            "description": "Filter by move direction."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "abs_z_score",
+                "abs_scaled_return"
+              ],
+              "default": "abs_z_score"
+            },
+            "description": "Ranking metric for unusual moves."
+          },
+          {
+            "name": "min_z_score",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Optional absolute z-score floor. Defaults to 0 so the endpoint always returns the top ranked moves."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Maximum number of ranked factor moves."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorExtremeMoveList"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "list",
+                      "data": [],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "factors.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/factors/extreme-pairs": {
+      "get": {
+        "summary": "Return factor pairs ranked by unusual rolling spread divergence with direction, threshold, and trust metadata",
+        "parameters": [
+          {
+            "name": "factors",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated canonical factor keys or supported public aliases used to generate pair combinations."
+          },
+          {
+            "name": "keys",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for factors."
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional launch factor category filter such as style, sector, or industry."
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "5d",
+                "10d",
+                "21d",
+                "63d",
+                "126d",
+                "252d",
+                "1m",
+                "3m",
+                "6m",
+                "1y"
+              ],
+              "default": "21d"
+            },
+            "description": "Rolling spread window. Calendar aliases map to trading-day pair windows."
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "6m"
+            },
+            "description": "History lookback used to score rolling spread z-scores. Automatically widens when shorter than window."
+          },
+          {
+            "name": "side",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "both",
+                "factor1",
+                "factor2",
+                "flat"
+              ],
+              "default": "both"
+            },
+            "description": "Filter by which side of the pair outperformed over the latest window."
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "both",
+                "factor1",
+                "factor2",
+                "flat"
+              ]
+            },
+            "description": "Alias for side."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "abs_z_score",
+                "abs_spread_return"
+              ],
+              "default": "abs_z_score"
+            },
+            "description": "Ranking metric for pair divergence."
+          },
+          {
+            "name": "min_z_score",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Optional absolute z-score floor. Defaults to 0 so the endpoint always returns the top ranked pairs."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Maximum number of ranked factor pairs."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorExtremePairList"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "list",
+                      "data": [],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "factors.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/factors/valuations": {
+      "get": {
+        "summary": "Return valuation-factor opportunity signals ranked from SecAPI-owned factor return state with trust metadata",
+        "parameters": [
+          {
+            "name": "factors",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated valuation factor keys or supported public aliases. Defaults to launch valuation factors."
+          },
+          {
+            "name": "keys",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for factors."
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional category filter. Valuation defaults are style factors."
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "5d",
+                "10d",
+                "1m",
+                "3m",
+                "6m",
+                "1y"
+              ],
+              "default": "1m"
+            },
+            "description": "Return window used to score the valuation-factor signal."
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "6m"
+            },
+            "description": "History lookback used to compute factor z-scores. Automatically widens when shorter than window."
+          },
+          {
+            "name": "side",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "tailwind",
+                "headwind",
+                "neutral"
+              ],
+              "default": "all"
+            },
+            "description": "Filter by valuation-factor signal direction."
+          },
+          {
+            "name": "signal",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "tailwind",
+                "headwind",
+                "neutral"
+              ]
+            },
+            "description": "Alias for side."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "opportunity_score",
+                "abs_z_score",
+                "factor_key"
+              ],
+              "default": "opportunity_score"
+            },
+            "description": "Ranking metric for valuation-factor opportunities. With side=headwind, opportunity_score ranks the strongest headwinds first while opportunityScore remains signed."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Maximum number of valuation factor rows."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorValuationList"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "list",
+                      "data": [],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "factors.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/factors/valuations/stocks": {
+      "get": {
+        "summary": "Return stock candidates exposed to a valuation-factor signal using latest materialized factor exposures",
+        "parameters": [
+          {
+            "name": "factor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Valuation factor key or alias to drill into. If omitted, the top valuation factor is selected."
+          },
+          {
+            "name": "factorKey",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for factor."
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for factor."
+          },
+          {
+            "name": "factors",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated valuation factor keys used when factor is omitted; the top valuation row is selected."
+          },
+          {
+            "name": "keys",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for factors."
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional valuation factor category filter."
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "5d",
+                "10d",
+                "1m",
+                "3m",
+                "6m",
+                "1y"
+              ],
+              "default": "1m"
+            },
+            "description": "Return window used for the factor valuation signal."
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "6m"
+            },
+            "description": "Exposure lookback and valuation z-score lookback."
+          },
+          {
+            "name": "signal",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "tailwind",
+                "headwind",
+                "neutral"
+              ]
+            },
+            "description": "Optional factor-level valuation signal filter when selecting the top factor."
+          },
+          {
+            "name": "stance",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "beneficiaries",
+                "at_risk",
+                "both"
+              ],
+              "default": "beneficiaries"
+            },
+            "description": "Stock view: beneficiaries of the factor signal, stocks at risk from it, or both."
+          },
+          {
+            "name": "side",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for stance; also accepts long, short, all."
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for stance."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "score",
+                "abs_beta",
+                "symbol"
+              ],
+              "default": "score"
+            },
+            "description": "Ranking metric for stock candidates."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Maximum number of stock candidates."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorValuationStockList"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "list",
+                      "data": [],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "factors.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/portfolio/attribution": {
+      "post": {
+        "summary": "Return factor return attribution for a portfolio with explained return, alpha, and compact contribution rows",
+        "parameters": [
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioAttributionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioAttribution"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "portfolio_attribution",
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "v1.default_authenticated",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/portfolio/hedge": {
+      "post": {
+        "summary": "Return constrained factor hedge candidates for a portfolio with compact residual exposure and trust metadata",
+        "parameters": [
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioHedgeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioHedge"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "portfolio_hedge",
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "v1.default_authenticated",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/models/factor-analysis": {
+      "post": {
+        "summary": "Return model factor analysis for submitted Model Builder or saved-model holdings with optional attribution and hedge sections",
+        "parameters": [
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as metadata, series, exposures, position_views, position_exposures, or drilldown."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelFactorAnalysisRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelFactorAnalysis"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "model_factor_analysis",
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "models.factor_analysis",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
       }
     }
   },
@@ -48897,6 +50304,3260 @@
           "provenance",
           "factorModelContext"
         ],
+        "additionalProperties": false
+      },
+      "Error": {},
+      "FactorExtremeMove": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "rank",
+          "factorKey",
+          "factorName",
+          "category",
+          "window",
+          "lookback",
+          "direction",
+          "sort",
+          "score",
+          "absZScore",
+          "absScaledReturn",
+          "minAbsZScore",
+          "isExtreme",
+          "asOf",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "factor_extreme_move"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "window": {
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "10d",
+              "1m",
+              "3m",
+              "6m",
+              "1y"
+            ]
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "flat"
+            ]
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "abs_z_score",
+              "abs_scaled_return"
+            ]
+          },
+          "score": {
+            "type": "number"
+          },
+          "absZScore": {
+            "type": "number",
+            "minimum": 0
+          },
+          "absScaledReturn": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minAbsZScore": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isExtreme": {
+            "type": "boolean"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rawReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pureReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scaledReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "zScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "leverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorExtremeMoveList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorExtremeMove"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorExtremePair": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "rank",
+          "factor1",
+          "factor2",
+          "factor1Name",
+          "factor2Name",
+          "category1",
+          "category2",
+          "window",
+          "lookback",
+          "direction",
+          "sort",
+          "score",
+          "absZScore",
+          "absSpreadReturn",
+          "minAbsZScore",
+          "isExtreme",
+          "spreadReturn",
+          "factor1Return",
+          "factor2Return",
+          "averageSpreadReturn",
+          "spreadVolatility",
+          "zScore",
+          "observationCount",
+          "rollingObservationCount",
+          "asOf",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "factor_extreme_pair"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "factor1": {
+            "type": "string"
+          },
+          "factor2": {
+            "type": "string"
+          },
+          "factor1Name": {
+            "type": "string"
+          },
+          "factor2Name": {
+            "type": "string"
+          },
+          "category1": {
+            "type": "string"
+          },
+          "category2": {
+            "type": "string"
+          },
+          "window": {
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "10d",
+              "21d",
+              "63d",
+              "126d",
+              "252d"
+            ]
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "factor1",
+              "factor2",
+              "flat"
+            ]
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "abs_z_score",
+              "abs_spread_return"
+            ]
+          },
+          "score": {
+            "type": "number"
+          },
+          "absZScore": {
+            "type": "number",
+            "minimum": 0
+          },
+          "absSpreadReturn": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minAbsZScore": {
+            "type": "number",
+            "minimum": 0
+          },
+          "isExtreme": {
+            "type": "boolean"
+          },
+          "spreadReturn": {
+            "type": "number"
+          },
+          "factor1Return": {
+            "type": "number"
+          },
+          "factor2Return": {
+            "type": "number"
+          },
+          "averageSpreadReturn": {
+            "type": "number"
+          },
+          "spreadVolatility": {
+            "type": "number",
+            "minimum": 0
+          },
+          "zScore": {
+            "type": "number"
+          },
+          "observationCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rollingObservationCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorExtremePairList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorExtremePair"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorHistory": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "factorKey",
+          "factorName",
+          "category",
+          "range",
+          "dateFrom",
+          "dateTo",
+          "observationCount",
+          "asOf",
+          "series",
+          "summaryWindows",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "factor_history"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "range": {
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "10d",
+              "1m",
+              "3m",
+              "6m",
+              "1y",
+              "max"
+            ]
+          },
+          "dateFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "dateTo": {
+            "type": "string",
+            "format": "date"
+          },
+          "historyStartDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "historyEndDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observationCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "rawReturn",
+                "pureReturn",
+                "scaledReturn",
+                "zScore",
+                "leverage"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "rawReturn": {
+                  "type": "number"
+                },
+                "pureReturn": {
+                  "type": "number"
+                },
+                "scaledReturn": {
+                  "type": "number"
+                },
+                "zScore": {
+                  "type": "number"
+                },
+                "leverage": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "summaryWindows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "window",
+                "rawReturn",
+                "pureReturn",
+                "scaledReturn",
+                "observationCount",
+                "startDate",
+                "endDate"
+              ],
+              "properties": {
+                "window": {
+                  "type": "string"
+                },
+                "rawReturn": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pureReturn": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "scaledReturn": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "observationCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "startDate": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "endDate": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorSparkline": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "factorKey",
+          "factorName",
+          "category",
+          "range",
+          "metric",
+          "dateFrom",
+          "dateTo",
+          "observationCount",
+          "pointCount",
+          "asOf",
+          "summaryWindows",
+          "points",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "factor_sparkline"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "range": {
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "10d",
+              "1m",
+              "3m",
+              "6m",
+              "1y",
+              "max"
+            ]
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "scaled_return",
+              "pure_return",
+              "raw_return",
+              "z_score"
+            ]
+          },
+          "dateFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "dateTo": {
+            "type": "string",
+            "format": "date"
+          },
+          "historyStartDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "historyEndDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observationCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pointCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "latestValue": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latestRawReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latestPureReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latestScaledReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latestZScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latestLeverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summaryWindows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "window",
+                "rawReturn",
+                "pureReturn",
+                "scaledReturn",
+                "observationCount",
+                "startDate",
+                "endDate"
+              ],
+              "properties": {
+                "window": {
+                  "type": "string"
+                },
+                "rawReturn": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "pureReturn": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "scaledReturn": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "observationCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "startDate": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "endDate": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "value"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorSparklineList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorSparkline"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorValuation": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "rank",
+          "factorKey",
+          "factorName",
+          "category",
+          "valuationMetric",
+          "longLeg",
+          "shortLeg",
+          "window",
+          "lookback",
+          "signal",
+          "sort",
+          "score",
+          "opportunityScore",
+          "zScore",
+          "absZScore",
+          "asOf",
+          "signalSource",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "factor_valuation"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "valuationMetric": {
+            "type": "string"
+          },
+          "longLeg": {
+            "type": "string"
+          },
+          "shortLeg": {
+            "type": "string"
+          },
+          "window": {
+            "type": "string"
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "signal": {
+            "type": "string",
+            "enum": [
+              "tailwind",
+              "headwind",
+              "neutral"
+            ]
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "opportunity_score",
+              "abs_z_score",
+              "factor_key"
+            ]
+          },
+          "score": {
+            "type": "number"
+          },
+          "opportunityScore": {
+            "type": "number"
+          },
+          "zScore": {
+            "type": "number"
+          },
+          "absZScore": {
+            "type": "number",
+            "minimum": 0
+          },
+          "scaledReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pureReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rawReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "signalSource": {
+            "type": "string",
+            "enum": [
+              "materialized_factor_return_z_score"
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorValuationList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorValuation"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorValuationStock": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "rank",
+          "symbol",
+          "factorKey",
+          "factorName",
+          "category",
+          "valuationMetric",
+          "valuationSignal",
+          "stance",
+          "impact",
+          "sort",
+          "score",
+          "expectedFactorImpactScore",
+          "factorZScore",
+          "exposureBeta",
+          "absExposureBeta",
+          "nActiveFactors",
+          "window",
+          "lookback",
+          "modelName",
+          "asOf",
+          "factorAsOf",
+          "signalSource",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "factor_valuation_stock"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "valuationMetric": {
+            "type": "string"
+          },
+          "valuationSignal": {
+            "type": "string",
+            "enum": [
+              "tailwind",
+              "headwind",
+              "neutral"
+            ]
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "beneficiaries",
+              "at_risk",
+              "both"
+            ]
+          },
+          "impact": {
+            "type": "string",
+            "enum": [
+              "beneficiary",
+              "at_risk",
+              "neutral"
+            ]
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "score",
+              "abs_beta",
+              "symbol"
+            ]
+          },
+          "score": {
+            "type": "number"
+          },
+          "expectedFactorImpactScore": {
+            "type": "number"
+          },
+          "factorZScore": {
+            "type": "number"
+          },
+          "exposureBeta": {
+            "type": "number"
+          },
+          "absExposureBeta": {
+            "type": "number",
+            "minimum": 0
+          },
+          "exposurePercentile": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exposureConfidence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nActiveFactors": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "window": {
+            "type": "string"
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "modelName": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "factorAsOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "factorFreshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "factorMaterialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "signalSource": {
+            "type": "string",
+            "enum": [
+              "materialized_factor_return_z_score_plus_latest_factor_exposure"
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorValuationStockList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorValuationStock"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ModelFactorAnalysis": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "asOf",
+          "model",
+          "country",
+          "lookback",
+          "window",
+          "category",
+          "holdings",
+          "include",
+          "analysis",
+          "attribution",
+          "hedge",
+          "positionViews",
+          "positionExposures",
+          "summaryMd",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision",
+          "degradedState"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "model_factor_analysis"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "model": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "description",
+              "tags",
+              "source"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "turos",
+                  "client",
+                  "model_builder"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "country": {
+            "type": "string"
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "window": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "holdings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          },
+          "include": {
+            "$ref": "#/components/schemas/ModelFactorAnalysisInclude"
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/PortfolioAnalysis"
+          },
+          "attribution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortfolioAttribution"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hedge": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortfolioHedge"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "positionViews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioPositionFactorView"
+            }
+          },
+          "positionExposures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorExposure"
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ModelFactorAnalysisHedgeOptions": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string",
+            "enum": [
+              "factor_neutral",
+              "min_drawdown",
+              "regime_aware"
+            ],
+            "default": "factor_neutral"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard"
+            ],
+            "default": "compact"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/PortfolioHedgeConstraints"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ModelFactorAnalysisInclude": {
+        "type": "object",
+        "properties": {
+          "attribution": {
+            "type": "boolean",
+            "default": true
+          },
+          "hedge": {
+            "type": "boolean",
+            "default": false
+          },
+          "positionViews": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ModelFactorAnalysisModelInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "default": "Ad hoc model"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "default": "Ad hoc model submitted for factor analysis."
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "default": []
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "turos",
+              "client",
+              "model_builder"
+            ],
+            "default": "client"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ModelFactorAnalysisRequest": {
+        "type": "object",
+        "required": [
+          "holdings"
+        ],
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/ModelFactorAnalysisModelInput"
+          },
+          "country": {
+            "type": "string",
+            "default": "US",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "lookback": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "window": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "category": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "include": {
+            "$ref": "#/components/schemas/ModelFactorAnalysisInclude"
+          },
+          "hedge": {
+            "$ref": "#/components/schemas/ModelFactorAnalysisHedgeOptions"
+          },
+          "holdings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 250,
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioAttribution": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "analysisId",
+          "asOf",
+          "country",
+          "window",
+          "lookback",
+          "holdings",
+          "portfolioReturn",
+          "totalExplained",
+          "alpha",
+          "rSquared",
+          "contributions",
+          "exposures",
+          "summaryMd",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "portfolio_attribution"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "analysisId": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "country": {
+            "type": "string"
+          },
+          "window": {
+            "type": "string"
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "holdings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          },
+          "portfolioReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "totalExplained": {
+            "type": "number"
+          },
+          "alpha": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rSquared": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioFactorAttribution"
+            }
+          },
+          "exposures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorExposure"
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioAttributionRequest": {
+        "type": "object",
+        "required": [
+          "holdings"
+        ],
+        "properties": {
+          "country": {
+            "type": "string",
+            "default": "US",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "lookback": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "window": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "category": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "holdings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 250,
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioFactorAttribution": {
+        "type": "object",
+        "required": [
+          "object",
+          "rank",
+          "factorKey",
+          "factorName",
+          "factorCategory",
+          "contributionPercent",
+          "contributionPct",
+          "beta",
+          "factorReturn",
+          "explanation"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "portfolio_factor_attribution"
+            ]
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "factorCategory": {
+            "type": "string"
+          },
+          "contributionPercent": {
+            "type": "number"
+          },
+          "contributionPct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "beta": {
+            "type": "number"
+          },
+          "factorReturn": {
+            "type": "number"
+          },
+          "rawReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pureReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scaledReturn": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "zScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "leverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "trace": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Trace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioHedge": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "analysisId",
+          "asOf",
+          "country",
+          "lookback",
+          "objective",
+          "mode",
+          "constraints",
+          "holdings",
+          "targetExposures",
+          "hedges",
+          "residualExposure",
+          "exposures",
+          "optimizationNotes",
+          "factorNeutralPlan",
+          "summaryMd",
+          "provenance",
+          "freshness",
+          "materialization",
+          "sourceRights",
+          "methodology",
+          "revision"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "portfolio_hedge"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "analysisId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "country": {
+            "type": "string"
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "objective": {
+            "type": "string",
+            "enum": [
+              "factor_neutral",
+              "min_drawdown",
+              "regime_aware"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard"
+            ]
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/PortfolioHedgeConstraints"
+          },
+          "holdings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          },
+          "targetExposures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHedgeTargetExposure"
+            }
+          },
+          "hedges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHedgeCandidate"
+            }
+          },
+          "residualExposure": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "exposures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorExposure"
+            }
+          },
+          "optimizationNotes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "factorNeutralPlan": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioHedgeCandidate": {
+        "type": "object",
+        "required": [
+          "object",
+          "rank",
+          "factorKey",
+          "factorName",
+          "factorCategory",
+          "symbol",
+          "instrumentType",
+          "action",
+          "recommendedWeight",
+          "targetExposureDelta",
+          "expectedExposureDelta",
+          "residualBeta",
+          "constraintStatus",
+          "constraintsApplied",
+          "rationale",
+          "confidence"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "portfolio_hedge_candidate"
+            ]
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "factorCategory": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "instrumentType": {
+            "$ref": "#/components/schemas/PortfolioHedgeInstrumentType"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ]
+          },
+          "recommendedWeight": {
+            "type": "number"
+          },
+          "targetExposureDelta": {
+            "type": "number"
+          },
+          "expectedExposureDelta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "residualBeta": {
+            "type": "number"
+          },
+          "constraintStatus": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "capped"
+            ]
+          },
+          "constraintsApplied": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioHedgeConstraints": {
+        "type": "object",
+        "properties": {
+          "maxHedges": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "default": 3
+          },
+          "maxPositionWeight": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 1,
+            "default": 0.1
+          },
+          "hedgeIntensity": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 1,
+            "default": 1
+          },
+          "longOnly": {
+            "type": "boolean",
+            "default": false
+          },
+          "allowedInstrumentTypes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHedgeInstrumentType"
+            },
+            "default": [
+              "etf"
+            ]
+          },
+          "customUniverse": {
+            "type": "array",
+            "maxItems": 250,
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "targetExposures": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "default": {}
+          },
+          "minConfidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "default": "medium"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioHedgeInstrumentType": {
+        "type": "string",
+        "enum": [
+          "equity",
+          "etf",
+          "future",
+          "option",
+          "cash"
+        ]
+      },
+      "PortfolioHedgeRequest": {
+        "type": "object",
+        "required": [
+          "holdings"
+        ],
+        "properties": {
+          "country": {
+            "type": "string",
+            "default": "US",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "lookback": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "category": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "objective": {
+            "type": "string",
+            "enum": [
+              "factor_neutral",
+              "min_drawdown",
+              "regime_aware"
+            ],
+            "default": "factor_neutral"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard"
+            ],
+            "default": "compact"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/PortfolioHedgeConstraints"
+          },
+          "holdings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 250,
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioHedgeTargetExposure": {
+        "type": "object",
+        "required": [
+          "object",
+          "factorKey",
+          "factorName",
+          "factorCategory",
+          "beta",
+          "targetExposureDelta",
+          "proposedExposureDelta",
+          "residualBeta",
+          "hedged",
+          "skipReason"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "portfolio_hedge_target_exposure"
+            ]
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "factorCategory": {
+            "type": "string"
+          },
+          "beta": {
+            "type": "number"
+          },
+          "targetExposureDelta": {
+            "type": "number"
+          },
+          "proposedExposureDelta": {
+            "type": "number"
+          },
+          "residualBeta": {
+            "type": "number"
+          },
+          "hedged": {
+            "type": "boolean"
+          },
+          "skipReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioHoldingInput": {
+        "type": "object",
+        "required": [
+          "symbol",
+          "weight"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "shares": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "costBasis": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorSimilarityPack": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "symbol",
+          "asOf",
+          "anchorTheme",
+          "factorKeySuggestion",
+          "discoveryMode",
+          "semanticSignature",
+          "namingWorkflow",
+          "peers",
+          "summaryMd",
+          "provenance",
+          "sourceRights"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "factor_similarity_pack"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "anchorTheme": {
+            "type": "string"
+          },
+          "themeLabels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "factorKeySuggestion": {
+            "type": "string"
+          },
+          "discoveryMode": {
+            "type": "string",
+            "enum": [
+              "factor_overlap_plus_filing_news_signature"
+            ]
+          },
+          "semanticSignature": {
+            "type": "object",
+            "required": [
+              "algorithm",
+              "dimensions",
+              "topTerms",
+              "sourceKinds",
+              "sourceCount"
+            ],
+            "properties": {
+              "algorithm": {
+                "type": "string"
+              },
+              "dimensions": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "topTerms": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "sourceKinds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "sourceCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "namingWorkflow": {
+            "type": "object",
+            "required": [
+              "workflowVersion",
+              "selectedLabel",
+              "factorKeySuggestion",
+              "confidence",
+              "labelCandidates",
+              "rationale"
+            ],
+            "properties": {
+              "workflowVersion": {
+                "type": "string"
+              },
+              "selectedLabel": {
+                "type": "string"
+              },
+              "factorKeySuggestion": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              },
+              "labelCandidates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "label",
+                    "factorKeySuggestion",
+                    "score",
+                    "rationale"
+                  ],
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "factorKeySuggestion": {
+                      "type": "string"
+                    },
+                    "score": {
+                      "type": "number"
+                    },
+                    "rationale": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "rationale": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "peers": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/RelatedSecurity"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "score": {
+                      "type": "number"
+                    },
+                    "factorSimilarity": {
+                      "type": "number"
+                    },
+                    "thematicSimilarity": {
+                      "type": "number"
+                    },
+                    "themeLabels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorCustomDiscoveryRequest": {
+        "type": "object",
+        "anyOf": [
+          {
+            "required": [
+              "symbol"
+            ]
+          },
+          {
+            "required": [
+              "symbols"
+            ]
+          }
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Anchor ticker symbol. Required when symbols is omitted."
+          },
+          "symbols": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Anchor plus optional candidate symbols. The first symbol is treated as the anchor when symbol is omitted."
+          },
+          "candidates": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Optional candidate universe to compare against the anchor symbol."
+          },
+          "lookback": {
+            "type": "string",
+            "default": "6m"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25,
+            "default": 5
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioPositionFactorView": {
+        "type": "object",
+        "required": [
+          "object",
+          "symbol",
+          "holding",
+          "activeFactorCount",
+          "topFactors",
+          "summaryMd",
+          "drillTargets"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "portfolio_position_factor_view"
+            ]
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "holding": {
+            "$ref": "#/components/schemas/PortfolioHoldingInput"
+          },
+          "activeFactorCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "topFactors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FactorExposure"
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "drillTargets": {
+            "type": "object",
+            "required": [
+              "loadings",
+              "decomposition"
+            ],
+            "properties": {
+              "loadings": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "method",
+                  "path"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "GET"
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "decomposition": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "method",
+                  "path"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "GET"
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "RelatedSecurity": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "symbol",
+          "similarity",
+          "factorOverlap",
+          "explanation"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "related_security"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "similarity": {
+            "type": "number"
+          },
+          "factorOverlap": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioOptimizeRequest": {
+        "type": "object",
+        "required": [
+          "holdings"
+        ],
+        "properties": {
+          "country": {
+            "type": "string",
+            "default": "US",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "lookback": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "category": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "objective": {
+            "type": "string",
+            "enum": [
+              "factor_neutral",
+              "min_drawdown",
+              "regime_aware"
+            ],
+            "default": "factor_neutral"
+          },
+          "maxHedges": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "holdings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 250,
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          }
+        },
         "additionalProperties": false
       }
     },

@@ -19,7 +19,14 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.50},
+      {"symbol": "MSFT", "weight": 0.50}
+    ],
+    "objective": "factor_neutral",
+    "maxHedges": 3
+  }' \
   "https://api.secapi.ai/v1/portfolio/optimize"
 ```
 </RequestExample>
@@ -46,5 +53,4 @@ Use SEC API POST /v1/portfolio/optimize to return portfolio optimization recomme
 - Treat non-2xx responses as API errors and log the response body for debugging
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
 

@@ -1,6 +1,6 @@
-# POST /v1/portfolio/stress-test
+# POST /v1/portfolio/hedge
 
-Run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs
+Return constrained factor hedge candidates for a portfolio with compact residual exposure and trust metadata
 
 <Info>
 Use this endpoint from server-side applications, SDKs, or agent workflows.
@@ -21,12 +21,19 @@ curl -X POST \
   -H "content-type: application/json" \
   -d '{
     "holdings": [
-      {"symbol": "AAPL", "weight": 0.50},
-      {"symbol": "MSFT", "weight": 0.50}
+      {"symbol": "AAPL", "weight": 0.35},
+      {"symbol": "MSFT", "weight": 0.30},
+      {"symbol": "NVDA", "weight": 0.20},
+      {"symbol": "JPM", "weight": 0.15}
     ],
-    "scenarioKey": "us_recession"
+    "objective": "factor_neutral",
+    "constraints": {
+      "maxHedges": 3,
+      "maxPositionWeight": 0.10,
+      "allowedInstrumentTypes": ["etf"]
+    }
   }' \
-  "https://api.secapi.ai/v1/portfolio/stress-test"
+  "https://api.secapi.ai/v1/portfolio/hedge?response_mode=compact"
 ```
 </RequestExample>
 
@@ -44,7 +51,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API POST /v1/portfolio/stress-test to run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API POST /v1/portfolio/hedge to generate constrained hedge candidates for unwanted factor exposures. Preserve candidate instruments, expected exposure reduction, residual exposure, constraints, freshness, and methodology metadata. Treat the output as a hedge construction input, not an execution instruction.
 </Prompt>
 
 ## Errors and partial results

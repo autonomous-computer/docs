@@ -65,6 +65,16 @@ The `secapi-token-count-source: opt-in-required` advisory header marks the defau
 - agent-mode responses preserve camelCase field names — agent mode is a projection of the default shape, not a rename. See the per-endpoint API reference for the exact agent-mode field set
 - unknown values of `?view=` fall back silently to `default`, so accidental typos do not return a 4xx
 
+### Factor response modes
+
+Factor, portfolio-factor, and model-factor endpoints use `response_mode=compact | standard | verbose` plus optional `include` controls:
+
+- `compact`: chart, table, SDK, and agent handoff shape with identifiers, dates, ranks, contribution rows, and compact trust metadata
+- `standard`: default application shape with the fields most dashboards and portfolio workflows need
+- `verbose`: expanded methodology, freshness, and materialization context for audits and debugging
+
+Use `response_mode=compact` for `/v1/factors/history/{factorKey}`, `/v1/factors/sparklines`, `/v1/factors/extreme-moves`, `/v1/factors/extreme-pairs`, `/v1/factors/valuations`, `/v1/factors/valuations/stocks`, `/v1/portfolio/attribution`, `/v1/portfolio/hedge`, and `/v1/models/factor-analysis` when the next consumer is an LLM, UI table, or chart. Preserve `requestId`, `traceparent`, freshness, and methodology metadata even when summarizing compact responses.
+
 ### Endpoints that support `?view=agent`
 
 Agent mode is live on **15 endpoints**. Expect 30–95% byte-size reduction depending on endpoint shape; endpoints with large prose summaries see the biggest reductions.
@@ -124,6 +134,7 @@ Citation fields are emitted on every result row regardless of `?view=`. In agent
 REST and MCP serve different consumer profiles, and SEC API optimizes for each:
 
 - **REST endpoints** support `?view={default,compact,agent}`. The `agent` view is the wire-byte-optimized projection — large prose drops out, the dilution `verification` block compresses to the canonical `{ confidence, crossValidationsPassed, sourceSpanResolved, modelVersion }` summary, and the response shrinks 30–95% depending on the endpoint. Use it from SDK clients that want low-latency / low-token responses to forward to a UI or downstream agent.
+- **Factor REST endpoints** use `response_mode={compact,standard,verbose}` for factor-specific payload shaping, because factor workflows need distinct chart/table, application, and audit shapes.
 - **MCP tools** always return the full payload (verification block, full provenance chain, all citation pointers). MCP context is already an agent context; returning the evidence up front avoids a second fetch. Agents reasoning over MCP decide what to show to the user.
 
 This split is intentional: REST optimizes for the wire (network bytes); MCP optimizes for the model (in-context evidence). For dilution endpoints, the rule is concrete:

@@ -5,7 +5,7 @@ sidebarTitle: "Migrate from FactorsToday"
 
 # Migrate from FactorsToday
 
-This guide helps FactorsToday users map their existing workflows to SEC API equivalents. SEC API provides a broader factor catalog with deeper macro and credit factor coverage, plus portfolio intelligence overlays.
+This guide helps FactorsToday users map factor-history, valuation, portfolio, hedge, and factor-screening workflows to SEC API equivalents. SEC API uses its own factor methodology and data plane, with compact REST, SDK, and MCP interfaces designed for agent and LLM applications.
 
 For a detailed comparison of factor construction methodologies, see [Factor Model Methodology](factor-model-methodology).
 
@@ -13,41 +13,42 @@ For a detailed comparison of factor construction methodologies, see [Factor Mode
 
 | FactorsToday | SEC API | Notes |
 |---|---|---|
-| `GET /api/factors/catalog` | `GET /v1/factors/catalog` | 84 factors (vs FactorsToday's 147) — SEC API leads on macro/style/sector |
+| `GET /api/factors/catalog` | `GET /v1/factors/catalog` | Launch-ready factor definitions with methodology, source status, and freshness metadata |
 | `GET /api/factor-returns/intraday` | `GET /v1/factors/returns/intraday` | Live intraday factor returns |
 | `GET /api/factor-returns/historic` | `GET /v1/factors/returns` | Historical daily factor returns |
+| Factor history page | `GET /v1/factors/history/{factorKey}` | Single-factor history with 1D through MAX summary windows |
+| Multi-factor history table | `GET /v1/factors/sparklines` | Compact multi-factor series for charts, sector/index tables, and model UIs |
 | `GET /api/factor-loadings/:factor` | `GET /v1/factors/exposures` | Per-stock factor loadings |
 | `GET /api/factor-correlations` | `GET /v1/factors/correlations` | Factor correlation matrix |
 | `GET /api/factor-composition/:name` | `GET /v1/factors/catalog` | Equation and methodology in catalog entry |
 | `GET /api/stock-loadings/:ticker` | `GET /v1/factors/exposures` | Per-stock factor decomposition |
 | `GET /api/related-stocks/:ticker` | `GET /v1/factors/related-stocks` | Factor-similarity stock discovery |
+| Extreme Factor Moves | `GET /v1/factors/extreme-moves` | Unusual factor moves ranked by z-score, return, and direction |
+| Extreme Factor Pairs | `GET /v1/factors/extreme-pairs` | Unusual factor-pair spread divergence |
+| Factor Valuations | `GET /v1/factors/valuations` | Factor-level valuation opportunity signals |
+| Factor Valuation Stocks | `GET /v1/factors/valuations/stocks` | Stock candidates exposed to a valuation-factor signal |
 | `GET /api/portfolio/analyze` | `POST /v1/portfolio/analyze` | Portfolio factor decomposition |
-| `GET /api/hedge/calculate` | `POST /v1/portfolio/optimize` | Portfolio optimization with hedging |
+| Portfolio attribution | `POST /v1/portfolio/attribution` | Dedicated explained-return and factor-contribution endpoint |
+| `GET /api/hedge/calculate` | `POST /v1/portfolio/hedge` | Constrained factor hedge candidates |
+| Portfolio optimizer | `POST /v1/portfolio/optimize` | Factor-neutral, drawdown-aware, and regime-aware optimization |
 | `GET /api/screener/stocks-by-factor` | `GET /v1/factors/screen` | Factor-based stock screening |
 | `GET /api/stocks/search` | `GET /v1/entities/resolve` | Entity resolution |
+| Model Builder analysis | `POST /v1/models/factor-analysis` | Submitted model holdings with exposure, attribution, hedge, and position views |
 | N/A | `POST /v1/portfolio/stress-test` | Scenario-based stress testing |
 | N/A | `GET /v1/factors/regime-performance` | Factor returns by macro regime |
 | N/A | `GET /v1/factors/dashboard` | Consolidated factor dashboard |
 | N/A | `POST /v1/strategies/factor-rotation` | Factor rotation signals |
 
-## Factor catalog comparison
+## Launch coverage posture
 
-| Category | FactorsToday | SEC API | Notes |
-|---|---|---|---|
-| Market/Macro | 7 | 17 | SEC API leads — includes credit, HY, TIPS, commodities, crypto, FX |
-| Style | 11 | 23 | SEC API leads — includes intl variants, buyback, profitability, earnings revisions |
-| Sectors | 11 | 26 | SEC API leads — GICS sectors + 15 sub-sectors |
-| Industry | 34 | 18 | FactorsToday leads — SEC API has 18 industry factors |
-| Countries | 42 | 0 | FactorsToday leads — country equity factors are not included in the current SEC API catalog |
-| Custom Baskets | 42 | 0 | FactorsToday offers thematic AI-discovered baskets |
-| **Total** | **147** | **84** | |
+SEC API's launch factor set is built around launch-ready U.S. market, style, sector, and industry factors. Launch factors target a `2010-01-01` history floor and include freshness, source, and methodology metadata. Shorter-history or beta factors are labeled in catalog metadata and should not be used for 2010+ coverage claims.
 
 ### Where SEC API leads
 
-- **Macro factor depth**: 17 macro factors covering rates, credit spreads, currencies, commodities, and crypto versus FactorsToday's 7.
-- **Style factor breadth**: 23 style factors including international variants, buyback, profitability, multi-factor, and earnings revisions.
-- **Sub-sector granularity**: 26 sector/sub-sector factors down to cybersecurity, clean energy, and AI/robotics level.
-- **Intelligence overlays**: Portfolio stress testing, regime-conditioned performance, factor rotation strategies, and semantic intelligence queries — none of which FactorsToday offers.
+- **Agent-first response design**: `response_mode=compact` and `include` controls keep factor history, sparklines, valuations, attribution, and hedge payloads small enough for downstream agents.
+- **Portfolio and model workflows**: Portfolio analysis, attribution, hedge, optimize, stress-test, and Model Builder factor analysis share one holdings contract.
+- **Trust metadata**: Factor responses preserve `requestId`, `traceparent`, freshness, methodology, and materialization metadata so applications can audit stale or partial results.
+- **MCP and SDK reach**: The same factor workflows are exposed through REST, SDKs, CLI, and hosted MCP tools.
 
 ## Authentication
 
@@ -80,6 +81,20 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/factors/returns?keys=VALUE,MOMENTUM,QUALITY&lookback=6m"
 ```
 
+## Example: single-factor history
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/factors/history/VALUE?range=max&response_mode=compact"
+```
+
+## Example: factor valuation stocks
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&signal=tailwind&limit=25&response_mode=compact"
+```
+
 ## Example: portfolio factor decomposition
 
 ```bash
@@ -95,6 +110,24 @@ curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
     ]
   }' \
   "https://api.secapi.ai/v1/portfolio/analyze"
+```
+
+## Example: portfolio hedge
+
+```bash
+curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.35},
+      {"symbol": "MSFT", "weight": 0.30},
+      {"symbol": "NVDA", "weight": 0.20},
+      {"symbol": "JPM", "weight": 0.15}
+    ],
+    "objective": "factor_neutral",
+    "constraints": {"maxHedges": 3, "maxPositionWeight": 0.10}
+  }' \
+  "https://api.secapi.ai/v1/portfolio/hedge?response_mode=compact"
 ```
 
 ## Example: factor rotation strategy
