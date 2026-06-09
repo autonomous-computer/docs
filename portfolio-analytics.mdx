@@ -5,11 +5,11 @@ description: "Factor-aware portfolio analysis, optimization, and stress testing"
 
 # Portfolio Analytics
 
-SEC API provides allocator-grade portfolio analytics: factor exposure analysis, optimization recommendations, and stress testing — all in one API call.
+SEC API provides allocator-grade portfolio analytics: factor exposure analysis, attribution, hedge construction, optimization recommendations, stress testing, and model factor analysis.
 
 ## Endpoints
 
-### Portfolio Analysis (One Call)
+### Portfolio Analysis
 
 Analyze factor exposures, attribution, and hedge suggestions for any portfolio:
 
@@ -19,16 +19,57 @@ curl -X POST "https://api.secapi.ai/v1/portfolio/analyze" \
   -H "Content-Type: application/json" \
   -d '{
     "holdings": [
-      {"ticker": "AAPL", "weight": 0.25},
-      {"ticker": "MSFT", "weight": 0.25},
-      {"ticker": "GOOGL", "weight": 0.20},
-      {"ticker": "AMZN", "weight": 0.15},
-      {"ticker": "NVDA", "weight": 0.15}
+      {"symbol": "AAPL", "weight": 0.25},
+      {"symbol": "MSFT", "weight": 0.25},
+      {"symbol": "GOOGL", "weight": 0.20},
+      {"symbol": "AMZN", "weight": 0.15},
+      {"symbol": "NVDA", "weight": 0.15}
     ]
   }'
 ```
 
 Returns: factor exposures, attribution breakdown, concentration risks, and hedge suggestions.
+
+### Portfolio Attribution
+
+Explain portfolio return through factor contributions:
+
+```bash
+curl -X POST "https://api.secapi.ai/v1/portfolio/attribution?response_mode=compact" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.30},
+      {"symbol": "MSFT", "weight": 0.25},
+      {"symbol": "NVDA", "weight": 0.20},
+      {"symbol": "JPM", "weight": 0.15},
+      {"symbol": "XOM", "weight": 0.10}
+    ],
+    "lookback": "6m",
+    "category": "style"
+  }'
+```
+
+### Portfolio Hedge
+
+Generate constrained hedge candidates for unwanted factor exposures:
+
+```bash
+curl -X POST "https://api.secapi.ai/v1/portfolio/hedge?response_mode=compact" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.35},
+      {"symbol": "MSFT", "weight": 0.30},
+      {"symbol": "NVDA", "weight": 0.20},
+      {"symbol": "JPM", "weight": 0.15}
+    ],
+    "objective": "factor_neutral",
+    "constraints": {"maxHedges": 3, "maxPositionWeight": 0.10}
+  }'
+```
 
 ### Portfolio Optimization
 
@@ -39,9 +80,9 @@ curl -X POST "https://api.secapi.ai/v1/portfolio/optimize" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "holdings": [{"ticker": "AAPL", "weight": 0.5}, {"ticker": "MSFT", "weight": 0.5}],
+    "holdings": [{"symbol": "AAPL", "weight": 0.5}, {"symbol": "MSFT", "weight": 0.5}],
     "objective": "factor_neutral",
-    "constraints": {"maxPositionSize": 0.3}
+    "maxHedges": 3
   }'
 ```
 
@@ -54,8 +95,8 @@ curl -X POST "https://api.secapi.ai/v1/portfolio/stress-test" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "holdings": [{"ticker": "AAPL", "weight": 0.5}, {"ticker": "MSFT", "weight": 0.5}],
-    "scenarios": ["rate_shock_100bp", "equity_drawdown_20pct", "vol_spike"]
+    "holdings": [{"symbol": "AAPL", "weight": 0.5}, {"symbol": "MSFT", "weight": 0.5}],
+    "scenarioKey": "us_recession"
   }'
 ```
 
@@ -66,6 +107,27 @@ Drill into a model portfolio's factor profile:
 ```bash
 curl "https://api.secapi.ai/v1/model-portfolios/{id}/factor-view" \
   -H "x-api-key: $SECAPI_API_KEY"
+```
+
+### Model Factor Analysis
+
+Analyze Model Builder or ad hoc model holdings without first persisting a model portfolio:
+
+```bash
+curl -X POST "https://api.secapi.ai/v1/models/factor-analysis?response_mode=compact" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": {"id": "growth-quality-core", "label": "Growth Quality Core", "source": "model_builder"},
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.30},
+      {"symbol": "MSFT", "weight": 0.25},
+      {"symbol": "NVDA", "weight": 0.20},
+      {"symbol": "GOOGL", "weight": 0.15},
+      {"symbol": "AMZN", "weight": 0.10}
+    ],
+    "include": {"attribution": true, "hedge": true, "positionViews": true}
+  }'
 ```
 
 ## Use Cases
@@ -89,4 +151,5 @@ curl "https://api.secapi.ai/v1/model-portfolios/{id}/factor-view" \
 
 - [Make Portfolio Factor Neutral](/api-reference/portfolio/post-v1-portfolio-optimize) — Interactive workflow for portfolio neutralization
 - [Decompose Return and Hedge](/api-reference/portfolio/post-v1-portfolio-analyze) — Attribution and hedge ideas for individual positions
-
+- [Attribute Portfolio Return](/api-reference/portfolio/post-v1-portfolio-attribution) — Dedicated explained-return and factor-contribution workflow
+- [Construct Factor Hedge](/api-reference/portfolio/post-v1-portfolio-hedge) — Constrained hedge candidate workflow

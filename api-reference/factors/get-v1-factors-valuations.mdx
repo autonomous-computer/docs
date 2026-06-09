@@ -1,6 +1,6 @@
-# GET /v1/factors/dashboard
+# GET /v1/factors/valuations
 
-Return a one-call factor dashboard with intraday, regime, rotation, spotlight-security, and optional model-portfolio drill-down sections
+Return valuation-factor opportunity signals ranked from SEC API-owned factor return state with trust metadata
 
 <Info>
 Use this endpoint from server-side applications, SDKs, or agent workflows.
@@ -18,7 +18,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/dashboard"
+  "https://api.secapi.ai/v1/factors/valuations?category=style&signal=tailwind&limit=10&response_mode=compact"
 ```
 </RequestExample>
 
@@ -36,7 +36,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/factors/dashboard to return a one-call factor dashboard with intraday, regime, rotation, spotlight-security, and optional model-portfolio drill-down sections. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/factors/valuations to rank factor-level valuation opportunities. Preserve signal, side, score, lookback, latest return context, freshness, and methodology metadata. Treat this as factor opportunity discovery, not a direct stock recommendation.
 </Prompt>
 
 ## Errors and partial results
@@ -44,4 +44,3 @@ Use SEC API GET /v1/factors/dashboard to return a one-call factor dashboard with
 - Treat non-2xx responses as API errors and log the response body for debugging
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-

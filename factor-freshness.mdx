@@ -1,0 +1,91 @@
+---
+title: "Factor Freshness"
+description: "How factor freshness, market-calendar SLAs, and degraded states work."
+---
+
+# Factor Freshness
+
+<Info>
+Factor freshness is market-calendar-aware. A response is not current just because it was served quickly; it is current when the relevant source session, materialized rows, and response metadata agree.
+</Info>
+
+SEC API factor workflows use different freshness clocks for daily, intraday, and portfolio-derived data. Always inspect `freshness`, `materialization`, and `degradedState` before making customer-visible recency claims.
+
+## Freshness Clocks
+
+| Surface | Freshness clock | Launch expectation |
+|---------|-----------------|-------------------|
+| Factor catalog | Catalog version and release metadata | Stable unless factor definitions change. |
+| Daily factor returns | Last complete U.S. market session for the requested factor set | Current after the daily factor materialization completes for the last complete market day. |
+| Factor history and sparklines | Row-level daily return coverage for the requested factor and range | `range=max` should only be claimed to the proven row-level floor for that factor. |
+| Intraday factor returns | Snapshot timestamp and current market-data inputs | Current only when underlying market-data inputs are current during market hours. |
+| Factor exposures | Latest exposure model session and source factor-return session | Current when exposure rows and their source return windows are current. |
+| Valuations and valuation stocks | Factor-return z-score session plus latest exposure session for stock drilldowns | Current when both factor-side and exposure-side inputs are current. |
+| Portfolio attribution | Submitted holdings, factor exposures, factor returns, and holding market bars | Partial if any material input is missing or stale. |
+| Portfolio hedge | Submitted holdings, factor exposures, hedge constraints, and candidate mappings | Partial if exposures or candidate mappings are unavailable. |
+
+## Market-Calendar Policy
+
+Daily factor data is measured against the last complete market session, not wall-clock midnight. Weekends and market holidays do not create missing daily factor rows. Early closes and delayed data-plane jobs should produce explicit stale or degraded metadata rather than false freshness.
+
+For launch-readiness and customer-facing claims:
+
+- make 2010+ history claims only for factors with row-level proof
+- check `historyStartDate`, `historyEndDate`, `observationCount`, and `lastCompleteMarketDate` when present
+- treat stale materialization as a launch blocker for marketed freshness promises
+- treat intraday data as current only when the snapshot and market-data plane are current
+
+## Compact Requests With Trust Metadata
+
+Use compact mode for agent and chart workflows, then request trust metadata when recency matters:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/history/VALUE?range=1y&response_mode=compact&include=trust"
+```
+
+MCP tools accept the same intent:
+
+```json
+{
+  "name": "factors.history",
+  "arguments": {
+    "factorKey": "VALUE",
+    "range": "1y",
+    "response_mode": "compact",
+    "include": ["trust"]
+  }
+}
+```
+
+## Reading Freshness Fields
+
+| Field | Meaning |
+|-------|---------|
+| `freshness.status` | Current state such as fresh, stale, degraded, or unknown. |
+| `freshness.asOf` | The timestamp or session the response is current as of. |
+| `freshness.sourcePublishedAt` | The source-side publish or session timestamp when available. |
+| `freshness.lagMs` | Measured lag between source time and available response time when applicable. |
+| `materialization.materializationVersion` | Read-model or computation version used to produce the response. |
+| `degradedState` | Structured explanation for partial, stale, or fallback behavior. |
+
+Field availability varies by response type and response mode. Use `include=trust` if an agent must preserve the full trust envelope.
+
+## Operational Interpretation
+
+| Response state | What to do |
+|----------------|------------|
+| Fresh with matching materialization | Safe for normal product and agent workflows. |
+| Fresh but missing requested history floor | Do not claim MAX or 2010+ coverage for that factor. |
+| Stale daily factor returns | Show stale status, avoid launch freshness claims, and wait for or repair the data-plane materialization. |
+| Stale intraday snapshots | Avoid live-market language; use the last complete daily surface instead. |
+| Degraded portfolio attribution | Show partial attribution and preserve missing capabilities. |
+| Explicit materialization error | Treat as retryable only if the error details say the missing read model can be repaired or rerun. |
+
+## Next Pages
+
+- [Factor Provenance](/factor-provenance)
+- [Factor Model Methodology](/factor-model-methodology)
+- [Factor Quickstart](/factor-quickstart)
+- [Freshness and Trust](/freshness-and-trust)

@@ -1,6 +1,6 @@
-# POST /v1/portfolio/analyze
+# POST /v1/models/factor-analysis
 
-Return factor exposures, attribution, and hedge suggestions for a portfolio in one deterministic response
+Return model factor analysis for submitted Model Builder or saved-model holdings with optional attribution and hedge sections
 
 <Info>
 Use this endpoint from server-side applications, SDKs, or agent workflows.
@@ -20,17 +20,29 @@ curl -X POST \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
   -d '{
+    "model": {
+      "id": "growth-quality-core",
+      "label": "Growth Quality Core",
+      "source": "model_builder"
+    },
     "holdings": [
       {"symbol": "AAPL", "weight": 0.30},
       {"symbol": "MSFT", "weight": 0.25},
       {"symbol": "NVDA", "weight": 0.20},
-      {"symbol": "JPM", "weight": 0.15},
-      {"symbol": "XOM", "weight": 0.10}
+      {"symbol": "GOOGL", "weight": 0.15},
+      {"symbol": "AMZN", "weight": 0.10}
     ],
-    "lookback": "6m",
-    "category": "style"
+    "include": {
+      "attribution": true,
+      "hedge": true,
+      "positionViews": true
+    },
+    "hedge": {
+      "objective": "factor_neutral",
+      "mode": "compact"
+    }
   }' \
-  "https://api.secapi.ai/v1/portfolio/analyze"
+  "https://api.secapi.ai/v1/models/factor-analysis?response_mode=compact"
 ```
 </RequestExample>
 
@@ -48,7 +60,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API POST /v1/portfolio/analyze to return factor exposures, attribution, and hedge suggestions for a portfolio in one deterministic response. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API POST /v1/models/factor-analysis to analyze submitted Model Builder holdings. Preserve model metadata, aggregate exposures, attribution rows, hedge candidates when requested, position views, freshness, and methodology metadata. Prefer compact mode when returning the result to an agent or LLM.
 </Prompt>
 
 ## Errors and partial results
@@ -56,4 +68,3 @@ Use SEC API POST /v1/portfolio/analyze to return factor exposures, attribution, 
 - Treat non-2xx responses as API errors and log the response body for debugging
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-

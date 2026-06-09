@@ -12,7 +12,7 @@ SEC API delivers structured SEC data, factor analytics, ownership tracking, and 
 
 <CardGroup cols={2}>
   <Card title="Factor decomposition" icon="chart-line" href="/factor-intelligence">
-    84-factor model spanning market, style, macro, sector, and industry categories. Decompose portfolios, run correlation analysis, and monitor regime shifts.
+    Factor intelligence across a broad catalog with a narrower launch-ready surface. Decompose portfolios, run correlation analysis, and monitor regime shifts while preserving freshness metadata.
   </Card>
   <Card title="13F ownership tracking" icon="building-2" href="/ownership-workflows">
     Retrieve and compare institutional 13F holdings by quarter. Track position changes across your coverage universe.
@@ -59,7 +59,7 @@ Pull current factor exposures for a ticker in your portfolio:
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/exposures?ticker=NVDA"
+  "https://api.secapi.ai/v1/factors/exposures?symbols=NVDA"
 ```
 
 Run a pre-earnings intelligence bundle before a reporting date:
@@ -73,14 +73,14 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 ## Example: portfolio-level factor decomposition
 
-Decompose a portfolio across all 84 factors in a single call:
+Decompose a portfolio across supported factor exposures in a single call:
 
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  -d '{"positions":[{"ticker":"AAPL","weight":0.25},{"ticker":"MSFT","weight":0.25},{"ticker":"NVDA","weight":0.25},{"ticker":"GOOGL","weight":0.25}]}' \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.25},{"symbol":"MSFT","weight":0.25},{"symbol":"NVDA","weight":0.25},{"symbol":"GOOGL","weight":0.25}]}' \
   "https://api.secapi.ai/v1/intelligence/portfolio"
 ```
 
@@ -124,4 +124,3 @@ You are an investment research agent with access to SEC API. For any portfolio o
 </Prompt>
 
 _See the full 12-prompt [Investment manager library](/give-this-prompt-to-your-agent)._
-

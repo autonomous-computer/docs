@@ -1,0 +1,266 @@
+---
+title: "Factor Quickstart"
+description: "Make the first useful factor data requests with REST, SDKs, and hosted MCP."
+---
+
+# Factor Quickstart
+
+Use this path when you want compact factor returns, history, valuation signals, and portfolio attribution in a product or agent workflow.
+
+## Before you start
+
+1. Export `SECAPI_API_KEY`
+2. Use `https://api.secapi.ai` for production requests
+3. Send the API key in the `x-api-key` header
+4. Send `secapi-version: 2026-03-19`
+5. Use `response_mode=compact&include=trust` for agent, chart, table, and prompt-context workflows that need audit metadata
+
+Keep `requestId`, `traceparent`, `freshness`, `materialization`, `methodology`, and `degradedState` fields attached to downstream traces when they are present. If a compact response omits a heavier section your workflow needs, request it with `include`; those fields tell an agent whether the answer is current, how it was constructed, and whether any part of the response fell back to a partial state.
+
+## REST
+
+Start with the catalog, then request the smallest return window that proves your workflow.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/catalog?category=style"
+
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/returns?keys=VALUE,MOMENTUM,QUALITY&lookback=6m&response_mode=compact&include=trust"
+```
+
+Use single-factor history when you need a 1D through MAX table, chart, or backtest input.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/history/VALUE?range=1y&response_mode=compact&include=trust"
+```
+
+Use valuation and extreme-move endpoints when you need opportunity discovery instead of just return history.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/extreme-moves?category=style&window=1d&min_z_score=2&limit=10&response_mode=compact&include=trust"
+
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&signal=tailwind&limit=25&response_mode=compact&include=trust"
+```
+
+## TypeScript
+
+```bash
+npm install @secapi/sdk-js
+```
+
+```ts
+import { SecApiClient } from "@secapi/sdk-js"
+
+const client = new SecApiClient({
+  apiKey: process.env.SECAPI_API_KEY!,
+})
+
+const returns = await client.factorReturns({
+  keys: ["VALUE", "MOMENTUM", "QUALITY"],
+  lookback: "6m",
+  response_mode: "compact",
+  include: ["trust"],
+})
+
+const history = await client.factorHistory("VALUE", {
+  range: "1y",
+  response_mode: "compact",
+  include: ["trust"],
+})
+
+const valuationStocks = await client.factorValuationStocks({
+  factor: "VALUE",
+  signal: "tailwind",
+  limit: 25,
+  response_mode: "compact",
+  include: ["trust"],
+})
+
+console.log({
+  requestId: returns.requestId,
+  factors: returns.data,
+  historySample: history.seriesSample,
+  windows: history.summaryWindows,
+  valuationStocks: valuationStocks.data,
+})
+```
+
+## Python
+
+```bash
+pip install secapi-client
+```
+
+```python
+import os
+
+from secapi_client import SecApiClient
+
+client = SecApiClient(
+    api_key=os.environ["SECAPI_API_KEY"],
+    base_url="https://api.secapi.ai",
+)
+
+returns = client.factor_returns(
+    keys=["VALUE", "MOMENTUM", "QUALITY"],
+    lookback="6m",
+    response_mode="compact",
+    include=["trust"],
+)
+
+history = client.factor_history(
+    "VALUE",
+    range="1y",
+    response_mode="compact",
+    include=["trust"],
+)
+
+valuation_stocks = client.factor_valuation_stocks(
+    factor="VALUE",
+    signal="tailwind",
+    limit=25,
+    response_mode="compact",
+    include=["trust"],
+)
+
+print({
+    "requestId": returns["requestId"],
+    "factors": returns.get("data"),
+    "historySample": history.get("seriesSample"),
+    "windows": history.get("summaryWindows"),
+    "valuationStocks": valuation_stocks.get("data"),
+})
+```
+
+## Portfolio Attribution
+
+Use portfolio attribution when you need explained return, residual alpha, contribution rows, and model metadata for a portfolio or model-builder draft.
+
+```bash
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.30},
+      {"symbol": "MSFT", "weight": 0.25},
+      {"symbol": "NVDA", "weight": 0.20},
+      {"symbol": "JPM", "weight": 0.15},
+      {"symbol": "XOM", "weight": 0.10}
+    ],
+    "lookback": "6m",
+    "category": "style"
+  }' \
+  "https://api.secapi.ai/v1/portfolio/attribution?response_mode=compact&include=trust"
+```
+
+```ts
+const attribution = await client.portfolioAttribution(
+  {
+    holdings: [
+      { symbol: "AAPL", weight: 0.30 },
+      { symbol: "MSFT", weight: 0.25 },
+      { symbol: "NVDA", weight: 0.20 },
+      { symbol: "JPM", weight: 0.15 },
+      { symbol: "XOM", weight: 0.10 },
+    ],
+    lookback: "6m",
+    category: "style",
+  },
+  { response_mode: "compact", include: ["trust"] },
+)
+```
+
+```python
+attribution = client.portfolio_attribution(
+    {
+        "holdings": [
+            {"symbol": "AAPL", "weight": 0.30},
+            {"symbol": "MSFT", "weight": 0.25},
+            {"symbol": "NVDA", "weight": 0.20},
+            {"symbol": "JPM", "weight": 0.15},
+            {"symbol": "XOM", "weight": 0.10},
+        ],
+        "lookback": "6m",
+        "category": "style",
+    },
+    params={"response_mode": "compact", "include": ["trust"]},
+)
+```
+
+## Hosted MCP
+
+Hosted MCP exposes the same factor workflows as agent-callable tools.
+
+```bash
+claude mcp add --transport streamable-http sec-api https://api.secapi.ai/mcp \
+  --header "x-api-key: $SECAPI_API_KEY"
+```
+
+Call compact factor returns:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "factors.returns",
+    "arguments": {
+      "keys": ["VALUE", "MOMENTUM", "QUALITY"],
+      "lookback": "6m",
+      "response_mode": "compact",
+      "include": ["trust"]
+    }
+  }
+}
+```
+
+Call portfolio attribution:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "portfolio.attribution",
+    "arguments": {
+      "holdings": [
+        {"symbol": "AAPL", "weight": 0.30},
+        {"symbol": "MSFT", "weight": 0.25},
+        {"symbol": "NVDA", "weight": 0.20},
+        {"symbol": "JPM", "weight": 0.15},
+        {"symbol": "XOM", "weight": 0.10}
+      ],
+      "lookback": "6m",
+      "category": "style",
+      "response_mode": "compact",
+      "include": ["trust"]
+    }
+  }
+}
+```
+
+<Prompt description="Copy this factor prompt for your agent.">
+Use SEC API hosted MCP to get VALUE, MOMENTUM, and QUALITY factor returns for the last 6 months, fetch VALUE history for 1 year, identify the largest style-factor extreme moves, and attribute this portfolio to style factors: AAPL 30%, MSFT 25%, NVDA 20%, JPM 15%, XOM 10%. Request compact responses with `include: ["trust"]`, then return requestId, traceparent, freshness, materialization, methodology, and degradedState with the answer.
+</Prompt>
+
+## Next Pages
+
+- [Factor Intelligence](/factor-intelligence)
+- [Factor Model Methodology](/factor-model-methodology)
+- [Factor Provenance](/factor-provenance)
+- [Factor Freshness](/factor-freshness)
+- [Hosted MCP Workflows](/mcp-workflows)
+- [Migrate from FactorsToday](/migrate-from-factorstoday)

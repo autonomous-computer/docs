@@ -6,17 +6,18 @@ title: "Factor Intelligence"
 
 ## What Factor Intelligence Covers
 
-SEC API Factor Intelligence provides a structured factor model spanning 84 factors across 5 categories. The API supports factor catalog retrieval, historical and intraday returns, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
+SEC API Factor Intelligence provides a structured factor model for launch-focused U.S. market, style, sector, and industry workflows. The API supports factor catalog retrieval, single-factor history, multi-factor sparklines, historical and intraday returns, extreme move detection, valuation signals, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
 
 Every response includes `requestId` and `traceparent` for downstream traceability.
 
-For the full factor construction methodology, including purification architecture, academic references, and institutional comparisons, see [Factor Model Methodology](factor-model-methodology).
+For the full factor construction methodology, including purification architecture, academic references, and institutional comparisons, see [Factor Model Methodology](factor-model-methodology). For source posture and freshness contracts, see [Factor Provenance](/factor-provenance) and [Factor Freshness](/factor-freshness).
 
 ## Factor catalog
 
-- 84 factors organized into 5 categories: market, style, macro, sector, and industry
-- each factor entry includes methodology description, proxy ticker, orthogonalization metadata, and category assignment
+- launch-focused factors are organized into market, style, sector, and industry categories
+- each factor entry includes methodology description, source status, proxy or construction metadata, orthogonalization metadata, and category assignment
 - the catalog is the canonical reference for factor identifiers used across all other factor endpoints
+- launch factors target a `2010-01-01` history floor; shorter-history or beta factors are labeled as such and should not be used for 2010+ coverage claims
 
 ### Categories
 
@@ -24,7 +25,6 @@ For the full factor construction methodology, including purification architectur
 |----------|-------------|
 | `market` | broad market risk premia (e.g., equity risk premium, volatility) |
 | `style` | cross-sectional return drivers (e.g., momentum, value, quality, size, low-volatility) |
-| `macro` | macroeconomic regime factors (e.g., inflation, real rates, credit spreads, growth) |
 | `sector` | GICS sector-level return attribution |
 | `industry` | GICS industry-level return attribution |
 
@@ -40,22 +40,59 @@ curl -X GET \
 - historical daily factor return series with z-scores and volatility-scaled variants
 - supports filtering by factor category, individual factor identifiers, and date range
 - used for backtesting, trend analysis, and factor-timing research
+- use `response_mode=compact` when forwarding results into an agent, chart, or table workflow
 
 ### Query parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `category` | string | filter by factor category (`market`, `style`, `macro`, `sector`, `industry`) |
-| `factors` | string | comma-separated list of factor identifiers |
-| `start_date` | string | start of return window (ISO 8601 date) |
-| `end_date` | string | end of return window (ISO 8601 date) |
-| `frequency` | string | return frequency (`daily`, `weekly`, `monthly`) |
+| `keys` | string | comma-separated list of factor identifiers |
+| `category` | string | filter by launch factor category (`market`, `style`, `sector`, `industry`) |
+| `window` | string | return window such as `1d`, `1m`, `6m`, `1y`, or `max` |
+| `lookback` | string | alternate lookback window alias used by SDK and agent workflows |
+| `response_mode` | string | response shape (`compact`, `standard`, `verbose`) |
 
 ```bash
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/returns?category=style&start_date=2025-01-01&end_date=2025-12-31&frequency=daily"
+  "https://api.secapi.ai/v1/factors/returns?keys=VALUE,MOMENTUM,QUALITY&lookback=6m&response_mode=compact"
+```
+
+## Single-factor history and sparklines
+
+- single-factor daily history with 1D through MAX summary windows, bounded by row-level coverage and freshness metadata
+- compact multi-factor sparkline series for sector, index, model, and dashboard UI views
+- designed for token-efficient chart/table rendering where the caller needs returns plus window summaries, not full attribution payloads
+
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/history/VALUE?range=1y&response_mode=compact"
+
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/sparklines?keys=VALUE,MOMENTUM,QUALITY&range=1y&points=64&response_mode=compact"
+```
+
+## Extreme moves, pairs, and valuations
+
+- extreme factor moves ranked by z-score, return, direction, and threshold
+- extreme factor pairs ranked by unusual spread divergence
+- valuation-factor opportunity signals and stock candidates exposed to those signals
+
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/extreme-moves?category=style&window=1d&min_z_score=2&limit=10&response_mode=compact"
+
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&signal=tailwind&limit=25&response_mode=compact"
 ```
 
 ## Factor correlations
@@ -68,15 +105,15 @@ curl -X GET \
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `factors` | string | comma-separated list of factor identifiers |
-| `ticker` | string | optional security ticker for factor-to-security correlations |
-| `lookback_days` | integer | correlation lookback window in trading days |
+| `keys` | string | comma-separated list of factor identifiers |
+| `category` | string | filter by factor category |
+| `lookback` | string | correlation lookback window such as `3m`, `6m`, or `1y` |
 
 ```bash
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/correlations?factors=momentum,value,quality&lookback_days=252"
+  "https://api.secapi.ai/v1/factors/correlations?keys=VALUE,MOMENTUM,QUALITY&lookback=1y&response_mode=compact"
 ```
 
 ## Factor exposures
@@ -89,23 +126,25 @@ curl -X GET \
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `ticker` | string | security ticker |
-| `tickers` | string | comma-separated list of tickers for batch queries |
+| `symbols` | string | comma-separated list of security symbols |
+| `tickers` | string | alias for `symbols` |
 | `category` | string | filter exposures to a specific factor category |
-| `as_of` | string | point-in-time exposure date (ISO 8601 date) |
+| `keys` | string | comma-separated list of factor identifiers |
+| `lookback` | string | exposure model lookback window |
+| `model` | string | optional exposure model selector |
 
 ```bash
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/exposures?ticker=AAPL"
+  "https://api.secapi.ai/v1/factors/exposures?symbols=AAPL&response_mode=compact"
 ```
 
 ## Factor intraday
 
-- live intraday factor return snapshots derived from the latest benchmark proxy inputs
+- intraday factor return snapshots derived from the current benchmark proxy inputs when the market-data plane is current
 - intended for dashboards and real-time factor monitoring during market hours
-- returns are updated throughout the trading day as proxy prices move
+- callers should inspect freshness metadata before treating an intraday snapshot as current
 
 ```bash
 curl -X GET \
@@ -116,21 +155,14 @@ curl -X GET \
 
 ## Factor dashboard
 
-- consolidated one-call view combining intraday returns, regime context, rotation signals, spotlight-security analysis, and optional model-portfolio drill-down
+- consolidated one-call view combining intraday returns, regime context, rotation signals, and available factor state
 - designed to power full-screen factor dashboards in a single request
-
-### Query parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `ticker` | string | optional spotlight security for per-stock factor context |
-| `portfolioId` | string | optional model portfolio identifier for drill-down section |
 
 ```bash
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/dashboard?ticker=AAPL"
+  "https://api.secapi.ai/v1/factors/dashboard?response_mode=compact"
 ```
 
 ## Factor regime performance
@@ -143,8 +175,13 @@ curl -X GET \
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `regime` | string | override regime label instead of using the detected current regime |
-| `lookback_years` | integer | historical lookback for regime-conditioned statistics |
+| `country` | string | country scope, defaults to `US` |
+| `keys` | string | comma-separated list of factor identifiers |
+| `category` | string | filter by factor category |
+| `window` | string | performance window |
+| `lookback` | string | historical lookback window |
+| `limit` | integer | maximum ranked factors to return |
+| `response_mode` | string | response shape (`compact`, `standard`, `verbose`) |
 
 ```bash
 curl -X GET \
@@ -156,7 +193,7 @@ curl -X GET \
 ## Portfolio factor analysis
 
 - decompose an arbitrary portfolio into factor exposures, return attribution, and hedge suggestions
-- accepts a list of positions with weights in the request body
+- accepts a list of holdings with weights in the request body
 - returns explained return, residual alpha, and per-factor contribution
 
 ```bash
@@ -165,15 +202,40 @@ curl -X POST \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
   -d '{
-    "positions": [
-      {"ticker": "AAPL", "weight": 0.30},
-      {"ticker": "MSFT", "weight": 0.25},
-      {"ticker": "GOOGL", "weight": 0.20},
-      {"ticker": "AMZN", "weight": 0.15},
-      {"ticker": "NVDA", "weight": 0.10}
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.30},
+      {"symbol": "MSFT", "weight": 0.25},
+      {"symbol": "GOOGL", "weight": 0.20},
+      {"symbol": "AMZN", "weight": 0.15},
+      {"symbol": "NVDA", "weight": 0.10}
     ]
   }' \
   "https://api.secapi.ai/v1/portfolio/analyze"
+```
+
+## Portfolio attribution and hedge
+
+- dedicated attribution endpoint for explained return, alpha, and compact contribution rows
+- dedicated hedge endpoint for constrained hedge candidates and residual factor exposure
+- both endpoints accept the same normalized holdings shape used by portfolio analysis
+
+```bash
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.30},
+      {"symbol": "MSFT", "weight": 0.25},
+      {"symbol": "NVDA", "weight": 0.20},
+      {"symbol": "JPM", "weight": 0.15},
+      {"symbol": "XOM", "weight": 0.10}
+    ],
+    "lookback": "6m",
+    "category": "style"
+  }' \
+  "https://api.secapi.ai/v1/portfolio/attribution?response_mode=compact"
 ```
 
 ## Model portfolio factor view
@@ -189,19 +251,53 @@ curl -X GET \
   "https://api.secapi.ai/v1/model-portfolios/{portfolioId}/factor-view"
 ```
 
+## Model factor analysis
+
+- ad hoc Model Builder or saved-model holdings analysis without first persisting a model portfolio
+- optional attribution, hedge, and per-position sections in one compact response
+- useful for `/models` and model detail views that need the same factor intelligence as portfolio workflows
+
+```bash
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{
+    "model": {"id": "growth-quality-core", "label": "Growth Quality Core", "source": "model_builder"},
+    "holdings": [
+      {"symbol": "AAPL", "weight": 0.30},
+      {"symbol": "MSFT", "weight": 0.25},
+      {"symbol": "NVDA", "weight": 0.20},
+      {"symbol": "GOOGL", "weight": 0.15},
+      {"symbol": "AMZN", "weight": 0.10}
+    ],
+    "include": {"attribution": true, "hedge": true, "positionViews": true}
+  }' \
+  "https://api.secapi.ai/v1/models/factor-analysis?response_mode=compact"
+```
+
 ## Endpoint summary
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/v1/factors/catalog` | list all factor definitions |
 | `GET` | `/v1/factors/returns` | historical factor returns |
+| `GET` | `/v1/factors/history/:factorKey` | single-factor history and summary windows |
+| `GET` | `/v1/factors/sparklines` | compact multi-factor sparkline series |
+| `GET` | `/v1/factors/extreme-moves` | unusual factor move ranking |
+| `GET` | `/v1/factors/extreme-pairs` | unusual factor-pair spread ranking |
+| `GET` | `/v1/factors/valuations` | valuation-factor opportunity signals |
+| `GET` | `/v1/factors/valuations/stocks` | stock candidates exposed to valuation signals |
 | `GET` | `/v1/factors/correlations` | factor correlation matrix |
 | `GET` | `/v1/factors/exposures` | per-stock factor loadings |
-| `GET` | `/v1/factors/returns/intraday` | live intraday factor returns |
+| `GET` | `/v1/factors/returns/intraday` | intraday factor return snapshots |
 | `GET` | `/v1/factors/dashboard` | consolidated factor dashboard |
 | `GET` | `/v1/factors/regime-performance` | factor performance by macro regime |
 | `POST` | `/v1/portfolio/analyze` | portfolio factor decomposition |
+| `POST` | `/v1/portfolio/attribution` | portfolio factor return attribution |
+| `POST` | `/v1/portfolio/hedge` | constrained portfolio hedge candidates |
 | `GET` | `/v1/model-portfolios/:id/factor-view` | model portfolio factor view |
+| `POST` | `/v1/models/factor-analysis` | ad hoc model factor analysis |
 
 ## Errors and partial results
 
