@@ -1,6 +1,6 @@
 # SEC API Documentation
 
-SEC API provides REST and MCP access to SEC filings, companies, ownership data, financial statements, filing search, market data, events, webhooks, and agent-ready intelligence workflows.
+SEC API provides REST and MCP access to SEC filings, companies, ownership data, financial statements, filing search, market data, factor data, portfolio analytics, events, webhooks, and agent-ready intelligence workflows.
 
 Use this file as the entrypoint for coding agents and LLM tools. Prefer the OpenAPI spec and canonical docs links below over guessing endpoint paths or inventing SDK methods.
 
@@ -43,6 +43,47 @@ Use this file as the entrypoint for coding agents and LLM tools. Prefer the Open
 - [Events](https://docs.secapi.ai/api-reference/platform/get-v1-events): Filing-derived and delivery events.
 - [Webhooks](https://docs.secapi.ai/api-reference/webhooks/get-v1-webhook-endpoints): Signed webhook endpoints, deliveries, replay, and rotation.
 - [Billing rates](https://docs.secapi.ai/api-reference/platform/get-v1-billing-rates): Public pricing catalog and meter rates.
+
+## Factor And Portfolio Workflows
+
+- [Factor quickstart](https://docs.secapi.ai/factor-quickstart): Compact cURL, TypeScript, Python, and MCP examples for factor returns, history, extreme moves, valuations, and attribution.
+- [Factor intelligence](https://docs.secapi.ai/factor-intelligence): Factor workflow overview for returns, exposures, correlations, valuation signals, dashboards, and portfolio analysis.
+- [Factor model methodology](https://docs.secapi.ai/factor-model-methodology): Model construction, launch coverage posture, and 2010+ claim boundaries.
+- [Factor provenance](https://docs.secapi.ai/factor-provenance): SecAPI-owned factor methodology, source-rights posture, and trust metadata.
+- [Factor freshness](https://docs.secapi.ai/factor-freshness): Market-calendar-aware freshness clocks, materialization IDs, and degraded-state handling.
+- [Migrate from FactorsToday](https://docs.secapi.ai/migrate-from-factorstoday): Workflow mapping from FactorsToday-style factor tools to SecAPI-owned APIs.
+- [Factors API reference](https://docs.secapi.ai/api-reference/factors): Factor catalog, returns, history, sparklines, intraday snapshots, correlations, screens, extreme moves, extreme pairs, valuations, exposures, related stocks, dashboard, decomposition, pair spread, bulk download, and custom factor discovery.
+- [Portfolio API reference](https://docs.secapi.ai/api-reference/portfolio): Portfolio analysis, attribution, hedge, optimization, stress testing, and portfolio intelligence endpoints.
+- [Model factor analysis](https://docs.secapi.ai/api-reference/models/post-v1-models-factor-analysis): Factor analysis for model-builder drafts and saved model views.
+
+For factor analytic, portfolio, and model-analysis endpoints that expose response controls, use `response_mode=compact` for agent and LLM calls by default. Add `include=trust` when preserving freshness, materialization, methodology, degraded-state, and provenance metadata matters. Add `include=series` only for chart/table time series.
+
+Key REST entry points:
+
+- `GET /v1/factors/catalog`
+- `GET /v1/factors/returns`
+- `GET /v1/factors/history/{factorKey}`
+- `GET /v1/factors/sparklines`
+- `GET /v1/factors/returns/intraday`
+- `GET /v1/factors/extreme-moves`
+- `GET /v1/factors/extreme-pairs`
+- `GET /v1/factors/valuations`
+- `GET /v1/factors/valuations/stocks`
+- `GET /v1/factors/exposures`
+- `GET /v1/factors/bulk-download`
+- `POST /v1/portfolio/analyze`
+- `POST /v1/portfolio/attribution`
+- `POST /v1/portfolio/hedge`
+- `POST /v1/portfolio/optimize`
+- `POST /v1/portfolio/stress-test`
+- `POST /v1/models/factor-analysis`
+
+Key MCP tools:
+
+- `factors.catalog`, `factors.returns`, `factors.history`, `factors.sparklines`
+- `factors.extreme_moves`, `factors.extreme_pairs`, `factors.valuations`, `factors.valuation_stocks`
+- `factors.exposures`, `factors.bulk_returns`, `factors.dashboard`, `factors.decomposition`, `factors.related_stocks`
+- `portfolio.analyze`, `portfolio.attribution`, `portfolio.hedge`, `portfolio.optimize`, `portfolio.stress_test`
 
 ## SDKs, MCP, And Agents
 
