@@ -5,136 +5,166 @@ sidebarTitle: "Migrate from FactorsToday"
 
 # Migrate from FactorsToday
 
-This guide helps FactorsToday users map factor-history, valuation, portfolio, hedge, and factor-screening workflows to SEC API equivalents. SEC API uses its own factor methodology and data plane, with compact REST, SDK, and MCP interfaces designed for agent and LLM applications.
+This guide maps FactorsToday-style factor-history, valuation, portfolio, hedge, optimizer, dashboard, and bulk-download workflows to SEC API equivalents. SEC API uses SecAPI-owned factor methodology and data-plane contracts, with compact REST, SDK, and MCP interfaces designed for agent and LLM applications.
 
-For a detailed comparison of factor construction methodologies, see [Factor Model Methodology](factor-model-methodology).
+<Info>
+Migrate the workflow behavior, not a third-party dataset. SEC API compatibility means comparable product jobs: factor history tables, 1D through MAX windows, extreme moves, valuation screens, portfolio attribution, hedging, and optimizer flows backed by SecAPI data, methodology, freshness, and source-rights metadata.
+</Info>
 
-## Endpoint mapping
+For construction details, see [Factor Model Methodology](/factor-model-methodology). For source posture and freshness semantics, see [Factor Provenance](/factor-provenance) and [Factor Freshness](/factor-freshness).
 
-| FactorsToday | SEC API | Notes |
+## Endpoint Mapping
+
+| FactorsToday workflow | SEC API | Migration notes |
 |---|---|---|
-| `GET /api/factors/catalog` | `GET /v1/factors/catalog` | Factor definitions with methodology, source status, launch posture, and freshness metadata |
-| `GET /api/factor-returns/intraday` | `GET /v1/factors/returns/intraday` | Intraday factor snapshots with freshness metadata |
-| `GET /api/factor-returns/historic` | `GET /v1/factors/returns` | Historical daily factor returns |
-| Factor history page | `GET /v1/factors/history/{factorKey}` | Single-factor history with 1D through MAX summary windows |
-| Multi-factor history table | `GET /v1/factors/sparklines` | Compact multi-factor series for charts, sector/index tables, and model UIs |
-| `GET /api/factor-loadings/:factor` | `GET /v1/factors/exposures?symbols={symbols}&keys={factor}` | Factor exposure loadings for a supplied security universe |
-| `GET /api/factor-correlations` | `GET /v1/factors/correlations` | Factor correlation matrix |
-| `GET /api/factor-composition/:name` | `GET /v1/factors/catalog` | Equation and methodology in catalog entry |
-| `GET /api/stock-loadings/:ticker` | `GET /v1/factors/exposures?symbols={ticker}` | Per-stock factor decomposition; `/v1/stocks/{ticker}/loadings` is also available where stock-loading parity is preferred |
-| `GET /api/related-stocks/:ticker` | `GET /v1/factors/related-stocks` | Factor-similarity stock discovery |
-| Extreme Factor Moves | `GET /v1/factors/extreme-moves` | Unusual factor moves ranked by z-score, return, and direction |
-| Extreme Factor Pairs | `GET /v1/factors/extreme-pairs` | Unusual factor-pair spread divergence |
-| Factor Valuations | `GET /v1/factors/valuations` | Factor-level valuation opportunity signals |
-| Factor Valuation Stocks | `GET /v1/factors/valuations/stocks` | Stock candidates exposed to a valuation-factor signal |
-| `GET /api/portfolio/analyze` | `POST /v1/portfolio/analyze` | Portfolio factor decomposition |
-| Portfolio attribution | `POST /v1/portfolio/attribution` | Dedicated explained-return and factor-contribution endpoint |
-| `GET /api/hedge/calculate` | `POST /v1/portfolio/hedge` | Constrained factor hedge candidates |
-| Portfolio optimizer | `POST /v1/portfolio/optimize` | Factor-neutral, drawdown-aware, and regime-aware optimization |
-| `GET /api/screener/stocks-by-factor` | `GET /v1/factors/screen` | Factor-based stock screening |
-| `GET /api/stocks/search` | `GET /v1/entities/resolve` | Entity resolution |
-| Model Builder analysis | `POST /v1/models/factor-analysis` | Submitted model holdings with exposure, attribution, hedge, and position views |
-| N/A | `POST /v1/portfolio/stress-test` | Scenario-based stress testing |
-| N/A | `GET /v1/factors/regime-performance` | Factor returns by macro regime |
-| N/A | `GET /v1/factors/dashboard` | Consolidated factor dashboard |
-| N/A | `POST /v1/strategies/factor-rotation` | Factor rotation signals |
+| Factor catalog | `GET /v1/factors/catalog` | Factor definitions, category, launch posture, methodology, and source posture. |
+| Basic, style, sector, industry factor tables | `GET /v1/factors/catalog?category=style` and `GET /v1/factors/sparklines` | Use catalog for definitions and sparklines for compact chart/table rows. |
+| Daily factor returns | `GET /v1/factors/returns` | Multi-factor daily return rows with launch-safe defaults. |
+| Intraday factor returns | `GET /v1/factors/returns/intraday` | Current only when market-data inputs and snapshot freshness are current. |
+| Single-factor history page | `GET /v1/factors/history/{factorKey}` | Single-factor history with 1D, 5D, 1M, 3M, 6M, 1Y, and MAX summary windows. |
+| Multi-factor history table | `GET /v1/factors/sparklines` | Downsampled multi-factor series for sector/index/model UI tables. |
+| Manual all-factor return downloads | `GET /v1/factors/bulk-download` | Bulk daily factor returns for commercial bulk-download workflows; use `include=series` when full series are needed. |
+| Factor loadings by factor | `GET /v1/factors/exposures?symbols={symbols}&keys={factor}` | Exposure loadings for a caller-supplied security universe. |
+| Stock loadings by ticker | `GET /v1/factors/exposures?symbols={ticker}` or `GET /v1/stocks/{ticker}/loadings` | Per-stock exposure decomposition. |
+| Factor correlations | `GET /v1/factors/correlations` | Launch factor correlation matrix. |
+| Factor composition/methodology | `GET /v1/factors/catalog` | Equation, inputs, methodology, source posture, and launch status live on catalog/methodology metadata. |
+| Related stocks | `GET /v1/factors/related-stocks?symbol={ticker}` | Factor-similarity stock discovery. |
+| Extreme Factor Moves | `GET /v1/factors/extreme-moves` | Unusual factor moves ranked by z-score, absolute return, side, and direction. |
+| Extreme Factor Pairs | `GET /v1/factors/extreme-pairs` | Unusual factor-pair spread divergence. |
+| Factor Valuations | `GET /v1/factors/valuations` | Factor-level valuation/opportunity signals. |
+| Factor Valuation Stocks | `GET /v1/factors/valuations/stocks` | Stock candidates exposed to a valuation-factor signal. |
+| Stock screener by factor | `GET /v1/factors/screen` | Factor-ranked stock screening. |
+| Portfolio analysis | `POST /v1/portfolio/analyze` | Portfolio factor exposure decomposition from submitted holdings. |
+| Portfolio attribution | `POST /v1/portfolio/attribution` | Explained return, factor contributions, alpha when realized portfolio return is sufficiently covered. |
+| Portfolio hedge | `POST /v1/portfolio/hedge` | Constrained hedge candidates and residual exposure. |
+| Portfolio optimizer | `POST /v1/portfolio/optimize` | Factor-neutral, drawdown-aware, and regime-aware optimizer flows. |
+| Model Builder or model detail factor analysis | `POST /v1/models/factor-analysis` | Submitted model holdings with exposure, attribution, hedge, and position views. |
+| Factor dashboard | `GET /v1/factors/dashboard` | One-call dashboard with intraday, regime, rotation, spotlight, and optional model-portfolio drilldowns. |
+| Regime performance | `GET /v1/factors/regime-performance` | Factor returns by macro regime. |
+| Portfolio stress test | `POST /v1/portfolio/stress-test` | Scenario-based portfolio factor stress testing. |
+| Factor rotation | `POST /v1/strategies/factor-rotation` | Factor rotation signals. |
 
-## Launch coverage posture
+## Launch Coverage Posture
 
-SEC API's launch factor set is built around U.S. market, style, sector, and industry factors. Launch factors target a `2010-01-01` history floor, but public 2010+ claims should be made only where row-level coverage, freshness, model version, and methodology metadata prove the factor. Shorter-history or beta factors are labeled in catalog metadata and should not be used for 2010+ coverage claims.
+SEC API's launch factor surface is built around U.S. market, style, sector, and industry workflows. Launch factors target a `2010-01-01` history floor, but public 2010+ claims should be made only where row-level coverage, freshness, model version, methodology, and source-rights metadata prove the factor.
 
-### Where SEC API leads
+Shorter-history, beta, blocked, and deferred factors are labeled in catalog or methodology metadata. Do not treat a tracked catalog definition as a launch claim by itself.
 
-- **Agent-first response design**: `response_mode=compact` and `include` controls keep factor history, sparklines, valuations, attribution, and hedge payloads small enough for downstream agents.
-- **Portfolio and model workflows**: Portfolio analysis, attribution, hedge, optimize, stress-test, and Model Builder factor analysis share one holdings contract.
-- **Trust metadata**: Factor responses preserve `requestId`, `traceparent`, freshness, methodology, and materialization metadata so applications can audit stale or partial results.
-- **MCP and SDK reach**: Core factor workflows are exposed through REST and hosted MCP, with SDK and CLI methods moving through the current release train.
+## Workflow Translation Patterns
+
+### Factor History And Tables
+
+Use `factors/history/{factorKey}` when the UI focuses on one factor, and `factors/sparklines` when the UI needs many compact rows for index, sector, dashboard, or model tables.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/history/VALUE?range=max&response_mode=compact&include=series,trust"
+
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/sparklines?category=sector&range=1y&points=90&response_mode=compact&include=trust"
+```
+
+Use `range=max` only with the proven row-level floor for that factor. For launch-facing claims, preserve `historyStartDate`, `historyEndDate`, `observationCount`, `lastCompleteMarketDate`, freshness, materialization, and methodology metadata when present.
+
+### Bulk Downloads
+
+FactorsToday-style manual return downloads map to `GET /v1/factors/bulk-download`. Compact mode omits full series unless requested.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/bulk-download?category=style&lookback=12m&response_mode=compact&include=series,trust"
+```
+
+Use this endpoint for authorized bulk-download workflows. Use `factors/returns`, `factors/history`, or `factors/sparklines` for UI and agent workflows that do not need a full return export.
+
+### Extreme Moves And Pairs
+
+Use extreme-move and extreme-pair endpoints for FactorsToday-style homepage views.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/extreme-moves?category=style&lookback=6m&limit=20&response_mode=compact&include=trust"
+
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/extreme-pairs?category=style&lookback=6m&limit=20&response_mode=compact&include=trust"
+```
+
+### Valuation Workflows
+
+Use factor valuations for factor-level opportunity discovery and valuation stocks for drilldowns into securities most exposed to a factor signal.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/valuations?category=style&signal=tailwind&limit=20&response_mode=compact&include=trust"
+
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&signal=tailwind&limit=25&response_mode=compact&include=trust"
+```
+
+### Portfolio, Hedge, And Optimizer
+
+SEC API portfolio endpoints use submitted holdings. Migrate query-string portfolio workflows into POST bodies so agents, SDKs, and UI clients share one contract.
+
+```bash
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.30},{"symbol":"MSFT","weight":0.25},{"symbol":"NVDA","weight":0.20},{"symbol":"JPM","weight":0.15},{"symbol":"XOM","weight":0.10}],"lookback":"6m","category":"style"}' \
+  "https://api.secapi.ai/v1/portfolio/attribution?response_mode=compact&include=trust"
+
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.30},{"symbol":"MSFT","weight":0.25},{"symbol":"NVDA","weight":0.20},{"symbol":"JPM","weight":0.15},{"symbol":"XOM","weight":0.10}],"lookback":"6m","category":"style","objective":"factor_neutral","maxHedges":3}' \
+  "https://api.secapi.ai/v1/portfolio/optimize?response_mode=compact&include=trust"
+```
+
+For hedge-specific constraints such as `maxPositionWeight`, use `POST /v1/portfolio/hedge` with a `constraints` object. Unsupported constraints are rejected or returned as explicit degraded state rather than silently modeled.
+
+## Agent And MCP Migration
+
+Hosted MCP tools mirror the same migration surface. Prefer compact responses and request trust metadata when an agent will cite freshness, coverage, or methodology:
+
+```json
+{
+  "name": "factors.history",
+  "arguments": {
+    "factorKey": "VALUE",
+    "range": "1y",
+    "response_mode": "compact",
+    "include": ["trust"]
+  }
+}
+```
+
+Key MCP names include `factors.returns`, `factors.history`, `factors.sparklines`, `factors.extreme_moves`, `factors.extreme_pairs`, `factors.valuations`, `factors.valuation_stocks`, `factors.exposures`, `factors.bulk_returns`, `portfolio.analyze`, `portfolio.attribution`, `portfolio.hedge`, `portfolio.optimize`, and `portfolio.stress_test`.
 
 ## Authentication
 
-FactorsToday uses a query parameter API key. SEC API uses the `x-api-key` header:
+FactorsToday examples often pass API keys as query parameters. SEC API uses the `x-api-key` header:
 
 ```bash
-# FactorsToday
-curl "https://api.factorstoday.com/api/factors/catalog?apiKey=YOUR_KEY"
-
 # SEC API
 curl -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/factors/catalog"
 ```
 
-## Example: factor catalog
+## Migration Checklist
 
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/factors/catalog"
-
-# Filter by category
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/factors/catalog?category=industry"
-```
-
-## Example: historical factor returns
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/factors/returns?keys=VALUE,MOMENTUM,QUALITY&lookback=6m"
-```
-
-## Example: single-factor history
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/factors/history/VALUE?range=max&response_mode=compact"
-```
-
-## Example: factor valuation stocks
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&signal=tailwind&limit=25&response_mode=compact"
-```
-
-## Example: portfolio factor decomposition
-
-```bash
-curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "holdings": [
-      {"symbol": "AAPL", "weight": 0.3},
-      {"symbol": "MSFT", "weight": 0.25},
-      {"symbol": "JPM", "weight": 0.2},
-      {"symbol": "XOM", "weight": 0.15},
-      {"symbol": "JNJ", "weight": 0.1}
-    ]
-  }' \
-  "https://api.secapi.ai/v1/portfolio/analyze"
-```
-
-## Example: portfolio hedge
-
-```bash
-curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "holdings": [
-      {"symbol": "AAPL", "weight": 0.35},
-      {"symbol": "MSFT", "weight": 0.30},
-      {"symbol": "NVDA", "weight": 0.20},
-      {"symbol": "JPM", "weight": 0.15}
-    ],
-    "objective": "factor_neutral",
-    "constraints": {"maxHedges": 3, "maxPositionWeight": 0.10}
-  }' \
-  "https://api.secapi.ai/v1/portfolio/hedge?response_mode=compact"
-```
-
-## Example: factor rotation strategy
-
-```bash
-curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"country": "US", "lookback": "6m"}' \
-  "https://api.secapi.ai/v1/strategies/factor-rotation"
-```
+- Replace query-parameter API keys with the `x-api-key` header.
+- Replace downloaded third-party return files with SEC API endpoints and SecAPI-owned data-plane outputs.
+- Use `response_mode=compact` by default for agent/UI flows.
+- Add `include=trust` when the workflow needs freshness, materialization, methodology, source-rights, or degraded-state metadata.
+- Use `include=series` only when a full daily series is required.
+- Gate 2010+ or MAX claims on returned row-level coverage and freshness fields.
+- Preserve `requestId` and `traceparent` in logs, agent responses, and support tickets.
