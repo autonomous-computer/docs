@@ -10,6 +10,8 @@ SEC API provides an allocator-grade factor research catalog spanning more than 2
 
 Launch factor return surfaces are refreshed on a market-calendar-aware schedule. Intraday snapshot endpoints expose available in-session factor state when the underlying market-data plane is current; inspect freshness metadata before treating a snapshot as live.
 
+For source posture, source-rights metadata, and response trust fields, see [Factor Provenance](/factor-provenance). For market-calendar SLAs and freshness interpretation, see [Factor Freshness](/factor-freshness).
+
 ## Factor categories
 
 | Category | Count | Description |
@@ -110,7 +112,9 @@ Every factor return observation includes:
 - `requestId` and `traceparent` for end-to-end request tracing
 - `modelName` identifying the computation pipeline version
 - `methodology.inputs` listing the data sources consumed
-- `sourceRightsNotes` documenting licensing status for each factor family
+- `sourceRights.notes` documenting source-rights status when trust metadata is included
+
+Compact responses may omit heavier trust metadata unless requested. Use `response_mode=compact&include=trust` on REST endpoints or `include: ["trust"]` in MCP tool calls when an agent needs freshness, materialization, methodology, source-rights, and degraded-state metadata alongside the answer.
 
 ## Methodology comparison
 
