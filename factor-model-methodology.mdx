@@ -6,27 +6,27 @@ This page is for allocators, portfolio managers, risk analysts, and compliance t
 
 ## Overview
 
-SEC API provides an allocator-grade factor research catalog spanning 230+ factors across 7 categories: market, style, macro, sector, industry, country, and thematic. The launch-ready API surface is narrower: U.S. market, style, sector, and industry factors target a `2010-01-01` history floor, while shorter-history, beta, blocked, or deferred factors are labeled in catalog and methodology metadata. The model follows a hierarchical purification architecture consistent with institutional standards pioneered by MSCI Barra and adopted by Axioma (Qontigo), Bloomberg PORT, and Northfield.
+SEC API provides an allocator-grade factor research catalog spanning more than 230 tracked factor definitions across market, style, macro, sector, industry, country, and thematic categories. The launch API surface is narrower: U.S. market, style, sector, and industry factors target a `2010-01-01` history floor, while shorter-history, beta, blocked, or deferred factors are labeled in catalog and methodology metadata. Public 2010+ claims should be made only where row-level coverage and freshness proof support the factor. The model follows a hierarchical purification architecture consistent with institutional standards pioneered by MSCI Barra and adopted by Axioma (Qontigo), Bloomberg PORT, and Northfield.
 
-Launch factor return surfaces are refreshed on a market-calendar-aware schedule, with intraday snapshots at 1-minute and 5-minute intervals during US market hours (9:30-16:00 ET) when the underlying market data plane is current.
+Launch factor return surfaces are refreshed on a market-calendar-aware schedule. Intraday snapshot endpoints expose available in-session factor state when the underlying market-data plane is current; inspect freshness metadata before treating a snapshot as live.
 
 ## Factor categories
 
 | Category | Count | Description |
 |----------|-------|-------------|
 | `market` | 1 | Broad US equity risk premium (MKT_US) |
-| `style` | 24 | Cross-sectional return drivers (momentum, value, quality, size, low-volatility, etc.) |
-| `macro` | 16 | Macroeconomic regime factors (rates, credit, commodities, currencies) |
-| `sector` | 21 | GICS sector and sub-sector return attribution |
-| `industry` | 27 | Industry-level return attribution |
-| `country` | 61 | Single-country and regional equity factors |
+| `style` | 30 | Cross-sectional return drivers (momentum, value, quality, size, low-volatility, etc.) |
+| `macro` | 17 | Macroeconomic regime factors (rates, credit, commodities, currencies) |
+| `sector` | 26 | GICS sector and sub-sector return attribution |
+| `industry` | 31 | Industry-level return attribution |
+| `country` | 45 | Single-country and regional equity factors |
 | `thematic` | 81 | Named investment themes (nuclear energy, genomics, REITs, etc.) |
 
 ## Factor construction pipeline
 
 ### Step 1: Universe construction
 
-Factors are computed over a point-in-time US equity universe refreshed monthly:
+U.S. market, style, sector, and industry stock-basket factors are computed over a point-in-time U.S. equity universe refreshed monthly:
 
 - Minimum $100M market capitalization
 - Minimum $5M average daily dollar volume
@@ -44,7 +44,7 @@ Each factor type uses a different data source for membership and characteristic 
 |--------|-------------|---------|
 | Point-in-time fundamentals (SEC XBRL) | Style factors | Book/Market ratio from latest 10-K filing |
 | SIC classification | Sector and industry factors | SIC 7372 → Technology / Software |
-| ETF holdings (Polygon API) | Thematic baskets with ETF proxy | URA holdings → Nuclear Energy basket |
+| ETF, proxy, and curated basket metadata | Thematic, macro, and country factors | URA proxy spread → Nuclear Energy basket |
 | Curated constituent lists | Thematic baskets without ETF proxy | Hotel REITs: APLE, HLT, MAR, HST... |
 | Single-country ETF | Country factors | EWJ → Japan equity premium |
 
@@ -101,7 +101,7 @@ Scaled returns are converted to rolling z-scores for cross-factor comparability.
 
 ## Intraday factor snapshots
 
-During US market hours (9:30–16:00 ET), SEC API computes 1-minute and 5-minute factor snapshots using real-time ETF and constituent prices. Each snapshot includes raw return, purified return, scaled return, and z-score.
+During US market hours (9:30-16:00 ET), SEC API exposes intraday factor snapshots when current proxy and constituent inputs are available. Each snapshot can include raw return, purified return, scaled return, z-score, and freshness metadata so consumers can distinguish current, stale, or degraded results.
 
 ## Data provenance and traceability
 
@@ -121,8 +121,8 @@ Every factor return observation includes:
 | Factor hierarchy | Market → Sector → Theme | Market → Country → Industry → Style |
 | Weighting | Cap-weight (style), equal-weight (thematic) | Cap-weight |
 | Volatility targeting | 10% annual, dynamic leverage | Factor-specific |
-| Recomputation | Daily + intraday (1m, 5m) | Daily |
-| Factor count | 230+ | Varies by model |
+| Recomputation | Market-calendar-aware daily refresh plus intraday snapshots when current inputs are available | Daily |
+| Factor count | 230+ tracked definitions, narrower launch API surface | Varies by model |
 
 ## Thematic basket methodology
 

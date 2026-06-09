@@ -6,7 +6,7 @@ title: "Factor Intelligence"
 
 ## What Factor Intelligence Covers
 
-SEC API Factor Intelligence provides a structured factor model for launch-ready U.S. market, style, sector, and industry factors. The API supports factor catalog retrieval, single-factor history, multi-factor sparklines, historical and intraday returns, extreme move detection, valuation signals, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
+SEC API Factor Intelligence provides a structured factor model for launch-focused U.S. market, style, sector, and industry workflows. The API supports factor catalog retrieval, single-factor history, multi-factor sparklines, historical and intraday returns, extreme move detection, valuation signals, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
 
 Every response includes `requestId` and `traceparent` for downstream traceability.
 
@@ -14,7 +14,7 @@ For the full factor construction methodology, including purification architectur
 
 ## Factor catalog
 
-- launch-ready factors are organized into market, style, sector, and industry categories
+- launch-focused factors are organized into market, style, sector, and industry categories
 - each factor entry includes methodology description, source status, proxy or construction metadata, orthogonalization metadata, and category assignment
 - the catalog is the canonical reference for factor identifiers used across all other factor endpoints
 - launch factors target a `2010-01-01` history floor; shorter-history or beta factors are labeled as such and should not be used for 2010+ coverage claims
@@ -61,7 +61,7 @@ curl -X GET \
 
 ## Single-factor history and sparklines
 
-- single-factor daily history with exact 1D through MAX summary windows
+- single-factor daily history with 1D through MAX summary windows, bounded by row-level coverage and freshness metadata
 - compact multi-factor sparkline series for sector, index, model, and dashboard UI views
 - designed for token-efficient chart/table rendering where the caller needs returns plus window summaries, not full attribution payloads
 
@@ -142,9 +142,9 @@ curl -X GET \
 
 ## Factor intraday
 
-- live intraday factor return snapshots derived from the latest benchmark proxy inputs
+- intraday factor return snapshots derived from the current benchmark proxy inputs when the market-data plane is current
 - intended for dashboards and real-time factor monitoring during market hours
-- returns are updated throughout the trading day as proxy prices move
+- callers should inspect freshness metadata before treating an intraday snapshot as current
 
 ```bash
 curl -X GET \
@@ -155,7 +155,7 @@ curl -X GET \
 
 ## Factor dashboard
 
-- consolidated one-call view combining intraday returns, regime context, rotation signals, and current factor state
+- consolidated one-call view combining intraday returns, regime context, rotation signals, and available factor state
 - designed to power full-screen factor dashboards in a single request
 
 ```bash
@@ -290,7 +290,7 @@ curl -X POST \
 | `GET` | `/v1/factors/valuations/stocks` | stock candidates exposed to valuation signals |
 | `GET` | `/v1/factors/correlations` | factor correlation matrix |
 | `GET` | `/v1/factors/exposures` | per-stock factor loadings |
-| `GET` | `/v1/factors/returns/intraday` | live intraday factor returns |
+| `GET` | `/v1/factors/returns/intraday` | intraday factor return snapshots |
 | `GET` | `/v1/factors/dashboard` | consolidated factor dashboard |
 | `GET` | `/v1/factors/regime-performance` | factor performance by macro regime |
 | `POST` | `/v1/portfolio/analyze` | portfolio factor decomposition |

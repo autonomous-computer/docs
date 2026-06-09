@@ -50,7 +50,7 @@ curl -X POST \
 
 ## POST /v1/portfolio/stress-test
 
-Stress-test a portfolio against historical scenarios. Returns projected drawdown, recovery timeline, and per-holding impact.
+Stress-test a portfolio against supported macro and factor scenarios. Returns projected drawdown, recovery timeline, and per-holding impact when scenario inputs are available.
 
 ### Request body
 
@@ -60,14 +60,15 @@ Stress-test a portfolio against historical scenarios. Returns projected drawdown
     { "symbol": "AAPL", "weight": 0.50 },
     { "symbol": "TLT", "weight": 0.50 }
   ],
-  "category": "rate_shock"
+  "scenarioKey": "us_recession"
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `holdings` | array | yes | Array of `{ symbol, weight }` objects. |
-| `category` | string | no | Scenario category filter. One of `rate_shock`, `credit_event`, `equity_crash`, `geopolitical`, `pandemic`. Omit for all scenarios. |
+| `category` | string | no | Optional scenario category filter. |
+| `scenarioKey` | string | no | Specific supported scenario key such as `us_recession`, `higher_for_longer`, or `china_growth_scare`. |
 
 ### Example
 
@@ -75,7 +76,7 @@ Stress-test a portfolio against historical scenarios. Returns projected drawdown
 curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"TLT","weight":0.5}],"category":"equity_crash"}' \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"TLT","weight":0.5}],"scenarioKey":"us_recession"}' \
   "https://api.secapi.ai/v1/portfolio/stress-test"
 ```
 
@@ -104,7 +105,7 @@ Portfolio optimization across three objectives. Returns proposed weight adjustme
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `holdings` | array | yes | Array of `{ symbol, weight }` objects. |
-| `objective` | string | yes | Optimization objective. One of `factor_neutral`, `min_drawdown`, `regime_aware`. |
+| `objective` | string | no | Optimization objective. One of `factor_neutral`, `min_drawdown`, `regime_aware`. Defaults to `factor_neutral`. |
 | `country` | string | no | ISO 3166-1 alpha-2 country code. Defaults to `US`. |
 | `lookback` | string | no | Lookback window. One of `1Y`, `3Y`, `5Y`. Defaults to `3Y`. |
 
@@ -200,4 +201,3 @@ curl -X POST \
   -d '{"country":"US","lookback":"1Y"}' \
   "https://api.secapi.ai/v1/strategies/regime-screen"
 ```
-
