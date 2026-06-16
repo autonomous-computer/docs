@@ -22,9 +22,9 @@ API keys are the primary authentication method for REST, SDK, CLI, and server-to
 
 Dashboard login uses WorkOS to create an `HttpOnly`, `SameSite=Lax` browser-session cookie named `omni_datastream_session`. Google, GitHub, and email-based WorkOS sign-in are supported by the WorkOS tenant configuration. Public signup is controlled by the `SECAPI_AUTH_PUBLIC_SIGNUP_ENABLED` flag.
 
-The cookie stores the WorkOS access token inside the signed cookie payload and expires with the WorkOS `expires_in` value returned during the code exchange; if WorkOS omits a usable value, SEC API falls back to a one-hour session.
+The cookie is an AES-256-GCM sealed payload that also carries the WorkOS refresh token, so the dashboard stays signed in without re-prompting: the short-lived WorkOS access token is refreshed server-side before it expires. Sessions use a 30-day sliding idle window (re-issued on each refresh) with a 90-day absolute cap measured from first login.
 
-Browser sessions are sealed `HttpOnly` cookies. `GET /auth/session` returns `expiresAt` plus `refreshAvailable: false`, and the dashboard sends users back through `/login` when the cookie expires or the underlying WorkOS token can no longer be verified.
+`GET /auth/session` returns `expiresAt` and `refreshAvailable: false` — refresh is handled server-side via the sealed cookie, not by the client. The dashboard sends users back through `/login` when the idle window lapses, the 90-day absolute cap is reached, or the underlying WorkOS token can no longer be refreshed or verified.
 
 Dashboard control-plane routes require a human WorkOS browser session with the right permissions. API-key-authenticated callers cannot create or revoke dashboard API keys, mutate billing state, update profile/settings, or submit account deletion requests.
 
