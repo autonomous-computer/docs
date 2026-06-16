@@ -1,11 +1,8 @@
----
-title: "Give This Prompt to Your Agent"
-description: "A copyable SEC API briefing prompt for coding agents."
----
+# Give this prompt to your agent
 
-# Give This Prompt to Your Agent
+Generated from the SEC API contract and prompt asset registry.
 
-Use this prompt to give a coding agent the SEC API base URLs, safety rules, and evidence requirements before it starts calling endpoints.
+<Note>For persona-tuned prompts (50 prompts × 5 customer segments — law firms, investment managers, sophisticated investors, insurance, PR firms), see the [agent prompt library](/agents/prompt-library).</Note>
 
 ## Setup prompt
 
@@ -23,9 +20,9 @@ Rules:
 - Prefer structured SEC API endpoints and MCP tools over raw filing text when possible.
 - Check GET /v1/billing and GET /v1/limits before expensive or repeated workflows.
 - Use POST /v1/billing/quote before repeated heavy workflows, and stop if the server returns `billing_budget_approval_required` or `billing_budget_hard_cap_exceeded`.
-- If the client does not already have a long-lived API key, have an administrator mint a sponsor token via POST /v1/agent/bootstrap_tokens and exchange it through POST /v1/agent/bootstrap before repeated machine workflows.
-- Preserve requestId, traceparent, secapi-plan-key, secapi-billing-state, secapi-free-grant-remaining, provenance, freshness, and materialization metadata on every artifact.
-- Warn before repeated loops when the org is approaching a budget limit or is in payg_pending_card.
+- If the client does not already have a long-lived API key, have a human operator mint a sponsor token via POST /v1/agent/bootstrap_tokens and exchange it through POST /v1/agent/bootstrap before repeated machine workflows.
+- Preserve requestId, traceparent, SECAPI-Plan-Key, SECAPI-Billing-State, SECAPI-Free-Grant-Remaining, provenance, freshness, and materialization metadata on every downstream artifact.
+- Warn before repeated loops when the org is close to exhausting the starter grant or is in payg_pending_card.
 - Use the generated prompt snippets below before improvising generic SEC workflows.
 ```
 
@@ -46,7 +43,7 @@ Use SEC API to resolve AAPL, fetch the latest 10-K, extract Item 1A and Item 7, 
 - Summary: Fetch the all-statements bundle and segmented revenue history.
 
 ```text
-Use SEC API to fetch the annual all-statements bundle and segmented revenue history for AAPL, then summarize the last three periods with the key changes, source accession numbers, and the billing state used during the workflow.
+Use SEC API to fetch the annual all-statements bundle and segmented revenue history for AAPL, then summarize the last three periods with the key changes, source accession numbers, and the billing posture used during the workflow.
 ```
 
 ### Ownership Workflow
@@ -73,14 +70,14 @@ Use SEC API to search recent S-1 and 424B4 filings, then return the newest issue
 - Summary: Inspect recent SEC-native M&A events and SEC-furnished earnings materials.
 
 ```text
-Use SEC API to fetch recent M&A events and SEC-furnished earnings materials for AAPL, then return the latest filings, event or coverage classification, accession numbers, concise traceable summaries, and any billing state warnings encountered.
+Use SEC API to fetch recent M&A events and SEC-furnished earnings materials for AAPL, then return the latest filings, event or coverage classification, accession numbers, concise traceable summaries, and any billing posture warnings encountered.
 ```
 
 ## Contract coverage
 
 - `/v1/statements/segmented-revenues` — Return filing-derived segmented revenue history with XBRL product or geography dimensions, capability state, and trace references when issuers disclose them
 - `/v1/statements/share-float` — Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise
-- `/v1/statements/all` — Return the balance sheet, income statement, and cash flow statement as one normalized bundle
+- `/v1/statements/all` — Return the balance sheet, income statement, and cash flow statement as one normalized bundle. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.
 - `/v1/entities/resolve` — Resolve an entity by ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name with confidence and match-basis metadata
 - `/v1/entities` — Search canonical SEC entities across issuers, managers, insiders, and funds
 - `/v1/filings` — Search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination
@@ -90,4 +87,3 @@ Use SEC API to fetch recent M&A events and SEC-furnished earnings materials for 
 - `/v1/filings/latest/risk-categories` — Return deterministic Item 1A risk-category coverage for the latest covered filing of an issuer
 - `/v1/filings/{accession_number}` — Retrieve a filing manifest by accession number from the materialized filing corpus
 - `/v1/filings/{accession_number}/sections/{section_key}` — Extract a filing item or section from a specific accession-number filing
-

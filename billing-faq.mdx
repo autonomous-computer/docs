@@ -1,20 +1,16 @@
----
-title: "Billing FAQ"
----
-
 # Billing FAQ
 
 ## Is there a free trial?
 
-No separate public trial is listed in the pricing catalog. Create an organization and check `GET /v1/billing` for the current billing state and any account-specific evaluation credits.
+No separate trial. Every new organization receives `250` included calls. This grant is **renewable monthly** — the allowance resets at the start of each UTC calendar month while the org is on the sandbox grant (it is not a one-time allocation).
 
-## What happens when billing is required?
+## What happens after the included calls run out?
 
 The org moves to `payg_pending_card`. Billable routes require card attachment through `POST /v1/billing/payg/activate`.
 
 ## Can an agent bootstrap itself?
 
-Not fully anonymously. An administrator creates a short-lived sponsor token with `POST /v1/agent/bootstrap_tokens`, then the agent exchanges it once through `POST /v1/agent/bootstrap`.
+Not fully anonymously. A human operator creates a short-lived sponsor token with `POST /v1/agent/bootstrap_tokens`, then the agent exchanges it once through `POST /v1/agent/bootstrap`.
 
 ## Do I need a subscription to use the API?
 
@@ -26,7 +22,7 @@ Commercial only.
 
 ## Where do I view invoices and payment methods?
 
-Use the dashboard billing tab or `POST /v1/billing/portal`.
+Use the dashboard Billing page or `POST /v1/billing/portal`. The browser receives a Stripe Billing Portal URL; plan and payment state remain server-derived.
 
 ## How do I keep an agent from spending too much?
 
@@ -40,20 +36,55 @@ The `ai_queries` monthly quota covers semantic intelligence and AI-graded routes
 - `GET /v1/signals/dilution/enhanced` (and any sub-paths)
 - MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhanced.get`
 
-When chat endpoints become available, they will count as well. Other meter classes, including filing reads, factor lookups, and market data, do not consume `ai_queries` quota.
+When the chat surfaces (`/v1/copilot/chat`, `/v1/filings/chat`) ship, they will count as well. Other meter classes (filings reads, factor lookups, market data) do not consume `ai_queries` quota.
 
-## Where do I see my ai_queries limit?
+## What are the per-tier ai_queries limits?
 
-Use `GET /v1/billing` for the current organization's quota and usage values. Do not hardcode quota limits in clients; limits can vary by plan and commercial contract.
+| Plan | Monthly AI queries |
+| --- | --- |
+| Sandbox grant | 10 (trial allocation) |
+| Pay As You Go | Uncapped — metered per call |
+| Personal ($55) | Uncapped — governed by budget gates |
+| Team ($239) | Uncapped — governed by budget gates |
+| Commercial ($1,500 floor) | Uncapped — governed by budget gates |
+
+Paid tiers no longer enforce a fixed monthly `ai_queries` cap. Intelligence routes
+are LLM-free at request time, so usage is bounded by your billing budget instead of
+a hard query count. Each paid org gets a default soft budget (alerts/approval at
+roughly 2× the base fee) and an abuse-protection hard cap (roughly 50× the base
+fee); both are overridable with `PUT /v1/billing/budget`. The sandbox grant keeps
+its 10-query monthly trial allocation.
 
 ## When does my AI query quota reset?
 
-Calendar-month reset, in UTC. The `secapi-ai-quota-reset` response header carries the exact ISO timestamp (the first day of the next UTC month at `00:00:00Z`).
+Calendar-month reset, in UTC. The `SECAPI-AI-Quota-Reset` response header carries the exact ISO timestamp (the first day of the next UTC month at `00:00:00Z`).
 
 ## What happens when I exhaust my ai_queries quota?
 
-Quota-counted REST routes return `429 Too Many Requests` with `code: "ai_query_quota_exceeded"` and structured `details` (`aiQueryQuotaLimit`, `aiQueryQuotaUsed`, `aiQueryQuotaRemaining`, `aiQueryQuotaResetAt`, `upgradeUrl`, `docsUrl`). MCP quota exhaustion returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`. Inspect `secapi-ai-quota-*` headers on every quota-counted response for proactive monitoring.
+Only the sandbox grant has a fixed `ai_queries` cap (its 10-query trial). When a
+capped org exhausts it, quota-counted REST routes return `429 Too Many Requests`
+with `code: "ai_query_quota_exceeded"` and structured `details`
+(`aiQueryQuotaLimit`, `aiQueryQuotaUsed`, `aiQueryQuotaRemaining`,
+`aiQueryQuotaResetAt`, `upgradeUrl`, `docsUrl`). MCP quota exhaustion returns HTTP
+`429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`.
+Inspect `SECAPI-AI-Quota-*` headers on every quota-counted response for proactive
+monitoring.
+
+Paid tiers are uncapped on `ai_queries`; instead, requests are bounded by your
+billing budget and surface `402` (`billing_budget_approval_required` at the soft
+ceiling, `billing_budget_hard_cap_exceeded` at the hard cap) rather than the
+`429 ai_query_quota_exceeded` shape.
+
+During the post-launch grace window, `429s` are suppressed and the response includes an `SECAPI-AI-Quota-Grace-Until` header so clients can program against the upcoming enforcement date.
 
 ## Can I see my current ai_queries usage?
 
-`GET /v1/billing` includes a `monthlyQuotas.ai_queries` block: `{ limit, used, remaining, resetAt }`. The same information is mirrored on every quota-counted response via `secapi-ai-quota-*` headers.
+`GET /v1/billing` includes a `monthlyQuotas.ai_queries` block: `{ limit, used, remaining, resetAt }`. The same information is mirrored on every quota-counted response via `SECAPI-AI-Quota-*` headers.
+
+## Is public account creation available?
+
+Create your account at secapi.ai/signup: you authenticate through WorkOS, accept the Terms of Service and Privacy Policy, then create API keys explicitly in the dashboard. Public self-serve signup is rolling out at launch; the signup page reflects current availability.
+
+## Can an API key manage billing or create more keys?
+
+No. API keys are machine credentials for data access. Creating/revoking keys, opening Stripe checkout or portal flows, changing budgets, updating dashboard settings, or requesting account deletion requires a WorkOS browser session with the required permissions.

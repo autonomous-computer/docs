@@ -1,19 +1,14 @@
----
-title: "API Conventions"
-description: "Request, response, metering, versioning, and error conventions for SEC API."
----
-
-# API Conventions
+# API conventions
 
 ## Request correlation
 
 - every response includes `Request-Id`
-- callers can provide `x-request-id` to make local logs and repeatable tests easier to compare
+- callers can provide `x-request-id` to make local benchmarking and smoke output deterministic
 
 ## Metering
 
-- API responses include `secapi-meter-class`
-- this is the canonical hint for billing and quota classification in logs
+- API responses include `SECAPI-Meter-Class`
+- this is the canonical hint for billing/quota classification in logs, smoke output, and reconciliation jobs
 - hosted MCP `tools/call` usage rows also persist `mcp_tool_name`; `intelligence.query` and `signals.dilution.enhanced.get` are the current MCP tools that count toward `ai_queries`
 
 ### MCP JSON-RPC quota envelope
@@ -24,35 +19,37 @@ Successful quota-counted MCP tool calls include top-level `_secapi.quota` metada
 
 ## Cost and token headers
 
-- every `/v1/*` response includes `secapi-token-count` and `secapi-estimated-cost` so agents can budget natively without re-reading the pricing page
-- `secapi-token-count` is an approximate output-token count computed with the `o200k_base` tokenizer (gpt-4o / o1 / modern-frontier encoding) as a portable proxy; consumer-model token usage may vary 10–30%
-- `secapi-estimated-cost` is a dollar string at 4-decimal precision (e.g. `$0.0042`) reflecting the plan-discounted per-call rate pre-grant-offset; it is emitted on every `/v1/*` 2xx regardless of token-count opt-in
-- grant and credit balance are communicated separately via `secapi-free-grant-remaining` and `secapi-budget-used`; the final billed amount reflects grant offsets on top of the per-call estimate
-- `secapi-token-count-estimated: true` is emitted whenever `secapi-token-count` falls back to a `ceil(bytes / 4)` approximation, either because the response body exceeded 512 KB or because the response is a non-JSON billable payload (filing downloads, csv/markdown/pdf exports). Absence of this header means the count is an exact tokenizer result from the JSON body
+- every `/v1/*` response includes `SECAPI-Token-Count` and `SECAPI-Estimated-Cost` so agents can budget natively without re-reading the pricing page
+- `SECAPI-Token-Count` is an approximate output-token count computed with the `o200k_base` tokenizer (gpt-4o / o1 / modern-frontier encoding) as a portable proxy; consumer-model token usage may vary 10–30%
+- `SECAPI-Estimated-Cost` is a dollar string at 4-decimal precision (e.g. `$0.0042`) reflecting the plan-discounted per-call rate pre-grant-offset — emitted on every `/v1/*` 2xx regardless of token-count opt-in
+- grant and credit balance are communicated separately via `SECAPI-Free-Grant-Remaining` and `SECAPI-Budget-Used` — the final billed amount reflects grant offsets on top of the per-call estimate
+- `SECAPI-Token-Count-Estimated: true` is emitted whenever `SECAPI-Token-Count` falls back to a `ceil(bytes / 4)` approximation — either because the response body exceeded 512 KB (and was not fully tokenized to protect p95 latency) or because the response is a non-JSON billable payload (filing downloads, csv/markdown/pdf exports). Absence of this header means the count is an exact tokenizer result from the JSON body
 - counts flagged as estimated are advisory for budget planning only; do not use them for exact tokenizer-equivalence math
-- error responses (4xx, 5xx), rate-limit 429, billing-required 402, and budget-gate 402 all emit `secapi-token-count: 0` and `secapi-estimated-cost: $0.0000`; agents should treat failed requests as free
+- error responses (4xx, 5xx), rate-limit 429, billing-required 402, and budget-gate 402 all emit `SECAPI-Token-Count: 0` and `SECAPI-Estimated-Cost: $0.0000` — agents should treat failed requests as free
 
-### Opting in to exact token counts
+### Requesting exact token counts
 
 Response-body tokenization is opt-in by default to keep p50 latency on hot paths low. Clients that want exact counts on every response add the request header:
 
 ```
-secapi-compute-headers: token-count
+SECAPI-Compute-Headers: token-count
 ```
 
 Behavior matrix:
 
-| Mode | `secapi-token-count` | `secapi-token-count-source` | `secapi-estimated-cost` |
+| Mode | `SECAPI-Token-Count` | `SECAPI-Token-Count-Source` | `SECAPI-Estimated-Cost` |
 |---|---|---|---|
 | Opt-in absent (default), cache miss | `0` | `opt-in-required` | rate-card |
-| Opt-in absent (default), cache hit | exact (from cached body) | omitted; `secapi-cache-hit: true` | rate-card |
+| Opt-in absent (default), cache hit | exact (from cached body) | omitted; `SECAPI-Cache-Hit: true` | rate-card |
 | Opt-in present, cache miss | exact (from body tokenize) | omitted | rate-card |
-| Opt-in present, cache hit | exact (from cached body) | omitted; `secapi-cache-hit: true` | rate-card |
+| Opt-in present, cache hit | exact (from cached body) | omitted; `SECAPI-Cache-Hit: true` | rate-card |
 | Error (4xx/5xx) | `0` | (omitted) | `$0.0000` |
 
-Cache-served responses (a subset of cacheable `/v1/*` GETs) carry an exact token count regardless of opt-in, because the count is precomputed once at cache-write time and stored alongside the body. The `secapi-cache-hit: true` header makes that visible to clients.
+Cache-served responses (a subset of cacheable `/v1/*` GETs) carry an exact token count regardless of opt-in, because the count is precomputed once at cache-write time and stored alongside the body. The `SECAPI-Cache-Hit: true` header makes that visible to clients.
 
-The `secapi-token-count-source: opt-in-required` advisory header marks the default path: if your application needs an exact count for cost reconciliation, re-issue the request with `secapi-compute-headers: token-count`.
+The `SECAPI-Token-Count-Source: opt-in-required` advisory header marks the cheap path: if your agent needs an exact count for cost reconciliation, re-issue the request with `SECAPI-Compute-Headers: token-count`. The official SDKs will add a helper for this header in a future minor release.
+
+Server-side tokenization policy can change without client changes. Clients should rely on the response headers instead of assuming a specific tokenization path.
 
 ## Response formats
 
@@ -63,27 +60,21 @@ The `secapi-token-count-source: opt-in-required` advisory header marks the defau
 - `?view=agent` and `?view=compact` coexist as distinct shapes; agent is not a strict subset of compact — it ships the richer "essentials + citations" shape while compact ships a UI-friendly top-level skim
 - token-count and cost headers naturally shrink in agent mode (agents pay less for compact responses). No client changes are required — header values reflect the final serialized body
 - agent-mode responses preserve camelCase field names — agent mode is a projection of the default shape, not a rename. See the per-endpoint API reference for the exact agent-mode field set
-- unknown values of `?view=` fall back silently to `default`, so accidental typos do not return a 4xx
-
-### Factor response modes
-
-Factor, portfolio-factor, and model-factor endpoints use `response_mode=compact | standard | verbose` plus optional `include` controls:
-
-- `compact`: chart, table, SDK, and agent handoff shape with identifiers, dates, ranks, contribution rows, and compact trust metadata
-- `standard`: default application shape with the fields most dashboards and portfolio workflows need
-- `verbose`: expanded methodology, freshness, and materialization context for audits and debugging
-
-Use `response_mode=compact` for `/v1/factors/history/{factorKey}`, `/v1/factors/sparklines`, `/v1/factors/extreme-moves`, `/v1/factors/extreme-pairs`, `/v1/factors/valuations`, `/v1/factors/valuations/stocks`, `/v1/portfolio/attribution`, `/v1/portfolio/hedge`, and `/v1/models/factor-analysis` when the next consumer is an LLM, UI table, or chart. Preserve `requestId`, `traceparent`, freshness, and methodology metadata even when summarizing compact responses.
+- unknown values of `?view=` fall back silently to `default`, so accidental typos never surface as a 4xx
 
 ### Endpoints that support `?view=agent`
 
-Agent mode is live on **15 endpoints**. Expect 30–95% byte-size reduction depending on endpoint shape; endpoints with large prose summaries see the biggest reductions.
+Agent mode is live on **15 endpoints** today. Expect 30–95% byte-size reduction depending on endpoint shape (endpoints that carry large prose summaries see the biggest wins).
+
+Initial agent-mode endpoints:
 
 - `GET /v1/filings/latest` — single filing essentials + `filingUrl`
 - `GET /v1/entities/resolve` — entity with primary identifiers + match metadata
 - `GET /v1/statements` — statement with rows/periods, provenance dropped
 - `GET /v1/facts` — fact point items + lifted `accessionNumber` / `filingUrl`
 - `GET /v1/sections/search` — section items + lifted `startOffset` / `endOffset`
+
+Expanded agent-mode endpoints:
 
 - `GET /v1/insiders` — insider trade items with trade essentials, ownership flags dropped
 - `GET /v1/forms/144` — Form 144 filings with citation pointers
@@ -127,15 +118,14 @@ When the validator can't produce a span (no section text available for the row o
 
 ### `?view=agent` interaction
 
-Citation fields are emitted on every result row regardless of `?view=`. In agent mode (`?view=agent`), `score` and `retrievalMode` are dropped from `/v1/search/semantic` results; citation fields remain available.
+Citation fields are emitted on every result row regardless of `?view=`. In agent mode (`?view=agent`), `score` and `retrievalMode` are dropped from `/v1/search/semantic` results — the citation surface is preserved.
 
 ## REST vs MCP shape conventions
 
 REST and MCP serve different consumer profiles, and SEC API optimizes for each:
 
 - **REST endpoints** support `?view={default,compact,agent}`. The `agent` view is the wire-byte-optimized projection — large prose drops out, the dilution `verification` block compresses to the canonical `{ confidence, crossValidationsPassed, sourceSpanResolved, modelVersion }` summary, and the response shrinks 30–95% depending on the endpoint. Use it from SDK clients that want low-latency / low-token responses to forward to a UI or downstream agent.
-- **Factor REST endpoints** use `response_mode={compact,standard,verbose}` for factor-specific payload shaping, because factor workflows need distinct chart/table, application, and audit shapes.
-- **MCP tools** always return the full payload (verification block, full provenance chain, all citation pointers). MCP context is already an agent context; returning the evidence up front avoids a second fetch. Agents reasoning over MCP decide what to show to the user.
+- **MCP tools** always return the full payload (verification block, full provenance chain, all citation pointers). MCP context is already an agent context — round-tripping through compact-then-fetch wastes tokens compared to surfacing full evidence on the first call. Agents reasoning over MCP decide what to surface to the user.
 
 This split is intentional: REST optimizes for the wire (network bytes); MCP optimizes for the model (in-context evidence). For dilution endpoints, the rule is concrete:
 
@@ -144,14 +134,14 @@ This split is intentional: REST optimizes for the wire (network bytes); MCP opti
 
 ### Substring-match heuristic
 
-The match span is anchored by the longest query token, falling back to the snippet's leading words and finally to a section-head citation. Multi-occurrence ambiguity is resolved by earliest occurrence. The `highlighted_snippet` window is stable for display; the precise `[char_start, char_end)` may move slightly as upstream rerankers improve. Use the bolded snippet for display and the offsets only for programmatic slicing.
+The match span is anchored by the longest query token, falling back to the snippet's leading words and finally to a section-head citation. Multi-occurrence ambiguity is resolved by earliest occurrence. The `highlighted_snippet` window is the stable user surface; the precise `[char_start, char_end)` may move slightly as upstream rerankers improve — agents should rely on the bolded snippet for display and on the offsets only for programmatic slicing.
 
 ## Versioning
 
 - production clients should send `secapi-version` and pin to a dated release
 - additive fields can ship within a pinned version without requiring a client rebuild
 - breaking behavior changes should land behind a new dated version and be called out in `/docs/changelog`
-- migration guides should be updated in the same change when compatibility behavior changes
+- migration guides should be updated in the same change when a compatibility seam is moved or removed
 
 ## Error model
 
@@ -172,5 +162,15 @@ Error responses use a stable JSON shape:
 ## Auth conventions
 
 - machine access uses `x-api-key`
-- MCP protected-resource metadata is publicly available
-- OAuth authorization-server metadata returns an explicit `503 authorization_server_unavailable` if authorization metadata is not available
+- do not send SEC API keys as `Authorization: Bearer`
+- API-key-authenticated callers can read data through REST, SDK, CLI, and server-to-server MCP, but dashboard control-plane mutations require a WorkOS browser session
+- API key management, billing mutations, dashboard settings, and account deletion requests reject API-key auth and require a WorkOS browser principal with the required permissions
+- MCP protected-resource metadata is available before WorkOS is fully configured
+- OAuth authorization-server metadata returns WorkOS tenant metadata when configured and intentionally returns an explicit `503 workos_authorization_server_unavailable` until real WorkOS values are present
+
+## Launch posture
+
+- public signup is disabled unless `SECAPI_AUTH_PUBLIC_SIGNUP_ENABLED` is intentionally opened server-side
+- dashboard login requires the login flag plus configured WorkOS AuthKit/client values
+- new organizations receive the starter grant and create API keys explicitly; key secrets are revealed once
+- plan, budget, quota, and billing state are server-derived and should not be inferred from frontend-only flags

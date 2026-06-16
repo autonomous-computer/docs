@@ -1,82 +1,84 @@
 ---
 title: "PAYG Cost Calculator"
-description: "Estimate SEC API pay-as-you-go pricing against fixed monthly SEC data plans"
+description: "See how much you'll save with SEC API's pay-as-you-go pricing vs sec-api.io's fixed monthly plans"
 ---
 
 # Pay-As-You-Go Cost Calculator
 
-SEC API offers pay-as-you-go pricing with no monthly minimum. Prices below use
-the `standard_reads` meter at `$0.02` per call from the `GET /v1/billing/rates`
-catalog verified on 2026-04-27.
+SEC API is the only SEC data API with true pay-as-you-go pricing. No monthly minimum. Pay only for what you use.
 
 ## Side-by-Side Comparison
 
 ### Light Usage (Agent running ~200 queries/month)
 
-| | sec-api.io entry plan | SEC API PAYG | SEC API Personal |
+| | sec-api.io | SEC API PAYG | SEC API Personal |
 |---|---|---|---|
-| Monthly cost | **$55/mo** month-to-month or **$49/mo** billed annually | **$4.00** | **$55/mo** or **$588/yr** |
-| Usage basis | Fixed plan | 200 × $0.02 | Subscription |
-| Annual cost | **$588** if billed annually | **$48** | **$588** if billed annually |
+| Monthly cost | **$49/month** (minimum) | **$4.00** | **$55/month** |
+| Per-query cost | ~$0.25 | $0.02 | $0.016 |
+| Annual cost | **$588** | **$48** | **$660** |
+| Savings vs sec-api.io | — | **92%** | **-12%** |
 
 ### Medium Usage (Analyst running ~2,000 queries/month)
 
-| | sec-api.io entry plan | SEC API PAYG | SEC API Personal |
+| | sec-api.io | SEC API PAYG | SEC API Personal |
 |---|---|---|---|
-| Monthly cost | **$55/mo** month-to-month or **$49/mo** billed annually | **$40.00** | **$55/mo** or **$588/yr** |
-| Usage basis | Fixed plan | 2,000 × $0.02 | Subscription |
-| Annual cost | **$588** if billed annually | **$480** | **$588** if billed annually |
+| Monthly cost | **$49/month** | **$40.00** | **$55 + $25.60** |
+| Per-query cost | ~$0.025 | $0.02 | $0.016 |
+| Annual cost | **$588** | **$480** | **$967** |
+| Savings vs sec-api.io | — | **18%** | -64% |
 
 ### Heavy Usage (Team running ~10,000 queries/month)
 
-| | sec-api.io business plan | SEC API PAYG | SEC API Team |
+| | sec-api.io | SEC API PAYG | SEC API Team |
 |---|---|---|---|
-| Monthly cost | **$239/mo** month-to-month or **$199/mo** billed annually | **$200.00** | **$239/mo** or **$2,388/yr** |
-| Usage basis | Fixed plan | 10,000 × $0.02 | Subscription |
-| Annual cost | **$2,388** if billed annually | **$2,400** | **$2,388** if billed annually |
+| Monthly cost | **$199/month** | **$200** | **$239 + $84.50** |
+| Per-query cost | ~$0.02 | $0.02 | $0.013 |
+| Annual cost | **$2,388** | **$2,400** | **$3,882** |
+| Best option | — | **Comparable** | **Best per-query rate** |
 
 ## When to Choose Each Plan
 
 <CardGroup cols={3}>
-  <Card title="Evaluate first" icon="gift">
-    Start with an API key and confirm your current billing state with `GET /v1/billing`.
+  <Card title="Free (250/month)" icon="gift">
+    Evaluation, prototyping, and low-volume agent workflows. No card required.
   </Card>
   <Card title="Pay As You Go" icon="receipt">
-    Good for agents and light users. No monthly commitment. Pay per metered call.
+    Best for agents and light users. No monthly commitment. Highest per-call rate but zero waste.
   </Card>
   <Card title="Personal ($55/mo)" icon="user">
-    Good when you want predictable monthly billing for a single analyst or developer. Annual billing is $588/yr.
+    Best when you consistently exceed ~300 queries/month. 20% meter discount pays for itself.
   </Card>
 </CardGroup>
 
 ## Per-Operation Pricing
 
-| Operation | PAYG meter |
-|---|---|
-| Entity resolution | $0.01 |
-| Filing search, facts, statements, ownership, compensation | $0.02 |
-| Section extraction and comparison workflows | $0.05 |
-| Semantic search | $0.04 |
-| Intelligence query | $0.08 |
-| Market data | $0.03 |
-| Artifact generation | $0.10 |
-| Webhook or stream delivery | $0.001 |
+| Operation | PAYG | Personal (20% off) | Team (35% off) |
+|---|---|---|---|
+| Entity resolution | $0.01 | $0.008 | $0.0065 |
+| Filing search | $0.02 | $0.016 | $0.013 |
+| Section extraction | $0.05 | $0.04 | $0.033 |
+| Intelligence query | $0.08 | $0.064 | $0.052 |
+| Semantic search | $0.04 | $0.032 | $0.026 |
+| Market data | $0.03 | $0.024 | $0.020 |
+| Artifact generation | $0.10 | $0.08 | $0.065 |
+| Webhook delivery | $0.001 | $0.001 | $0.001 |
 
-## Pricing Differences vs sec-api.io
+## What sec-api.io Doesn't Offer
 
-- **PAYG:** sec-api.io's public self-serve pricing is fixed monthly subscription-based.
-- **Meter transparency:** SEC API exposes per-meter prices through `GET /v1/billing/rates`.
-- **Per-call billing:** SEC API exposes per-meter prices through `GET /v1/billing/rates`.
-- **Budget controls:** SEC API exposes quote and budget endpoints for spend controls.
-- **Intelligence bundles:** SEC API packages common agent briefings into single calls.
+- **No PAYG tier.** Minimum $49/month even for 1 query.
+- **No free tier renewal.** 100 lifetime calls vs our 250/month renewable.
+- **No per-call billing.** Fixed monthly regardless of usage.
+- **No budget controls.** No spending caps, no threshold alerts.
+- **No intelligence bundles.** 8+ API calls to assemble what SEC API returns in 1.
 
 ## Get Started
 
 ```bash
-# Get an API key, then confirm your billing state with GET /v1/billing
+# Create a free account at secapi.ai/signup to get an API key
+# Use an existing API key or create a free account at secapi.ai/signup
 
 curl "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
   -H "x-api-key: YOUR_API_KEY"
 ```
 
-[Get an API key →](https://secapi.ai/login)
+Create a free account at secapi.ai/signup to get an API key.

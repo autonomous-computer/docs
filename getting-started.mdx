@@ -1,37 +1,42 @@
----
-title: "Getting Started"
-description: "Make your first useful SEC API request and verify a real workflow."
----
-
 # Getting Started
 
 ## The shortest useful path
 
 Get one issuer, one filing, and one structured statement working first. Do that before you chase a broader integration.
 
-If you are connecting an MCP-aware client, start with the hosted MCP metadata below. For REST and SDK work, start with your API key.
+If you are starting as an external coding agent or operator, begin at `https://secapi.ai/agents` first. That page is the public discovery surface for the sponsored bootstrap flow and the hosted MCP posture.
 
 ## Before you make a request
 
-1. Export `SECAPI_API_KEY`
-2. Verify health at `https://api.secapi.ai/healthz`
-3. Verify readiness at `https://api.secapi.ai/readyz`
-4. Decide whether you are starting with REST, SDK, CLI, or MCP
-5. Pick one identifier you already trust such as ticker, CIK, FIGI, ISIN, or CUSIP
+1. Create a free account, or use an existing org API key
+2. Export `SECAPI_API_KEY`
+3. Verify health at `https://api.secapi.ai/healthz`
+4. Verify readiness at `https://api.secapi.ai/readyz`
+5. Decide whether you are starting with REST, SDK, CLI, or MCP
+6. Pick one identifier you already trust such as ticker, CIK, FIGI, ISIN, or CUSIP
+
+<Warning>
+Use the `x-api-key` header for API keys. Do not send SEC API keys as `Authorization: Bearer`; bearer tokens are WorkOS browser/session credentials, not machine API keys.
+</Warning>
+
+## Dashboard access
+
+Create a free account at secapi.ai/signup, then sign in to the dashboard to manage API keys, billing, and usage.
+
+Use `/login` to start the WorkOS flow. The dashboard lets approved users create and reveal API keys once, view usage and request activity, manage credits and billing entry points, and update profile, organization, appearance, security, logout, and account deletion-request settings.
+
+Control-plane actions require a WorkOS browser session. Machine API keys are for REST, SDK, CLI, and server-to-server MCP calls.
 
 ## REST quickstart
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
 
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
 ```
 
@@ -56,12 +61,10 @@ const statements = await client.allStatements({ ticker: "AAPL", period: "annual"
 ## Python quickstart
 
 ```python
-import os
-
 from secapi_client import SecApiClient
 
 client = SecApiClient(
-    api_key=os.environ["SECAPI_API_KEY"],
+    api_key="YOUR_API_KEY",
     base_url="https://api.secapi.ai",
 )
 
@@ -72,14 +75,9 @@ statements = client.all_statements(ticker="AAPL", period="annual", limit=1)
 
 ## CLI quickstart
 
-Install the CLI via Homebrew or npm:
+Install the CLI via npm:
 
 ```bash
-# Homebrew
-brew tap secapi-ai/tap
-brew install secapi
-
-# or npm
 npm install -g @secapi/cli
 ```
 
@@ -97,7 +95,6 @@ When a filing-derived response includes trace references, hydrate them by trace 
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/traces/<trace_id>"
 ```
 
@@ -110,6 +107,7 @@ const trace = await client.getTrace("<trace_id>")
 - MCP server: `https://api.secapi.ai/mcp`
 - Protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
 - Authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
+- Sponsored bootstrap: `POST https://api.secapi.ai/v1/agent/bootstrap_tokens` then `POST https://api.secapi.ai/v1/agent/bootstrap`
 
 ### First MCP tools to call
 
@@ -126,6 +124,6 @@ const trace = await client.getTrace("<trace_id>")
 ## Next pages
 
 - [First request flows](/first-request-flows)
-- [SEC API Docs](/sec-api-docs)
+- [SEC API Docs](/getting-started)
 - [Libraries & SDKs](/libraries-and-sdks)
 - [Give this prompt to your agent](/give-this-prompt-to-your-agent)

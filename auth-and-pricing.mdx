@@ -1,48 +1,65 @@
----
-title: "Auth, Billing, and First Utility"
----
-
 # Auth, Billing, and First Utility
 
 <Info>
-API keys are the primary authentication method for all plans. Create an org, mint an org-scoped key, make a real request, then attach billing only after a successful test request. Enterprise SSO is available through the enterprise rollout path; contact sales to discuss requirements.
+API keys are the primary authentication method for REST, SDK, CLI, and server-to-server MCP calls. Create a free account and sign in through WorkOS to manage API keys, billing, and usage.
 </Info>
 
 ## Auth model
 
 <CardGroup cols={3}>
   <Card title="API keys (primary)" icon="key-round" href="/api-reference/platform">
-    All REST, SDK, and CLI clients use org-scoped `x-api-key` credentials. This is the primary authentication method for every plan.
+    REST, SDK, CLI, and server-to-server MCP clients use org-scoped `x-api-key` credentials. This is the primary machine-auth method for every plan.
   </Card>
   <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
-    MCP clients use WorkOS OAuth discovery through `api.secapi.ai`.
+    Hosted MCP clients use `x-api-key` for server-to-server access and WorkOS discovery metadata where the client needs OAuth-protected-resource metadata.
   </Card>
   <Card title="Enterprise SSO" icon="shield-check" href="/enterprise">
-    Enterprise SSO is available through the enterprise rollout path. Contact sales to discuss requirements.
+    WorkOS is the dashboard identity provider today and remains the enterprise SSO boundary as organization-level access expands.
   </Card>
 </CardGroup>
 
+## Browser dashboard sessions
+
+Dashboard login uses WorkOS to create an `HttpOnly`, `SameSite=Lax` browser-session cookie named `omni_datastream_session`. Google, GitHub, and email-based WorkOS sign-in are supported by the WorkOS tenant configuration. Public signup is controlled by the `SECAPI_AUTH_PUBLIC_SIGNUP_ENABLED` flag.
+
+The cookie is an AES-256-GCM sealed payload that also carries the WorkOS refresh token, so the dashboard stays signed in without re-prompting: the short-lived WorkOS access token is refreshed server-side before it expires. Sessions use a 30-day sliding idle window (re-issued on each refresh) with a 90-day absolute cap measured from first login.
+
+`GET /auth/session` returns `expiresAt` and `refreshAvailable: false` — refresh is handled server-side via the sealed cookie, not by the client. The dashboard sends users back through `/login` when the idle window lapses, the 90-day absolute cap is reached, or the underlying WorkOS token can no longer be refreshed or verified.
+
+Dashboard control-plane routes require a human WorkOS browser session with the right permissions. API-key-authenticated callers cannot create or revoke dashboard API keys, mutate billing state, update profile/settings, or submit account deletion requests.
+
 ## Agent-native entry path
 
-- start at the public `/agents` overview when the caller is an external coding agent or administrator
+- start at the public `/agents` overview when the caller is an external coding agent or operator
 - mint a short-lived sponsor token with `POST /v1/agent/bootstrap_tokens` from a human-authenticated org session
 - exchange that sponsor token at `POST /v1/agent/bootstrap`
 - preserve the returned API key secret once, then treat it as the machine credential for REST, SDK, CLI, or hosted MCP
+
+## API key revocation SLA
+
+Revoking a key through the dashboard or `DELETE /v1/api_keys/:keyId` marks that key `revoked` in Postgres and, when Redis is available, publishes a short-lived revocation marker for API replicas.
+
+- the replica that processes the revoke stops serving the key immediately
+- with Redis healthy, other API replicas reject cached copies within `5` seconds
+- if Redis is unavailable but Postgres is healthy, cached API key principals expire and re-check Postgres within `60` seconds
+- if Redis and Postgres are both unavailable after a key has already been cached on a replica, stale-while-revalidate is capped at `6m5s`
+
+For suspected key theft, revoke the key, create a replacement, rotate callers, and monitor for `401` responses and unexpected usage. Contact support for a forced fleet cache flush if you need emergency containment beyond the normal propagation window.
 
 ## Default onboarding motion
 
 <Steps>
   <Step title="Create your org and API key">
-    Start at the marketing-site `Get Free API Key` button or the `/login` route. Complete the sign-in flow to create your org and mint your first org-scoped API key in one step.
+    Create a free account, then create your first org-scoped API key explicitly from the dashboard or account API using a WorkOS browser session, where it is revealed exactly once.
   </Step>
-  <Step title="Check billing state">
-    Use `GET /v1/billing` to see the current plan, billing state, available keys, and any account-specific evaluation credit.
+  <Step title="Receive the starter grant">
+    Every new org starts with `250` included calls; API keys are created explicitly and revealed once.
   </Step>
   <Step title="Make one real request">
     Resolve an issuer, fetch a filing, or run one statement workflow before you think about plan changes.
   </Step>
   <Step title="Attach billing only when the work is real">
-    Activate Pay As You Go or move directly to a commit plan when the workflow is ready for paid usage.
+    After the starter grant is exhausted, activate Pay As You Go or move directly to a commit plan.
   </Step>
 </Steps>
 
@@ -61,7 +78,7 @@ API keys are the primary authentication method for all plans. Create an org, min
 
 <CardGroup cols={2}>
   <Card title="Pay As You Go" icon="gauge" href="/plans-and-pricing">
-    Default paid motion. No fixed monthly fee. Higher per-call pricing in exchange for the lowest signup friction.
+    Default paid motion. No fixed monthly fee. Higher per-call pricing in exchange for low activation friction.
   </Card>
   <Card title="Personal" icon="user" href="/plans-and-pricing">
     Monthly or annual commit plan for individual developers and analysts who want lower unit pricing.
@@ -74,19 +91,22 @@ API keys are the primary authentication method for all plans. Create an org, min
   </Card>
 </CardGroup>
 
-## Pricing
+## Launch pricing posture
 
-- `GET /v1/billing/rates` is the source of truth for public plan and meter pricing
+- every new org gets `250` included calls
 - Pay As You Go is the default paid path
 - annual billing defaults on commit plans
 - Team and Commercial are for shared or externalized usage, not just more requests
 - redistribution, embedding, resale, and broader commercial rights begin at `Commercial`
 
-## WebSocket Rate Limits
+## WebSocket rate posture
 
-Chat messages sent through the SEC API Agent WebSocket runtime are rate-limited per user. The default ceiling is 30 requests per minute unless your organization has a custom limit. Non-chat messages, such as permission responses and plan approvals, are exempt because they respond to server-initiated prompts.
+Chat messages sent through the SEC API Agent WebSocket runtime are rate-limited per user at a configurable requests-per-minute ceiling (default: 30 RPM). Non-chat messages — permission responses, plan approvals, label and source operations — are exempt because they are responses to server-initiated prompts, not user-initiated load.
 
-Rate-limited requests receive a clear error message with a retry-after interval. The WebSocket connection stays open, so interactive workflows can continue after the backoff window.
+Rate-limited requests receive a clear error message with a retry-after interval. The WebSocket connection stays open. This posture protects shared infrastructure without punishing interactive workflows.
+
+- `RATE_LIMIT_CHAT_RPM`: per-user ceiling (default 30)
+- `RATE_LIMIT_ENABLED`: feature flag (default true in production)
 
 ## Billing entry points
 
@@ -100,45 +120,58 @@ Rate-limited requests receive a clear error message with a retry-after interval.
 - `POST /v1/agent/bootstrap_tokens`
 - `POST /v1/agent/bootstrap`
 - `GET /v1/limits`
+- `GET /v1/dashboard/overview`
+
+## Dashboard surfaces
+
+The dashboard mirrors the account and billing API state instead of inventing client-side entitlements.
+
+- Overview: principal, org, plan, quota, recent usage, and key context
+- API Keys: active-key count, create/reveal-once, copy, revoke, and revocation status
+- Usage: time series, endpoint breakdown, request activity, and export controls
+- Billing and Credits: subscription, PAYG, budget, quota, starter grant, and billing portal entry points
+- Settings: profile, organization, appearance, security, logout, and deletion-request controls
+
+Billing mutations are server-authoritative. The browser only receives Stripe Checkout or Billing Portal URLs; it does not decide plan state locally.
 
 ## What to log
 
 <Warning>
-Preserve billing and plan headers in logs and traces so entitlement changes are visible before they affect production workflows.
+Do not treat billing and plan headers as decorative. Preserve them in logs, traces, and downstream artifacts so degraded entitlement posture is visible before it becomes a production incident.
 </Warning>
 
 - `Request-Id`
 - `traceparent`
-- `secapi-meter-class`
-- `secapi-plan-key`
-- `secapi-billing-status`
-- `secapi-billing-state`
-- `secapi-free-grant-remaining`
-- `secapi-token-count`
-- `secapi-estimated-cost`
-- `secapi-token-count-estimated` (present only when the count fell back to a byte/4 approximation)
+- `SECAPI-Meter-Class`
+- `SECAPI-Plan-Key`
+- `SECAPI-Billing-Status`
+- `SECAPI-Billing-State`
+- `SECAPI-Free-Grant-Remaining`
+- `SECAPI-Token-Count`
+- `SECAPI-Estimated-Cost`
+- `SECAPI-Token-Count-Estimated` (present only when the count fell back to a byte/4 approximation)
 
 ## MCP OAuth discovery endpoints
 
-These endpoints support hosted MCP. They are not part of the primary human-auth flow: API keys cover every REST, SDK, and CLI client.
+These endpoints back the hosted MCP surface. They are not part of the primary human-auth flow — API keys cover every REST, SDK, and CLI client.
 
 - protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
 - authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
 
 ## Recommended first-success flow
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Set up SEC API auth with an org-scoped API key. Verify health, readiness, billing, rates, and limits first. Then run one real issuer workflow while preserving `requestId`, `traceparent`, `secapi-plan-key`, `secapi-billing-state`, `secapi-free-grant-remaining`, provenance, and freshness metadata.
+<Prompt>
+Set up SEC API auth with an org-scoped API key. Verify health, readiness, billing, rates, and limits first. Then run one real issuer workflow while preserving `requestId`, `traceparent`, `SECAPI-Plan-Key`, `SECAPI-Billing-State`, `SECAPI-Free-Grant-Remaining`, provenance, and freshness metadata.
 </Prompt>
 
 ## Read next
 
 <CardGroup cols={3}>
   <Card title="Plans and Pricing" icon="gauge" href="/plans-and-pricing">
-    Review PAYG, commit plans, and rights boundaries.
+    Review the starter grant, PAYG, commit plans, and rights boundaries.
   </Card>
   <Card title="Agent Billing" icon="bot" href="/agent-billing">
-    Learn how agents should check billing before expensive loops.
+    Learn how agents should reason about billing posture before expensive loops.
   </Card>
   <Card title="Pay As You Go" icon="credit-card" href="/pay-as-you-go">
     See the PAYG activation flow and the billing state transition after the grant is exhausted.
