@@ -5,7 +5,7 @@ description: "Connect SEC API to Claude Desktop, Claude Code, Cursor, and other 
 
 # MCP Server Installation
 
-SEC API provides a hosted MCP server for AI agents. Connect once to expose the SEC API tool set in an MCP-aware client.
+SEC API provides a hosted MCP server for AI agents. Connect once, get direct access to SEC filing, statement, section, ownership, insider, and Form 144 workflows.
 
 ## Claude Desktop
 
@@ -14,10 +14,10 @@ Add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "sec-api": {
+    "secapi": {
       "url": "https://api.secapi.ai/mcp",
       "headers": {
-        "x-api-key": "${SECAPI_API_KEY}"
+        "x-api-key": "YOUR_API_KEY"
       }
     }
   }
@@ -30,7 +30,7 @@ On macOS, the config is at `~/Library/Application Support/Claude/claude_desktop_
 
 ```bash
 claude mcp add --transport http secapi https://api.secapi.ai/mcp \
-  --header "x-api-key: $SECAPI_API_KEY"
+  --header "x-api-key: YOUR_API_KEY"
 ```
 
 ## Cursor
@@ -40,10 +40,10 @@ Add to your `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "sec-api": {
+    "secapi": {
       "url": "https://api.secapi.ai/mcp",
       "headers": {
-        "x-api-key": "${SECAPI_API_KEY}"
+        "x-api-key": "YOUR_API_KEY"
       }
     }
   }
@@ -52,8 +52,8 @@ Add to your `.cursor/mcp.json`:
 
 ## Get Your API Key
 
-1. Get an API key at [secapi.ai](https://secapi.ai/login)
-2. Create or copy an API key from your account
+1. Create a free account or use an existing SEC API key
+2. Create an API key explicitly from the dashboard or account API
 3. Set it as `SECAPI_API_KEY` in your environment
 
 ## Available Tools
@@ -74,8 +74,39 @@ Once connected, your agent has access to:
 | `forms.list_144` | List Form 144 proposed sale filings |
 | `comp.list` | List executive compensation records |
 | `companies.financials` | Get normalized company financial statements |
-| `intelligence.query` | Run an agent intelligence query |
+| `companies.ratios` | Get normalized company ratios |
 | `intelligence.footnotes` | Query filing footnotes for agent workflows |
+
+## Agent Recipes
+
+Use these as first-run prompts after installation:
+
+### Claude Desktop or Claude Code
+
+> Use SEC API MCP. Resolve AAPL, fetch the latest 10-K with `filings.latest`, extract Item 1A with `sections.get`, read annual income statements with `statements.get`, and return citations with accession numbers, filing dates, source URLs, freshness, and requestId.
+
+### Cursor or Codex-Style Coding Agents
+
+> Wire SEC API MCP into this repo. Then verify it by calling `entities.resolve` for NVDA, `owners.institutional_holders` for NVDA with `limit: 10`, `forms.list_144` for NVDA with `limit: 10`, and `sections.search` for NVDA risk-factor language. Keep compact citation fields intact in any generated artifact.
+
+### Generic MCP Clients
+
+Send a `tools/call` request to the streamable HTTP endpoint:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "secapi-verify",
+  "method": "tools/call",
+  "params": {
+    "name": "filings.latest",
+    "arguments": {
+      "ticker": "AAPL",
+      "form": "10-K"
+    }
+  }
+}
+```
 
 ## Verify Connection
 
@@ -87,16 +118,16 @@ The agent should call `filings.latest` with `ticker: AAPL, form: 10-K`.
 
 ## Agent Bootstrap (Ephemeral Credentials)
 
-For automated agent workflows, use sponsor tokens for short-lived credentials:
+For automated agent workflows, use a WorkOS-authenticated sponsor bearer token to mint short-lived credentials:
 
 ```bash
-# Create a bootstrap token from a server-side workflow.
+# Create a bootstrap token (valid for 1 hour)
 curl -X POST https://api.secapi.ai/v1/agent/bootstrap_tokens \
-  -H "Authorization: Bearer YOUR_BEARER_TOKEN" \
+  -H "Authorization: Bearer $SECAPI_BEARER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"ttlSeconds": 3600}'
 
-# Exchange the token for ephemeral agent credentials.
+# Agent uses the token to get ephemeral credentials
 curl -X POST https://api.secapi.ai/v1/agent/bootstrap \
   -H "Content-Type: application/json" \
   -d '{"token": "BOOTSTRAP_TOKEN"}'

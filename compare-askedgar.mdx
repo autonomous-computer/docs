@@ -6,7 +6,7 @@ description: "Feature-by-feature comparison of SEC API and AskEdgar — schema, 
 # SEC API vs AskEdgar
 
 [AskEdgar](https://askedgar.io) launched 2026-04-22 as a focused
-dilution-intelligence product for small-cap teams. It ships a curated
+dilution-intelligence product for small-cap operators. It ships a curated
 dilution schema, an AI Copilot UI, and a per-KB API priced for tactical
 workflows. SEC API ships parity on the dilution data — every entity AskEdgar
 models, plus a few they don't — and adds 38 endpoint families they don't
@@ -73,52 +73,52 @@ back to a source span:
     "sourceSpanResolved": true,
     "verifiedAt": "2026-04-22T14:31:08Z",
     "modelVersion": "claude-opus-4-7",
-    "reviewer": "human:reviewer-184"
+    "reviewer": "human:operator-id-184"
   }
 }
 ```
 
-The SEC API verification model is available in the public response schema.
-Customers should treat confidence, source-span resolution, and review metadata
-as separate signals rather than collapsing verification to a single boolean.
+SEC API dilution verification is rolling out in stages. Schema and contract
+are live on every response; production extraction coverage expands as each
+source family clears verification.
 
 ## Pricing
 
-AskEdgar splits its API into two products: an AI Copilot UI (priced
+AskEdgar splits its surface into two products: an AI Copilot UI (priced
 per-month with included AI questions) and an API (priced per-KB,
 pay-as-you-go only). SEC API is API-first and offers a unified PAYG plus
 subscription ladder.
 
 | Tier              | SEC API                                            | AskEdgar Copilot                       | AskEdgar API     |
 | ----------------- | ----------------------------------------------- | -------------------------------------- | ---------------- |
-| **Evaluation access** | Account-specific billing state              | Limited AI questions                   | None             |
+| **Free**          | 250 calls/month (renewable)                     | Limited AI questions                   | None             |
 | **Pay-as-you-go** | From $0.01/call                                 | n/a                                    | $0.004–$0.019/KB |
-| **Personal/Pro**  | $55/mo or $588/yr                               | $59/month — 600 AI Q (7-day trial)     | n/a              |
-| **Team/Pro+**     | $239/mo or $2,388/yr                            | $199/month — 1,000 AI Q (7-day trial)  | n/a              |
-| **Commercial/Enterprise** | From $18,000/yr                         | Custom                                 | Custom           |
+| **Personal/Pro**  | $55/month                                       | $59/month — 600 AI Q (7-day trial)     | n/a              |
+| **Team/Pro+**     | $239/month                                      | $199/month — 1,000 AI Q (7-day trial)  | n/a              |
+| **Enterprise**    | Custom (SLA, support, dedicated capacity)       | Custom                                 | Custom           |
 
 **Cost example** for a small dilution-research workload (300 API calls/month, ~6 KB returned per `dilution-data` call):
 
 - AskEdgar API PAYG (`/v1/dilution-data` at $0.018/KB) ≈ **$32.40/month**
-- SEC API PAYG at light-read pricing for 50 calls ≈ **-e.50/month**
-- SEC API Personal **$55/month** or **$588/year** (predictable, includes the rest of the 39-family API)
+- SEC API PAYG (250 free + 50 × $0.01) ≈ **$0.50/month**
+- SEC API Personal **$55/month** (predictable, includes the rest of the 39-family API surface)
 
 The PAYG arithmetic is the conversion lever for any agent at small-to-medium
 volume. The subscription is the right call once dilution data is embedded
-in a workflow that touches the rest of the API.
+in a workflow that touches the rest of the API surface.
 
 ## Where AskEdgar wins
 
 AskEdgar has genuine strengths and a visible head start on dilution
 specifically. Customers evaluating both should know:
 
-- **Polished AI Copilot UI** for non-engineer teams. SEC API is API-first
+- **Polished AI Copilot UI** for non-engineer operators. SEC API is API-first
   and does not ship a Copilot UI in the same shape today.
 - **Tight vertical scope** — schema, screener, alerts, and Discord
   integrations tuned for one workflow (small-cap dilution forensics)
   feel cohesive end-to-end.
 - **7-day free trial** on Pro and Pro+ Copilot tiers. SEC API does not offer
-  a separate public trial in the pricing catalog; use `GET /v1/billing` to inspect any account-specific evaluation credit
+  a separate trial; every new organization receives 250 included calls
   renewable monthly.
 - **Marquee small-cap testimonials.** Aegis Capital is named on the home
   page alongside Trillium, Seven Points Capital, SMB Capital, and others.
@@ -129,8 +129,8 @@ specifically. Customers evaluating both should know:
 
 SEC API is broader (39 endpoint families vs AskEdgar's dilution-only wedge),
 ships per-field verification rather than a binary flag, and treats agents
-as a first-class API (4 SDKs, 8 Skills, MCP server, signed webhooks,
-structured CLI).
+as a first-class surface (4 SDKs, 8 Skills, MCP server, FinanceBench
+score, signed webhooks, structured CLI).
 
 | Dimension                                               | SEC API                                  | AskEdgar                          |
 | ------------------------------------------------------- | ------------------------------------- | --------------------------------- |
@@ -140,29 +140,29 @@ structured CLI).
 | MCP server                                              | yes (47 tools, 14 dilution.*)         | no                                |
 | SDKs                                                    | 4 (JS/TS, Python, Go, Rust)           | none published                    |
 | Custom Skills (Claude / agent-runnable)                 | 8 canonical skills                    | none                              |
-| FinanceBench                                            | canary status published separately    | none published                    |
+| FinanceBench score                                      | 18 / 25 (72%) canary subset, 2026-04-25 | none published                    |
 | Filing search / sections / XBRL                         | yes                                   | no                                |
 | 13F holdings + comparison                               | yes                                   | no                                |
 | Insider trading + Form 144                              | yes                                   | no                                |
 | Executive compensation                                  | yes                                   | no                                |
-| 8-K 5.07 voting (structured)                            | yes                                   | no                                |
+| 8-K 5.07 voting (structured)                            | yes (first in market)                 | no                                |
 | Form ADV (+ AUM filters)                                | yes                                   | no                                |
 | Enforcement (5,993+ records)                            | yes                                   | no                                |
-| Semantic search                     | yes                                   | no                                |
+| Semantic search (Pinecone + Voyage)                     | yes                                   | no                                |
 | Macro intelligence (12 countries)                       | yes                                   | no                                |
 | Factor analysis (broad catalog with narrower launch surface) | yes                              | no                                |
 | Webhooks (signed, replay, cursor)                       | yes (7 dilution event types)          | Discord automation only           |
 | Direct row-level back-link to competitor                | yes (`askedgar_url` field)            | n/a                               |
 
-SEC API's published p50 across the current 4-workflow harness is available at
-[/benchmark-results](/benchmark-results). AskEdgar-specific latency has not
-yet been published.
+Latency benchmarks vs AskEdgar are scheduled for a follow-up ticket; SEC API's
+published p50 across the 4-workflow harness is at
+[/benchmark-results](/benchmark-results).
 
 ## When to choose which
 
 **Choose AskEdgar when:**
 
-- You are a small-cap team who wants an AI Copilot UI today and dilution
+- You are a small-cap operator who wants an AI Copilot UI today and dilution
   is your only need.
 - You want to start with a 7-day free trial on the Copilot tier.
 - You are billing-compliant with strictly-metered per-KB API charges and
@@ -188,13 +188,13 @@ path to the AskEdgar UI for verification.
 | -------------------------------- | ----------------------------------- | ------------------------------ |
 | API auth header                  | `x-api-key`                         | `API-KEY`                      |
 | API base URL                     | `https://api.secapi.ai/v1`          | `https://api.askedgar.com/v1`  |
-| Onboarding                       | API-key signup; billing state returned by `GET /v1/billing` | API-key request flow + per-KB billing |
-| OpenAPI                          | yes (Zod-generated)                 | not published in its public docs |
+| Onboarding                       | Free account; explicit key creation | API-key request flow + per-KB billing |
+| OpenAPI                          | yes (Zod-generated)                 | not publicly linked from /docs |
 | MCP server                       | yes (47 tools)                      | no                             |
 | Multi-language SDKs              | JS/TS, Python, Go, Rust             | none published                 |
 | Skills (Claude / agent-runnable) | 8 canonical                         | none published                 |
 | Webhooks                         | signed + replay + cursor            | Discord-only                   |
-| FinanceBench                     | canary status published separately  | not published                  |
+| FinanceBench                     | 18 / 25 (72%) canary, 2026-04-25    | not published                  |
 
 ## Migration
 
@@ -216,8 +216,8 @@ curl "https://api.secapi.ai/v1/dilution/events?ticker=MULN" \
   -H "x-api-key: YOUR_API_KEY"
 ```
 
-[Get an API key →](https://secapi.ai/login).
+Create a free account at secapi.ai/signup to get an API key.
 
 ---
 
-*All numeric claims in this comparison reflect data captured as of 2026-04-26. AskEdgar facts re-verified at askedgar.io on 2026-04-26. See `benchmarks/METHODOLOGY.md` for benchmark methodology.*
+*All numeric claims in this comparison reflect data captured as of 2026-04-26. AskEdgar facts re-verified at askedgar.io on 2026-04-26. See `benchmarks/METHODOLOGY.md` for sign-off.*
