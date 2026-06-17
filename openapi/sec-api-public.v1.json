@@ -14768,7 +14768,7 @@
     },
     "/v1/intelligence/footnotes/query": {
       "post": {
-        "summary": "Return a structured filing-footnote investigation bundle for lease, tax, revenue, covenant, and segment-note workflows",
+        "summary": "Return a structured filing-footnote investigation bundle. Single-ticker latest-only requests return a footnote_intelligence_result; multi-ticker or date-range requests return a footnote_intelligence_collection.",
         "requestBody": {
           "required": true,
           "content": {
@@ -14785,7 +14785,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FootnoteIntelligenceResult"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/FootnoteIntelligenceResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FootnoteIntelligenceCollection"
+                    }
+                  ]
                 }
               }
             }
@@ -26699,6 +26706,7 @@
       "CountryReport": {},
       "FootnoteIntelligenceRequest": {},
       "FootnoteIntelligenceResult": {},
+      "FootnoteIntelligenceCollection": {},
       "IntelligenceQueryRequest": {},
       "IntelligenceQueryResponse": {},
       "IntelligenceQueryPlanManifest": {},
