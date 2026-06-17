@@ -15833,6 +15833,76 @@
         "x-secapi-anonymous-read": true
       }
     },
+    "/v1/companies/overview": {
+      "get": {
+        "summary": "Return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline). Ships beta. Requires ticker or cik.",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Either ticker or cik is required."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Either ticker or cik is required."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated opt-in enrichments: segments, footnotes, dilution. Omitted enrichments report status not_requested."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyOverview"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "companies.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
     "/v1/owners/13f": {
       "get": {
         "summary": "Return the latest normalized 13F ownership report for a manager CIK, with optional quarter-specific selection",
@@ -17847,6 +17917,7 @@
       "CompanyFinancials": {},
       "CompanyRatios": {},
       "CompanySegments": {},
+      "CompanyOverview": {},
       "SegmentedRevenueSeries": {},
       "BoardComposition": {},
       "NportHoldings": {},
