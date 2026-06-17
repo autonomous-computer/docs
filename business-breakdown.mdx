@@ -1,0 +1,108 @@
+# Business Breakdown (segment analysis)
+
+<Note>
+**`GET /v1/companies/segments` ships beta.** Responses carry `SECAPI-Maturity: beta`. The de-subtotal and revenue tie-out heuristics are validated across large-cap issuers; treat axes flagged `low_confidence` (common for banks, REITs, and insurers) as directional.
+</Note>
+
+`GET /v1/companies/segments` returns a multi-axis, revenue-anchored breakdown of a
+company's business — the "Business Breakdown" capability. It complements, and does
+not replace:
+
+- [`/v1/statements/segmented-revenues`](/api-reference/statements) — the revenue-only segmented series (single axis at a time, raw members).
+- the LLM-generated segment summaries in the OMNI apps surface.
+
+Where `segmented-revenues` returns raw XBRL segment members for one metric, this
+endpoint groups every reported segment axis into the three canonical business
+dimensions, removes parent subtotals and elimination rows, ties each axis back to
+total reported revenue, and joins in segment profit/loss, margin, and year-over-year
+growth.
+
+## Request
+
+| Parameter | Required | Description |
+| --- | --- | --- |
+| `ticker` | one of `ticker`/`cik` | Issuer ticker. |
+| `cik` | one of `ticker`/`cik` | Issuer CIK. |
+| `period` | no | `annual` (default) or `quarterly`. Accepts the `quarter`/`q` aliases. |
+| `segment_type` | no | Restrict to a single axis: `product`, `geographic`, or `operating`. Defaults to all canonical axes. |
+
+```bash
+curl "https://api.secapi.ai/v1/companies/segments?ticker=AAPL&period=annual" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+## Canonical axes
+
+Only three XBRL axes are treated as business segments. Every other axis
+(Restatement, RelatedParty, MajorCustomers, ConsolidationItems,
+IncomeStatementLocation, LegalEntity, …) is dropped — those slice the income
+statement on non-business dimensions.
+
+| `axis` | XBRL axis tag |
+| --- | --- |
+| `product` | `srt:ProductOrServiceAxis` |
+| `geographic` | `srt:StatementGeographicalAxis` |
+| `operating` | `us-gaap:StatementBusinessSegmentsAxis` |
+
+## How the breakdown is computed
+
+1. **Group by canonical axis.** Non-canonical axes are discarded.
+2. **Latest period (plus prior for YoY).** Per axis we take the most recent
+   reported period, and the period before it for growth.
+3. **Dedup members.** A member reported under several contexts collapses to its
+   maximum value (the unscoped figure). Elimination, intersegment, consolidation,
+   and reconciling members are dropped.
+4. **De-subtotal against total revenue.** Anchored to the company's total reported
+   revenue for the same period, we iteratively remove the single member whose
+   removal brings the axis sum closest to total revenue — while the sum still
+   exceeds revenue by more than 3% and the removal would not drop the sum below
+   90% of revenue. This strips parent rollups (for example Apple's "Products" row
+   that coexists with iPhone, Mac, iPad, …) without deleting genuine segments.
+5. **Tie-out and confidence.** An axis `tiesToRevenue` when `|axisTotal − companyRevenue| ≤ 5% × companyRevenue`. Tying axes are `reported`; non-tying axes are `low_confidence`. Financials, REITs, and insurers commonly do not tie because their segment basis is net revenue, premiums, or rental income rather than GAAP total revenue — they are surfaced, not hidden.
+
+## Response shape
+
+```json
+{
+  "object": "company_segments",
+  "ticker": "AAPL",
+  "companyName": "Apple Inc.",
+  "period": "annual",
+  "segments": [
+    {
+      "object": "company_segment_axis",
+      "axis": "product",
+      "axisTag": "srt:ProductOrServiceAxis",
+      "periodEnd": "2024-09-28",
+      "priorPeriodEnd": "2023-09-30",
+      "axisTotalRevenue": 391035000000,
+      "companyRevenue": 391035000000,
+      "tiesToRevenue": true,
+      "confidence": "reported",
+      "segments": [
+        {
+          "object": "company_segment",
+          "segment": "iPhone",
+          "revenue": 201183000000,
+          "revenuePct": 0.514,
+          "profitLoss": null,
+          "segmentMargin": null,
+          "yoyGrowthPct": 0.002
+        }
+      ]
+    }
+  ],
+  "note": null
+}
+```
+
+When a company reports no canonical segment axes (single-activity or pre-revenue
+issuers), `segments` is an empty array and `note` explains why — this is a
+successful response, not an error.
+
+## Edge cases
+
+- **Financials / REITs / insurers.** Axes are returned with `confidence: "low_confidence"` and a top-level `note`. The numbers are still useful, but the basis differs from GAAP total revenue.
+- **Missing profit/loss.** `profitLoss` and `segmentMargin` are `null` when a segment does not disclose profit on the same axis.
+- **No prior period.** `yoyGrowthPct` is `null` when only one period is available.
+- **Concurrency.** Segment extraction reads submission-file XBRL and is bounded by a shared concurrency slot. Under load the endpoint returns `429` with `Retry-After`; retry shortly.
