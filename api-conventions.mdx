@@ -26,6 +26,7 @@ Successful quota-counted MCP tool calls include top-level `_secapi.quota` metada
 - `SECAPI-Token-Count-Estimated: true` is emitted whenever `SECAPI-Token-Count` falls back to a `ceil(bytes / 4)` approximation — either because the response body exceeded 512 KB (and was not fully tokenized to protect p95 latency) or because the response is a non-JSON billable payload (filing downloads, csv/markdown/pdf exports). Absence of this header means the count is an exact tokenizer result from the JSON body
 - counts flagged as estimated are advisory for budget planning only; do not use them for exact tokenizer-equivalence math
 - error responses (4xx, 5xx), rate-limit 429, billing-required 402, and budget-gate 402 all emit `SECAPI-Token-Count: 0` and `SECAPI-Estimated-Cost: $0.0000` — agents should treat failed requests as free
+- `SECAPI-Maturity` is present with the value `beta` on pre-GA surfaces — currently the factor endpoints (`/v1/factors/*` and `/v1/stocks/{ticker}/loadings`) and the dilution endpoints (`/v1/dilution/*`, `/v1/signals/dilution`, `/v1/signals/dilution/enhanced`) — so clients can flag those responses as beta and gate production use accordingly. The header is absent on generally-available surfaces
 
 ### Requesting exact token counts
 
@@ -50,6 +51,25 @@ Cache-served responses (a subset of cacheable `/v1/*` GETs) carry an exact token
 The `SECAPI-Token-Count-Source: opt-in-required` advisory header marks the cheap path: if your agent needs an exact count for cost reconciliation, re-issue the request with `SECAPI-Compute-Headers: token-count`. The official SDKs will add a helper for this header in a future minor release.
 
 Server-side tokenization policy can change without client changes. Clients should rely on the response headers instead of assuming a specific tokenization path.
+
+## Response shape & pagination
+
+- field naming is camelCase for most `/v1` JSON responses. A few endpoints intentionally expose top-level snake_case fields where that is the documented contract — notably the citation fields on `/v1/sections/search` and `/v1/search/semantic` (`section_key`, `char_start`, `highlighted_snippet`, `source_url`). Treat those documented exceptions as canonical rather than normalizing them away
+- **paginated** list endpoints use cursor pagination: the response includes `hasMore` (boolean) and `nextCursor` (string | null). To page, pass `nextCursor` back as the `cursor` query param on the next request; `hasMore: false` (and a `null` `nextCursor`) marks the end of the result set. Not every list-shaped response paginates — some intentionally return the full set as `{ object, data, requestId }` with no `hasMore`/`nextCursor` (e.g. `/v1/api_keys`, `/v1/quality/scorecards`); absence of those fields on such endpoints is expected, not an error
+- the `limit` query param defaults to a per-endpoint value (commonly 10–25) and is bounded by a per-endpoint maximum (commonly 50). Most endpoints **clamp** an out-of-range or invalid `limit` to the valid range rather than failing; a few validate it explicitly and return `400` (e.g. `/v1/market/estimates` rejects a non-numeric `limit`). Send a valid integer to avoid relying on either behavior
+- every `/v1` response carries `SECAPI-Estimated-Cost` (a 4-decimal dollar string, e.g. `$0.0042`) and `SECAPI-Token-Count`, so clients can budget per-call cost from the response itself without guessing or re-reading the pricing page
+
+### Financial statement periods
+
+- statement rows/periods carry a `periodBasis` field with one of three values:
+  - `instant` — balance-sheet point-in-time values (as-of a single date)
+  - `fiscal_year_to_date` — quarterly income-statement and cash-flow values, which are **cumulative as filed** in the 10-Q (Q2 is 6 months, Q3 is 9 months) rather than discrete single-quarter figures
+  - `discrete_period` — annual values
+- the `period` query param accepts `annual` (default) or `quarterly`; `quarter` and `q` are accepted aliases for `quarterly`
+
+<Note>
+Because quarterly income-statement and cash-flow values are reported as filed, Q2 and Q3 are year-to-date cumulative totals (`periodBasis: fiscal_year_to_date`), not standalone quarters. Subtract the prior period when you need a discrete-quarter figure.
+</Note>
 
 ## Response formats
 

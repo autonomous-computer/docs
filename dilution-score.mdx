@@ -1,10 +1,10 @@
----
-title: "SEC API Dilution Score"
----
-
 # SEC API Dilution Score
 
-A single 0-100 derived metric expressing near-term dilution risk per issuer. Built by composing five factor signals from the SEC API dilution dataset (filed offering events, outstanding warrants and convertibles, latest cash position, share-float trajectory, Nasdaq compliance status). Returns six categorical sub-ratings, a `regsho` flag, and an optional rolling-history timeseries materialized daily.
+<Warning>
+The Dilution surfaces are in **beta** — dilution data coverage is still being populated, so some issuers may return degraded confidence or no rating. All dilution responses carry the `SECAPI-Maturity: beta` response header; do not yet treat returned values as production-grade.
+</Warning>
+
+A single 0-100 derived metric expressing near-term dilution risk per issuer. Built by composing five factor signals from the SEC API dilution dataset (filed offering events, outstanding warrants and convertibles, latest cash position, share-float trajectory, Nasdaq compliance status). Surfaces alongside six categorical sub-ratings, a `regsho` flag, and an optional rolling-history timeseries materialized daily.
 
 ## Methodology
 
@@ -24,7 +24,7 @@ Bands: `low` 0-34, `moderate` 35-54, `elevated` 55-74, `high` 75-100.
 
 - methodology version is returned in every payload (bumping the version invalidates persisted history without overwriting prior rows)
 - confidence drops when SEC API has to fall back because dilution events, warrants/convertibles, cash-position, share-float-history, or Nasdaq-compliance inputs are unavailable
-- degraded reasons are reported explicitly so consumers can reason about gaps instead of treating the score as full-confidence
+- degraded reasons are surfaced explicitly so consumers can reason about gaps instead of treating the score as full-confidence
 - score is deterministic given (inputs, methodology_version) — same inputs always produce the same envelope
 - score is always bounded `[0, 100]`; never NaN or Infinity even under extreme inputs
 
@@ -56,6 +56,15 @@ Buckets: `high` (≥70), `medium` (≥40), `low` (>0), `unknown` (0).
 
 Daily Dagster materialization (`dilution_score_materialization` asset) runs at 09:00 UTC and UPSERTs into `dilution_score_history` via the `(ticker, methodology_version, as_of)` unique index. The endpoint reads the latest live computation on every request; `?history=` reads the persisted timeseries.
 
+## Endpoints
+
+Two endpoints expose the Dilution Score. They are not interchangeable — pick based on how much metadata you need:
+
+- **`GET /v1/signals/dilution`** — the canonical Dilution Score. Returns the full envelope: score, band, confidence, factor-level breakdown, the six categorical sub-ratings, percentile rank, optional `history[]` (via `?history=30d|90d|1y`), and full provenance/freshness metadata. Use this when you need to reason about the score or display its components.
+- **`GET /v1/dilution/score`** — a lightweight alias that returns only the latest rating for an issuer (`ticker` required) with minimal metadata. Use it for a quick band/score lookup where the sub-ratings, percentile, history, and provenance blocks are not needed.
+
+`/v1/signals/dilution` computes the score live from the dilution inputs on each request, while `/v1/dilution/score` returns the latest persisted rating row — so the two can differ in freshness. Do not conflate them — only `/v1/signals/dilution` carries the full sub-ratings, percentile, history, and provenance surface.
+
 ## Example
 
 ```bash
@@ -75,4 +84,3 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/signals/dilution/enhanced?ticker=MULN"
 ```
-

@@ -4,6 +4,10 @@ title: "Factor Intelligence"
 
 # Factor Intelligence
 
+<Warning>
+Factor Intelligence is in **beta** — the compute methodology is still being validated. All factor responses carry the `SECAPI-Maturity: beta` response header; do not yet treat returned values as production-grade.
+</Warning>
+
 ## What Factor Intelligence Covers
 
 SEC API Factor Intelligence provides a structured factor model for launch-focused U.S. market, style, sector, and industry workflows. The API supports factor catalog retrieval, single-factor history, multi-factor sparklines, historical and intraday returns, extreme move detection, valuation signals, correlation analysis, per-stock exposure loadings, regime-conditioned performance, portfolio decomposition, and consolidated dashboard views.
@@ -17,7 +21,7 @@ For the full factor construction methodology, including purification architectur
 - launch-focused factors are organized into market, style, sector, and industry categories
 - each factor entry includes methodology description, source status, proxy or construction metadata, orthogonalization metadata, and category assignment
 - the catalog is the canonical reference for factor identifiers used across all other factor endpoints
-- launch factors target a `2010-01-01` history floor; shorter-history or beta factors are labeled as such and should not be used for 2010+ coverage claims
+- launch factors target a `2015-01-01` public history floor; shorter-history or beta factors are labeled as such and should not be used for unsupported coverage claims
 
 ### Categories
 
@@ -92,7 +96,12 @@ curl -X GET \
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&signal=tailwind&limit=25&response_mode=compact"
+  "https://api.secapi.ai/v1/factors/valuations?signal=tailwind&sort=opportunity_score&limit=1&response_mode=compact"
+
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&stance=beneficiaries&limit=25&response_mode=compact"
 ```
 
 ## Factor correlations
@@ -271,7 +280,8 @@ curl -X POST \
       {"symbol": "GOOGL", "weight": 0.15},
       {"symbol": "AMZN", "weight": 0.10}
     ],
-    "include": {"attribution": true, "hedge": true, "positionViews": true}
+    "include": {"attribution": true, "hedge": true, "optimizer": true, "positionViews": true},
+    "optimizer": {"objective": "min_drawdown", "constraints": {"maxCandidates": 3, "turnoverLimit": 0.25}}
   }' \
   "https://api.secapi.ai/v1/models/factor-analysis?response_mode=compact"
 ```
@@ -297,7 +307,7 @@ curl -X POST \
 | `POST` | `/v1/portfolio/attribution` | portfolio factor return attribution |
 | `POST` | `/v1/portfolio/hedge` | constrained portfolio hedge candidates |
 | `GET` | `/v1/model-portfolios/:id/factor-view` | model portfolio factor view |
-| `POST` | `/v1/models/factor-analysis` | ad hoc model factor analysis |
+| `POST` | `/v1/models/factor-analysis` | ad hoc model factor analysis with optional attribution, hedge, and optimizer sections |
 
 ## Errors and partial results
 
