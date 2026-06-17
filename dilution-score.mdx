@@ -63,7 +63,7 @@ Two endpoints expose the Dilution Score. They are not interchangeable — pick b
 - **`GET /v1/signals/dilution`** — the canonical Dilution Score. Returns the full envelope: score, band, confidence, factor-level breakdown, the six categorical sub-ratings, percentile rank, optional `history[]` (via `?history=30d|90d|1y`), and full provenance/freshness metadata. Use this when you need to reason about the score or display its components.
 - **`GET /v1/dilution/score`** — a lightweight alias that returns only the latest rating for an issuer (`ticker` required) with minimal metadata. Use it for a quick band/score lookup where the sub-ratings, percentile, history, and provenance blocks are not needed.
 
-`/v1/signals/dilution` computes the score live from the dilution inputs on each request, while `/v1/dilution/score` returns the latest persisted rating row — so the two can differ in freshness. Do not conflate them — only `/v1/signals/dilution` carries the full sub-ratings, percentile, history, and provenance surface.
+`/v1/signals/dilution` computes the score live from the dilution inputs on each request. `/v1/dilution/score` prefers the latest persisted rating row when one exists, and otherwise falls back to the same live computation (reshaped to the compact `dilution_rating` envelope) so the alias always returns a usable band/score for any resolvable issuer rather than a 404. The two can therefore differ in freshness only when a persisted rating row is present. Do not conflate them — only `/v1/signals/dilution` carries the full factor-level breakdown, percentile, history, and provenance surface.
 
 ## Example
 
