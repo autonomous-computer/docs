@@ -2,6 +2,8 @@
 
 Generated from the SEC API contract and prompt asset registry.
 
+<Note>New here? Start at [secapi.ai/agents](https://secapi.ai/agents) for a one-paste MCP install across Claude Code, Cursor, Codex, and Windsurf, a drop-in [rules file](https://secapi.ai/agents/AGENTS.md), and installable skills (`npx skills add secapi-ai/secapi-skills`).</Note>
+
 <Note>For persona-tuned prompts (50 prompts × 5 customer segments — law firms, investment managers, sophisticated investors, insurance, PR firms), see the [agent prompt library](/agents/prompt-library).</Note>
 
 ## Setup prompt
@@ -17,7 +19,10 @@ Base URLs:
 - Docs root: https://docs.secapi.ai
 
 Rules:
+- Authenticate with the `x-api-key` header. Never send the API key as `Authorization: Bearer` — bearer tokens are WorkOS browser/session credentials, not machine API keys.
+- Resolve entities (ticker, CIK, CUSIP, ISIN, FIGI) before querying via GET /v1/entities/resolve, and pass the resolved CIK downstream — never guess a CIK.
 - Prefer structured SEC API endpoints and MCP tools over raw filing text when possible.
+- When a number comes from a filing, cite the source accession number and the filing page, and keep extracted filing facts separate from your interpretation.
 - Check GET /v1/billing and GET /v1/limits before expensive or repeated workflows.
 - Use POST /v1/billing/quote before repeated heavy workflows, and stop if the server returns `billing_budget_approval_required` or `billing_budget_hard_cap_exceeded`.
 - If the client does not already have a long-lived API key, have a human operator mint a sponsor token via POST /v1/agent/bootstrap_tokens and exchange it through POST /v1/agent/bootstrap before repeated machine workflows.
