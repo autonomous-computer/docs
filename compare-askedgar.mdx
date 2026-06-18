@@ -13,6 +13,19 @@ models, plus a few they don't — and adds 38 endpoint families they don't
 touch. Each SEC API dilution row carries an `askedgar_url` field, so customers
 running both products can dual-source during cutover.
 
+SEC API's dilution score is **live-computed** on every request (no persisted
+table to go stale, no permanent 404). The score now surfaces its **full
+per-factor breakdown** on `/v1/dilution/score` (key, label, score, weight,
+value, and a plain-English explanation per factor), **excludes missing factors
+and renormalizes the remaining weights** rather than substituting a neutral 50,
+flags **variable-rate / floorless ("death-spiral") convertibles** as a distinct
+surcharge, and blends a **share-float-velocity** factor (trailing-12-month
+share-issuance velocity, so the score moves with the *rate* of dilution, not
+just a point-in-time state) — contrasted with a purely state-based score.
+`/v1/dilution/ratings` reads the canonical `dilution_score_history` and returns
+the **latest** factor-weighted rating per issuer; for the rolling score time
+series use `/v1/signals/dilution?history=30d|90d|1y`.
+
 ## Dilution data model
 
 | Entity                                              | SEC API fields                                          | AskEdgar fields     |
@@ -54,12 +67,35 @@ under `https://api.askedgar.com/v1`. Mapping for the most common queries:
 
 Full migration table at [migrate-from-askedgar](/migrate-from-askedgar).
 
+## Dilution score model
+
+AskEdgar exposes a categorical dilution rating. SEC API's `/v1/dilution/score`
+returns a 0–100 numeric score plus a band, six categorical sub-ratings, and the
+**full per-factor breakdown** that produced it — so an agent can read *why* a
+ticker scored where it did, not just the headline.
+
+| Property                                       | SEC API `/v1/dilution/score`                                      | AskEdgar rating |
+| ---------------------------------------------- | ----------------------------------------------------------------- | --------------- |
+| Compute model                                  | live-computed per request (no stale persisted row, no hard 404)   | state-based     |
+| Per-factor breakdown                           | yes — `factors[]` (key, label, score, weight, value, explanation) | not exposed     |
+| Missing-factor handling                        | excluded + remaining weights renormalized (no neutral-50 default) | n/a             |
+| Death-spiral / variable-rate convertible flag  | yes — distinct surcharge on the overhang factor                   | no              |
+| Float-velocity factor                          | yes — `share_float_velocity` (trailing-12mo share-issuance rate)  | no              |
+| Score history                                  | `/v1/dilution/ratings` (reads canonical `dilution_score_history`) | n/a             |
+
+The emitted per-factor `weight` is the **effective** in-score weight: with no
+missing factors the weights are the static catalog weights; when a factor is
+unavailable it is excluded and the rest renormalize to sum to 1.0, so
+`sum(score × weight)` always reconciles to the headline. The agent view
+(`?view=agent`) carries the same numeric score, sub-ratings, and a flat
+`factorExposures` map keyed by factor.
+
 ## Verification model
 
 SEC API returns a 6-dimension verification block on every dilution row.
 AskEdgar returns a single boolean. The shape difference matters when an
 agent needs to gate downstream actions on confidence or trace a number
-back to a source span:
+back to a citeable source span in the filing:
 
 ```json
 // AskEdgar
@@ -68,15 +104,23 @@ back to a source span:
 // SEC API
 {
   "verification": {
+    "sourceSpan": "S-1 §Use of Proceeds, p.34",
+    "extractionTraceId": "trace_…",
     "confidence": 0.94,
-    "crossValidationsPassed": 3,
-    "sourceSpanResolved": true,
-    "verifiedAt": "2026-04-22T14:31:08Z",
+    "crossValidations": [{ "name": "xbrl_shares_outstanding", "passed": true }],
     "modelVersion": "claude-opus-4-7",
-    "reviewer": "human:operator-id-184"
+    "verifiedAt": "2026-04-22T14:31:08Z"
   }
 }
 ```
+
+Every **extracted** dilution row type (events, warrants, convertibles, RoFR,
+lockups, Nasdaq compliance, reverse splits, cash position, corporate actions,
+and share-float history) exposes this block — including a `sourceSpan` filing
+anchor — on its default view, so any number an agent surfaces is one hop from
+the filing that backs it. The **derived** dilution rating/score is a composite
+of those rows rather than a single extracted field, so its `verification.sourceSpan`
+is `null`; trace it through the per-factor breakdown and the underlying rows.
 
 SEC API dilution verification is rolling out in stages. Schema and contract
 are live on every response; production extraction coverage expands as each
@@ -128,9 +172,14 @@ specifically. Customers evaluating both should know:
 ## Where SEC API wins
 
 SEC API is broader (39 endpoint families vs AskEdgar's dilution-only wedge),
-ships per-field verification rather than a binary flag, and treats agents
-as a first-class surface (4 SDKs, 8 Skills, MCP server, FinanceBench
-score, signed webhooks, structured CLI).
+serves first-party SEC data through one consistent contract, ships per-field
+verification with citeable source spans rather than a binary flag, returns
+cost and token headers on every call, and treats agents as a first-class
+surface (hosted MCP, 4 SDKs, 8 Skills, FinanceBench score, signed webhooks,
+structured CLI). The dilution wedge now sits inside that broader surface: a
+ticker's quant factor exposures are available inline on
+`/v1/companies/overview?include=factors` (opt-in), so a dilution workflow can
+read offering pressure and factor risk from the same company surface.
 
 | Dimension                                               | SEC API                                  | AskEdgar                          |
 | ------------------------------------------------------- | ------------------------------------- | --------------------------------- |
@@ -151,6 +200,9 @@ score, signed webhooks, structured CLI).
 | Semantic search (Pinecone + Voyage)                     | yes                                   | no                                |
 | Macro intelligence (12 countries)                       | yes                                   | no                                |
 | Factor analysis (broad catalog with narrower launch surface) | yes                              | no                                |
+| Quant factor exposures on the company surface           | yes (`/v1/companies/overview?include=factors`) | no                       |
+| Dilution score: full per-factor breakdown               | yes (`factors[]` on `/v1/dilution/score`) | categorical rating only       |
+| Dilution score: death-spiral / variable-rate flag       | yes                                   | no                                |
 | Webhooks (signed, replay, cursor)                       | yes (7 dilution event types)          | Discord automation only           |
 | Direct row-level back-link to competitor                | yes (`askedgar_url` field)            | n/a                               |
 
@@ -172,7 +224,11 @@ published p50 across the 4-workflow harness is at
 
 - You are building agents or integrations that touch dilution AND broader
   SEC data (filings, statements, factors, insiders, board, comp, macro).
-- You need per-field verification rather than a binary `verified` flag.
+- You need per-field verification with citeable source spans rather than a
+  binary `verified` flag.
+- You need a transparent dilution score — the full per-factor breakdown,
+  renormalized weights, and a death-spiral / variable-rate-convertible flag —
+  not just a categorical rating.
 - You need an MCP server, multi-language SDKs, or signed webhooks.
 - You expect to migrate between tactical (PAYG) and predictable
   (subscription) billing as your workload grows.
@@ -220,4 +276,4 @@ Create a free account at secapi.ai/signup to get an API key.
 
 ---
 
-*All numeric claims in this comparison reflect data captured as of 2026-04-26. AskEdgar facts re-verified at askedgar.io on 2026-04-26. See `benchmarks/METHODOLOGY.md` for sign-off.*
+*AskEdgar facts and numeric claims reflect data captured as of 2026-04-26 (re-verified at askedgar.io on 2026-04-26). SEC API dilution-score and factor-exposure capabilities updated 2026-06-18 to reflect the shipped live-compute score, per-factor breakdown, missing-factor renormalization, death-spiral / variable-rate-convertible flag, float-velocity factor, and the opt-in `/v1/companies/overview?include=factors` enrichment. See `benchmarks/METHODOLOGY.md` for sign-off.*
