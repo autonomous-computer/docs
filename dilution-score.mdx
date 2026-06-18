@@ -61,9 +61,17 @@ Daily Dagster materialization (`dilution_score_materialization` asset) runs at 0
 Two endpoints expose the Dilution Score. They are not interchangeable — pick based on how much metadata you need:
 
 - **`GET /v1/signals/dilution`** — the canonical Dilution Score. Returns the full envelope: score, band, confidence, factor-level breakdown, the six categorical sub-ratings, percentile rank, optional `history[]` (via `?history=30d|90d|1y`), and full provenance/freshness metadata. Use this when you need to reason about the score or display its components.
-- **`GET /v1/dilution/score`** — a lightweight alias that returns only the latest rating for an issuer (`ticker` required) with minimal metadata. Use it for a quick band/score lookup where the sub-ratings, percentile, history, and provenance blocks are not needed.
+- **`GET /v1/dilution/score`** — the `dilution_rating` view of the same score for an issuer (`ticker` required). Lighter than the signal (no percentile, no `history[]`), but it now carries the **full per-factor breakdown**: see Factor breakdown below. Use it for a band/score lookup plus factor attribution where percentile and history are not needed.
 
-`/v1/signals/dilution` computes the score live from the dilution inputs on each request. `/v1/dilution/score` prefers the latest persisted rating row when one exists, and otherwise falls back to the same live computation (reshaped to the compact `dilution_rating` envelope) so the alias always returns a usable band/score for any resolvable issuer rather than a 404. The two can therefore differ in freshness only when a persisted rating row is present. Do not conflate them — only `/v1/signals/dilution` carries the full factor-level breakdown, percentile, history, and provenance surface.
+Both endpoints compute the score live from the dilution inputs on each request (the legacy persisted `dilution_ratings` table was retired — see [API changelog](/api-changelog) OMNI-4401/OMNI-4414). `/v1/dilution/score` reshapes the same live computation into the `dilution_rating` envelope. They differ only in the surrounding metadata `/v1/signals/dilution` adds (percentile, history, full provenance) — the score, band, sub-ratings, and factor breakdown are identical.
+
+## Factor breakdown
+
+The five weighted factors are exposed three ways so every consumer sees the same per-factor scores additively:
+
+- **`/v1/signals/dilution` default view** — `factors[]`, each entry `{ key, label, score (0–100), weight (0–1), value, explanation }`.
+- **`/v1/dilution/score` (and `/v1/dilution/ratings`)** — the `dilution_rating` envelope carries **both** the legacy flat `factorExposures` (`{ key: score }`, retained for back-compat) **and** the full `factors[]` array in the same shape as the signal's default view (`key`, `label`, `score`, `weight`, `value`, `explanation`).
+- **`/v1/signals/dilution?view=agent`** — a **compact** `factors[]` where each entry is only `{ key, score, weight }`. The verbose `label`, `value`, and `explanation` fields are intentionally dropped under `view=agent` to hold the agent token budget; the stable factor `key` plus its `score` and `weight` are enough to rank factor contributions. Request the default view when an agent needs the human-readable explanation.
 
 ## Example
 
@@ -76,7 +84,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/signals/dilution?ticker=MULN&history=90d"
 
-# Compact agent shape (drops factors[] for token efficiency)
+# Compact agent shape — factors[] reduced to { key, score, weight }
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/signals/dilution?ticker=MULN&view=agent"
 
