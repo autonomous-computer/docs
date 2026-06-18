@@ -1,6 +1,6 @@
 # GET /v1/companies/overview
 
-Return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline). Ships beta. Requires ticker or cik.
+Return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution,factors to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline; factors is a quantified, time-ranged quant factor-exposure snapshot — an exposure snapshot, not a forecast). Ships beta. Requires ticker or cik.
 
 <Info>
 Audience: application and coding agent.
@@ -19,7 +19,8 @@ XBRL reads. It never renders a filing and never runs segmented submission-file
 extraction, so it stays well within the customer-facing request budget.
 
 Heavy work is opt-in via `include` (comma list of `segments`, `footnotes`,
-`dilution`) and is bounded so it can never block or fail the base snapshot:
+`dilution`, `factors`) and is bounded so it can never block or fail the base
+snapshot:
 
 - `dilution` runs inline — a single light database read mapped to a compact
   risk band (`overallRisk`, `dilutionRisk`, `numericScore`).
@@ -27,6 +28,18 @@ Heavy work is opt-in via `include` (comma list of `segments`, `footnotes`,
   slot (the same guard `/v1/companies/segments` uses). If the slot is at
   capacity the enrichment returns `status: "error"` rather than a 429 on the
   whole overview.
+- `factors` runs inline via the cache-first light read that backs
+  `/v1/factors/exposures` — it never triggers a factor recompute or
+  materialization. It surfaces the issuer stock's exposure to the launch factors
+  as a **quantified, time-ranged snapshot**: each exposure carries `beta` (the
+  model loading), `percentileVsUniverse` (where the stock ranks vs the factor
+  universe, 0–100; `null` when the model did not materialize a percentile —
+  beta + `asOf` + `window` are still returned, never a heavy computed
+  percentile), `asOf`, and the estimation `window`, plus a top-level `asOf` and a
+  `methodology` link. It requires a ticker (exposures are per-stock); a cik-only
+  request that cannot resolve a ticker returns `status: "error"` with code
+  `factors_requires_ticker`. This is an **exposure snapshot, not a forecast** —
+  it never implies predictive power.
 - `footnotes` is returned as a **reference**, not rendered inline. A latest 10-K
   render is CPU-heavy and uninterruptible, so the overview returns the endpoint +
   query the client should call on its own request budget (`POST
@@ -60,7 +73,7 @@ metric that cannot be sourced reliably is `null` rather than guessed.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/companies/overview?ticker=AAPL&include=dilution,footnotes"
+  "https://api.secapi.ai/v1/companies/overview?ticker=AAPL&include=dilution,footnotes,factors"
 ```
 </RequestExample>
 
@@ -112,7 +125,19 @@ curl -X GET \
         "body": { "ticker": "AAPL", "form": "10-K", "topics": ["going_concern", "litigation", "customer_concentration"] }
       }
     },
-    "dilution": { "status": "included", "data": { "overallRisk": "low", "numericScore": "0.18" } }
+    "dilution": { "status": "included", "data": { "overallRisk": "low", "numericScore": "0.18" } },
+    "factors": {
+      "status": "included",
+      "data": {
+        "asOf": "2026-03-25",
+        "exposures": [
+          { "key": "MKT_US", "label": "US Market", "beta": 1.12, "percentileVsUniverse": 87, "asOf": "2026-03-25", "window": "6m" },
+          { "key": "SIZE", "label": "Size", "beta": -0.34, "percentileVsUniverse": 12, "asOf": "2026-03-25", "window": "6m" }
+        ],
+        "methodology": "https://docs.secapi.ai/factor-model-methodology",
+        "fullEndpoint": "/v1/factors/exposures"
+      }
+    }
   },
   "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
@@ -123,7 +148,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/companies/overview to return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline). Ships beta. Requires ticker or cik. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/companies/overview to return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution,factors to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline; factors is a quantified, time-ranged quant factor-exposure snapshot — an exposure snapshot, not a forecast). Ships beta. Requires ticker or cik. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
