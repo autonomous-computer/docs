@@ -845,6 +845,88 @@
         "x-secapi-smoke": "post_deploy"
       }
     },
+    "/v1/billing/credits": {
+      "get": {
+        "summary": "Return the current organization's prepaid credit balance, auto-top-up settings, lifetime totals, and low-balance status",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "v1.default_authenticated",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/billing/credits/transactions": {
+      "get": {
+        "summary": "List the current organization's prepaid credit ledger entries (top-ups, debits, refunds, grants, adjustments), newest first",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "v1.default_authenticated",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/billing/payg/activate": {
       "post": {
         "summary": "Create a Stripe Checkout setup session that activates Pay As You Go card-on-file billing",
