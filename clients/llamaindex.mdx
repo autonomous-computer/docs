@@ -1,16 +1,16 @@
 ---
 title: "Install SEC API in LlamaIndex"
-description: "Add SEC API as a tool spec in LlamaIndex using MCP over streamable HTTP."
+description: "Add SEC API as a tool spec in LlamaIndex using llama-index-tools-mcp and a custom httpx client for x-api-key auth."
 ---
 
 # Install SEC API in LlamaIndex
 
-Use LlamaIndex's MCP tooling to register SEC API as a streamable HTTP server. The example passes auth through a custom `httpx.AsyncClient`.
+LlamaIndex ships first-party MCP support via `llama-index-tools-mcp`. The `BasicMCPClient` constructor doesn't take a `headers=` kwarg directly, so we pass auth through a custom `httpx.AsyncClient`.
 
 ## Prerequisites
 
-- SEC API key. Sign up at [secapi.ai](https://secapi.ai). Set `SECAPI_API_KEY`.
-- `llama-index-tools-mcp`, `llama-index-core`, `llama-index-llms-anthropic`, and `httpx`.
+- SEC API key (free — 150 calls, one-time). Sign up at [secapi.ai](https://secapi.ai). Set `SECAPI_API_KEY`.
+- `llama-index-tools-mcp` ≥ 0.4 with `llama-index-core` ≥ 0.13 and `llama-index-llms-anthropic`.
 
 ## Install
 
@@ -45,7 +45,7 @@ Run the snippet. The agent should call the `filings.latest` tool with `ticker: A
 
 - **`401 Unauthorized`** — the `httpx.AsyncClient` headers didn't reach the server. Verify the env var is set in the same shell that runs Python: `echo $SECAPI_API_KEY`.
 - **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
-- **`AttributeError: BasicMCPClient` has no attribute `headers`** — if your installed version does not accept `headers=`, wrap auth in a custom `httpx.AsyncClient` as shown above.
+- **`AttributeError: BasicMCPClient` has no attribute `headers`** — you're passing `headers=` to the constructor; that kwarg doesn't exist. Always wrap auth in a custom `httpx.AsyncClient` as shown above.
 - **Connection timeout** — verify the URL ends in `/mcp` (note the `/mcp` suffix, not `/sse`).
 
 ## OAuth alternative

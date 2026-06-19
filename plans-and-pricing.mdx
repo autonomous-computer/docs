@@ -1,23 +1,20 @@
----
-title: "Plans and Pricing"
----
-
 # Plans and Pricing
 
 ## Default motion
 
+- every new organization starts with `150` included calls, one-time (with an optional self-serve reset every 30 days)
 - Pay As You Go is the default paid path
 - Personal and Team are self-serve commit plans
 - Commercial is the first plan with redistribution and external commercial rights
 
-## Available Plans
+## Launch plans
 
 <CardGroup cols={2}>
   <Card title="Pay As You Go" icon="gauge">
-    No fixed monthly fee. Good for low-friction onboarding and real-world evaluation.
+    No fixed monthly fee. Highest per-call pricing. Best for low-friction onboarding and real-world evaluation after the starter grant.
   </Card>
   <Card title="Personal" icon="user">
-    `$55/mo` or `$588/yr`. Predictable billing for a single analyst or developer who has repeated usage.
+    `$55/mo` or `$588/yr`. Lower unit pricing for a single analyst or developer who has repeated usage.
   </Card>
   <Card title="Team" icon="users">
     `$239/mo` or `$2,388/yr`. Shared-org plan for up to five seats with higher throughput and more keys.
@@ -27,10 +24,7 @@ title: "Plans and Pricing"
   </Card>
 </CardGroup>
 
-## Current Meter Pricing
-
-Prices below are from the public `GET /v1/billing/rates` catalog verified on
-2026-04-27.
+## Meter-family launch pricing
 
 - `light_reads`: `$0.01` — entity resolution and lightweight metadata
 - `standard_reads`: `$0.02` — filings, facts, statements, ownership, compensation
@@ -39,23 +33,39 @@ Prices below are from the public `GET /v1/billing/rates` catalog verified on
 - `delivery_events`: `$0.001` — webhook and stream delivery
 - `intelligence_queries`: `$0.08` — semantic intelligence, country reports, portfolio analysis, strategy queries
 - `market_data_reads`: `$0.03` — factor returns, macro indicators, market snapshots
-- `semantic_search`: `$0.04` — semantic filing search
+- `semantic_search`: `$0.04` — vector-based semantic search across filing content
 
-## AI-query usage
+## Monthly AI-query allowance
 
-`ai_queries` covers semantic intelligence and AI-graded routes such as `/v1/intelligence/*` and `GET /v1/signals/dilution/enhanced`. Use `GET /v1/billing` for the current organization's quota and usage values because limits can vary by plan and commercial contract.
+The `ai_queries` quota covers semantic intelligence + AI-graded routes (`/v1/intelligence/*`, `GET /v1/signals/dilution/enhanced`, plus future chat surfaces). Resets on the first day of each UTC calendar month.
+
+| Plan | Monthly AI queries |
+| --- | --- |
+| Sandbox grant | 10 (trial) |
+| Pay As You Go | Uncapped — metered per call |
+| Personal | Uncapped — governed by budget gates |
+| Team | Uncapped — governed by budget gates |
+| Commercial | Uncapped — governed by budget gates |
+
+Paid tiers are uncapped on `ai_queries`. Intelligence routes are LLM-free at request
+time, so paid usage is bounded by your billing budget (a default soft alert at ~2× the
+base fee and an abuse-protection hard cap at ~50× the base fee, both overridable via
+`PUT /v1/billing/budget`) rather than a fixed query count. Only the sandbox grant
+keeps a hard monthly trial cap.
+
+Every quota-counted response carries `SECAPI-AI-Quota-Limit`, `SECAPI-AI-Quota-Used`, `SECAPI-AI-Quota-Remaining`, and `SECAPI-AI-Quota-Reset` headers. `GET /v1/billing` returns the same numbers under `monthlyQuotas.ai_queries`.
 
 ## Rights boundary
 
-- evaluation: Pay As You Go or account-specific evaluation credit shown by `GET /v1/billing`
-- business use: PAYG, Personal, Team
+- evaluation: starter grant
+- in-house use: PAYG, Personal, Team
 - redistribution, embedding, white-label, resale: Commercial
 
 ## Read next
 
 <CardGroup cols={3}>
   <Card title="Auth and pricing" icon="key-round" href="/auth-and-pricing">
-    Review authentication, billing state, and first-request behavior.
+    Review the overall launch auth, billing, and first-utility posture.
   </Card>
   <Card title="Pay As You Go" icon="credit-card" href="/pay-as-you-go">
     See the PAYG activation flow and post-grant billing transition.

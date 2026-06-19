@@ -1,8 +1,3 @@
----
-title: "Migrate from AskEdgar"
-sidebarTitle: "Migrate from AskEdgar"
----
-
 # Migrate from AskEdgar
 
 <Info>
@@ -19,9 +14,9 @@ This guide maps every AskEdgar dilution endpoint onto SEC API and walks through 
     AskEdgar uses `API-KEY: …`; SEC API uses `x-api-key: …`. Same per-request shape, different header name.
   </Card>
   <Card title="Predictable subscription option" icon="credit-card" href="/plans-and-pricing">
-    SEC API offers PAYG and flat subscriptions ($55/mo or $588/yr Personal, $239/mo or $2,388/yr Team). AskEdgar's API is per-KB only.
+    SEC API offers PAYG and flat subscriptions ($55 Personal, $239 Team). AskEdgar's API is per-KB only.
   </Card>
-  <Card title="Broader API" icon="layers-2" href="/api-reference">
+  <Card title="Broader API surface" icon="layers-2" href="/api-reference">
     14 dilution endpoints plus 38 other endpoint families (filings, statements, factors, insiders, macro). One key, 39 families.
   </Card>
   <Card title="Hosted MCP and SDKs" icon="bot" href="/mcp-workflows">
@@ -91,8 +86,8 @@ curl "https://api.secapi.ai/v1/dilution/share-float-history?ticker=MULN" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Migrate this AskEdgar integration to SEC API. Replace the host `api.askedgar.com` with `api.secapi.ai` (the existing paths already carry `/v1/...`, so the cutover is host-only — do not add `/v1` to the host or you will get `/v1/v1/...`). Swap the `API-KEY` header for `x-api-key`. Map `/v1/dilution-data` to `/v1/dilution/events`, split warrants/convertibles into `/v1/dilution/warrants` and `/v1/dilution/convertibles`, and replace any `verified === true` check with `verification.confidence >= 0.9 && verification.sourceSpanResolved`. Add `?view=agent` for token-efficient summaries on token-sensitive paths. Keep `Request-Id` logging and document any workflows that still need a temporary fallback during cutover.
+<Prompt>
+Migrate this AskEdgar integration to SEC API. Replace the host `api.askedgar.com` with `api.secapi.ai` (the existing paths already carry `/v1/...`, so the cutover is host-only — do NOT add `/v1` to the host or you will get `/v1/v1/...`). Swap the `API-KEY` header for `x-api-key`. Map `/v1/dilution-data` to `/v1/dilution/events`, split warrants/convertibles into `/v1/dilution/warrants` and `/v1/dilution/convertibles`, and replace any `verified === true` check with `verification.confidence >= 0.9 && verification.sourceSpanResolved`. Add `?view=agent` for token-efficient summaries on token-sensitive paths. Keep `Request-Id` logging and any current fallback gaps in the final implementation notes.
 </Prompt>
 
 ## Verification model migration
@@ -112,7 +107,7 @@ can reason about:
     "sourceSpanResolved": true,
     "verifiedAt": "2026-04-22T14:31:08Z",
     "modelVersion": "claude-opus-4-7",
-    "reviewer": "human:reviewer-184"
+    "reviewer": "human:operator-id-184"
   }
 }
 ```
@@ -129,16 +124,17 @@ volume:
 
 | Profile                 | Volume                   | AskEdgar API (PAYG, per-KB) | SEC API option                 | SEC API $/mo |
 | ----------------------- | ------------------------ | --------------------------- | --------------------------- | --------- |
-| Light researcher        | 100 dilution-data calls  | ~$10.80 (≈$0.108/call)      | PAYG with account-specific evaluation access | See billing state |
-| Hedge-fund analyst      | 600 dilution-data calls  | ~$64.80                     | PAYG at published per-call pricing | See billing state |
-| Hedge-fund analyst      | 600 dilution-data calls  | ~$64.80                     | Personal (predictable)      | **$55/mo or $588/yr**   |
-| Small-cap research team | 5,000 dilution-data calls| ~$540                       | Team (predictable)          | **$239/mo or $2,388/yr**  |
-| Small-cap research team | 5,000 dilution-data calls| ~$540                       | PAYG (4,750 × $0.01)        | **$47.50**|
+| Light researcher        | 100 dilution-data calls  | ~$10.80 (≈$0.108/call)      | PAYG (150 free grant)       | **$0**    |
+| Hedge-fund analyst      | 600 dilution-data calls  | ~$64.80                     | PAYG (150 free + 450 × $0.01) | **$4.50** |
+| Hedge-fund analyst      | 600 dilution-data calls  | ~$64.80                     | Personal (predictable)      | **$55**   |
+| Small-cap research team | 5,000 dilution-data calls| ~$540                       | Team (predictable)          | **$239**  |
+| Small-cap research team | 5,000 dilution-data calls| ~$540                       | PAYG (150 free + 4,850 × $0.01) | **$48.50**|
 
 AskEdgar API costs assume the published `/v1/dilution-data` rate of
-$0.018/KB and a typical ~6 KB response. SEC API prices are from the public
-`GET /v1/billing/rates` catalog verified on 2026-04-27.
-calls renew monthly.
+$0.018/KB and a typical ~6 KB response. SEC API quotas verified against
+`infra/stripe/pricing-plans.json`. The 150 included calls are a one-time
+grant (with an optional self-serve reset every 30 days) per
+`apps/docs/content/billing-faq.md`.
 
 ## Migration script template
 
@@ -175,7 +171,7 @@ sed -i.bak \
 - Capture `Request-Id` during dual-run testing so request diagnostics stay comparable across the two providers.
 - AskEdgar's `verified: boolean` collapses 6 dimensions into 1. Expect richer per-row metadata on SEC API; build your gating logic around the `verification` block, not a single flag.
 - AskEdgar's API is metered per-KB; SEC API's is per-call. For payload-heavy workloads the unit-cost story flips — re-benchmark before locking the pricing tier.
-- `askedgar_url` is preserved on every SEC API dilution row, so you can keep a back-link to the AskEdgar Copilot UI if your teams want to dual-source during cutover.
+- `askedgar_url` is preserved on every SEC API dilution row, so you can keep a back-link to the AskEdgar Copilot UI if your operators want to dual-source during cutover.
 
 ## Recommended cutover order
 

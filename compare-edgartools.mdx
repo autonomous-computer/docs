@@ -1,13 +1,13 @@
 ---
 title: "SEC API vs edgartools"
-description: "Feature-by-feature comparison of SEC API and edgartools — speed, cost, agent support, and commercial status"
+description: "Feature-by-feature comparison of SEC API and edgartools — speed, cost, agent support, and commercial posture"
 hidden: true
 ---
 
 <Warning>
-**Preliminary — pending external methodology review.** Numbers on this page
-come from the reproducible benchmark harness described in
-`benchmarks/METHODOLOGY.md`.
+**Preliminary — pending external methodology review**. Numbers on
+this page will be re-verified by an external SRE before this comparison is
+linked from the docs sidebar. See `benchmarks/METHODOLOGY.md`.
 </Warning>
 
 # SEC API vs edgartools
@@ -16,7 +16,7 @@ come from the reproducible benchmark harness described in
 open-source Python library (MIT-licensed) that talks directly to SEC EDGAR.
 It's the OSS peer most agent-builders evaluate alongside hosted APIs. This
 comparison puts SEC API head-to-head against edgartools on the same four
-workflows we use to benchmark against sec-api.io and Financial Datasets.
+workflows we use to benchmark against sec-api.io and financialdatasets.ai.
 
 ## Speed
 
@@ -24,7 +24,7 @@ From a `ubuntu-latest` GitHub Actions runner, N=5 iterations per case.
 Every edgartools iteration runs in a **fresh subprocess** with all caches
 cleared, so each measurement is a truly cold SEC fetch — no in-memory or
 on-disk cache hits skew the p50
-([methodology](https://github.com/autonomous-computer/sec-api/blob/main/benchmarks/METHODOLOGY.md)):
+in the methodology notes:
 
 | Operation           | SEC API p50 | edgartools p50 | Speedup  | SEC API wire bytes | edgartools wire bytes |
 | ------------------- | -------- | -------------- | -------- | --------------- | --------------------- |
@@ -45,11 +45,11 @@ compact JSON.
 
 | Tier             | SEC API                                        | edgartools              |
 | ---------------- | ------------------------------------------- | ----------------------- |
-| **Free**         | Check current billing state after signup       | Unlimited (truly free)  |
+| **Free**         | 150 calls (one-time)                        | Unlimited (truly free)  |
 | **Pay-as-you-go**| From $0.01/call                             | Not applicable          |
-| **Personal**     | $55/mo or $588/yr                           | $0                      |
-| **Team**         | $239/mo or $2,388/yr                        | $0                      |
-| **Commercial**   | From $18,000/yr                             | None (community-supported) |
+| **Personal**     | $55/month                                   | $0                      |
+| **Business**     | $239/month                                  | $0                      |
+| **Enterprise**   | Custom (SLA, support, dedicated capacity)   | None (community-supported) |
 
 **The honest take:** edgartools is **genuinely free**. If you can tolerate
 client-side parsing of multi-megabyte SEC documents, aren't running at agent
@@ -60,8 +60,8 @@ great option. SEC API costs money; the value is operational:
 - Payloads 600-1,000× smaller (fewer LLM tokens)
 - SLA, support, dedicated capacity
 - Commercial redistribution rights
-- Hosted semantic search, dilution intelligence, hosted MCP API, monitors, etc.
-- JavaScript and Python SDKs, plus Go and Rust REST guides (edgartools is Python-only)
+- Hosted semantic search, dilution intelligence, MCP server, monitors, etc.
+- Native JS/TS + Go + Rust SDKs (edgartools is Python-only)
 
 ## Where edgartools wins
 
@@ -84,12 +84,12 @@ compounds with scale, agents, and production requirements.
 | ------------------------------------------- | ------------------------------- | ------------------------------- |
 | Latency (hot path)                          | 34-38ms p50                     | 300-2,100ms p50                 |
 | Payload size (agent-ingestable)             | Compact JSON                    | Raw 10-K HTML / full XBRL       |
-| Semantic search                             | Yes (hybrid semantic search)  | No                              |
+| Semantic search                             | Yes (Pinecone + Voyage hybrid)  | No                              |
 | Intelligence bundles                        | Yes (company, security, earnings) | No (build it yourself)       |
 | Filing diff / amendment tracking            | Yes                             | No                              |
 | Monitors + webhooks                         | Yes (signed, replay, cursor)    | No                              |
-| Hosted MCP API                          | Yes                             | Not in the edgartools Python library |
-| SDKs                                        | JS and Python SDKs; Go and Rust REST guides            | Python-only                     |
+| MCP native server                           | Yes                             | No                              |
+| SDKs                                        | JS, Python, Go, Rust            | Python-only                     |
 | CLI (`secapi` on npm)                     | Yes                             | No (Python import only)         |
 | Status page / SLA                           | Yes                             | No (best-effort OSS)            |
 | Commercial redistribution license           | Yes (via commercial agreement)  | No (library itself: MIT; SEC data: public) |
@@ -170,4 +170,4 @@ All numbers on this page come from public scripts:
 - `scripts/bench/competitive_scorecard.py` (4-way aggregator)
 - `benchmarks/METHODOLOGY.md` (reviewable methodology doc)
 
-Run them yourself to compare the same operations in your own environment.
+Run them yourself. If you find a methodology flaw, file an issue or open a PR.
