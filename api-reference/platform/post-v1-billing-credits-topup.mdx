@@ -1,0 +1,52 @@
+# POST /v1/billing/credits/topup
+
+Create a Stripe PaymentIntent to purchase prepaid credits, returning the client secret and the discount/fee charge breakdown
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X POST \
+  -H "Cookie: omni_datastream_session=$SECAPI_WORKOS_SESSION_COOKIE" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{"amountUsd":50,"paymentMethodType":"us_bank_account"}' \
+  "https://api.secapi.ai/v1/billing/credits/topup"
+```
+</RequestExample>
+
+<Info>
+Credit top-ups require the `omni_datastream_session` WorkOS browser-session cookie and are limited to pay-as-you-go organizations with prepaid credits enabled. API keys are rejected, and the body must include a positive `amountUsd`.
+</Info>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API POST /v1/billing/credits/topup to create a Stripe PaymentIntent to purchase prepaid credits, returning the client secret and the discount/fee charge breakdown. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
