@@ -1,7 +1,3 @@
----
-title: "SEC Data for Insurance and Risk"
----
-
 # SEC Data for Insurance and Risk
 
 <Info>
@@ -36,7 +32,7 @@ SEC API gives insurance and risk teams programmatic access to financial health i
 | `/v1/compensation/compare` | `POST` | Year-over-year compensation changes |
 | `/v1/intelligence/company` | `GET` | Financial health and governance analysis bundle |
 | `/v1/filings` | `GET` | Filing search with form type and date filters |
-| `/v1/filings/latest/sections/{section_key}` | `GET` | Extract specific sections (auditor report, risk factors) |
+| `/v1/filings/latest/sections/{item}` | `GET` | Extract specific sections (auditor report, risk factors) |
 | `/v1/webhook_endpoints` | `POST` | Register webhook endpoints for event-driven monitoring |
 
 ---
@@ -70,13 +66,13 @@ Every response includes `requestId` and `traceparent` for audit trails.
 
 ## Example: webhook-driven restatement monitoring
 
-Register a webhook to receive alerts when material events are filed:
+Register an org-level webhook endpoint to receive monitor-match alerts:
 
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -d '{"url":"https://your-system.example.com/webhooks/sec","events":["filing.published","enforcement.published"],"filter":{"tickers":["XYZ","ABC","DEF"]}}' \
+  -d '{"destinationUrl":"https://your-system.example.com/webhooks/sec","description":"Insurance risk monitor","subscribedEventTypes":["monitor.match"]}' \
   "https://api.secapi.ai/v1/webhook_endpoints"
 ```
 
@@ -84,7 +80,7 @@ Monitor for restatements by extracting auditor opinion sections from new filings
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=XYZ&form=10-K&view=compact"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=XYZ&form=10-K&mode=compact"
 ```
 
 Webhook deliveries include the same provenance and `requestId` metadata as direct API calls. Use `/v1/events/export` to audit delivery history.
@@ -97,10 +93,10 @@ These Claude Code skills accelerate insurance and risk workflows:
 
 | Skill | What it does |
 |-------|-------------|
-| `enforcement.list` | Search enforcement actions for underwriting screening |
-| `intelligence.company` | Pull financial health and governance analysis bundles |
-| `compensation.list` | Retrieve and compare executive compensation records |
-| `filing.search` | Find filings by company, form type, and date range |
+| `sections.search` | Search filing sections for underwriting screening |
+| `companies.financials` | Pull normalized issuer financial statements |
+| `comp.list` | Retrieve executive compensation records |
+| `filings.search` | Find filings by company, form type, and date range |
 | `events.monitor` | Configure webhook-driven event monitoring |
 
 Install via MCP for agent-driven risk assessment:
@@ -115,15 +111,15 @@ secapi mcp install
 
 <CardGroup cols={2}>
   <Card title="Webhook-driven monitoring" icon="radio" href="/webhook-stream-workflows">
-    Register webhooks for the entities you underwrite. Pay only for the events you consume. No polling infrastructure required.
+    Create org-level webhook endpoints for monitor matches; define entity and form filters on monitors. No polling infrastructure required.
   </Card>
   <Card title="Platform plan" icon="building" href="/plans-and-pricing">
     For teams monitoring large portfolios of insured entities. Custom throughput, dedicated support, and bulk event export.
   </Card>
 </CardGroup>
 
-<Prompt description="Copy this SEC API prompt for your agent.">
+<Prompt>
 You are a risk assessment agent with access to SEC API. For any company under review, check enforcement history, pull the company intelligence bundle for financial health, review executive compensation structures, and extract auditor opinion and risk-factor sections from the latest 10-K. Flag restatements, auditor changes, and enforcement actions as high-priority findings. Always include requestId references for compliance documentation.
 </Prompt>
 
-_See the full 6-prompt [Insurance & risk library](/give-this-prompt-to-your-agent)._
+_See the full 6-prompt [Insurance & risk library](/agents/prompt-library/insurance)._
