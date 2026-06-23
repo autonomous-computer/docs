@@ -39,6 +39,7 @@ Use `period=annual` for annual company facts or `period=quarterly` for quarterly
 - `tag` is the XBRL concept for concept-specific lookups, such as `Revenues`, `Revenue`, `NetIncomeLoss`, or `PropertyPlantAndEquipmentNet`. If omitted, the API returns common financial metrics.
 - `taxonomy`, `unit`, and `form` pin the lookup when you do not want the default us-gaap plus foreign-private-issuer fallback.
 - `fy`, `year`, `fy_from`, `fyFrom`, `fy_to`, and `fyTo` bound fiscal years.
+- `limit` controls the maximum number of fact points returned, up to 50.
 - `include=geographic_segments` adds bounded revenue geography when available. Use `segment_limit` and `submission_file_limit` to control the enrichment budget.
 - `view=agent` returns token-efficient fact rows with filing pointers lifted onto each item.
 
@@ -82,5 +83,5 @@ Use SEC API GET /v1/facts with `ticker`, `symbol`, or `cik`, an XBRL `tag` for c
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
 - retry with `ticker`, `symbol`, or `cik`, and add a valid `tag` when you need one specific concept
-- invalid `period` values return `400 invalid_query_parameter` with `details.acceptedValues`
+- invalid `period`, fiscal-year, or `limit` filters return `400 invalid_query_parameter`
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
