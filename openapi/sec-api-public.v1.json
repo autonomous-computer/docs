@@ -3048,14 +3048,117 @@
     "/v1/entities/resolve": {
       "get": {
         "summary": "Resolve an entity by ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name with confidence and match-basis metadata",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ticker symbol to resolve, such as AAPL."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC CIK to resolve. Leading zeros are accepted."
+          },
+          {
+            "name": "figi",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "FIGI-family identifier to resolve."
+          },
+          {
+            "name": "composite_figi",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Composite FIGI identifier to resolve."
+          },
+          {
+            "name": "share_class_figi",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Share-class FIGI identifier to resolve."
+          },
+          {
+            "name": "isin",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISIN identifier to resolve."
+          },
+          {
+            "name": "cusip",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "CUSIP identifier to resolve."
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Company, fund, manager, or insider name to resolve."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent",
+                "compact"
+              ]
+            },
+            "description": "Use view=agent for a compact agent shape with identifiers and match metadata; view=compact returns core entity identity fields."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful response. At least one of ticker, cik, figi, composite_figi, share_class_figi, isin, cusip, or name is required.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "additionalProperties": true
+                },
+                "examples": {
+                  "agent": {
+                    "summary": "Agent view by ticker",
+                    "value": {
+                      "object": "entity",
+                      "id": "cent_f3913349312cbf5bfd60ecdb",
+                      "ticker": "AAPL",
+                      "cik": "0000320193",
+                      "name": "Apple Inc.",
+                      "primaryIdentifiers": [
+                        {
+                          "type": "ticker",
+                          "value": "AAPL"
+                        },
+                        {
+                          "type": "cik",
+                          "value": "0000320193"
+                        }
+                      ],
+                      "matchConfidence": 1,
+                      "matchBasis": "ticker",
+                      "requestId": "req_example"
+                    }
+                  }
                 }
               }
             }
@@ -3673,6 +3776,93 @@
     "/v1/filings/latest/sections/{section_key}": {
       "get": {
         "summary": "Extract a section from the latest filing for an entity and form",
+        "parameters": [
+          {
+            "name": "section_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Canonical section key, such as item_1a, item_7, or item_8."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Either ticker or cik is required."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Either ticker or cik is required."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC form type. Defaults to 10-K."
+          },
+          {
+            "name": "filing_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Calendar filing year filter."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Fiscal-year selector."
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "full",
+                "compact"
+              ]
+            },
+            "description": "Section body mode. compact caps contentMd; full returns the full extracted section body when available."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Response shape. compact is equivalent to mode=compact; agent returns citation fields and snippets without the full section body."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -3883,6 +4073,90 @@
     "/v1/filings/{accession_number}/sections/{section_key}": {
       "get": {
         "summary": "Extract a filing item or section from a specific accession-number filing",
+        "parameters": [
+          {
+            "name": "accession_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC accession number."
+          },
+          {
+            "name": "section_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Canonical section key, such as item_1a, item_7, or item_8."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional ticker hint."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional CIK hint."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional SEC form hint."
+          },
+          {
+            "name": "submission_file_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Maximum SEC submission files to inspect while resolving the filing."
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "full",
+                "compact"
+              ]
+            },
+            "description": "Section body mode. compact caps contentMd; full returns the full extracted section body when available."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Response shape. compact is equivalent to mode=compact; agent returns citation fields and snippets without the full section body."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -3967,6 +4241,90 @@
     "/v1/statements/segmented-facts": {
       "get": {
         "summary": "Return filing-derived segmented fact history for supported metrics such as revenue and segment profit/loss, with product or geography dimensions, hierarchy metadata, capability state, and trace references when issuers disclose them",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Either ticker or cik is required."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Either ticker or cik is required."
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "revenue",
+                "profit_loss"
+              ]
+            },
+            "description": "Segment metric to extract."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "annual",
+                "quarterly",
+                "quarter",
+                "q"
+              ]
+            },
+            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+          },
+          {
+            "name": "segment_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "geographic",
+                "product",
+                "other"
+              ]
+            },
+            "description": "Optional segment dimension filter."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Maximum segment periods to return."
+          },
+          {
+            "name": "submission_file_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Maximum SEC submission files to inspect."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -4009,6 +4367,77 @@
     "/v1/statements/segmented-revenues": {
       "get": {
         "summary": "Return filing-derived segmented revenue history with XBRL product or geography dimensions, capability state, and trace references when issuers disclose them",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Either ticker or cik is required."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Either ticker or cik is required."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "annual",
+                "quarterly",
+                "quarter",
+                "q"
+              ]
+            },
+            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+          },
+          {
+            "name": "segment_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "geographic",
+                "product",
+                "other"
+              ]
+            },
+            "description": "Optional segment dimension filter."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Maximum segment periods to return."
+          },
+          {
+            "name": "submission_file_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Maximum SEC submission files to inspect."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -6602,13 +7031,104 @@
     "/v1/macro/high-signal-pack": {
       "get": {
         "summary": "Return the launch-ring Tier-1 high-signal macro pack with explicit source, fallback, and release-calendar posture for supported countries",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "JP"
+            },
+            "description": "ISO country code (e.g. US, JP, CN). Defaults to JP for backward compatibility."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact returns bounded per-series summaries; standard returns the full nested pack shape."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "series"
+              ]
+            },
+            "description": "Use include=series to expand the full nested observations, releases, forecasts, source plans, and trust metadata."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful response. Defaults to compact; pass response_mode=standard or include=series for the full nested pack.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MacroHighSignalPack"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Compact response",
+                    "value": {
+                      "object": "macro_high_signal_pack",
+                      "id": "macro_high_signal_pack_US",
+                      "asOf": "2026-06-09T22:15:00.000Z",
+                      "country": "US",
+                      "ring": "launch_ring_1",
+                      "responseMode": "compact",
+                      "seriesCount": 32,
+                      "series": [
+                        {
+                          "indicatorKey": "US_CPI_ALL_ITEMS",
+                          "label": "CPI (All Items)",
+                          "frequency": "monthly",
+                          "sourceKey": "fred",
+                          "sourceLabel": "Federal Reserve (FRED)",
+                          "dataset": "CPIAUCSL",
+                          "seriesCode": "CPIAUCSL",
+                          "coverageState": "live",
+                          "canonicality": "official",
+                          "fallbackPolicy": "none",
+                          "latest": {
+                            "period": "2026-05-01",
+                            "value": 321.5,
+                            "unit": "index",
+                            "asOf": "2026-06-09T22:15:00.000Z",
+                            "freshnessStatus": "fresh"
+                          },
+                          "upcomingRelease": {
+                            "scheduledAt": "2026-07-12T13:30:00.000Z",
+                            "status": "scheduled",
+                            "actual": null,
+                            "prior": 321.5,
+                            "consensus": 322,
+                            "surprise": null
+                          },
+                          "forecast": {
+                            "horizon": "1m",
+                            "value": 322.1,
+                            "intervalLow": 321,
+                            "intervalHigh": 323,
+                            "scenario": "baseline"
+                          }
+                        }
+                      ],
+                      "regime": null,
+                      "summaryMd": "US launch-ring high-signal macro pack includes 32 official-source or harmonized series with explicit fallback and release-calendar posture.",
+                      "expansionHints": [
+                        "Use include=series to return full nested observations, releases, forecasts, source plans, and trust metadata."
+                      ],
+                      "requestId": "req_example"
+                    }
+                  }
                 }
               }
             }
@@ -6788,7 +7308,7 @@
     },
     "/v1/factors/catalog": {
       "get": {
-        "summary": "Return the SEC API factor catalog with methodology, proxy, and orthogonalization metadata",
+        "summary": "Return compact SEC API factor definitions, with trust and methodology metadata available on request",
         "parameters": [
           {
             "name": "response_mode",
@@ -6812,7 +7332,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -6849,126 +7369,10 @@
                           "launchUniverseStatus": "launch_candidate",
                           "launchClaimStatus": "candidate_pending_history_freshness_proof",
                           "launchParityCategory": "style",
-                          "launchReadiness": {
-                            "object": "factor_launch_readiness",
-                            "status": "launch_ready",
-                            "proofGated": true,
-                            "proofReady": true,
-                            "observedProofStatus": "ready",
-                            "proofObservedAt": "2026-06-09T22:15:00.000Z",
-                            "requiredProofArtifact": "factor_quality_daily_proof",
-                            "requiredProofStatus": "ready",
-                            "targetHistoryStartDate": "2015-01-01",
-                            "historyStartDateClaim": "2015-01-01",
-                            "betaReason": null,
-                            "exclusionReason": null,
-                            "claimPrerequisites": [
-                              "2015+ launch history",
-                              "latest complete market day",
-                              "row-level quality proof"
-                            ]
-                          },
-                          "qualityProof": {
-                            "object": "factor_quality_proof",
-                            "status": "ready",
-                            "proofSource": "secapi_factor_pipeline",
-                            "proofObservedAt": "2026-06-09T22:15:00.000Z",
-                            "rowLevelProofAvailable": true,
-                            "proofReady": true,
-                            "firstDate": "2015-01-02",
-                            "lastDate": "2026-06-09",
-                            "firstRequiredMarketDate": "2015-01-02",
-                            "latestMarketDay": "2026-06-09",
-                            "targetHistoryStartDate": "2015-01-01",
-                            "requiredHistoryStartDate": "2015-01-01",
-                            "shortHistoryExempt": false,
-                            "historyStartMarketDayLag": 0,
-                            "latestMarketDayLag": 0,
-                            "rowCount": 2882,
-                            "distinctFactorDateCount": 2882,
-                            "coveredMarketDateCount": 2882,
-                            "expectedMarketDateCount": 2882,
-                            "missingSessionCount": 0,
-                            "coveragePct": 1,
-                            "methodologyVersion": "secapi_factor_returns_v1",
-                            "modelName": "secapi_stock_basket_factor_model_v1",
-                            "methodologyUrl": "https://docs.secapi.ai/factors/methodology",
-                            "sourceMetadata": {
-                              "latestAsOf": "2026-06-09",
-                              "latestSourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "observedModelNameCount": 1,
-                              "observedModelNamesSample": [
-                                "secapi_stock_basket_factor_model_v1"
-                              ],
-                              "nonStockBasketRowCount": 0,
-                              "metadataModelNames": [
-                                "secapi_stock_basket_factor_model_v1"
-                              ],
-                              "metadataModelVersions": [
-                                "2026-06-09"
-                              ],
-                              "metadataMethodologyUrls": [
-                                "https://docs.secapi.ai/factors/methodology"
-                              ]
-                            },
-                            "degradedReasons": []
-                          },
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_returns_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=trust for launchReadiness, qualityProof, provenance, source rights, methodology, and revision metadata."
+                          ]
                         }
                       ],
                       "hasMore": false,
@@ -6979,7 +7383,8 @@
                         "sector",
                         "industry"
                       ],
-                      "requestId": "req_example"
+                      "requestId": "req_example",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
                     }
                   }
                 }
@@ -7039,7 +7444,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -7300,7 +7705,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -7654,7 +8059,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -7884,7 +8289,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -8041,7 +8446,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -8075,72 +8480,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "modelPortfolio": null,
@@ -8260,7 +8607,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -8396,16 +8743,40 @@
     },
     "/v1/factors/exposures": {
       "get": {
-        "summary": "Return security, portfolio, or watchlist factor exposures with model metadata and provenance",
+        "summary": "Return compact security, portfolio, or watchlist factor exposures with optional diagnostics and provenance",
         "parameters": [
           {
             "name": "symbols",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated symbols to load exposures for. `tickers` is accepted as an alias."
+            "description": "Comma-separated symbols to load exposures for. Required unless `symbol`, `ticker`, or `tickers` is provided."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Single-symbol alias for symbols."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Single-ticker alias for symbols."
+          },
+          {
+            "name": "tickers",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated ticker alias for symbols."
           },
           {
             "name": "factors",
@@ -8470,7 +8841,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -8494,72 +8865,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "hasMore": false,
@@ -8634,7 +8947,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -8658,72 +8971,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "hasMore": false,
@@ -8789,7 +9044,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -8935,7 +9190,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -9246,7 +9501,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -9524,7 +9779,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -9843,7 +10098,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -10204,7 +10459,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -10436,7 +10691,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -10465,72 +10720,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "contributions": [
@@ -10723,7 +10920,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -10925,7 +11122,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -11154,7 +11351,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -11375,7 +11572,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -11615,7 +11812,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -11792,7 +11989,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -11994,7 +12191,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -12088,72 +12285,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "fit": null,
@@ -12169,72 +12308,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "attribution": [
@@ -12424,7 +12505,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -12560,72 +12641,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "export": {
@@ -12768,7 +12791,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "responses": {
@@ -12840,72 +12863,14 @@
                             "subjectKey": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
-                            "intercept": 0.001,
-                            "rSquared": 0.31,
-                            "adjustedRSquared": 0.29,
-                            "tStat": -4.8,
-                            "observationCount": 126,
-                            "nActiveFactors": 7,
                             "percentile": 18.2,
                             "confidence": "high",
                             "modelName": "secapi_stock_basket_factor_model_v1",
                             "asOf": "2026-06-09T22:15:00.000Z",
                             "responseMode": "compact",
-                            "dataAsOf": "2026-06-09",
-                            "freshnessStatus": "fresh",
-                            "methodologyVersion": "secapi_factor_exposures_v1",
-                            "materializationVersion": "2026-06-09",
-                            "provenance": {
-                              "source": "secapi_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "accessionNumber": null,
-                              "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                              "acceptedAt": null,
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "parserVersion": "secapi-factor-pipeline"
-                            },
-                            "freshness": {
-                              "status": "fresh",
-                              "asOf": "2026-06-09T22:15:00.000Z",
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "lagMs": 2700000
-                            },
-                            "materialization": {
-                              "parserVersion": "secapi-factor-pipeline",
-                              "materializationVersion": "2026-06-09"
-                            },
-                            "sourceRights": {
-                              "source": "secapi_owned_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "posture": "public_safe",
-                              "publicAvailability": "public",
-                              "contractStatus": "approved",
-                              "restrictions": [],
-                              "notes": "SecAPI-owned derived factor data."
-                            },
-                            "methodology": {
-                              "id": "secapi_factor_returns",
-                              "version": "v1",
-                              "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                              "confidence": "high",
-                              "launchState": "beta",
-                              "inputs": [
-                                "secapi_factor_returns",
-                                "secapi_factor_exposures",
-                                "market_calendar"
-                              ],
-                              "validation": {
-                                "launchHistoryFloor": "2015-01-01",
-                                "marketCalendarAware": true
-                              }
-                            },
-                            "revision": {
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "vintageId": "2026-06-09",
-                              "revisedFrom": null
-                            },
-                            "degradedState": null
+                            "expansionHints": [
+                              "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                            ]
                           }
                         ],
                         "fit": null,
@@ -12921,72 +12886,14 @@
                             "subjectKey": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
-                            "intercept": 0.001,
-                            "rSquared": 0.31,
-                            "adjustedRSquared": 0.29,
-                            "tStat": -4.8,
-                            "observationCount": 126,
-                            "nActiveFactors": 7,
                             "percentile": 18.2,
                             "confidence": "high",
                             "modelName": "secapi_stock_basket_factor_model_v1",
                             "asOf": "2026-06-09T22:15:00.000Z",
                             "responseMode": "compact",
-                            "dataAsOf": "2026-06-09",
-                            "freshnessStatus": "fresh",
-                            "methodologyVersion": "secapi_factor_exposures_v1",
-                            "materializationVersion": "2026-06-09",
-                            "provenance": {
-                              "source": "secapi_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "accessionNumber": null,
-                              "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                              "acceptedAt": null,
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "parserVersion": "secapi-factor-pipeline"
-                            },
-                            "freshness": {
-                              "status": "fresh",
-                              "asOf": "2026-06-09T22:15:00.000Z",
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "lagMs": 2700000
-                            },
-                            "materialization": {
-                              "parserVersion": "secapi-factor-pipeline",
-                              "materializationVersion": "2026-06-09"
-                            },
-                            "sourceRights": {
-                              "source": "secapi_owned_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "posture": "public_safe",
-                              "publicAvailability": "public",
-                              "contractStatus": "approved",
-                              "restrictions": [],
-                              "notes": "SecAPI-owned derived factor data."
-                            },
-                            "methodology": {
-                              "id": "secapi_factor_returns",
-                              "version": "v1",
-                              "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                              "confidence": "high",
-                              "launchState": "beta",
-                              "inputs": [
-                                "secapi_factor_returns",
-                                "secapi_factor_exposures",
-                                "market_calendar"
-                              ],
-                              "validation": {
-                                "launchHistoryFloor": "2015-01-01",
-                                "marketCalendarAware": true
-                              }
-                            },
-                            "revision": {
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "vintageId": "2026-06-09",
-                              "revisedFrom": null
-                            },
-                            "degradedState": null
+                            "expansionHints": [
+                              "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                            ]
                           }
                         ],
                         "attribution": [
@@ -13128,72 +13035,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "responseMode": "compact",
@@ -13311,7 +13160,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -13498,72 +13347,14 @@
                             "subjectKey": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
-                            "intercept": 0.001,
-                            "rSquared": 0.31,
-                            "adjustedRSquared": 0.29,
-                            "tStat": -4.8,
-                            "observationCount": 126,
-                            "nActiveFactors": 7,
                             "percentile": 18.2,
                             "confidence": "high",
                             "modelName": "secapi_stock_basket_factor_model_v1",
                             "asOf": "2026-06-09T22:15:00.000Z",
                             "responseMode": "compact",
-                            "dataAsOf": "2026-06-09",
-                            "freshnessStatus": "fresh",
-                            "methodologyVersion": "secapi_factor_exposures_v1",
-                            "materializationVersion": "2026-06-09",
-                            "provenance": {
-                              "source": "secapi_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "accessionNumber": null,
-                              "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                              "acceptedAt": null,
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "parserVersion": "secapi-factor-pipeline"
-                            },
-                            "freshness": {
-                              "status": "fresh",
-                              "asOf": "2026-06-09T22:15:00.000Z",
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "lagMs": 2700000
-                            },
-                            "materialization": {
-                              "parserVersion": "secapi-factor-pipeline",
-                              "materializationVersion": "2026-06-09"
-                            },
-                            "sourceRights": {
-                              "source": "secapi_owned_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "posture": "public_safe",
-                              "publicAvailability": "public",
-                              "contractStatus": "approved",
-                              "restrictions": [],
-                              "notes": "SecAPI-owned derived factor data."
-                            },
-                            "methodology": {
-                              "id": "secapi_factor_returns",
-                              "version": "v1",
-                              "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                              "confidence": "high",
-                              "launchState": "beta",
-                              "inputs": [
-                                "secapi_factor_returns",
-                                "secapi_factor_exposures",
-                                "market_calendar"
-                              ],
-                              "validation": {
-                                "launchHistoryFloor": "2015-01-01",
-                                "marketCalendarAware": true
-                              }
-                            },
-                            "revision": {
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "vintageId": "2026-06-09",
-                              "revisedFrom": null
-                            },
-                            "degradedState": null
+                            "expansionHints": [
+                              "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                            ]
                           }
                         ],
                         "fit": null,
@@ -13579,72 +13370,14 @@
                             "subjectKey": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
-                            "intercept": 0.001,
-                            "rSquared": 0.31,
-                            "adjustedRSquared": 0.29,
-                            "tStat": -4.8,
-                            "observationCount": 126,
-                            "nActiveFactors": 7,
                             "percentile": 18.2,
                             "confidence": "high",
                             "modelName": "secapi_stock_basket_factor_model_v1",
                             "asOf": "2026-06-09T22:15:00.000Z",
                             "responseMode": "compact",
-                            "dataAsOf": "2026-06-09",
-                            "freshnessStatus": "fresh",
-                            "methodologyVersion": "secapi_factor_exposures_v1",
-                            "materializationVersion": "2026-06-09",
-                            "provenance": {
-                              "source": "secapi_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "accessionNumber": null,
-                              "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                              "acceptedAt": null,
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "parserVersion": "secapi-factor-pipeline"
-                            },
-                            "freshness": {
-                              "status": "fresh",
-                              "asOf": "2026-06-09T22:15:00.000Z",
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "lagMs": 2700000
-                            },
-                            "materialization": {
-                              "parserVersion": "secapi-factor-pipeline",
-                              "materializationVersion": "2026-06-09"
-                            },
-                            "sourceRights": {
-                              "source": "secapi_owned_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "posture": "public_safe",
-                              "publicAvailability": "public",
-                              "contractStatus": "approved",
-                              "restrictions": [],
-                              "notes": "SecAPI-owned derived factor data."
-                            },
-                            "methodology": {
-                              "id": "secapi_factor_returns",
-                              "version": "v1",
-                              "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                              "confidence": "high",
-                              "launchState": "beta",
-                              "inputs": [
-                                "secapi_factor_returns",
-                                "secapi_factor_exposures",
-                                "market_calendar"
-                              ],
-                              "validation": {
-                                "launchHistoryFloor": "2015-01-01",
-                                "marketCalendarAware": true
-                              }
-                            },
-                            "revision": {
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "vintageId": "2026-06-09",
-                              "revisedFrom": null
-                            },
-                            "degradedState": null
+                            "expansionHints": [
+                              "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                            ]
                           }
                         ],
                         "attribution": [
@@ -13853,72 +13586,14 @@
                             "subjectKey": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
-                            "intercept": 0.001,
-                            "rSquared": 0.31,
-                            "adjustedRSquared": 0.29,
-                            "tStat": -4.8,
-                            "observationCount": 126,
-                            "nActiveFactors": 7,
                             "percentile": 18.2,
                             "confidence": "high",
                             "modelName": "secapi_stock_basket_factor_model_v1",
                             "asOf": "2026-06-09T22:15:00.000Z",
                             "responseMode": "compact",
-                            "dataAsOf": "2026-06-09",
-                            "freshnessStatus": "fresh",
-                            "methodologyVersion": "secapi_factor_exposures_v1",
-                            "materializationVersion": "2026-06-09",
-                            "provenance": {
-                              "source": "secapi_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "accessionNumber": null,
-                              "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                              "acceptedAt": null,
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "parserVersion": "secapi-factor-pipeline"
-                            },
-                            "freshness": {
-                              "status": "fresh",
-                              "asOf": "2026-06-09T22:15:00.000Z",
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "lagMs": 2700000
-                            },
-                            "materialization": {
-                              "parserVersion": "secapi-factor-pipeline",
-                              "materializationVersion": "2026-06-09"
-                            },
-                            "sourceRights": {
-                              "source": "secapi_owned_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "posture": "public_safe",
-                              "publicAvailability": "public",
-                              "contractStatus": "approved",
-                              "restrictions": [],
-                              "notes": "SecAPI-owned derived factor data."
-                            },
-                            "methodology": {
-                              "id": "secapi_factor_returns",
-                              "version": "v1",
-                              "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                              "confidence": "high",
-                              "launchState": "beta",
-                              "inputs": [
-                                "secapi_factor_returns",
-                                "secapi_factor_exposures",
-                                "market_calendar"
-                              ],
-                              "validation": {
-                                "launchHistoryFloor": "2015-01-01",
-                                "marketCalendarAware": true
-                              }
-                            },
-                            "revision": {
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "vintageId": "2026-06-09",
-                              "revisedFrom": null
-                            },
-                            "degradedState": null
+                            "expansionHints": [
+                              "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                            ]
                           }
                         ],
                         "export": {
@@ -14099,72 +13774,14 @@
                             "subjectKey": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
-                            "intercept": 0.001,
-                            "rSquared": 0.31,
-                            "adjustedRSquared": 0.29,
-                            "tStat": -4.8,
-                            "observationCount": 126,
-                            "nActiveFactors": 7,
                             "percentile": 18.2,
                             "confidence": "high",
                             "modelName": "secapi_stock_basket_factor_model_v1",
                             "asOf": "2026-06-09T22:15:00.000Z",
                             "responseMode": "compact",
-                            "dataAsOf": "2026-06-09",
-                            "freshnessStatus": "fresh",
-                            "methodologyVersion": "secapi_factor_exposures_v1",
-                            "materializationVersion": "2026-06-09",
-                            "provenance": {
-                              "source": "secapi_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "accessionNumber": null,
-                              "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                              "acceptedAt": null,
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "parserVersion": "secapi-factor-pipeline"
-                            },
-                            "freshness": {
-                              "status": "fresh",
-                              "asOf": "2026-06-09T22:15:00.000Z",
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "lagMs": 2700000
-                            },
-                            "materialization": {
-                              "parserVersion": "secapi-factor-pipeline",
-                              "materializationVersion": "2026-06-09"
-                            },
-                            "sourceRights": {
-                              "source": "secapi_owned_factor_pipeline",
-                              "sourceLabel": "SecAPI factor pipeline",
-                              "posture": "public_safe",
-                              "publicAvailability": "public",
-                              "contractStatus": "approved",
-                              "restrictions": [],
-                              "notes": "SecAPI-owned derived factor data."
-                            },
-                            "methodology": {
-                              "id": "secapi_factor_returns",
-                              "version": "v1",
-                              "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                              "confidence": "high",
-                              "launchState": "beta",
-                              "inputs": [
-                                "secapi_factor_returns",
-                                "secapi_factor_exposures",
-                                "market_calendar"
-                              ],
-                              "validation": {
-                                "launchHistoryFloor": "2015-01-01",
-                                "marketCalendarAware": true
-                              }
-                            },
-                            "revision": {
-                              "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                              "retrievedAt": "2026-06-09T22:15:00.000Z",
-                              "vintageId": "2026-06-09",
-                              "revisedFrom": null
-                            },
-                            "degradedState": null
+                            "expansionHints": [
+                              "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                            ]
                           }
                         ],
                         "optimizationNotes": [
@@ -14287,72 +13904,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "summaryMd": "Model is growth-quality tilted; hedge and optimizer sections show bounded factor-neutral alternatives.",
@@ -14470,7 +14029,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -14663,7 +14222,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -14850,72 +14409,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "optimizationNotes": [
@@ -15039,7 +14540,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -15137,72 +14638,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "fit": null,
@@ -15218,72 +14661,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "attribution": [
@@ -15473,7 +14858,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -15799,7 +15184,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
           }
         ],
         "requestBody": {
@@ -16383,72 +15768,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "fit": null,
@@ -16464,72 +15791,14 @@
                           "subjectKey": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
-                          "intercept": 0.001,
-                          "rSquared": 0.31,
-                          "adjustedRSquared": 0.29,
-                          "tStat": -4.8,
-                          "observationCount": 126,
-                          "nActiveFactors": 7,
                           "percentile": 18.2,
                           "confidence": "high",
                           "modelName": "secapi_stock_basket_factor_model_v1",
                           "asOf": "2026-06-09T22:15:00.000Z",
                           "responseMode": "compact",
-                          "dataAsOf": "2026-06-09",
-                          "freshnessStatus": "fresh",
-                          "methodologyVersion": "secapi_factor_exposures_v1",
-                          "materializationVersion": "2026-06-09",
-                          "provenance": {
-                            "source": "secapi_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "accessionNumber": null,
-                            "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                            "acceptedAt": null,
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "parserVersion": "secapi-factor-pipeline"
-                          },
-                          "freshness": {
-                            "status": "fresh",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "lagMs": 2700000
-                          },
-                          "materialization": {
-                            "parserVersion": "secapi-factor-pipeline",
-                            "materializationVersion": "2026-06-09"
-                          },
-                          "sourceRights": {
-                            "source": "secapi_owned_factor_pipeline",
-                            "sourceLabel": "SecAPI factor pipeline",
-                            "posture": "public_safe",
-                            "publicAvailability": "public",
-                            "contractStatus": "approved",
-                            "restrictions": [],
-                            "notes": "SecAPI-owned derived factor data."
-                          },
-                          "methodology": {
-                            "id": "secapi_factor_returns",
-                            "version": "v1",
-                            "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                            "confidence": "high",
-                            "launchState": "beta",
-                            "inputs": [
-                              "secapi_factor_returns",
-                              "secapi_factor_exposures",
-                              "market_calendar"
-                            ],
-                            "validation": {
-                              "launchHistoryFloor": "2015-01-01",
-                              "marketCalendarAware": true
-                            }
-                          },
-                          "revision": {
-                            "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                            "retrievedAt": "2026-06-09T22:15:00.000Z",
-                            "vintageId": "2026-06-09",
-                            "revisedFrom": null
-                          },
-                          "degradedState": null
+                          "expansionHints": [
+                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+                          ]
                         }
                       ],
                       "attribution": [
@@ -17059,6 +16328,175 @@
     "/v1/facts": {
       "get": {
         "summary": "Return normalized SEC company facts for an issuer, concept, and optional form or unit. Defaults to the us-gaap taxonomy (10-K/10-Q); when no explicit taxonomy or form is supplied and the us-gaap lookup is empty, automatically falls back to ifrs-full on 20-F/6-K for foreign private issuers (e.g. SAP, TM, SONY, RIO).",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Either ticker or cik is required."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Either ticker or cik is required."
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "XBRL concept tag, such as Revenues."
+          },
+          {
+            "name": "taxonomy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional taxonomy pin, such as us-gaap or ifrs-full."
+          },
+          {
+            "name": "unit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional unit filter."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional SEC form filter, such as 10-K or 10-Q."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "annual",
+                "quarterly",
+                "quarter",
+                "q"
+              ]
+            },
+            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Fiscal year filter."
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Alias for fy."
+          },
+          {
+            "name": "fy_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive fiscal-year lower bound."
+          },
+          {
+            "name": "fyFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Alias for fy_from."
+          },
+          {
+            "name": "fy_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive fiscal-year upper bound."
+          },
+          {
+            "name": "fyTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Alias for fy_to."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Maximum fact points to return."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional enrichments such as geographic_segments."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "agent"
+              ]
+            },
+            "description": "Use agent for token-efficient fact point records."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -17137,9 +16575,12 @@
               "type": "string",
               "enum": [
                 "annual",
-                "quarterly"
+                "quarterly",
+                "quarter",
+                "q"
               ]
-            }
+            },
+            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
           },
           {
             "name": "fy",
@@ -17310,9 +16751,12 @@
               "type": "string",
               "enum": [
                 "annual",
-                "quarterly"
+                "quarterly",
+                "quarter",
+                "q"
               ]
-            }
+            },
+            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
           },
           {
             "name": "fy",
@@ -17468,9 +16912,12 @@
               "type": "string",
               "enum": [
                 "annual",
-                "quarterly"
+                "quarterly",
+                "quarter",
+                "q"
               ]
-            }
+            },
+            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
           },
           {
             "name": "fy",
@@ -21598,7 +21045,561 @@
       "MacroForecast": {},
       "MacroForecastList": {},
       "MacroRegime": {},
-      "MacroHighSignalPack": {},
+      "MacroHighSignalPack": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "asOf",
+          "country",
+          "ring",
+          "series",
+          "summaryMd"
+        ],
+        "properties": {
+          "dataAsOf": {
+            "type": "string"
+          },
+          "freshnessStatus": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "degraded",
+              "unknown"
+            ]
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "materializationVersion": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "macro_high_signal_pack"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "ring": {
+            "type": "string",
+            "enum": [
+              "launch_ring_1",
+              "tier_1_expansion"
+            ]
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "seriesCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "indicatorKey",
+                    "label",
+                    "frequency",
+                    "sourceKey",
+                    "sourceLabel",
+                    "dataset",
+                    "seriesCode",
+                    "coverageState",
+                    "canonicality",
+                    "fallbackPolicy",
+                    "latest",
+                    "upcomingRelease",
+                    "forecast"
+                  ],
+                  "properties": {
+                    "indicatorKey": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "label": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "frequency": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "daily",
+                            "weekly",
+                            "monthly",
+                            "quarterly",
+                            "annual"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sourceKey": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sourceLabel": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "dataset": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "seriesCode": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "coverageState": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "live",
+                            "materialized_bootstrap",
+                            "planned"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "canonicality": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "official",
+                            "official_via_dbnomics",
+                            "fallback_harmonized"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fallbackPolicy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "dbnomics",
+                            "imf_ifs",
+                            "world_bank"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "latest": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "period",
+                            "value",
+                            "unit",
+                            "asOf",
+                            "freshnessStatus"
+                          ],
+                          "properties": {
+                            "period": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "unit": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "asOf": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "freshnessStatus": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "upcomingRelease": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "scheduledAt",
+                            "status",
+                            "actual",
+                            "prior",
+                            "consensus",
+                            "surprise"
+                          ],
+                          "properties": {
+                            "scheduledAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "status": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "actual": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "prior": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "consensus": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "surprise": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "forecast": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "horizon",
+                            "value",
+                            "intervalLow",
+                            "intervalHigh",
+                            "scenario"
+                          ],
+                          "properties": {
+                            "horizon": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "intervalLow": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "intervalHigh": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "scenario": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "indicatorKey",
+                    "label",
+                    "sourcePlan"
+                  ],
+                  "properties": {
+                    "indicatorKey": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "sourcePlan": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "latestObservation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "upcomingRelease": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "forecast": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              ]
+            }
+          },
+          "regime": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "expansionHints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "freshness": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "materialization": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "sourceRights": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "methodology": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "revision": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
       "FactorCatalogStatus": {
         "type": "string",
         "enum": [
@@ -22143,9 +22144,7 @@
           "sourceAvailabilityStatus",
           "launchUniverseStatus",
           "launchClaimStatus",
-          "launchParityCategory",
-          "launchReadiness",
-          "qualityProof"
+          "launchParityCategory"
         ],
         "properties": {
           "dataAsOf": {
@@ -22247,6 +22246,12 @@
           },
           "qualityProof": {
             "$ref": "#/components/schemas/FactorQualityProof"
+          },
+          "expansionHints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "provenance": {
             "$ref": "#/components/schemas/ResponseMetadata"
@@ -27113,6 +27118,12 @@
           "asOf": {
             "type": "string",
             "format": "date-time"
+          },
+          "expansionHints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "provenance": {
             "$ref": "#/components/schemas/ResponseMetadata"

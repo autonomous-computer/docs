@@ -1,15 +1,21 @@
 # GET /v1/macro/high-signal-pack
 
-Return the high-signal macro pack with explicit source, fallback, and release-calendar metadata for supported countries
+Return the launch-ring Tier-1 high-signal macro pack with explicit source, fallback, and release-calendar posture for supported countries
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
+
+## Response controls
+
+- Default: compact high-signal summaries with latest value, next release, forecast, and regime context.
+- `response_mode=standard`: return the full nested pack.
+- `include=series`: expand full observations, releases, forecasts, source plans, and trust metadata.
 
 ## Example request
 
@@ -18,7 +24,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/macro/high-signal-pack"
+  "https://api.secapi.ai/v1/macro/high-signal-pack?country=US"
 ```
 </RequestExample>
 
@@ -27,7 +33,55 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
+  "object": "macro_high_signal_pack",
+  "id": "macro_high_signal_pack_US",
+  "asOf": "2026-06-09T22:15:00.000Z",
+  "country": "US",
+  "ring": "launch_ring_1",
+  "responseMode": "compact",
+  "seriesCount": 32,
+  "series": [
+    {
+      "indicatorKey": "US_CPI_ALL_ITEMS",
+      "label": "CPI (All Items)",
+      "frequency": "monthly",
+      "sourceKey": "fred",
+      "sourceLabel": "Federal Reserve (FRED)",
+      "dataset": "CPIAUCSL",
+      "seriesCode": "CPIAUCSL",
+      "coverageState": "live",
+      "canonicality": "official",
+      "fallbackPolicy": "none",
+      "latest": {
+        "period": "2026-05-01",
+        "value": 321.5,
+        "unit": "index",
+        "asOf": "2026-06-09T22:15:00.000Z",
+        "freshnessStatus": "fresh"
+      },
+      "upcomingRelease": {
+        "scheduledAt": "2026-07-12T13:30:00.000Z",
+        "status": "scheduled",
+        "actual": null,
+        "prior": 321.5,
+        "consensus": 322,
+        "surprise": null
+      },
+      "forecast": {
+        "horizon": "1m",
+        "value": 322.1,
+        "intervalLow": 321,
+        "intervalHigh": 323,
+        "scenario": "baseline"
+      }
+    }
+  ],
+  "regime": null,
+  "summaryMd": "US launch-ring high-signal macro pack includes 32 official-source or harmonized series with explicit fallback and release-calendar posture.",
+  "expansionHints": [
+    "Use include=series to return full nested observations, releases, forecasts, source plans, and trust metadata."
+  ],
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
@@ -35,14 +89,13 @@ curl -X GET \
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/macro/high-signal-pack to return the high-signal macro pack with explicit source, fallback, and release-calendar metadata for supported countries. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/macro/high-signal-pack?country=US for a compact macro pack. Preserve `requestId`, `traceparent`, `series[].latest`, `series[].upcomingRelease`, `series[].forecast`, `regime`, and `expansionHints`. Add `include=series` only when the workflow needs full nested observations, releases, forecasts, source plans, and trust metadata.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
 
