@@ -25,6 +25,8 @@ When the validator can't produce a span (no section text, no query-term match, o
 
 Pass `?view=agent` to receive the compact agent shape: key + snippet + lifted `accessionNumber` / `startOffset` / `endOffset` from provenance/trace, plus the citation envelope (`accession`, `section_key`, `char_start`, `char_end`, `highlighted_snippet`, `source_url`, `ticker`). Content-md and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
+Valid `view` values are `default`, `compact`, and `agent`. `view=compact` is accepted for response-format consistency and currently returns the default search row shape; use `view=agent` when you need token-efficient rows. Invalid view values return `400 invalid_query_parameter` with `details.acceptedValues`.
+
 ## Response metadata
 
 - `requestId`
@@ -82,7 +84,7 @@ Use SEC API GET /v1/sections/search to search filing sections and snippets with 
 ## Errors and partial results
 
 - Treat non-2xx responses as API errors and log the response body for debugging
+- invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
 

@@ -5034,6 +5034,133 @@
     "/v1/sections/search": {
       "get": {
         "summary": "Search filing sections and snippets with filing-scoped filters and cursor pagination",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Section search query."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional issuer ticker filter."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional issuer CIK filter."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional filing form filter such as 10-K or 10-Q."
+          },
+          {
+            "name": "filing_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional stored filing id to scope section search to a single filing."
+          },
+          {
+            "name": "filing_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional filing-year filter."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Optional fiscal-year selector. With ticker, maps to the issuer fiscal-year filing-date window."
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Alias for fy when ticker is present."
+          },
+          {
+            "name": "fp",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional fiscal period selector such as FY, Q1, Q2, Q3, or Q4."
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for fp, such as FY, Q1, Q2, Q3, or Q4."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum sections to return."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Non-negative result offset from a previous page."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Search response shape. Use agent for a compact citation-ready shape; compact is accepted for response-format consistency and currently matches the default search rows. Invalid values return invalid_query_parameter with details.acceptedValues."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -19385,10 +19512,11 @@
               "type": "string",
               "enum": [
                 "default",
+                "compact",
                 "agent"
               ]
             },
-            "description": "Pass `agent` to drop score and retrievalMode while preserving citation fields"
+            "description": "Search response shape. Pass agent to drop score and retrievalMode while preserving citation fields; compact is accepted for response-format consistency and currently matches the default search rows. Invalid values return invalid_query_parameter with details.acceptedValues."
           }
         ],
         "responses": {

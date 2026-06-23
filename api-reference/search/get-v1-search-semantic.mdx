@@ -25,6 +25,8 @@ When the validator can't produce a span (no section text, no query-term match, o
 
 Pass `?view=agent` to drop `score` and `retrievalMode` from each row. The seven citation fields are preserved unconditionally. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
+Valid `view` values are `default`, `compact`, and `agent`. `view=compact` is accepted for response-format consistency and currently returns the default search row shape; use `view=agent` when you need token-efficient rows. Invalid view values return `400 invalid_query_parameter` with `details.acceptedValues`.
+
 ## Retrieval mode
 
 Use `mode=hybrid` for the default keyword + vector blend, `mode=semantic` for vector retrieval, or `mode=keyword` for exact-text fallback. Invalid mode values return `400 invalid_query_parameter` with `acceptedValues`.
@@ -66,5 +68,6 @@ Use SEC API GET /v1/search/semantic with a required `q` query and `mode=hybrid`,
 
 - Treat non-2xx responses as API errors and log the response body for debugging
 - invalid `mode` values return `invalid_query_parameter` with `acceptedValues`
+- invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
