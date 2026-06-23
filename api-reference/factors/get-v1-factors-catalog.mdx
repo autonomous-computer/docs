@@ -1,15 +1,21 @@
 # GET /v1/factors/catalog
 
-Return the SEC API factor catalog with methodology, proxy, and orthogonalization metadata
+Return compact SEC API factor definitions, with trust and methodology metadata available on request.
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Use this endpoint from server-side applications, SDKs, or agent workflows. The default response is compact so catalog lookups are cheap to put in a prompt, table, or picker.
 </Info>
 
 ## Response metadata
 
 - `requestId`
 - `traceparent`
+
+## Response controls
+
+- `response_mode=compact` keeps each factor definition focused on identity, category, launch status, benchmark, equation, and expansion hints.
+- `include=trust` expands compact rows with `launchReadiness`, `qualityProof`, provenance, freshness, source-rights, methodology, materialization, revision, and degraded-state metadata.
+- `response_mode=standard` returns the full factor definition shape without requiring an `include` value.
 
 ## Example request
 
@@ -18,7 +24,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/catalog"
+  "https://api.secapi.ai/v1/factors/catalog?response_mode=compact"
 ```
 </RequestExample>
 
@@ -27,22 +33,69 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
+  "object": "list",
+  "data": [
+    {
+      "object": "factor_definition",
+      "id": "factor:VALUE",
+      "key": "VALUE",
+      "name": "Value",
+      "category": "style",
+      "description": "Long cheaper stocks and short expensive stocks using SecAPI-owned factor construction.",
+      "benchmarkSymbol": "VLUE",
+      "equation": {
+        "long_leg": 1,
+        "short_leg": -1
+      },
+      "orthogonalizedAgainst": [
+        "MARKET"
+      ],
+      "catalogStatus": "launch_ready",
+      "sourceAvailabilityStatus": "implemented",
+      "launchUniverseStatus": "launch_candidate",
+      "launchClaimStatus": "candidate_pending_history_freshness_proof",
+      "launchParityCategory": "style",
+      "responseMode": "compact",
+      "expansionHints": [
+        "Use include=trust for launchReadiness, qualityProof, provenance, source rights, methodology, and revision metadata."
+      ]
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "categories": [
+    "market",
+    "style",
+    "sector",
+    "industry"
+  ],
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Expanding trust metadata
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/catalog?response_mode=compact&include=trust"
+```
+</RequestExample>
+
+Use `include=trust` when an answer will cite freshness, coverage, methodology, source rights, or launch-readiness proof. Compact rows keep the trust envelope out of the default payload, but the response still points callers to the expansion.
+
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/factors/catalog to return the SEC API factor catalog with methodology, proxy, and orthogonalization metadata. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/factors/catalog to return the compact factor catalog. Preserve `requestId` and `traceparent`. Summarize the available factor keys, categories, benchmark symbols, and launch statuses. If the workflow needs proof, methodology, provenance, freshness, or source-rights evidence, call the endpoint again with `include=trust`.
 </Prompt>
 
 ## Errors and partial results
 
 - Treat non-2xx responses as API errors and log the response body for debugging
 - Log `requestId` and `traceparent` so SEC API support can trace the request
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- Use `include=trust` before citing proof, provenance, freshness, or source-rights metadata
