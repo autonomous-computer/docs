@@ -41,6 +41,25 @@ that command instead of changing your shell session:
 secapi health --base-url http://127.0.0.1:8787
 ```
 
+Use a no-secret profile when you switch between local, staging, and production often. Profiles live at `~/.config/secapi/profiles.json` by default and may set `baseUrl`, `apiKeyEnv`, and `bearerTokenEnv`. The file stores environment variable names, not credential values. Set `SECAPI_CONFIG_FILE` when CI or an agent runner should read profiles from a different path:
+
+```json
+{
+  "profiles": {
+    "local": {
+      "baseUrl": "http://127.0.0.1:8787",
+      "apiKeyEnv": "SECAPI_LOCAL_API_KEY"
+    }
+  }
+}
+```
+
+```bash
+export SECAPI_LOCAL_API_KEY="your-api-key"
+SECAPI_PROFILE=local secapi health
+secapi --profile local config show
+```
+
 ## Diagnose Your Setup
 
 Run `doctor` when auth, the API origin, or hosted MCP setup looks wrong:
