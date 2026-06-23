@@ -16336,7 +16336,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker. Either ticker or cik is required."
+            "description": "Issuer ticker, for example AAPL. Either ticker or cik is required."
           },
           {
             "name": "cik",
@@ -16354,7 +16354,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "XBRL concept tag, such as Revenues."
+            "description": "XBRL concept tag for concept-specific lookups, such as Revenues, Revenue, NetIncomeLoss, or PropertyPlantAndEquipmentNet. When omitted, the API returns common financial metrics."
           },
           {
             "name": "taxonomy",
@@ -16382,6 +16382,15 @@
               "type": "string"
             },
             "description": "Optional SEC form filter, such as 10-K or 10-Q."
+          },
+          {
+            "name": "formType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for form."
           },
           {
             "name": "period",
@@ -16481,7 +16490,69 @@
             "schema": {
               "type": "string"
             },
-            "description": "Optional enrichments such as geographic_segments."
+            "description": "Optional comma-separated enrichments. Use geographic_segments for revenue geography when available."
+          },
+          {
+            "name": "include_geographic_segments",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Legacy boolean alias for include=geographic_segments."
+          },
+          {
+            "name": "geographic_segments",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Legacy boolean alias for include=geographic_segments."
+          },
+          {
+            "name": "segment_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Maximum geographic segment rows when include=geographic_segments is requested."
+          },
+          {
+            "name": "segmentLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Alias for segment_limit."
+          },
+          {
+            "name": "submission_file_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Maximum recent filing submission files to inspect for geographic segment enrichment."
+          },
+          {
+            "name": "submissionFileLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Alias for submission_file_limit."
           },
           {
             "name": "view",
@@ -16499,12 +16570,93 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful response. Default view returns FactPointList; view=agent returns FactPointAgentList.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/FactPointList"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FactPointAgentList"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Quarterly revenue facts",
+                    "value": {
+                      "object": "list",
+                      "data": [
+                        {
+                          "object": "fact_point",
+                          "id": "fact_0000320193_Revenues_2025_Q3",
+                          "createdAt": "2026-03-17T00:00:00.000Z",
+                          "livemode": true,
+                          "entityId": "cent_f3913349312cbf5bfd60ecdb",
+                          "ticker": "AAPL",
+                          "companyName": "Apple Inc.",
+                          "taxonomy": "us-gaap",
+                          "tag": "Revenues",
+                          "label": "Revenue",
+                          "unit": "USD",
+                          "value": 95359000000,
+                          "periodStart": "2025-03-30",
+                          "fy": 2025,
+                          "fp": "Q3",
+                          "form": "10-Q",
+                          "periodEnd": "2025-06-28",
+                          "filedAt": "2025-08-01T00:00:00.000Z",
+                          "frame": "CY2025Q2",
+                          "provenance": {
+                            "source": "sec",
+                            "accessionNumber": "0000320193-25-000079",
+                            "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250628.htm",
+                            "retrievedAt": "2026-03-17T00:00:00.000Z",
+                            "parserVersion": "secapi-xbrl-v1"
+                          }
+                        }
+                      ],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "requestedTag": "Revenues",
+                      "resolvedTag": "Revenues",
+                      "aliasStrategy": "exact",
+                      "completeness": {
+                        "source": "company_facts",
+                        "observationsReturned": 1,
+                        "hasResolvedConcept": true
+                      },
+                      "requestId": "req_example",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  },
+                  "agent": {
+                    "summary": "Token-efficient agent view",
+                    "value": {
+                      "object": "list",
+                      "data": [
+                        {
+                          "object": "fact_point",
+                          "tag": "Revenues",
+                          "label": "Revenue",
+                          "taxonomy": "us-gaap",
+                          "unit": "USD",
+                          "value": 95359000000,
+                          "periodEnd": "2025-06-28",
+                          "fy": 2025,
+                          "fp": "Q3",
+                          "form": "10-Q",
+                          "accessionNumber": "0000320193-25-000079",
+                          "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250628.htm"
+                        }
+                      ],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "requestId": "req_example"
+                    }
+                  }
                 }
               }
             }
@@ -29546,7 +29698,9 @@
       "DilutionVerificationSummary": {},
       "DilutionCoverage": {},
       "DilutionScore": {},
-      "DilutionScoreEnhanced": {}
+      "DilutionScoreEnhanced": {},
+      "FactPointList": {},
+      "FactPointAgentList": {}
     },
     "securitySchemes": {
       "ApiKeyAuth": {

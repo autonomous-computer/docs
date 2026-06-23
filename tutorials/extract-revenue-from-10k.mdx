@@ -129,29 +129,29 @@ For granular control, use `/v1/facts` to pull individual XBRL concepts. This is 
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/facts?ticker=AAPL&concept=Revenues&period=annual&limit=4"
+  "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&period=annual&limit=4"
 ```
 
 ### Python
 
 ```python
-facts = client.facts.list(
+facts = client.facts(
     ticker="AAPL",
-    concept="Revenues",
+    tag="Revenues",
     period="annual",
     limit=4,
 )
 
-for fact in facts.data:
-    print(f"{fact.period_end}: ${fact.value:,.0f}")
+for fact in facts["data"]:
+    print(f"{fact['periodEnd']}: ${fact['value']:,.0f}")
 ```
 
 ### JavaScript
 
 ```ts
-const facts = await client.facts.list({
+const facts = await client.facts({
   ticker: "AAPL",
-  concept: "Revenues",
+  tag: "Revenues",
   period: "annual",
   limit: 4,
 });
@@ -178,4 +178,3 @@ for (const fact of facts.data) {
 - **Build dashboards**: Pipe the JSON output into your visualization tool of choice.
 
 See the [API Reference](/api-reference) for the full list of available endpoints and parameters.
-
