@@ -10,6 +10,10 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 
 Pass `?view=agent` to receive citation fields and a snippet without the full `contentMd` section body. Use `mode=compact` when you still need `contentMd` but want it capped for token efficiency.
 
+## Section mode
+
+Use `mode=full` for the full extracted section body or `mode=compact` for capped `contentMd`. Invalid mode values return `400 invalid_section_mode` with `details.acceptedValues`.
+
 ## Agent response fields
 
 - `requestId`
@@ -67,4 +71,5 @@ Use SEC API GET /v1/filings/{accession_number}/sections/{section_key}?view=agent
 ## Errors and partial results
 
 - Treat non-2xx responses as API errors and log the response body for debugging
+- invalid `mode` values return `invalid_section_mode` with `details.acceptedValues`
 - Log `requestId`, `accessionNumber`, and `source_url` so SEC API support can trace the request
