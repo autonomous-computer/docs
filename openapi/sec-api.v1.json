@@ -3047,7 +3047,7 @@
     },
     "/v1/entities/resolve": {
       "get": {
-        "summary": "Resolve an entity by ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name with confidence and match-basis metadata",
+        "summary": "Resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata",
         "parameters": [
           {
             "name": "ticker",
@@ -3056,6 +3056,14 @@
               "type": "string"
             },
             "description": "Ticker symbol to resolve, such as AAPL."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker, accepted for clients that use symbol terminology."
           },
           {
             "name": "cik",
@@ -3114,6 +3122,22 @@
             "description": "Company, fund, manager, or insider name to resolve."
           },
           {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for name, useful when resolving a free-form company or manager query."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Short alias for query/name."
+          },
+          {
             "name": "view",
             "in": "query",
             "schema": {
@@ -3128,7 +3152,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response. At least one of ticker, cik, figi, composite_figi, share_class_figi, isin, cusip, or name is required.",
+            "description": "Successful response. At least one of ticker, symbol, cik, figi, composite_figi, share_class_figi, isin, cusip, name, query, or q is required.",
             "content": {
               "application/json": {
                 "schema": {

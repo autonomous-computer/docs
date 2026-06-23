@@ -1,16 +1,16 @@
 # GET /v1/entities/resolve
 
-Resolve an entity by ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name with confidence and match-basis metadata.
+Resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows. Provide at least one identifier: `ticker`, `cik`, `figi`, `composite_figi`, `share_class_figi`, `isin`, `cusip`, or `name`.
+Audience: application and coding agent. Provide at least one identifier: `ticker`, `symbol`, `cik`, `figi`, `composite_figi`, `share_class_figi`, `isin`, `cusip`, `name`, `query`, or `q`.
 </Info>
 
 ## Agent mode
 
 Pass `view=agent` to receive the compact agent shape: entity identifiers (`id`, `ticker`, `cik`, `name`), primary identifiers, and match metadata. Aliases, jurisdiction, full identifiers list, and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `view` contract.
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -58,25 +58,25 @@ curl -X GET \
 
 ## Other identifiers
 
-Use the same endpoint with any one of the supported identifiers:
+Use the same endpoint with any one of the supported identifiers. `symbol` is accepted as a ticker alias, and `query` or `q` are accepted as name aliases.
 
 <RequestExample>
 ```bash
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/entities/resolve?cik=0000320193&view=agent"
+  "https://api.secapi.ai/v1/entities/resolve?query=Acme+Corp&view=agent"
 ```
 </RequestExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/entities/resolve with `ticker=AAPL` or the identifier the user provides. Pass `view=agent` unless the workflow needs the full entity record. Preserve `requestId`. Return the resolved `id`, `ticker`, `cik`, `name`, `matchConfidence`, `matchBasis`, and primary identifiers.
+<Prompt>
+Use SEC API GET /v1/entities/resolve with `ticker=AAPL`, `symbol=AAPL`, `query=Apple+Inc`, or the identifier the user provides. Pass `view=agent` unless the workflow needs the full entity record. Preserve `requestId`. Return the resolved `id`, `ticker`, `cik`, `name`, `matchConfidence`, `matchBasis`, and primary identifiers.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- If the response is `missing_identifier`, retry with one of `ticker`, `cik`, `figi`, `composite_figi`, `share_class_figi`, `isin`, `cusip`, or `name`
-- Log `requestId` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- if the response is `missing_identifier`, retry with one of `ticker`, `symbol`, `cik`, `figi`, `composite_figi`, `share_class_figi`, `isin`, `cusip`, `name`, `query`, or `q`
+- preserve `requestId` in logs and downstream reports
