@@ -11,14 +11,16 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 - `requestId`
 - `traceparent`
 
+Use `ticker`, `symbol`, or `cik` to scope the search to an issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
+
 ## Example request
 
 <RequestExample>
 ```bash
 curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/search/fulltext"
+ -H "x-api-key: $SECAPI_API_KEY" \
+ -H "secapi-version: 2026-03-19" \
+ "https://api.secapi.ai/v1/search/fulltext?q=going+concern&symbol=AAPL&form=10-K"
 ```
 </RequestExample>
 
@@ -42,6 +44,6 @@ Use SEC API GET /v1/search/fulltext to search filing content and section text by
 ## Errors and partial results
 
 - Treat non-2xx responses as API errors and log the response body for debugging
+- if `ticker` and `symbol` are both provided, they must match
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-

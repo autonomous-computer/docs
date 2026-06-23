@@ -27,6 +27,8 @@ Pass `?view=agent` to drop `score` and `retrievalMode` from each row. The seven 
 
 Valid `view` values are `default`, `compact`, and `agent`. `view=compact` is accepted for response-format consistency and currently returns the default search row shape; use `view=agent` when you need token-efficient rows. Invalid view values return `400 invalid_query_parameter` with `details.acceptedValues`.
 
+Use `ticker`, `symbol`, or `cik` to scope the search to an issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
+
 ## Retrieval mode
 
 Use `mode=hybrid` for the default keyword + vector blend, `mode=semantic` for vector retrieval, or `mode=keyword` for exact-text fallback. Invalid mode values return `400 invalid_query_parameter` with `acceptedValues`.
@@ -43,7 +45,7 @@ Use `mode=hybrid` for the default keyword + vector blend, `mode=semantic` for ve
 curl -X GET \
  -H "x-api-key: $SECAPI_API_KEY" \
  -H "secapi-version: 2026-03-19" \
- "https://api.secapi.ai/v1/search/semantic?q=supply+chain+risk&ticker=AAPL&form=10-K&mode=hybrid&view=agent"
+ "https://api.secapi.ai/v1/search/semantic?q=supply+chain+risk&symbol=AAPL&form=10-K&mode=hybrid&view=agent"
 ```
 </RequestExample>
 
@@ -67,6 +69,7 @@ Use SEC API GET /v1/search/semantic with a required `q` query and `mode=hybrid`,
 ## Errors and partial results
 
 - Treat non-2xx responses as API errors and log the response body for debugging
+- if `ticker` and `symbol` are both provided, they must match
 - invalid `mode` values return `invalid_query_parameter` with `acceptedValues`
 - invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
 - Log `requestId` and `traceparent` so SEC API support can trace the request
