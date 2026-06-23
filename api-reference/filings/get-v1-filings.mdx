@@ -6,6 +6,10 @@ Search filing manifests with historical filters, accession lookup semantics, sor
 Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
+## Issuer lookup
+
+Use `ticker`, `symbol`, or `cik` to scope issuer searches. `symbol` is an alias for `ticker`; if both are provided, they must refer to the same issuer symbol.
+
 ## Response metadata
 
 - `requestId`
@@ -21,7 +25,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings"
+  "https://api.secapi.ai/v1/filings?symbol=AAPL&form=10-K&limit=1&view=agent"
 ```
 </RequestExample>
 
@@ -57,13 +61,13 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/filings to search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/filings with `ticker`, `symbol`, or `cik` to search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
 
 - Treat non-2xx responses as API errors and log the response body for debugging
+- if both `ticker` and `symbol` are present, they must match
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
 

@@ -3503,7 +3503,16 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker symbol."
+            "description": "Issuer ticker, for example AAPL. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker, for customers coming from market-data APIs. If both ticker and symbol are provided, they must match."
           },
           {
             "name": "cik",
@@ -3512,7 +3521,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer Central Index Key."
+            "description": "Issuer Central Index Key. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
           },
           {
             "name": "form",
@@ -3648,6 +3657,20 @@
               "maximum": 50
             },
             "description": "Maximum SEC submission files to inspect when falling back to SEC submissions."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Response shape. compact is equivalent to mode=compact; agent returns citation fields and snippets without the full section body."
           }
         ],
         "responses": {
@@ -3692,6 +3715,89 @@
     "/v1/filings/latest": {
       "get": {
         "summary": "Retrieve the latest filing for an entity and form",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker, for example AAPL. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker, for customers coming from market-data APIs. If both ticker and symbol are provided, they must match."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer Central Index Key. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC form type, for example 10-K or 8-K. Omit to retrieve the issuer's latest filing of any type."
+          },
+          {
+            "name": "fp",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Fiscal period filter, for example FY, Q1, Q2, Q3, or Q4."
+          },
+          {
+            "name": "filing_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Calendar filing year filter."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Fiscal-year selector."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Response shape. compact is equivalent to mode=compact; agent returns citation fields and snippets without the full section body."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -3734,6 +3840,66 @@
     "/v1/filings/latest/render": {
       "get": {
         "summary": "Render the latest filing into Markdown-like text",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker, for example AAPL. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker, for customers coming from market-data APIs. If both ticker and symbol are provided, they must match."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer Central Index Key. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC form type. Defaults to 10-K."
+          },
+          {
+            "name": "filing_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Calendar filing year filter."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Fiscal-year selector."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -3793,7 +3959,16 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker. Either ticker or cik is required."
+            "description": "Issuer ticker, for example AAPL. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker, for customers coming from market-data APIs. If both ticker and symbol are provided, they must match."
           },
           {
             "name": "cik",
@@ -3802,7 +3977,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer CIK. Either ticker or cik is required."
+            "description": "Issuer Central Index Key. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
           },
           {
             "name": "form",
@@ -3905,6 +4080,53 @@
     "/v1/filings/latest/risk-categories": {
       "get": {
         "summary": "Return deterministic Item 1A risk-category coverage for the latest covered filing of an issuer",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker, for example AAPL. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker, for customers coming from market-data APIs. If both ticker and symbol are provided, they must match."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer Central Index Key. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC form type. Defaults to the latest covered risk-category filing."
+          },
+          {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional SEC accession number to inspect directly."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -4199,6 +4421,75 @@
     "/v1/filings/pension-benefit-schedule": {
       "get": {
         "summary": "Return structured expected pension and retiree benefit payments for a target year when the filing discloses the schedule in rendered tables",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker, for example AAPL. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker, for customers coming from market-data APIs. If both ticker and symbol are provided, they must match."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer Central Index Key. Use ticker, symbol, or cik to scope issuer-specific filing lookups."
+          },
+          {
+            "name": "filing_year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Filing year to inspect."
+          },
+          {
+            "name": "target_year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Benefit-payment year to extract."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC form type. Defaults to 10-K."
+          },
+          {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional SEC accession number to inspect directly."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",

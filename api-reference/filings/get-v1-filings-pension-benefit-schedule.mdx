@@ -6,6 +6,10 @@ Return structured expected pension and retiree benefit payments for a target yea
 Use this endpoint from server-side applications, SDKs, or agent workflows.
 </Info>
 
+## Issuer lookup
+
+Use `ticker`, `symbol`, or `cik` to choose the issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
+
 ## Response metadata
 
 - `requestId`
@@ -21,7 +25,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/pension-benefit-schedule"
+  "https://api.secapi.ai/v1/filings/pension-benefit-schedule?symbol=VZ&filing_year=2022&target_year=2024"
 ```
 </RequestExample>
 
@@ -34,16 +38,16 @@ curl -X GET \
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
   "provenance": {
     "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
+    "accessionNumber": "0000732712-22-000008",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/732712/000073271222000008/vz-20211231x10k.htm",
     "retrievedAt": "2026-03-17T00:00:00.000Z",
     "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
+    "rawSourceKey": "0000732712-22-000008"
   },
   "freshness": {
     "status": "fresh",
     "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
+    "sourcePublishedAt": "2022-02-22T00:00:00.000Z",
     "lagMs": 900000
   },
   "materialization": {
@@ -57,7 +61,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/filings/pension-benefit-schedule to return structured expected pension and retiree benefit payments for a target year when the filing discloses the schedule in rendered tables. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/filings/pension-benefit-schedule with `ticker`, `symbol`, or `cik` plus `filing_year` and `target_year` to return structured expected pension and retiree benefit payments when the filing discloses the schedule in rendered tables. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
@@ -65,5 +69,3 @@ Use SEC API GET /v1/filings/pension-benefit-schedule to return structured expect
 - Treat non-2xx responses as API errors and log the response body for debugging
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-

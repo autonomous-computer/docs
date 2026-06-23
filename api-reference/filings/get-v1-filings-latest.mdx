@@ -10,6 +10,10 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 
 Pass `?view=agent` to receive the compact agent shape: six essentials (object, ticker, form, accessionNumber, filingDate, title) + lifted `filingUrl`. Provenance chain, freshness, materialization, and validation metadata are dropped. Typical reduction: **~95%** (summaryMd prose dominates the default shape). See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
+## Issuer lookup
+
+Use `ticker`, `symbol`, or `cik` to choose the issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
+
 ## Response metadata
 
 - `requestId`
@@ -25,7 +29,7 @@ Pass `?view=agent` to receive the compact agent shape: six essentials (object, t
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/latest"
+  "https://api.secapi.ai/v1/filings/latest?symbol=AAPL&form=10-K&view=agent"
 ```
 </RequestExample>
 
@@ -61,13 +65,13 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/filings/latest to retrieve the latest filing for an entity and form. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/filings/latest with `ticker`, `symbol`, or `cik` to retrieve the latest filing for an entity and form. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
 
 - Treat non-2xx responses as API errors and log the response body for debugging
+- if both `ticker` and `symbol` are present, they must match
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
 
