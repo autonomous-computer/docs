@@ -1,0 +1,91 @@
+---
+title: "SEC API CLI"
+description: "Install, authenticate, discover, and run SEC API workflows from the terminal."
+---
+
+# SEC API CLI
+
+<Info>
+Use the SEC API CLI when you want terminal-first SEC workflows, quick smoke checks, or an agent-readable command inventory without writing an SDK script.
+</Info>
+
+## Install
+
+```bash
+npm install -g @secapi/cli
+secapi --version
+```
+
+The package installs the `secapi` binary. The legacy `omni-sec` alias may appear in older examples, but new scripts should use `secapi`.
+
+## Authenticate
+
+Set your API key in the environment before calling authenticated API commands:
+
+```bash
+export SECAPI_API_KEY="your-api-key"
+```
+
+For CI and agent runners, keep secrets out of process arguments and use stdin:
+
+```bash
+printf "%s" "$SECAPI_API_KEY" | secapi health --api-key-stdin
+```
+
+Use `SECAPI_BASE_URL` only when pointing the CLI at a non-production API origin.
+
+## Verify Setup Without Spending an API Call
+
+These commands are local and safe to run before authentication:
+
+```bash
+secapi --help
+secapi filings latest --help
+secapi agent-context
+```
+
+Unknown commands and option typos fail locally with nearest-command suggestions before any network request is made.
+
+## Core Workflows
+
+```bash
+secapi entities resolve --ticker AAPL
+secapi filings latest --ticker AAPL --form 10-K
+secapi sections get --ticker AAPL --form 10-K --section item_1a --view agent
+secapi statements get --ticker AAPL --statement all --period annual --limit 1
+secapi traces list --ids trc_1,trc_2
+```
+
+The CLI prints structured JSON for API workflows by default. Preserve `requestId`, `accessionNumber`, source URLs, freshness, provenance, and trace references in downstream artifacts, then hydrate returned trace IDs with `traces get` or `traces list`.
+
+## Agent and MCP Setup
+
+```bash
+secapi mcp install --client claude-code
+secapi mcp install --client cursor --print
+secapi init --client project --print
+```
+
+`secapi mcp install` and `secapi init` share the same client setup path. Use `--print` when you want to inspect generated config before writing it.
+
+## Command Inventory for Agents
+
+```bash
+secapi agent-context > secapi-cli-context.json
+```
+
+`agent-context` returns machine-readable command groups, usage strings, auth posture, mutation posture, output style, required flags, and examples. Give this to coding agents before asking them to automate SEC workflows.
+
+## Read Next
+
+<CardGroup cols={3}>
+  <Card title="Libraries & SDKs" icon="blocks" href="/libraries-and-sdks">
+    Choose the right integration surface for your runtime.
+  </Card>
+  <Card title="Hosted MCP workflows" icon="bot" href="/mcp-workflows">
+    Connect SEC API directly to MCP-aware agents.
+  </Card>
+  <Card title="First request flows" icon="route" href="/first-request-flows">
+    Prove issuer, filing, section, statement, and trace workflows.
+  </Card>
+</CardGroup>
