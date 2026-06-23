@@ -21,9 +21,17 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/income_statement?ticker=AAPL&period=quarter"
+  "https://api.secapi.ai/v1/statements/income_statement?symbol=AAPL&period=quarter"
 ```
 </RequestExample>
+
+## Query parameters
+
+- `statement_key` is the statement key in the path, such as `income_statement`, `balance_sheet`, or `cash_flow_statement`.
+- `ticker`, `symbol`, or `cik` identifies the issuer. `symbol` is accepted as an alias for `ticker`.
+- `fy`, `year`, `fy_from`, `fyFrom`, `fy_to`, and `fyTo` bound fiscal years.
+- `limit` caps periods returned, up to `40`.
+- `view=agent` returns compact rows and periods for agent workflows; `view=compact` returns period-indexed row arrays.
 
 ## Period aliases
 
@@ -61,7 +69,7 @@ Use `period=annual` for annual statements or `period=quarterly` for quarterly st
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/statements/{statement_key} to return a specific normalized statement bundle keyed by statement type. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/statements/{statement_key} with `ticker`, `symbol`, or `cik` to return a specific normalized statement bundle keyed by statement type. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
@@ -69,4 +77,3 @@ Use SEC API GET /v1/statements/{statement_key} to return a specific normalized s
 - Treat non-2xx responses as API errors and log the response body for debugging
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-

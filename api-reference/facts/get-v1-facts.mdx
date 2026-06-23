@@ -35,7 +35,7 @@ Use `period=annual` for annual company facts or `period=quarterly` for quarterly
 
 ## Query parameters
 
-- `ticker` or `cik` identifies the issuer. One is required.
+- `ticker`, `symbol`, or `cik` identifies the issuer. `symbol` is accepted as an alias for `ticker`.
 - `tag` is the XBRL concept for concept-specific lookups, such as `Revenues`, `Revenue`, `NetIncomeLoss`, or `PropertyPlantAndEquipmentNet`. If omitted, the API returns common financial metrics.
 - `taxonomy`, `unit`, and `form` pin the lookup when you do not want the default us-gaap plus foreign-private-issuer fallback.
 - `fy`, `year`, `fy_from`, `fyFrom`, `fy_to`, and `fyTo` bound fiscal years.
@@ -74,13 +74,13 @@ Use `period=annual` for annual company facts or `period=quarterly` for quarterly
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/facts with `ticker` or `cik`, an XBRL `tag` for concept-specific lookups, and `period=annual|quarterly|quarter|q` to return normalized SEC company facts. Use `view=agent` for compact fact rows with `accessionNumber` and `filingUrl`; use `include=geographic_segments` only when revenue geography is needed. Preserve `requestId` and any provenance/freshness/materialization metadata present in default responses.
+Use SEC API GET /v1/facts with `ticker`, `symbol`, or `cik`, an XBRL `tag` for concept-specific lookups, and `period=annual|quarterly|quarter|q` to return normalized SEC company facts. Use `view=agent` for compact fact rows with `accessionNumber` and `filingUrl`; use `include=geographic_segments` only when revenue geography is needed. Preserve `requestId` and any provenance/freshness/materialization metadata present in default responses.
 </Prompt>
 
 ## Errors and partial results
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- retry with either `ticker` or `cik`, and add a valid `tag` when you need one specific concept
+- retry with `ticker`, `symbol`, or `cik`, and add a valid `tag` when you need one specific concept
 - invalid `period` values return `400 invalid_query_parameter` with `details.acceptedValues`
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

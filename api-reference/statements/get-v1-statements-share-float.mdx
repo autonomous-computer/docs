@@ -23,9 +23,13 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/share-float?ticker=MSFT"
+  "https://api.secapi.ai/v1/statements/share-float?symbol=MSFT"
 ```
 </RequestExample>
+
+## Query parameters
+
+- `ticker`, `symbol`, or `cik` identifies the issuer. `symbol` is accepted as an alias for `ticker`.
 
 ## Example response
 
@@ -92,7 +96,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/statements/share-float to return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `capability`, `sourceMode` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/statements/share-float with `ticker`, `symbol`, or `cik` to return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `capability`, `sourceMode` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
@@ -100,5 +104,4 @@ Use SEC API GET /v1/statements/share-float to return a share-float wrapper backe
 - Treat non-2xx responses as API errors and log the response body for debugging
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
 
