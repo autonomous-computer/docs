@@ -67,6 +67,17 @@ Unknown commands and option typos fail locally with nearest-command suggestions 
 
 Missing required flags include the command usage, a copy-pasteable example, and the exact `--help` command to inspect before the CLI sends a request.
 
+Preview high-impact mutating commands before they touch account state by adding `--dry-run`. The CLI prints the method, endpoint, and JSON body locally without reading credentials or making an API request:
+
+```bash
+secapi api-keys create --label local-dev --scopes read:sec --dry-run
+secapi billing checkout --plan personal --dry-run
+secapi webhooks create --destination-url https://example.com/hooks/sec --event-types artifact.created --dry-run
+secapi streams create --event-types artifact.created --transport poll --dry-run
+```
+
+Supported dry-run previews: `api-keys create`, `billing budget`, `billing checkout`, `billing portal`, `webhooks create`, `webhooks rotate-secret`, `webhooks replay-delivery`, and `streams create`.
+
 Boolean flags accept bare flags plus explicit `true`, `false`, `yes`, `no`, `on`, `off`, `1`, and `0` values. For example, generated scripts can force an opt-in flag off with `--include-v2=false` instead of dropping the flag and changing the command shape.
 
 Write structured or generated command output directly to a file with `--output <path>`:
