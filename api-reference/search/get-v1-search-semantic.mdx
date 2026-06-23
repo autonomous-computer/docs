@@ -25,6 +25,10 @@ When the validator can't produce a span (no section text, no query-term match, o
 
 Pass `?view=agent` to drop `score` and `retrievalMode` from each row. The seven citation fields are preserved unconditionally. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
+## Retrieval mode
+
+Use `mode=hybrid` for the default keyword + vector blend, `mode=semantic` for vector retrieval, or `mode=keyword` for exact-text fallback. Invalid mode values return `400 invalid_query_parameter` with `acceptedValues`.
+
 ## Response metadata
 
 - `requestId`
@@ -37,7 +41,7 @@ Pass `?view=agent` to drop `score` and `retrievalMode` from each row. The seven 
 curl -X GET \
  -H "x-api-key: $SECAPI_API_KEY" \
  -H "secapi-version: 2026-03-19" \
- "https://api.secapi.ai/v1/search/semantic"
+ "https://api.secapi.ai/v1/search/semantic?q=supply+chain+risk&ticker=AAPL&form=10-K&mode=hybrid&view=agent"
 ```
 </RequestExample>
 
@@ -55,12 +59,12 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/search/semantic to find conceptually similar SEC filing sections with hybrid ranking and citations. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+Use SEC API GET /v1/search/semantic with a required `q` query and `mode=hybrid`, `mode=semantic`, or `mode=keyword` to find conceptually similar SEC filing sections with citations. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
 </Prompt>
 
 ## Errors and partial results
 
 - Treat non-2xx responses as API errors and log the response body for debugging
+- invalid `mode` values return `invalid_query_parameter` with `acceptedValues`
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
