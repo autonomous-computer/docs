@@ -4249,7 +4249,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker. Either ticker or cik is required."
+            "description": "Issuer ticker, for example JPM. Either ticker or cik is required."
           },
           {
             "name": "cik",
@@ -4314,6 +4314,28 @@
             "description": "Maximum segment periods to return."
           },
           {
+            "name": "segment_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Alias for limit when requesting bounded segment rows."
+          },
+          {
+            "name": "segmentLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Alias for segment_limit."
+          },
+          {
             "name": "submission_file_limit",
             "in": "query",
             "required": false,
@@ -4323,16 +4345,82 @@
               "maximum": 6
             },
             "description": "Maximum SEC submission files to inspect."
+          },
+          {
+            "name": "submissionFileLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Alias for submission_file_limit."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful response. Returns a SegmentedFactSeries with bounded records and request metadata.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/SegmentedFactSeries"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Product segment profit/loss history",
+                    "value": {
+                      "object": "segmented_fact_series",
+                      "id": "segfact_cent_jpm_profit_loss_product",
+                      "createdAt": "2026-03-17T00:00:00.000Z",
+                      "livemode": true,
+                      "entityId": "cent_jpm_example",
+                      "ticker": "JPM",
+                      "companyName": "JPMorgan Chase & Co.",
+                      "period": "quarterly",
+                      "metric": "profit_loss",
+                      "capability": "supported",
+                      "records": [
+                        {
+                          "segmentAxis": "us-gaap:StatementBusinessSegmentsAxis",
+                          "segmentMember": "jpm:ConsumerAndCommunityBankingMember",
+                          "segmentLabel": "Consumer & Community Banking",
+                          "segmentType": "product",
+                          "axisFamily": "business",
+                          "hierarchyDepth": 1,
+                          "isMostGranularSibling": true,
+                          "metricKey": "profit_loss",
+                          "taxonomy": "us-gaap",
+                          "tag": "ProfitLoss",
+                          "unit": "USD",
+                          "value": 4579000000,
+                          "periodStart": "2026-01-01",
+                          "periodEnd": "2026-03-31",
+                          "filingDate": "2026-04-12",
+                          "reportDate": "2026-03-31",
+                          "form": "10-Q",
+                          "accessionNumber": "0000019617-26-000123",
+                          "capability": "supported",
+                          "provenance": {
+                            "source": "sec",
+                            "accessionNumber": "0000019617-26-000123",
+                            "filingUrl": "https://www.sec.gov/Archives/edgar/data/19617/000001961726000123/jpm-20260331.htm",
+                            "retrievedAt": "2026-04-12T00:00:00.000Z",
+                            "parserVersion": "secapi-segmented-statements-v1"
+                          }
+                        }
+                      ],
+                      "provenance": {
+                        "source": "sec",
+                        "accessionNumber": "0000019617-26-000123",
+                        "filingUrl": "https://www.sec.gov/Archives/edgar/data/19617/000001961726000123/jpm-20260331.htm",
+                        "retrievedAt": "2026-04-12T00:00:00.000Z",
+                        "parserVersion": "secapi-segmented-statements-v1"
+                      },
+                      "requestId": "req_example",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  }
                 }
               }
             }
@@ -4375,7 +4463,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker. Either ticker or cik is required."
+            "description": "Issuer ticker, for example PFE. Either ticker or cik is required."
           },
           {
             "name": "cik",
@@ -4427,6 +4515,28 @@
             "description": "Maximum segment periods to return."
           },
           {
+            "name": "segment_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Alias for limit when requesting bounded segment rows."
+          },
+          {
+            "name": "segmentLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Alias for segment_limit."
+          },
+          {
             "name": "submission_file_limit",
             "in": "query",
             "required": false,
@@ -4436,16 +4546,81 @@
               "maximum": 6
             },
             "description": "Maximum SEC submission files to inspect."
+          },
+          {
+            "name": "submissionFileLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "description": "Alias for submission_file_limit."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful response. Returns a SegmentedRevenueSeries with bounded records and request metadata.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/SegmentedRevenueSeries"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Geographic revenue history",
+                    "value": {
+                      "object": "segmented_revenue_series",
+                      "id": "segrev_cent_pfe_geographic",
+                      "createdAt": "2026-03-17T00:00:00.000Z",
+                      "livemode": true,
+                      "entityId": "cent_pfe_example",
+                      "ticker": "PFE",
+                      "companyName": "Pfizer Inc.",
+                      "period": "quarterly",
+                      "capability": "supported",
+                      "records": [
+                        {
+                          "segmentAxis": "us-gaap:StatementGeographicalAxis",
+                          "segmentMember": "us-gaap:UnitedStatesMember",
+                          "segmentLabel": "United States",
+                          "segmentType": "geographic",
+                          "axisFamily": "geography",
+                          "hierarchyDepth": 1,
+                          "isMostGranularSibling": true,
+                          "metricKey": "revenue",
+                          "taxonomy": "us-gaap",
+                          "tag": "Revenues",
+                          "unit": "USD",
+                          "value": 6200000000,
+                          "periodStart": "2026-01-01",
+                          "periodEnd": "2026-03-31",
+                          "filingDate": "2026-05-02",
+                          "reportDate": "2026-03-31",
+                          "form": "10-Q",
+                          "accessionNumber": "0000078003-26-000045",
+                          "capability": "supported",
+                          "provenance": {
+                            "source": "sec",
+                            "accessionNumber": "0000078003-26-000045",
+                            "filingUrl": "https://www.sec.gov/Archives/edgar/data/78003/000007800326000045/pfe-20260331.htm",
+                            "retrievedAt": "2026-05-02T00:00:00.000Z",
+                            "parserVersion": "secapi-segmented-statements-v1"
+                          }
+                        }
+                      ],
+                      "provenance": {
+                        "source": "sec",
+                        "accessionNumber": "0000078003-26-000045",
+                        "filingUrl": "https://www.sec.gov/Archives/edgar/data/78003/000007800326000045/pfe-20260331.htm",
+                        "retrievedAt": "2026-05-02T00:00:00.000Z",
+                        "parserVersion": "secapi-segmented-statements-v1"
+                      },
+                      "requestId": "req_example",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  }
                 }
               }
             }
@@ -29700,7 +29875,8 @@
       "DilutionScore": {},
       "DilutionScoreEnhanced": {},
       "FactPointList": {},
-      "FactPointAgentList": {}
+      "FactPointAgentList": {},
+      "SegmentedFactSeries": {}
     },
     "securitySchemes": {
       "ApiKeyAuth": {
