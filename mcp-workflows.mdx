@@ -82,7 +82,15 @@ claude mcp add --transport streamable-http sec-api https://api.secapi.ai/mcp \
 - `sections.get`
 - `statements.get`
 - `market.snapshots`
+- `macro.search`
 - `macro.indicators`
+- `macro.high_signal_pack`
+- `macro.releases`
+- `macro.calendar`
+- `macro.forecasts`
+- `macro.regimes`
+- `macro.credit_ratings`
+- `macro.country_report`
 - `factors.returns`
 - `factors.history`
 - `factors.sparklines`
@@ -122,6 +130,31 @@ When the quota is exhausted, hosted MCP returns HTTP `429` with JSON-RPC error d
 <Prompt description="Copy this SEC API prompt for your agent.">
 Set up SEC API hosted MCP in this MCP-aware client. Register the streamable HTTP MCP endpoint, resolve AAPL, fetch the latest 10-K, extract Item 1A, and return the result with requestId, provenance, freshness, and materialization metadata intact.
 </Prompt>
+
+## Macro Workflow
+
+Use this sequence when an agent needs macro context for a company, factor, or portfolio analysis:
+
+1. Call `macro.search` with a natural-language query such as `inflation` or `policy rate`.
+2. Call `macro.high_signal_pack` with `country: "US"` for the compact country pack.
+3. Call `macro.calendar` for upcoming scheduled releases and `macro.releases` for released history.
+4. Call `macro.forecasts` and `macro.regimes` for forward and backdrop context.
+5. Call `macro.country_report` when the agent needs one compact rollup.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "macro_workflow",
+  "method": "tools/call",
+  "params": {
+    "name": "macro.high_signal_pack",
+    "arguments": {
+      "country": "US",
+      "response_mode": "compact"
+    }
+  }
+}
+```
 
 ## Example tool call
 

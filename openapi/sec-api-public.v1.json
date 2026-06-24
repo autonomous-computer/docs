@@ -7596,6 +7596,31 @@
               "default": 24
             },
             "description": "Maximum observations to return (default 24, max 240)"
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ],
+              "default": "standard"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
           }
         ],
         "responses": {
@@ -7659,6 +7684,30 @@
             "description": "Optional indicator key filter (alias: indicator_key)"
           },
           {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "released",
+                "scheduled"
+              ],
+              "default": "released"
+            },
+            "description": "Released history by default. Use scheduled to return upcoming calendar events."
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 180,
+              "default": 45
+            },
+            "description": "Look-ahead window when status=scheduled."
+          },
+          {
             "name": "limit",
             "in": "query",
             "schema": {
@@ -7668,6 +7717,31 @@
               "default": 12
             },
             "description": "Maximum releases to return (default 12, max 120)"
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ],
+              "default": "standard"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
           }
         ],
         "responses": {
@@ -7723,6 +7797,14 @@
             "description": "ISO country code (e.g. US, JP, CN)"
           },
           {
+            "name": "indicator",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional indicator key filter (alias: indicator_key)"
+          },
+          {
             "name": "days",
             "in": "query",
             "schema": {
@@ -7732,6 +7814,42 @@
               "default": 45
             },
             "description": "Look-ahead window in days (default 45, max 180)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 120,
+              "default": 120
+            },
+            "description": "Maximum scheduled events to return (default/max 120)"
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ],
+              "default": "standard"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
           }
         ],
         "responses": {
@@ -7804,6 +7922,31 @@
               "default": 3
             },
             "description": "Number of forecast horizons to return (default 3, max 6)"
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
           }
         ],
         "responses": {
@@ -7854,33 +7997,34 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "default": "JP"
+              "default": "US"
             },
-            "description": "ISO country code (e.g. US, JP, CN). Defaults to JP for backward compatibility."
+            "description": "ISO country code (e.g. US, JP, CN). Defaults to US."
           },
           {
             "name": "response_mode",
             "in": "query",
+            "required": false,
             "schema": {
               "type": "string",
               "enum": [
                 "compact",
-                "standard"
+                "standard",
+                "verbose",
+                "agent"
               ],
               "default": "compact"
             },
-            "description": "Response projection. compact returns bounded per-series summaries; standard returns the full nested pack shape."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
           },
           {
             "name": "include",
             "in": "query",
+            "required": false,
             "schema": {
-              "type": "string",
-              "enum": [
-                "series"
-              ]
+              "type": "string"
             },
-            "description": "Use include=series to expand the full nested observations, releases, forecasts, source plans, and trust metadata."
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
           }
         ],
         "responses": {
@@ -7980,13 +8124,88 @@
     "/v1/macro/regimes": {
       "get": {
         "summary": "Return the current macro regime classification for a country using the canonical SEC API macro overlay",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "US"
+            },
+            "description": "ISO country code (e.g. US, JP, CN)"
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "18m"
+            },
+            "description": "Lookback window for regime inference."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ],
+              "default": "standard"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful response.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MacroRegime"
+                  "type": "object",
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "enum": [
+                        "list"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MacroRegime"
+                      }
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "object",
+                    "data"
+                  ]
                 }
               }
             }
@@ -16832,6 +17051,33 @@
     "/v1/intelligence/country-report": {
       "post": {
         "summary": "Return a country intelligence bundle covering the prior period's macro path, likely drivers, and forward view",
+        "parameters": [
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ],
+              "default": "standard"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {

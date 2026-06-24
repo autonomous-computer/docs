@@ -1,0 +1,79 @@
+---
+title: "Macro Tier-1 Official Sources"
+description: "Official-source macro indicators and freshness posture for SEC API launch countries"
+---
+
+# Macro Tier-1 Official Sources
+
+SEC API macro coverage prioritizes the countries investors actually allocate to, with explicit source posture and freshness validation. Dagster is the scheduled production writer for macro data; GitHub Actions run read-only validation and freshness checks.
+
+## Launch Ring
+
+| Country | Series Count | Primary Sources | Source Mode |
+|---|---:|---|---|
+| United States (`US`) | 32 | FRED/ALFRED, BLS, Census | `direct_official` |
+| China (`CN`) | 14 | NBS China, SAFE | `direct_official` |
+| Japan (`JP`) | 10 | BOJ, e-Stat, MOF, Cabinet Office | `direct_official` |
+| Taiwan (`TW`) | 7 | DGBAS, CBC | `direct_official` |
+| Israel (`IL`) | 8 | CBS Israel, Bank of Israel | `direct_official` |
+
+## Expansion Ring
+
+| Country | Series Count | Primary Sources | Source Mode |
+|---|---:|---|---|
+| Canada (`CA`) | 4 | Statistics Canada, Bank of Canada | `direct_official` |
+| United Kingdom (`GB`) | 4 | ONS, Bank of England | `direct_official` |
+| Eurozone (`EZ`) | 4 | Eurostat, ECB | `direct_official` |
+| South Korea (`KR`) | 4 | KOSIS, Bank of Korea ECOS | `direct_official` |
+| Brazil (`BR`) | 4 | IBGE SIDRA, BCB SGS | `direct_official` |
+| India (`IN`) | 3 | MOSPI, data.gov.in | `official_bridge` |
+| Saudi Arabia (`SA`) | 3 | GASTAT | `official_bridge` |
+
+## Source Modes
+
+- `direct_official`: primary runtime fetches directly from an official government agency API or download endpoint.
+- `official_bridge`: official agency data is accessed through a bridge such as DBnomics when a stable direct API is not yet available.
+- `fallback_harmonized`: a harmonized source is used only as an explicit fallback and must be visible in metadata.
+
+DBnomics is a bridge and fallback, not the product claim. When direct official APIs exist and are stable, SEC API treats those as the preferred source of truth.
+
+## Example Calls
+
+Search for an indicator key:
+
+```bash
+curl "https://api.secapi.ai/v1/macro/search?q=gdp&country=US" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+Fetch observations:
+
+```bash
+curl "https://api.secapi.ai/v1/macro/indicators?country=US&indicator=CPIAUCSL&limit=10&response_mode=compact" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+Fetch the compact high-signal pack:
+
+```bash
+curl "https://api.secapi.ai/v1/macro/high-signal-pack?country=US" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+Fetch upcoming scheduled releases only:
+
+```bash
+curl "https://api.secapi.ai/v1/macro/calendar?country=US&days=45&limit=12&response_mode=compact" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+## Freshness Ownership
+
+Production macro writes are owned by Dagster. Read-only validation checks cover:
+
+- source coverage and source health
+- ClickHouse freshness for observations, releases, forecasts, regimes, revisions, and factor impacts
+- methodology validation
+- country-report and high-signal response shape
+
+Every observation can carry source, revision, release-calendar, canonicality, fallback, freshness, materialization, and methodology metadata. Keep those fields when macro data supports an investment conclusion.
