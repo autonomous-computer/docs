@@ -1,11 +1,6 @@
----
-title: "Request Diagnostics"
-description: "Use request diagnostics to investigate SEC API workflows with support."
----
+# Request diagnostics
 
-# Request Diagnostics
-
-SEC API exposes request-scoped diagnostics so you can share the exact workflow context support needs to investigate an issue.
+SEC API exposes request-scoped diagnostics so support can investigate a single workflow without database access.
 
 ## Endpoints
 
@@ -16,7 +11,7 @@ SEC API exposes request-scoped diagnostics so you can share the exact workflow c
 
 ```bash
 curl "$SECAPI_BASE_URL/v1/diagnostics/requests/req_123" \
-  -H "Authorization: Bearer $SECAPI_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 The drilldown includes:
@@ -34,7 +29,7 @@ Use this first when support has a `Request-Id` from an API response.
 
 ```bash
 curl "$SECAPI_BASE_URL/v1/diagnostics/deliveries/summary?since=2026-03-14T00:00:00Z&limit=200" \
-  -H "Authorization: Bearer $SECAPI_API_KEY"
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 This returns grouped webhook and stream delivery activity so support can answer:
@@ -49,3 +44,14 @@ This returns grouped webhook and stream delivery activity so support can answer:
 secapi diagnostics request --request-id req_123
 secapi diagnostics deliveries-summary --since 2026-03-14T00:00:00Z --limit 200
 ```
+
+For support tickets or agent handoffs, generate one redacted bundle instead of
+pasting several commands separately:
+
+```bash
+secapi support bundle --request-id req_123
+```
+
+The bundle includes local CLI config, `doctor` checks, request metadata, and the
+request drilldown when a request id is provided. Credential values are redacted
+recursively before output.
