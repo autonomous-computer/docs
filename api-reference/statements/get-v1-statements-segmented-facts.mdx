@@ -3,10 +3,10 @@
 Return filing-derived segmented fact history for supported metrics such as revenue and segment profit/loss, with product or geography dimensions, hierarchy metadata, capability state, and trace references when issuers disclose them
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -21,49 +21,86 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/segmented-facts"
+  "https://api.secapi.ai/v1/statements/segmented-facts?ticker=JPM&metric=profit_loss&period=quarter&segment_type=product&limit=4&submission_file_limit=5"
 ```
 </RequestExample>
+
+## Query parameters
+
+- `ticker`, `symbol`, or `cik` identifies the issuer. `symbol` is accepted as an alias for `ticker`.
+- `metric` is required and must be `revenue` or `profit_loss`.
+- `period=annual` returns annual segments. `period=quarterly`, `period=quarter`, and `period=q` return quarterly segments.
+- `segment_type` can be `geographic`, `product`, or `other`.
+- `limit`, `segment_limit`, or `segmentLimit` caps segment periods returned, up to `6`.
+- `submission_file_limit` caps recent SEC submission files inspected, up to `6`. `submissionFileLimit` is also accepted.
 
 ## Example response
 
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
-  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "object": "segmented_fact_series",
+  "id": "segfact_cent_jpm_profit_loss_product",
+  "createdAt": "2026-03-17T00:00:00.000Z",
+  "livemode": true,
+  "entityId": "cent_jpm_example",
+  "ticker": "JPM",
+  "companyName": "JPMorgan Chase & Co.",
+  "period": "quarterly",
+  "metric": "profit_loss",
+  "capability": "supported",
+  "records": [
+    {
+      "segmentAxis": "us-gaap:StatementBusinessSegmentsAxis",
+      "segmentMember": "jpm:ConsumerAndCommunityBankingMember",
+      "segmentLabel": "Consumer & Community Banking",
+      "segmentType": "product",
+      "axisFamily": "business",
+      "hierarchyDepth": 1,
+      "isMostGranularSibling": true,
+      "metricKey": "profit_loss",
+      "taxonomy": "us-gaap",
+      "tag": "ProfitLoss",
+      "unit": "USD",
+      "value": 4579000000,
+      "periodStart": "2026-01-01",
+      "periodEnd": "2026-03-31",
+      "filingDate": "2026-04-12",
+      "reportDate": "2026-03-31",
+      "form": "10-Q",
+      "accessionNumber": "0000019617-26-000123",
+      "capability": "supported",
+      "provenance": {
+        "source": "sec",
+        "accessionNumber": "0000019617-26-000123",
+        "filingUrl": "https://www.sec.gov/Archives/edgar/data/19617/000001961726000123/jpm-20260331.htm",
+        "retrievedAt": "2026-04-12T00:00:00.000Z",
+        "parserVersion": "secapi-segmented-statements-v1"
+      }
+    }
+  ],
   "provenance": {
     "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
+    "accessionNumber": "0000019617-26-000123",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/19617/000001961726000123/jpm-20260331.htm",
+    "retrievedAt": "2026-04-12T00:00:00.000Z",
+    "parserVersion": "secapi-segmented-statements-v1"
   },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "sec-api-3.0"
-  }
+  "requestId": "req_example"
 }
 ```
 </ResponseExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/statements/segmented-facts to return filing-derived segmented fact history for supported metrics such as revenue and segment profit/loss, with product or geography dimensions, hierarchy metadata, capability state, and trace references when issuers disclose them. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/statements/segmented-facts with `ticker`, `symbol`, or `cik`, required `metric=revenue|profit_loss`, and optional `segment_type=geographic|product|other` to return bounded filing-derived segment facts. Use `period=quarter`, `period=q`, or `period=quarterly` for quarterly segments. Preserve `requestId`, `traceparent`, `provenance`, and record-level `accessionNumber` values.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- retry with `metric=revenue` or `metric=profit_loss` if the API returns `invalid_metric`
+- invalid `period`, `metric`, and `segment_type` values include `details.acceptedValues`
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-

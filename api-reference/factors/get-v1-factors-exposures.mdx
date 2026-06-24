@@ -1,15 +1,22 @@
 # GET /v1/factors/exposures
 
-Return security, portfolio, or watchlist factor exposures with model metadata and provenance
+Return compact factor exposures for securities, portfolios, or watchlists, with diagnostics and provenance available on request.
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent. Use `symbol=AAPL` for the common single-security lookup, or `symbols=AAPL,MSFT` for batches.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
+
+## Response controls
+
+- `response_mode=compact` returns the factor beta, percentile, confidence, model, and as-of timestamp.
+- `include=diagnostics` adds regression diagnostics such as `rSquared`, `tStat`, `observationCount`, and `nActiveFactors`.
+- `include=trust` adds provenance, freshness, materialization, source-rights, methodology, revision, and degraded-state metadata.
+- `response_mode=standard` returns the full exposure row shape.
 
 ## Example request
 
@@ -18,7 +25,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/exposures"
+  "https://api.secapi.ai/v1/factors/exposures?symbol=AAPL&response_mode=compact"
 ```
 </RequestExample>
 
@@ -27,22 +34,56 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
+  "object": "list",
+  "data": [
+    {
+      "object": "factor_exposure",
+      "id": "factor_exposure:AAPL:VALUE:2026-06-09",
+      "subjectType": "security",
+      "subjectKey": "AAPL",
+      "factorKey": "VALUE",
+      "beta": -0.42,
+      "percentile": 18.2,
+      "confidence": "high",
+      "modelName": "secapi_stock_basket_factor_model_v1",
+      "asOf": "2026-06-09T22:15:00.000Z",
+      "responseMode": "compact",
+      "expansionHints": [
+        "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+      ]
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "responseMode": "compact",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Expanding diagnostics
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/exposures?symbol=AAPL&response_mode=compact&include=diagnostics"
+```
+</RequestExample>
+
+Use `include=diagnostics` when a model, risk report, or quant workflow needs regression fit details. Use `include=trust` when the answer will cite provenance, freshness, methodology, or source-rights evidence.
+
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/factors/exposures to return security, portfolio, or watchlist factor exposures with model metadata and provenance. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/factors/exposures with `symbol=AAPL` or the ticker the user provides. Preserve `requestId` and `traceparent`. Summarize the largest positive and negative factor betas, percentile, confidence, and model name. If the workflow needs regression fit statistics, call again with `include=diagnostics`; if it needs proof or methodology evidence, call again with `include=trust`.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- use `include=diagnostics` before citing regression fit statistics such as `rSquared` or `tStat`
+- use `include=trust` before citing proof, provenance, freshness, or source-rights metadata

@@ -1,0 +1,51 @@
+# POST /v1/dashboard/settings/account-deletion-request
+
+Record an account-deletion request for the current organization without deleting data inline
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X POST \
+  -H "Cookie: omni_datastream_session=$SECAPI_WORKOS_SESSION_COOKIE" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{}' \
+  "https://api.secapi.ai/v1/dashboard/settings/account-deletion-request"
+```
+</RequestExample>
+
+<Info>
+Dashboard endpoints require the `omni_datastream_session` WorkOS browser-session cookie. API keys are rejected for dashboard control-plane access.
+</Info>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API POST /v1/dashboard/settings/account-deletion-request to record an account-deletion request for the current organization without deleting data inline. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

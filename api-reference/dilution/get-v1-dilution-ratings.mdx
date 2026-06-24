@@ -1,27 +1,15 @@
 # GET /v1/dilution/ratings
 
-Composite Dilution Score with sub-factors (offering ability, historical, cash need, warrant exercise risk). Ordered by `computed_at desc`. Verification block on every row.
+Composite Dilution Score with sub-factors (offering ability, historical, cash need, warrant exercise risk)
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
-- `verification`
-- `provenance`
-
-## Query parameters
-
-| Param | Type | Description |
-|---|---|---|
-| `ticker` | string | Issuer ticker. |
-| `overall_risk` | string | Filter (`low`, `medium`, `high`). |
-| `cursor` | int | From prior page's `nextCursor`. |
-| `limit` | int (1–50, default 10) | Page size. |
-| `view` | enum | Response shape. |
 
 ## Example request
 
@@ -30,7 +18,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/ratings?overall_risk=high"
+  "https://api.secapi.ai/v1/dilution/ratings"
 ```
 </RequestExample>
 
@@ -39,54 +27,19 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "object": "list",
-  "data": [
-    {
-      "object": "dilution_rating",
-      "id": "dil_rate_acme_2026q1",
-      "ticker": "ACME",
-      "overallRisk": "high",
-      "offeringAbilityRisk": "high",
-      "dilutionRisk": "high",
-      "historicalRisk": "medium",
-      "cashNeedLevel": "low",
-      "warrantExerciseRating": "high",
-      "regsho": false,
-      "numericScore": 78,
-      "factorExposures": {
-        "atm_recent": 0.8,
-        "warrant_overhang": 0.6,
-        "convertible_overhang": 0.5
-      },
-      "computedAt": "2026-02-13T01:00:00.000Z",
-      "verification": {
-        "sourceSpan": "rating-engine#acme#2026q1",
-        "extractionTraceId": "rate_compute_acme_2026q1",
-        "confidence": 0.85,
-        "crossValidations": [
-          { "name": "factor_sum", "passed": true }
-        ],
-        "modelVersion": "dilution-rating-v2.1",
-        "verifiedAt": "2026-02-13T01:00:00.000Z"
-      }
-    }
-  ],
-  "hasMore": false,
-  "nextCursor": null,
-  "requestId": "req_example_123",
-  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API `GET /v1/dilution/ratings` to rank tickers by dilution risk. Preserve `requestId`, `traceparent`, and `verification`. Show `overallRisk`, `numericScore`, and the sub-factor breakdown so a human reviewer can validate the rating.
+<Prompt>
+Use SEC API GET /v1/dilution/ratings to composite Dilution Score with sub-factors (offering ability, historical, cash need, warrant exercise risk). Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- preserve `requestId` and `traceparent`
-
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

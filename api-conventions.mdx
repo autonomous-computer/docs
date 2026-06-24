@@ -179,10 +179,14 @@ Error responses use a stable JSON shape:
 }
 ```
 
+Authentication middleware failures, billing, validation, and other shared-helper errors also include `traceparent`. When it is present, log both `requestId` and `traceparent` when opening support tickets or correlating retries. `requestId` is the customer-facing API identifier; `traceparent` links the response to SEC API's distributed trace and is especially useful for billing, authentication, and dashboard control-plane issues.
+
 ## Auth conventions
 
 - machine access uses `x-api-key`
 - do not send SEC API keys as `Authorization: Bearer`
+- missing API-key calls return `401 missing_api_key` with a docs URL, dashboard key-creation URL, and `WWW-Authenticate` challenge
+- browser-session-only control-plane calls return `401 missing_browser_session` with a login URL when the caller is not signed in
 - API-key-authenticated callers can read data through REST, SDK, CLI, and server-to-server MCP, but dashboard control-plane mutations require a WorkOS browser session
 - API key management, billing mutations, dashboard settings, and account deletion requests reject API-key auth and require a WorkOS browser principal with the required permissions
 - MCP protected-resource metadata is available before WorkOS is fully configured

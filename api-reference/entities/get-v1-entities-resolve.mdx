@@ -1,16 +1,16 @@
 # GET /v1/entities/resolve
 
-Resolve an entity by ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name with confidence and match-basis metadata
+Resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent. Provide at least one identifier: `ticker`, `symbol`, `cik`, `figi`, `composite_figi`, `share_class_figi`, `isin`, `cusip`, `name`, `query`, or `q`.
 </Info>
 
 ## Agent mode
 
-Pass `?view=agent` to receive the compact agent shape: entity identifiers (id, ticker, cik, name) + primary identifiers + match metadata. Aliases, jurisdiction, full identifiers list, and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+Pass `view=agent` to receive the compact agent shape: entity identifiers (`id`, `ticker`, `cik`, `name`), primary identifiers, and match metadata. Aliases, jurisdiction, full identifiers list, and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `view` contract.
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -25,7 +25,7 @@ Pass `?view=agent` to receive the compact agent shape: entity identifiers (id, t
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/entities/resolve"
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
 </RequestExample>
 
@@ -34,40 +34,49 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
-  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "sec-api-3.0"
-  }
+  "object": "entity",
+  "id": "cent_f3913349312cbf5bfd60ecdb",
+  "ticker": "AAPL",
+  "cik": "0000320193",
+  "name": "Apple Inc.",
+  "primaryIdentifiers": [
+    {
+      "type": "ticker",
+      "value": "AAPL"
+    },
+    {
+      "type": "cik",
+      "value": "0000320193"
+    }
+  ],
+  "matchConfidence": 1,
+  "matchBasis": "ticker",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Other identifiers
+
+Use the same endpoint with any one of the supported identifiers. `symbol` is accepted as a ticker alias, and `query` or `q` are accepted as name aliases.
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/entities/resolve?query=Acme+Corp&view=agent"
+```
+</RequestExample>
+
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/entities/resolve to resolve an entity by ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name with confidence and match-basis metadata. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/entities/resolve with `ticker=AAPL`, `symbol=AAPL`, `query=Apple+Inc`, or the identifier the user provides. Pass `view=agent` unless the workflow needs the full entity record. Preserve `requestId`. Return the resolved `id`, `ticker`, `cik`, `name`, `matchConfidence`, `matchBasis`, and primary identifiers.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- if the response is `missing_identifier`, retry with one of `ticker`, `symbol`, `cik`, `figi`, `composite_figi`, `share_class_figi`, `isin`, `cusip`, `name`, `query`, or `q`
+- preserve `requestId` in logs and downstream reports

@@ -3,16 +3,38 @@
 Extract a section from the latest filing for an entity and form
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Agent mode
+
+Pass `?view=agent` to receive citation fields and a snippet without the full `contentMd` section body. Use `mode=compact` when you still need `contentMd` but want it capped for token efficiency.
+
+## Section mode
+
+Use `mode=full` for the full extracted section body or `mode=compact` for capped `contentMd`. Invalid mode values return `400 invalid_section_mode` with `details.acceptedValues`.
+
+## View values
+
+Use `view=agent` for citation-ready snippets, `view=compact` for capped `contentMd`, or `view=default` for the default full response. Invalid view values return `400 invalid_query_parameter` with `details.acceptedValues`.
+
+## Issuer lookup
+
+Use `ticker`, `symbol`, or `cik` to choose the issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
+
+## Agent response fields
 
 - `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
+- `object`
+- `ticker`
+- `key`
+- `snippet`
+- `accessionNumber`
+- `accession`
+- `section_key`
+- `source_url`
+- `startOffset`
+- `endOffset`
 
 ## Example request
 
@@ -21,7 +43,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/latest/sections/{section_key}"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?symbol=AAPL&form=10-K&view=agent"
 ```
 </RequestExample>
 
@@ -30,40 +52,33 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
-  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "sec-api-3.0"
-  }
+  "object": "section",
+  "ticker": "AAPL",
+  "accessionNumber": "0000320193-25-000079",
+  "key": "item_1a",
+  "startOffset": null,
+  "endOffset": null,
+  "snippet": "The Company faces risks from macroeconomic conditions, supply constraints, platform policy changes, and competition.",
+  "accession": "0000320193-25-000079",
+  "section_key": "item_1a",
+  "char_start": null,
+  "char_end": null,
+  "highlighted_snippet": null,
+  "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/filings/latest/sections/{section_key} to extract a section from the latest filing for an entity and form. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/filings/latest/sections/{section_key}?view=agent with `ticker`, `symbol`, or `cik` to extract a citation-ready section snippet from the latest filing for an entity and form. Preserve `requestId`, `ticker`, `key`, `snippet`, `accessionNumber`, `accession`, `section_key`, `source_url`, and any offset fields in the output.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
-
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- invalid `mode` values return `invalid_section_mode` with `details.acceptedValues`
+- invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
+- preserve `requestId`, `accessionNumber`, and `source_url` in logs and downstream reports
