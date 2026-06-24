@@ -811,6 +811,95 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/billing/stripe-config": {
+      "get": {
+        "summary": "Return the current organization's Stripe publishable-key configuration for browser payment setup",
+        "responses": {
+          "200": {
+            "description": "Stripe publishable-key configuration for browser payment setup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "publishableKey",
+                    "livemode",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "enum": [
+                        "stripe_config"
+                      ]
+                    },
+                    "publishableKey": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Stripe publishable key matching the current organization's billing mode. Null means browser payments are not configured."
+                    },
+                    "livemode": {
+                      "type": "boolean",
+                      "description": "Whether the key is for live Stripe mode."
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "examples": {
+                  "configured": {
+                    "summary": "Payments configured",
+                    "value": {
+                      "object": "stripe_config",
+                      "publishableKey": "pk_live_example",
+                      "livemode": true,
+                      "requestId": "req_example_123"
+                    }
+                  },
+                  "unavailable": {
+                    "summary": "Payments unavailable",
+                    "value": {
+                      "object": "stripe_config",
+                      "publishableKey": null,
+                      "livemode": false,
+                      "requestId": "req_example_123"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "billing.stripe_config",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "billing",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/billing/rates": {
       "get": {
         "summary": "Return the public pricing catalog, plan metadata, and meter-family launch rates",

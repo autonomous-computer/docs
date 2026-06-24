@@ -1,0 +1,53 @@
+# GET /v1/billing/stripe-config
+
+Return the current organization's Stripe publishable-key configuration for browser payment setup
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/billing/stripe-config"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "stripe_config",
+  "publishableKey": "pk_live_example",
+  "livemode": true,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+}
+```
+</ResponseExample>
+
+## Response shape
+
+- `publishableKey` is the non-secret Stripe publishable key for the organization's current billing mode.
+- `publishableKey: null` means browser payments are not configured for that mode; render a payments-unavailable state instead of calling Stripe Elements.
+- `livemode` tells the browser whether the key is for live or test Stripe mode.
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/billing/stripe-config to return the current organization's Stripe publishable-key configuration for browser payment setup. Preserve `requestId` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
