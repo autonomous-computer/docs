@@ -10,6 +10,10 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 
 Use `ticker`, `symbol`, or `cik` to choose the issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
 
+## Response size
+
+Rendered filings can exceed typical agent context budgets. Prefer section extraction with `view=agent` when you only need a specific item, and use this full render endpoint when the downstream workflow truly needs the whole filing body.
+
 ## Response metadata
 
 - `requestId`
@@ -69,4 +73,3 @@ Use SEC API GET /v1/filings/latest/render with `ticker`, `symbol`, or `cik` to r
 - Treat non-2xx responses as API errors and log the response body for debugging
 - Log `requestId` and `traceparent` so SEC API support can trace the request
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
-
