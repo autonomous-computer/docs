@@ -1133,6 +1133,25 @@
     "/v1/billing/payment-methods/setup-intent": {
       "post": {
         "summary": "Create a Stripe SetupIntent to save a payment method off-session for top-ups and auto-top-up (max 3 per organization)",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "maxProperties": 0,
+                "description": "No request body fields are accepted. Send an empty object or omit the body."
+              },
+              "examples": {
+                "empty": {
+                  "summary": "No request body fields",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",
@@ -1209,6 +1228,43 @@
     "/v1/billing/payment-methods/{id}": {
       "put": {
         "summary": "Set a saved payment method as primary and/or change its auto-top-up fallback priority",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "isPrimary": {
+                    "type": "boolean",
+                    "description": "Set this saved method as the primary payment method."
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Auto-top-up fallback priority. Lower numbers are tried first."
+                  }
+                }
+              },
+              "examples": {
+                "setPrimary": {
+                  "summary": "Make this payment method primary",
+                  "value": {
+                    "isPrimary": true
+                  }
+                },
+                "fallbackPriority": {
+                  "summary": "Update fallback priority",
+                  "value": {
+                    "priority": 2
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",
