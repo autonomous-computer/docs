@@ -3,7 +3,7 @@
 Search filing sections and snippets with filing-scoped filters and cursor pagination
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
 ## Citation fields
@@ -29,7 +29,7 @@ Valid `view` values are `default`, `compact`, and `agent`. `view=compact` is acc
 
 Use `ticker`, `symbol`, or `cik` to scope the search to an issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -42,9 +42,9 @@ Use `ticker`, `symbol`, or `cik` to scope the search to an issuer. `symbol` is a
 <RequestExample>
 ```bash
 curl -X GET \
- -H "x-api-key: $SECAPI_API_KEY" \
- -H "secapi-version: 2026-03-19" \
- "https://api.secapi.ai/v1/sections/search?q=supply+chain+risk&symbol=AAPL&form=10-K&view=agent"
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/sections/search?q=supply+chain+risk&symbol=AAPL&form=10-K&view=agent"
 ```
 </RequestExample>
 
@@ -53,40 +53,39 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
- "requestId": "req_example_123",
- "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
- "provenance": {
- "source": "sec",
- "accessionNumber": "0000320193-25-000079",
- "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
- "retrievedAt": "2026-03-17T00:00:00.000Z",
- "parserVersion": "2026-03-13.5",
- "rawSourceKey": "0000320193-25-000079"
- },
- "freshness": {
- "status": "fresh",
- "asOf": "2026-03-17T00:00:00.000Z",
- "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
- "lagMs": 900000
- },
- "materialization": {
- "parserVersion": "2026-03-13.5",
- "materializationVersion": "sec-api-3.0"
- }
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "provenance": {
+    "source": "sec",
+    "accessionNumber": "0000320193-25-000079",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
+    "retrievedAt": "2026-03-17T00:00:00.000Z",
+    "parserVersion": "2026-03-13.5",
+    "rawSourceKey": "0000320193-25-000079"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-03-17T00:00:00.000Z",
+    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
+    "lagMs": 900000
+  },
+  "materialization": {
+    "parserVersion": "2026-03-13.5",
+    "materializationVersion": "datastream-3.0"
+  }
 }
 ```
 </ResponseExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/sections/search to search filing sections and snippets with filing-scoped filters and cursor pagination. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/sections/search to search filing sections and snippets with filing-scoped filters and cursor pagination. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
+- treat non-2xx responses as contract-aware failures, not free-form errors
 - if `ticker` and `symbol` are both provided, they must match
 - invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

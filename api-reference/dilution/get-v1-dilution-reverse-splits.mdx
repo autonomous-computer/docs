@@ -1,27 +1,15 @@
 # GET /v1/dilution/reverse-splits
 
-List reverse-stock-split actions with execution date and ratio (`split_from` : `split_to`). Ordered by `execution_date desc`. Verification block on every row.
+List reverse-stock-split actions with execution date and ratio
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
-- `verification`
-- `provenance`
-
-## Query parameters
-
-| Param | Type | Description |
-|---|---|---|
-| `ticker` | string | Issuer ticker. |
-| `execution_date_from` / `execution_date_to` | ISO date | Bounds on `execution_date`. |
-| `cursor` | int | From prior page's `nextCursor`. |
-| `limit` | int (1–50, default 10) | Page size. |
-| `view` | enum | Response shape. |
 
 ## Example request
 
@@ -30,7 +18,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/reverse-splits?ticker=ACME"
+  "https://api.secapi.ai/v1/dilution/reverse-splits"
 ```
 </RequestExample>
 
@@ -39,45 +27,19 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "object": "list",
-  "data": [
-    {
-      "object": "dilution_reverse_split",
-      "id": "dil_rev_acme_2025q4",
-      "ticker": "ACME",
-      "executionDate": "2025-11-04",
-      "splitFrom": 10,
-      "splitTo": 1,
-      "cik": "0001234567",
-      "accessionNumber": "0001234567-25-006543",
-      "filedAt": "2025-10-21T19:55:00.000Z",
-      "verification": {
-        "sourceSpan": "8-K#item-5.03#char[420..760]",
-        "extractionTraceId": "lf_2025q4_acme_revsplit_extract",
-        "confidence": 0.98,
-        "crossValidations": [
-          { "name": "ratio_consistent", "passed": true }
-        ],
-        "modelVersion": "dilution-v1.4",
-        "verifiedAt": "2025-10-21T19:58:00.000Z"
-      }
-    }
-  ],
-  "hasMore": false,
-  "nextCursor": null,
-  "requestId": "req_example_123",
-  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API `GET /v1/dilution/reverse-splits` to retrieve historical reverse-split actions. Preserve `requestId`, `traceparent`, and `verification`. Report ratios as `splitFrom:splitTo` (e.g. `10:1`).
+<Prompt>
+Use SEC API GET /v1/dilution/reverse-splits to list reverse-stock-split actions with execution date and ratio. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- preserve `requestId` and `traceparent`
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

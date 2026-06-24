@@ -1,9 +1,9 @@
 # GET /v1/search/semantic
 
-Semantic search across SEC filing section content with hybrid ranking and citation fields on every result row
+Semantic vector search across SEC filing section content via Voyage AI + Pinecone, with hybrid keyword + vector RRF and citation fields on every result row
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
 ## Citation fields
@@ -33,7 +33,7 @@ Use `ticker`, `symbol`, or `cik` to scope the search to an issuer. `symbol` is a
 
 Use `mode=hybrid` for the default keyword + vector blend, `mode=semantic` for vector retrieval, or `mode=keyword` for exact-text fallback. Invalid mode values return `400 invalid_query_parameter` with `acceptedValues`.
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -43,9 +43,9 @@ Use `mode=hybrid` for the default keyword + vector blend, `mode=semantic` for ve
 <RequestExample>
 ```bash
 curl -X GET \
- -H "x-api-key: $SECAPI_API_KEY" \
- -H "secapi-version: 2026-03-19" \
- "https://api.secapi.ai/v1/search/semantic?q=supply+chain+risk&symbol=AAPL&form=10-K&mode=hybrid&view=agent"
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/search/semantic?q=supply+chain+risk&symbol=AAPL&form=10-K&mode=hybrid&view=agent"
 ```
 </RequestExample>
 
@@ -54,23 +54,22 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
- "requestId": "req_example_123",
- "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/search/semantic with a required `q` query and `mode=hybrid`, `mode=semantic`, or `mode=keyword` to find conceptually similar SEC filing sections with citations. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API GET /v1/search/semantic with a required `q` query and `mode=hybrid`, `mode=semantic`, or `mode=keyword` to search SEC filing sections with citation fields on every result row. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
+- treat non-2xx responses as contract-aware failures, not free-form errors
 - if `ticker` and `symbol` are both provided, they must match
 - invalid `mode` values return `invalid_query_parameter` with `acceptedValues`
 - invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
