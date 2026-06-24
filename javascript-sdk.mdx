@@ -1,25 +1,20 @@
----
-title: "JavaScript SDK"
-description: "Install and use the SEC API JavaScript SDK."
----
-
 # JavaScript SDK
 
 <Info>
 The JavaScript SDK is the fastest way to wire SEC API into TypeScript services, server actions, cron jobs, and product backends without hand-rolling request headers or metadata plumbing.
 </Info>
 
-## Install in Three Steps
+## Install in three steps
 
 <Steps>
   <Step title="Install the package">
-    Install the public npm package.
+    Add the SDK with your package manager of choice.
   </Step>
   <Step title="Set the API key">
     Export `SECAPI_API_KEY` in the runtime where the code will run.
   </Step>
   <Step title="Verify one real investor workflow">
-    Resolve an issuer, fetch a filing, and run one semantic investor workflow before you move to production.
+    Resolve an issuer, fetch a filing, and run one semantic investor workflow before you call the integration done.
   </Step>
 </Steps>
 
@@ -27,9 +22,7 @@ The JavaScript SDK is the fastest way to wire SEC API into TypeScript services, 
 npm install @secapi/sdk-js
 ```
 
-The SDK mirrors the same endpoints and `x-api-key` authentication as the REST examples below.
-
-## What this API is good for
+## When to use the SDK
 
 <CardGroup cols={2}>
   <Card title="Application backends" icon="server" href="/api-reference/platform">
@@ -46,45 +39,41 @@ The SDK mirrors the same endpoints and `x-api-key` authentication as the REST ex
   </Card>
 </CardGroup>
 
-## First useful calls with REST
-
-```ts
-const headers = { "x-api-key": process.env.SECAPI_API_KEY! }
-
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`https://api.secapi.ai${path}`, { headers })
-  if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
-  return response.json() as Promise<T>
-}
-
-const issuer = await getJson("/v1/entities/resolve?ticker=AAPL")
-const filings = await getJson("/v1/filings?ticker=AAPL&form=10-K&limit=3")
-const statements = await getJson("/v1/statements/all?ticker=AAPL&period=annual&limit=1")
-const market = await getJson("/v1/market/snapshots?symbols=AAPL")
-
-const answerResponse = await fetch("https://api.secapi.ai/v1/intelligence/query", {
-  method: "POST",
-  headers: { ...headers, "Content-Type": "application/json" },
-  body: JSON.stringify({
-    query: "Decompose AAPL's last 6M return into factors, macro drivers, filing-specific risks, then suggest hedges.",
-    entities: ["AAPL"],
-    lookback: "6m",
-    responseMode: "compact_json_and_md",
-  }),
-})
-const answer = await answerResponse.json()
-```
-
-## SDK shape
-
-The public SDK package name is `@secapi/sdk-js`:
+## First useful calls
 
 ```ts
 import { SecApiClient } from "@secapi/sdk-js"
 
-const client = new SecApiClient({ apiKey: process.env.SECAPI_API_KEY! })
-const filing = await client.latestFiling({ ticker: "AAPL", form: "10-K" })
+const client = new SecApiClient({
+  apiKey: process.env.SECAPI_API_KEY!,
+})
+
+const issuer = await client.resolveEntity({ ticker: "AAPL" })
+const filing = await client.agentLatestFiling({ ticker: "AAPL", form: "10-K" })
+const riskFactors = await client.agentSection({ ticker: "AAPL", form: "10-K", sectionKey: "item_1a" })
+const income = await client.agentStatement("income_statement", { ticker: "AAPL", period: "annual", limit: 3 })
+const holders = await client.agentInstitutionalHolders({ ticker: "NVDA", limit: 10 })
+const form144 = await client.agentForm144({ ticker: "NVDA", limit: 10 })
+const mcpSection = await client.callMcpTool(
+  "sections.get",
+  { ticker: "AAPL", form: "10-K", sectionKey: "item_1a", mode: "compact" },
+  { id: "aapl-item-1a" },
+)
 ```
+
+## Live example
+
+Run the repo-tested agent workflow when you want the smallest production-backed
+integration check: it resolves AAPL, fetches the latest 10-K, and extracts Item
+1A in compact mode using `SECAPI_API_KEY` from the environment.
+
+```bash
+export SECAPI_API_KEY="secapi_live_..."
+bun run packages/sdk-js/examples/agent_workflow.ts
+```
+
+In the monorepo, `bun run smoke:sdk-examples` runs the JavaScript, Python, Go,
+and Rust versions of this same workflow.
 
 ## Reliability defaults
 
@@ -97,8 +86,6 @@ The JavaScript SDK retries transient failures with exponential backoff and a per
 Disable SDK retries when your application already owns retry behavior:
 
 ```ts
-import { SecApiClient } from "@secapi/sdk-js"
-
 const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY!,
   retry: false,
@@ -133,10 +120,10 @@ const atms = await client.dilutionEvents({ ticker: "BBBB", is_atm: true })
 const coverage = await client.dilutionCoverage({ ticker: "BBBB" })
 ```
 
-The full API — `dilutionEvents`, `dilutionEventDetail`, `dilutionWarrants`, `dilutionConvertibles`, `dilutionRofr`, `dilutionLockups`, `dilutionCashPosition`, `dilutionCorporateActions`, `dilutionNasdaqCompliance`, `dilutionRatings`, `dilutionReverseSplits`, `dilutionScore`, `dilutionShareFloatHistory`, `dilutionCoverage` — mirrors the REST routes 1:1. Add `view: "agent"` to any list call (except `dilutionCoverage`) for the compact agent-mode shape.
+The full surface — `dilutionEvents`, `dilutionEventDetail`, `dilutionWarrants`, `dilutionConvertibles`, `dilutionRofr`, `dilutionLockups`, `dilutionCashPosition`, `dilutionCorporateActions`, `dilutionNasdaqCompliance`, `dilutionRatings`, `dilutionReverseSplits`, `dilutionScore`, `dilutionShareFloatHistory`, `dilutionCoverage` — mirrors the REST routes 1:1. Add `view: "agent"` to any list call (except `dilutionCoverage`) for the compact agent-mode shape.
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Install the JavaScript SDK for SEC API in this project. Resolve AAPL, fetch the latest 10-K, fetch the latest market snapshot, read US CPI, run the semantic intelligence query for AAPL return decomposition, and log requestId, traceparent, provenance, freshness, and materialization metadata with each response.
+<Prompt>
+Install the JavaScript SDK for SEC API in this project. Resolve AAPL, fetch the latest 10-K in agent mode, extract Item 1A in compact mode, read annual income statements in agent mode, fetch NVDA institutional holders and Form 144 filings, and log requestId, traceparent, accessionNumber, filingDate, sourceUrl, freshness, and materialization metadata with each response.
 </Prompt>
 
 ## Error handling
@@ -144,14 +131,20 @@ Install the JavaScript SDK for SEC API in this project. Resolve AAPL, fetch the 
 ```ts
 import { SecApiClient, SecApiError } from "@secapi/sdk-js"
 
+const client = new SecApiClient({
+  apiKey: process.env.SECAPI_API_KEY!,
+})
+
 try {
   await client.requestDiagnostics("missing-request-id")
 } catch (error) {
   if (error instanceof SecApiError) {
-    console.error(error.status, error.requestId, error.body)
+    console.error(error.status, error.code, error.requestId, error.message, error.body)
   }
 }
 ```
+
+`SecApiError` normalizes the common SEC API and JSON-RPC error shapes. Use [Status](/status), `code`, `requestId`, `message`, and `body` in structured logs so support can connect customer reports to the exact failed request.
 
 <Warning>
 Do not drop metadata on the floor. In production, keep `requestId`, `traceparent`, provenance, freshness, and materialization fields in your logs or downstream artifacts so support and audit workflows stay intact.
@@ -164,7 +157,7 @@ Do not drop metadata on the floor. In production, keep `requestId`, `traceparent
     Open the exact REST calls that sit underneath the SDK methods.
   </Card>
   <Card title="Hosted MCP workflows" icon="bot" href="/mcp-workflows">
-    Use the same SEC API workflows through SEC API hosted MCP.
+    Use the same SEC API workflows through SEC API-hosted MCP.
   </Card>
   <Card title="Give this prompt to your agent" icon="sparkles" href="/give-this-prompt-to-your-agent">
     Copy a stronger starting prompt instead of writing one from scratch.
