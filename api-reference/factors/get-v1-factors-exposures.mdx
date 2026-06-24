@@ -3,10 +3,10 @@
 Return compact factor exposures for securities, portfolios, or watchlists, with diagnostics and provenance available on request.
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows. Use `symbol=AAPL` for the common single-security lookup, or `symbols=AAPL,MSFT` for batches.
+Audience: application and coding agent. Use `symbol=AAPL` for the common single-security lookup, or `symbols=AAPL,MSFT` for batches.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -77,13 +77,13 @@ Use `include=diagnostics` when a model, risk report, or quant workflow needs reg
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
+<Prompt>
 Use SEC API GET /v1/factors/exposures with `symbol=AAPL` or the ticker the user provides. Preserve `requestId` and `traceparent`. Summarize the largest positive and negative factor betas, percentile, confidence, and model name. If the workflow needs regression fit statistics, call again with `include=diagnostics`; if it needs proof or methodology evidence, call again with `include=trust`.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
-- Use `include=diagnostics` before citing regression fit statistics such as `rSquared` or `tStat`
-- Use `include=trust` before citing proof, provenance, freshness, or source-rights metadata
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- use `include=diagnostics` before citing regression fit statistics such as `rSquared` or `tStat`
+- use `include=trust` before citing proof, provenance, freshness, or source-rights metadata

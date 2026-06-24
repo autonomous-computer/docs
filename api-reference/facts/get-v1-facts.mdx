@@ -1,16 +1,16 @@
 # GET /v1/facts
 
-Return normalized SEC company facts for an issuer, concept, and optional form or unit
+Return normalized SEC company facts for an issuer, concept, and optional form or unit. Defaults to the us-gaap taxonomy (10-K/10-Q); when no explicit taxonomy or form is supplied and the us-gaap lookup is empty, automatically falls back to ifrs-full on 20-F/6-K for foreign private issuers (e.g. SAP, TM, SONY, RIO).
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
 ## Agent mode
 
 Pass `?view=agent` to receive the compact agent shape: concept + value + unit + period fields + lifted `accessionNumber` / `filingUrl` from provenance. Metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -29,14 +29,11 @@ curl -X GET \
 ```
 </RequestExample>
 
-## Period aliases
-
-Use `period=annual` for annual company facts or `period=quarterly` for quarterly company facts. The shorter `period=quarter` and `period=q` aliases are also accepted for quarterly data.
-
 ## Query parameters
 
 - `ticker`, `symbol`, or `cik` identifies the issuer. `symbol` is accepted as an alias for `ticker`.
 - `tag` is the XBRL concept for concept-specific lookups, such as `Revenues`, `Revenue`, `NetIncomeLoss`, or `PropertyPlantAndEquipmentNet`. If omitted, the API returns common financial metrics.
+- `period=annual` returns annual facts. `period=quarterly`, `period=quarter`, and `period=q` return quarterly facts.
 - `taxonomy`, `unit`, and `form` pin the lookup when you do not want the default us-gaap plus foreign-private-issuer fallback.
 - `fy`, `year`, `fy_from`, `fyFrom`, `fy_to`, and `fyTo` bound fiscal years.
 - `limit` controls the maximum number of fact points returned, up to 50.
@@ -78,7 +75,7 @@ Use `period=annual` for annual company facts or `period=quarterly` for quarterly
 Use SEC API GET /v1/facts with `ticker`, `symbol`, or `cik`, an XBRL `tag` for concept-specific lookups, and `period=annual|quarterly|quarter|q` to return normalized SEC company facts. Use `view=agent` for compact fact rows with `accessionNumber` and `filingUrl`; use `include=geographic_segments` only when revenue geography is needed. Preserve `requestId` and any provenance/freshness/materialization metadata present in default responses.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports

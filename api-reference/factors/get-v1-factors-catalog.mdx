@@ -3,10 +3,10 @@
 Return compact SEC API factor definitions, with trust and methodology metadata available on request.
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows. The default response is compact so catalog lookups are cheap to put in a prompt, table, or picker.
+Audience: application and coding agent. The default response is compact so catalog lookups are cheap to put in a prompt, table, or picker.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -90,12 +90,12 @@ Use `include=trust` when an answer will cite freshness, coverage, methodology, s
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
+<Prompt>
 Use SEC API GET /v1/factors/catalog to return the compact factor catalog. Preserve `requestId` and `traceparent`. Summarize the available factor keys, categories, benchmark symbols, and launch statuses. If the workflow needs proof, methodology, provenance, freshness, or source-rights evidence, call the endpoint again with `include=trust`.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
-- Use `include=trust` before citing proof, provenance, freshness, or source-rights metadata
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- use `include=trust` before citing proof, provenance, freshness, or source-rights metadata

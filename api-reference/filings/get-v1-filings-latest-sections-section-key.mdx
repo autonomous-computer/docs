@@ -3,7 +3,7 @@
 Extract a section from the latest filing for an entity and form
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
 ## Agent mode
@@ -65,20 +65,20 @@ curl -X GET \
   "char_end": null,
   "highlighted_snippet": null,
   "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
-  "requestId": "req_example_123"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
+<Prompt>
 Use SEC API GET /v1/filings/latest/sections/{section_key}?view=agent with `ticker`, `symbol`, or `cik` to extract a citation-ready section snippet from the latest filing for an entity and form. Preserve `requestId`, `ticker`, `key`, `snippet`, `accessionNumber`, `accession`, `section_key`, `source_url`, and any offset fields in the output.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
+- treat non-2xx responses as contract-aware failures, not free-form errors
 - invalid `mode` values return `invalid_section_mode` with `details.acceptedValues`
 - invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
-- Log `requestId`, `accessionNumber`, and `source_url` so SEC API support can trace the request
+- preserve `requestId`, `accessionNumber`, and `source_url` in logs and downstream reports
