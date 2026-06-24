@@ -62,6 +62,20 @@ mcp_section = client.call_mcp_tool(
 )
 ```
 
+## Live example
+
+Run the repo-tested agent workflow when you want the smallest production-backed
+integration check: it resolves AAPL, fetches the latest 10-K, and extracts Item
+1A in compact mode using `SECAPI_API_KEY` from the environment.
+
+```bash
+export SECAPI_API_KEY="secapi_live_..."
+PYTHONPATH=packages/sdk-py python3 packages/sdk-py/examples/agent_workflow.py
+```
+
+In the monorepo, `bun run smoke:sdk-examples` runs the JavaScript, Python, Go,
+and Rust versions of this same workflow.
+
 ## Reliability defaults
 
 The Python SDK retries transient failures with exponential backoff and a per-client circuit breaker.
@@ -69,12 +83,15 @@ The Python SDK retries transient failures with exponential backoff and a per-cli
 - Auto-retried by default: `GET`, `HEAD`, `OPTIONS`
 - Opt-in required: `POST`, `PUT`, `PATCH`, `DELETE`, MCP `tools/call`
 - Always retried regardless of method: `429` rate limits, with `Retry-After` honored
+- Request timeout: `30s` by default, including when retries are disabled
 
 Disable SDK retries when your application already owns retry behavior:
 
 ```python
-client = SecApiClient(api_key="secapi_test_...", retry=False, telemetry=False)
+client = SecApiClient(api_key="secapi_test_...", retry=False, telemetry=False, timeout=10)
 ```
+
+Set `timeout=None` only when your own transport wrapper enforces socket deadlines.
 
 Opt into mutating retries only when the operation is idempotent:
 
@@ -86,6 +103,25 @@ artifact = client.create_artifact(
 ```
 
 See [SDK reliability](/sdk-reliability) for the full retry policy and migration notes.
+
+## Error handling
+
+```python
+from secapi_client import SecApiClient, SecApiError
+
+client = SecApiClient()
+
+try:
+    client.resolve_entity(ticker="INVALID")
+except SecApiError as error:
+    print(error.status)
+    print(error.code)
+    print(error.request_id)
+    print(error.message)
+    print(error.payload)
+```
+
+`SecApiError` keeps the raw `payload` and also exposes `code`, `message`, and `request_id` convenience properties. Log those fields with the failing workflow so support can trace the exact request without asking users to parse JSON by hand.
 
 ## Dilution intelligence
 

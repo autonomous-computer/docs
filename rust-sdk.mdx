@@ -1,19 +1,14 @@
----
-title: "Rust REST Guide"
-description: "Use SEC API from Rust services with direct REST calls."
----
-
-# Rust REST Guide
+# Rust SDK
 
 <Info>
-Use SEC API from async Rust services with direct REST calls today. The examples keep the canonical API contract visible so request IDs, freshness, provenance, and materialization metadata are easy to preserve.
+The Rust SDK is for async, performance-sensitive services that still want the SEC API contract to look like SEC API, not like a bespoke Rust dialect.
 </Info>
 
 ## Status
 
 <CardGroup cols={3}>
-  <Card title="Direct REST today" icon="braces" href="/api-reference">
-    Use the documented REST contract from any async Rust HTTP client.
+  <Card title="Bootstrap client" icon="package" href="/libraries-and-sdks">
+    A starter Rust client is available in `packages/sdk-rust`.
   </Card>
   <Card title="Async-first" icon="zap" href="/api-reference">
     Built around `reqwest` and `serde` for async service workloads.
@@ -26,8 +21,8 @@ Use SEC API from async Rust services with direct REST calls today. The examples 
 ## Recommended setup
 
 <Steps>
-  <Step title="Add an HTTP client">
-    Use `reqwest`, `serde`, and `SECAPI_API_KEY` to call the public REST API.
+  <Step title="Add the client">
+    Bring the Rust package into your service and set the SEC API key through the environment.
   </Step>
   <Step title="Exercise one fast path">
     Start with a volatility or entity lookup to confirm the runtime wiring.
@@ -40,72 +35,139 @@ Use SEC API from async Rust services with direct REST calls today. The examples 
 ## Example
 
 ```rust
-let api_key = std::env::var("SECAPI_API_KEY")?;
-let client = reqwest::Client::new();
-let response = client
-    .get("https://api.secapi.ai/v1/entities/resolve")
-    .query(&[("ticker", "AAPL")])
-    .header("x-api-key", api_key)
-    .send()
-    .await?
-    .error_for_status()?;
-
-let entity: serde_json::Value = response.json().await?;
-println!("{entity:#?}");
+let client = sec_api_sdk_rust::SecApiClient::new(
+    std::env::var("SECAPI_API_KEY").ok(),
+);
+let signal = client.volatility_signal(&[("ticker", "AAPL")]).await?;
 ```
 
-Use direct REST requests when you want explicit control over retries, logging, and response metadata in Rust.
+## Live example
+
+Run the repo-tested agent workflow when you want the smallest production-backed
+integration check: it resolves AAPL, fetches the latest 10-K, and extracts Item
+1A in compact mode using `SECAPI_API_KEY` from the environment.
+
+```bash
+export SECAPI_API_KEY="secapi_live_..."
+cd packages/sdk-rust
+cargo run --example agent_workflow
+```
+
+In the monorepo, `bun run smoke:sdk-examples` runs the JavaScript, Python, Go,
+and Rust versions of this same workflow.
+
+## Typed request builders
+
+Use typed builders for high-frequency paths when you want editor completion and
+canonical query names:
+
+```rust
+use sec_api_sdk_rust::{
+    LatestFilingRequest, LatestSectionRequest, ResolveEntityRequest, ResponseView,
+    SecApiClient, SemanticSearchMode, SemanticSearchRequest,
+};
+
+let client = SecApiClient::new(std::env::var("SECAPI_API_KEY").ok());
+
+let entity = client
+    .resolve_entity_with(&ResolveEntityRequest::new().ticker("AAPL").view(ResponseView::Agent))
+    .await?;
+
+let filing = client
+    .latest_filing_with(&LatestFilingRequest::new().ticker("AAPL").form("10-K"))
+    .await?;
+
+let section = client
+    .latest_section_with(&LatestSectionRequest::new("item_1a").ticker("AAPL").form("10-K").mode("compact"))
+    .await?;
+
+let semantic = client
+    .semantic_search_with(
+        &SemanticSearchRequest::new("risk factors")
+            .ticker("AAPL")
+            .form("10-K")
+            .mode(SemanticSearchMode::Hybrid)
+            .limit("3")
+            .view(ResponseView::Agent),
+    )
+    .await?;
+```
+
+Builders are available for entity resolution, latest filings, latest sections,
+and semantic search. Add `extra(key, value)` for newer or less common query
+parameters without changing the wire contract.
+
+## HTTP configuration
+
+The Rust SDK uses a 30-second request timeout by default and retries safe read requests (`GET`) on transient network errors, `408`, `429`, `502`, `503`, and `504` responses. Mutating requests are not retried automatically. `SecApiClient::new(None)` reads API-key and bearer-token environment variables, and dashboard/account workflows can set bearer auth explicitly with `with_bearer_token(...)`. Requests include `Accept: application/json` and a `User-Agent` like `secapi-rust/0.5.0` so support and server logs can identify SDK traffic. Tighten the timeout budget for latency-sensitive services with `with_timeout(...)`:
+
+```rust
+use sec_api_sdk_rust::SecApiClient;
+use std::time::Duration;
+
+let client = SecApiClient::new(std::env::var("SECAPI_API_KEY").ok())
+    .with_timeout(Duration::from_secs(10));
+```
+
+Customize retry ownership with `with_retry_config(...)`, or disable SDK retries when your service already wraps the client:
+
+```rust
+use sec_api_sdk_rust::{RetryConfig, SecApiClient};
+use std::time::Duration;
+
+let client = SecApiClient::new(std::env::var("SECAPI_API_KEY").ok())
+    .with_retry_config(RetryConfig {
+        max_retries: 2,
+        initial_backoff: Duration::from_millis(200),
+        max_backoff: Duration::from_secs(2),
+    });
+
+let no_sdk_retries = SecApiClient::new(std::env::var("SECAPI_API_KEY").ok())
+    .without_retries();
+```
+
+For proxies, custom TLS, or shared connection pools, pass a configured `reqwest::Client`:
+
+```rust
+use sec_api_sdk_rust::SecApiClient;
+
+let http = reqwest::Client::builder()
+    .timeout(std::time::Duration::from_secs(15))
+    .build()
+    .unwrap();
+
+let client = SecApiClient::new(std::env::var("SECAPI_API_KEY").ok())
+    .with_http_client(http);
+```
+
+Your application needs a compatible direct `reqwest` dependency when it builds the custom client. Chained setters are last-write-wins: calling `with_timeout(...)` after `with_http_client(...)` replaces the custom client, including proxy, TLS, and connection-pool settings. Set timeout on your `reqwest::Client` builder when using `with_http_client(...)`.
 
 ## Dilution intelligence
 
 ```rust
 // Top 10 highest-dilution-risk issuers
-let response = client
-    .get("https://api.secapi.ai/v1/dilution/ratings")
-    .query(&[("overall_risk", "high"), ("limit", "10")])
-    .header("x-api-key", api_key)
-    .send()
-    .await?
-    .error_for_status()?;
+let ratings = client.dilution_ratings(&[("overall_risk", "high"), ("limit", "10")]).await?;
 
 // Single-ticker dilution rollup
-let response = client
-    .get("https://api.secapi.ai/v1/dilution/score")
-    .query(&[("ticker", "BBBB")])
-    .header("x-api-key", api_key)
-    .send()
-    .await?
-    .error_for_status()?;
+let score = client.dilution_score(&[("ticker", "BBBB")]).await?;
 
 // ATM offerings only (boolean filter on the events list)
-let response = client
-    .get("https://api.secapi.ai/v1/dilution/events")
-    .query(&[("ticker", "BBBB"), ("is_atm", "true")])
-    .header("x-api-key", api_key)
-    .send()
-    .await?
-    .error_for_status()?;
+let atms = client.dilution_events(&[("ticker", "BBBB"), ("is_atm", "true")]).await?;
 
 // Coverage + freshness rollup (no agent shape — already compact)
-let response = client
-    .get("https://api.secapi.ai/v1/dilution/coverage")
-    .query(&[("ticker", "BBBB")])
-    .header("x-api-key", api_key)
-    .send()
-    .await?
-    .error_for_status()?;
+let coverage = client.dilution_coverage(&[("ticker", "BBBB")]).await?;
 ```
 
-The full dilution API is available under `/v1/dilution/*`. Pass `("view", "agent")` in list-call query params, except `/v1/dilution/coverage`, for the compact agent-mode shape.
+The full surface — `dilution_events`, `dilution_event_detail`, `dilution_warrants`, `dilution_convertibles`, `dilution_rofr`, `dilution_lockups`, `dilution_cash_position`, `dilution_corporate_actions`, `dilution_nasdaq_compliance`, `dilution_ratings`, `dilution_reverse_splits`, `dilution_score`, `dilution_share_float_history`, `dilution_coverage` — mirrors the REST routes 1:1. Pass `("view", "agent")` in any list call (except `dilution_coverage`) for the compact agent-mode shape.
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Integrate SEC API REST calls with this Rust service. Verify the base auth path with a volatility or entity call, then add one filing or statement workflow and preserve requestId, traceparent, freshness, and provenance in the service logs.
+<Prompt>
+Integrate the Rust SDK with this service. Verify the base auth path with a volatility or entity call, then add one filing or statement workflow and preserve requestId, traceparent, freshness, and provenance in the service logs.
 </Prompt>
 
 ## Smoke path
 
 ```bash
-cargo test
+bun run smoke:sdk-rust
 ```
 
 ## Read next
@@ -115,6 +177,6 @@ cargo test
     Open the underlying REST calls for exact request and response details.
   </Card>
   <Card title="Libraries & SDKs" icon="blocks" href="/libraries-and-sdks">
-    Compare the Rust API with the other runtime options.
+    Compare the Rust surface with the other runtime options.
   </Card>
 </CardGroup>

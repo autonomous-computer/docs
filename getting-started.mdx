@@ -84,10 +84,24 @@ npm install -g @secapi/cli
 Then run your first queries:
 
 ```bash
-secapi entities resolve --ticker AAPL --json
-secapi filings latest --ticker AAPL --form 10-K --json
-secapi statements get --ticker AAPL --statement all --period annual --json
+secapi entities resolve --ticker AAPL
+secapi filings latest --ticker AAPL --form 10-K
+secapi statements get --ticker AAPL --statement all --period annual
 ```
+
+Command-specific help is local and safe to run before authentication:
+
+```bash
+secapi filings latest --help
+```
+
+Typos fail locally with nearest-command suggestions, so `secapi filings latset`
+points back to `secapi filings latest` without making an API request.
+Unknown option typos fail locally too, so `secapi filings search --limt 5`
+points back to `--limit` before credentials are read or an API request is sent.
+Agents can run `secapi agent-context` to get a machine-readable inventory of the
+full current CLI command surface, including auth needs, output shape, mutating
+posture, required flags, and examples.
 
 ## Trace hydration quickstart
 
@@ -100,6 +114,11 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 ```ts
 const trace = await client.getTrace("<trace_id>")
+```
+
+```bash
+secapi traces get --trace-id <trace_id>
+secapi traces list --ids <trace_id_1>,<trace_id_2>
 ```
 
 ## MCP quickstart
