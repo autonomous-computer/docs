@@ -1,22 +1,15 @@
 # GET /v1/factors/exposures
 
-Return compact factor exposures for securities, portfolios, or watchlists, with diagnostics and provenance available on request.
+Return compact security, portfolio, or watchlist factor exposures with optional diagnostics and provenance
 
 <Info>
-Audience: application and coding agent. Use `symbol=AAPL` for the common single-security lookup, or `symbols=AAPL,MSFT` for batches.
+Audience: application and coding agent.
 </Info>
 
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
-
-## Response controls
-
-- `response_mode=compact` returns the factor beta, percentile, confidence, model, and as-of timestamp.
-- `include=diagnostics` adds regression diagnostics such as `rSquared`, `tStat`, `observationCount`, and `nActiveFactors`.
-- `include=trust` adds provenance, freshness, materialization, source-rights, methodology, revision, and degraded-state metadata.
-- `response_mode=standard` returns the full exposure row shape.
 
 ## Example request
 
@@ -25,7 +18,7 @@ Audience: application and coding agent. Use `symbol=AAPL` for the common single-
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/exposures?symbol=AAPL&response_mode=compact"
+  "https://api.secapi.ai/v1/factors/exposures"
 ```
 </RequestExample>
 
@@ -62,28 +55,14 @@ curl -X GET \
 ```
 </ResponseExample>
 
-## Expanding diagnostics
-
-<RequestExample>
-```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/exposures?symbol=AAPL&response_mode=compact&include=diagnostics"
-```
-</RequestExample>
-
-Use `include=diagnostics` when a model, risk report, or quant workflow needs regression fit details. Use `include=trust` when the answer will cite provenance, freshness, methodology, or source-rights evidence.
-
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/factors/exposures with `symbol=AAPL` or the ticker the user provides. Preserve `requestId` and `traceparent`. Summarize the largest positive and negative factor betas, percentile, confidence, and model name. If the workflow needs regression fit statistics, call again with `include=diagnostics`; if it needs proof or methodology evidence, call again with `include=trust`.
+Use SEC API GET /v1/factors/exposures to return compact security, portfolio, or watchlist factor exposures with optional diagnostics and provenance. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- use `include=diagnostics` before citing regression fit statistics such as `rSquared` or `tStat`
-- use `include=trust` before citing proof, provenance, freshness, or source-rights metadata
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

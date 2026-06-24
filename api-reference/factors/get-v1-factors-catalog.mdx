@@ -1,21 +1,15 @@
 # GET /v1/factors/catalog
 
-Return compact SEC API factor definitions, with trust and methodology metadata available on request.
+Return compact SEC API factor definitions, with trust and methodology metadata available on request
 
 <Info>
-Audience: application and coding agent. The default response is compact so catalog lookups are cheap to put in a prompt, table, or picker.
+Audience: application and coding agent.
 </Info>
 
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
-
-## Response controls
-
-- `response_mode=compact` keeps each factor definition focused on identity, category, launch status, benchmark, equation, and expansion hints.
-- `include=trust` expands compact rows with `launchReadiness`, `qualityProof`, provenance, freshness, source-rights, methodology, materialization, revision, and degraded-state metadata.
-- `response_mode=standard` returns the full factor definition shape without requiring an `include` value.
 
 ## Example request
 
@@ -24,7 +18,7 @@ Audience: application and coding agent. The default response is compact so catal
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/catalog?response_mode=compact"
+  "https://api.secapi.ai/v1/factors/catalog"
 ```
 </RequestExample>
 
@@ -75,27 +69,14 @@ curl -X GET \
 ```
 </ResponseExample>
 
-## Expanding trust metadata
-
-<RequestExample>
-```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/catalog?response_mode=compact&include=trust"
-```
-</RequestExample>
-
-Use `include=trust` when an answer will cite freshness, coverage, methodology, source rights, or launch-readiness proof. Compact rows keep the trust envelope out of the default payload, but the response still points callers to the expansion.
-
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/factors/catalog to return the compact factor catalog. Preserve `requestId` and `traceparent`. Summarize the available factor keys, categories, benchmark symbols, and launch statuses. If the workflow needs proof, methodology, provenance, freshness, or source-rights evidence, call the endpoint again with `include=trust`.
+Use SEC API GET /v1/factors/catalog to return compact SEC API factor definitions, with trust and methodology metadata available on request. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- use `include=trust` before citing proof, provenance, freshness, or source-rights metadata
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

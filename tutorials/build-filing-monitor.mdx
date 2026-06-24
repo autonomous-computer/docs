@@ -24,9 +24,9 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://your-server.com/webhooks/filings",
+    "destinationUrl": "https://your-server.com/webhooks/filings",
     "description": "Filing monitor webhook",
-    "events": ["filing.new"]
+    "subscribedEventTypes": ["monitor.match"]
   }' \
   "https://api.secapi.ai/v1/webhook_endpoints"
 ```
@@ -38,14 +38,14 @@ from secapi_client import SecApiClient
 
 client = SecApiClient(api_key="your-api-key")
 
-endpoint = client.webhook_endpoints.create(
-    url="https://your-server.com/webhooks/filings",
+endpoint = client.create_webhook_endpoint(
+    destination_url="https://your-server.com/webhooks/filings",
     description="Filing monitor webhook",
-    events=["filing.new"],
+    subscribed_event_types=["monitor.match"],
 )
 
-print(f"Endpoint ID: {endpoint.id}")
-print(f"Signing secret: {endpoint.signing_secret}")
+print(f"Endpoint ID: {endpoint['id']}")
+print(f"Signing secret: {endpoint['signingSecret']}")
 ```
 
 ### JavaScript
@@ -57,10 +57,10 @@ const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY!,
 });
 
-const endpoint = await client.webhookEndpoints.create({
-  url: "https://your-server.com/webhooks/filings",
+const endpoint = await client.createWebhookEndpoint({
+  destinationUrl: "https://your-server.com/webhooks/filings",
   description: "Filing monitor webhook",
-  events: ["filing.new"],
+  subscribedEventTypes: ["monitor.match"],
 });
 
 console.log(`Endpoint ID: ${endpoint.id}`);
@@ -72,14 +72,13 @@ console.log(`Signing secret: ${endpoint.signingSecret}`);
 ```json
 {
   "id": "we_abc123",
-  "url": "https://your-server.com/webhooks/filings",
-  "signing_secret": "whsec_...",
-  "events": ["filing.new"],
-  "status": "active"
+  "destinationUrl": "https://your-server.com/webhooks/filings",
+  "signingSecret": "whsec_...",
+  "subscribedEventTypes": ["monitor.match"]
 }
 ```
 
-Save the `signing_secret` securely. You will use it to verify incoming webhook payloads.
+Save the `signingSecret` securely. You will use it to verify incoming webhook payloads.
 
 ## Step 2 — Create a filing monitor
 
@@ -93,9 +92,11 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -d '{
     "name": "FAANG 8-K Monitor",
-    "form_types": ["8-K", "8-K/A"],
-    "tickers": ["AAPL", "AMZN", "GOOG", "META", "NFLX"],
-    "webhook_endpoint_id": "we_abc123"
+    "query": "latest FAANG 8-K filings",
+    "filters": {
+      "forms": ["8-K", "8-K/A"],
+      "tickers": ["AAPL", "AMZN", "GOOG", "META", "NFLX"]
+    }
   }' \
   "https://api.secapi.ai/v1/monitors"
 ```
@@ -103,29 +104,33 @@ curl -X POST \
 ### Python
 
 ```python
-monitor = client.monitors.create(
+monitor = client.create_monitor(
     name="FAANG 8-K Monitor",
-    form_types=["8-K", "8-K/A"],
-    tickers=["AAPL", "AMZN", "GOOG", "META", "NFLX"],
-    webhook_endpoint_id=endpoint.id,
+    query="latest FAANG 8-K filings",
+    filters={
+        "forms": ["8-K", "8-K/A"],
+        "tickers": ["AAPL", "AMZN", "GOOG", "META", "NFLX"],
+    },
 )
 
-print(f"Monitor ID: {monitor.id}")
-print(f"Status: {monitor.status}")
+print(f"Monitor ID: {monitor['id']}")
+print(f"Active: {monitor['isActive']}")
 ```
 
 ### JavaScript
 
 ```ts
-const monitor = await client.monitors.create({
+const monitor = await client.createMonitor({
   name: "FAANG 8-K Monitor",
-  formTypes: ["8-K", "8-K/A"],
-  tickers: ["AAPL", "AMZN", "GOOG", "META", "NFLX"],
-  webhookEndpointId: endpoint.id,
+  query: "latest FAANG 8-K filings",
+  filters: {
+    forms: ["8-K", "8-K/A"],
+    tickers: ["AAPL", "AMZN", "GOOG", "META", "NFLX"],
+  },
 });
 
 console.log(`Monitor ID: ${monitor.id}`);
-console.log(`Status: ${monitor.status}`);
+console.log(`Active: ${monitor.isActive}`);
 ```
 
 ### Expected output
@@ -134,31 +139,36 @@ console.log(`Status: ${monitor.status}`);
 {
   "id": "mon_xyz789",
   "name": "FAANG 8-K Monitor",
-  "form_types": ["8-K", "8-K/A"],
-  "tickers": ["AAPL", "AMZN", "GOOG", "META", "NFLX"],
-  "webhook_endpoint_id": "we_abc123",
-  "status": "active"
+  "query": "latest FAANG 8-K filings",
+  "filters": {
+    "forms": ["8-K", "8-K/A"],
+    "tickers": ["AAPL", "AMZN", "GOOG", "META", "NFLX"]
+  },
+  "isActive": true
 }
 ```
 
 ## Step 3 — Handle incoming webhooks
 
-When a matching filing is published, the API sends a POST request to your webhook URL. Here is what the payload looks like and how to verify it.
+When a matching filing is published, SEC API emits a `monitor.match` event to the org-level webhook endpoint you subscribed in Step 1. Here is what the payload looks like and how to verify it.
 
 ### Webhook payload
 
 ```json
 {
-  "event": "filing.new",
+  "eventType": "monitor.match",
   "timestamp": "2024-12-15T14:30:00Z",
   "data": {
-    "accession_number": "0000320193-24-000095",
-    "form": "8-K",
-    "ticker": "AAPL",
-    "company_name": "Apple Inc",
-    "filed_at": "2024-12-15",
-    "items": ["2.02", "9.01"],
-    "description": "Results of Operations and Financial Condition"
+    "monitorId": "mon_xyz789",
+    "matches": [
+      {
+        "accessionNumber": "0000320193-24-000095",
+        "form": "8-K",
+        "ticker": "AAPL",
+        "companyName": "Apple Inc",
+        "filingDate": "2024-12-15"
+      }
+    ]
   }
 }
 ```
@@ -187,8 +197,9 @@ def handle_webhook():
         return jsonify({"error": "Invalid signature"}), 401
 
     payload = request.json
-    print(f"New {payload['data']['form']} from {payload['data']['ticker']}")
-    print(f"Items: {payload['data']['items']}")
+    for match in payload["data"].get("matches", []):
+        print(f"New {match['form']} from {match['ticker']}")
+        print(f"Accession: {match['accessionNumber']}")
 
     return jsonify({"received": True}), 200
 ```
@@ -214,8 +225,10 @@ app.post("/webhooks/filings", express.raw({ type: "application/json" }), (req, r
   }
 
   const payload = JSON.parse(req.body.toString());
-  console.log(`New ${payload.data.form} from ${payload.data.ticker}`);
-  console.log(`Items: ${payload.data.items}`);
+  for (const match of payload.data.matches ?? []) {
+    console.log(`New ${match.form} from ${match.ticker}`);
+    console.log(`Accession: ${match.accessionNumber}`);
+  }
 
   res.json({ received: true });
 });
@@ -232,14 +245,11 @@ app.listen(3000);
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors"
 
-# Pause a monitor
-curl -X PATCH \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "paused"}' \
-  "https://api.secapi.ai/v1/monitors/mon_xyz789"
+# Check recent matches
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/mon_xyz789/matches?limit=10"
 
-# Delete a monitor
+# Deactivate a monitor
 curl -X DELETE \
   -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors/mon_xyz789"
@@ -252,4 +262,3 @@ curl -X DELETE \
 - **Audit delivery**: Use the [Webhook Delivery Audit](/webhook-delivery-audit) page to inspect delivery logs and retry failures.
 
 See the [Webhook Stream Workflows](/webhook-stream-workflows) guide for advanced patterns.
-

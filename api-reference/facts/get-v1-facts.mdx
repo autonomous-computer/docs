@@ -25,20 +25,9 @@ Pass `?view=agent` to receive the compact agent shape: concept + value + unit + 
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&period=quarter&limit=4&view=agent"
+  "https://api.secapi.ai/v1/facts"
 ```
 </RequestExample>
-
-## Query parameters
-
-- `ticker`, `symbol`, or `cik` identifies the issuer. `symbol` is accepted as an alias for `ticker`.
-- `tag` is the XBRL concept for concept-specific lookups, such as `Revenues`, `Revenue`, `NetIncomeLoss`, or `PropertyPlantAndEquipmentNet`. If omitted, the API returns common financial metrics.
-- `period=annual` returns annual facts. `period=quarterly`, `period=quarter`, and `period=q` return quarterly facts.
-- `taxonomy`, `unit`, and `form` pin the lookup when you do not want the default us-gaap plus foreign-private-issuer fallback.
-- `fy`, `year`, `fy_from`, `fyFrom`, `fy_to`, and `fyTo` bound fiscal years.
-- `limit` controls the maximum number of fact points returned, up to 50.
-- `include=geographic_segments` adds bounded revenue geography when available. Use `segment_limit` and `submission_file_limit` to control the enrichment budget.
-- `view=agent` returns token-efficient fact rows with filing pointers lifted onto each item.
 
 ## Example response
 
@@ -49,22 +38,45 @@ curl -X GET \
   "data": [
     {
       "object": "fact_point",
+      "id": "fact_0000320193_Revenues_2025_Q3",
+      "createdAt": "2026-03-17T00:00:00.000Z",
+      "livemode": true,
+      "entityId": "cent_f3913349312cbf5bfd60ecdb",
+      "ticker": "AAPL",
+      "companyName": "Apple Inc.",
+      "taxonomy": "us-gaap",
       "tag": "Revenues",
       "label": "Revenue",
-      "taxonomy": "us-gaap",
       "unit": "USD",
       "value": 95359000000,
-      "periodEnd": "2025-06-28",
+      "periodStart": "2025-03-30",
       "fy": 2025,
       "fp": "Q3",
       "form": "10-Q",
-      "accessionNumber": "0000320193-25-000079",
-      "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250628.htm"
+      "periodEnd": "2025-06-28",
+      "filedAt": "2025-08-01T00:00:00.000Z",
+      "frame": "CY2025Q2",
+      "provenance": {
+        "source": "sec",
+        "accessionNumber": "0000320193-25-000079",
+        "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250628.htm",
+        "retrievedAt": "2026-03-17T00:00:00.000Z",
+        "parserVersion": "secapi-xbrl-v1"
+      }
     }
   ],
   "hasMore": false,
   "nextCursor": null,
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestedTag": "Revenues",
+  "resolvedTag": "Revenues",
+  "aliasStrategy": "exact",
+  "completeness": {
+    "source": "company_facts",
+    "observationsReturned": 1,
+    "hasResolvedConcept": true
+  },
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
@@ -72,13 +84,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/facts with `ticker`, `symbol`, or `cik`, an XBRL `tag` for concept-specific lookups, and `period=annual|quarterly|quarter|q` to return normalized SEC company facts. Use `view=agent` for compact fact rows with `accessionNumber` and `filingUrl`; use `include=geographic_segments` only when revenue geography is needed. Preserve `requestId` and any provenance/freshness/materialization metadata present in default responses.
+Use SEC API GET /v1/facts to return normalized SEC company facts for an issuer, concept, and optional form or unit. Defaults to the us-gaap taxonomy (10-K/10-Q); when no explicit taxonomy or form is supplied and the us-gaap lookup is empty, automatically falls back to ifrs-full on 20-F/6-K for foreign private issuers (e.g. SAP, TM, SONY, RIO). Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- retry with `ticker`, `symbol`, or `cik`, and add a valid `tag` when you need one specific concept
-- invalid `period`, fiscal-year, or `limit` filters return `400 invalid_query_parameter`
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

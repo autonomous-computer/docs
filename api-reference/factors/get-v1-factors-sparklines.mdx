@@ -3,10 +3,10 @@
 Return compact multi-factor sparkline series with 1D through MAX summary windows for dashboard, sector, index, and model UIs
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -18,7 +18,7 @@ Use this endpoint from server-side applications, SDKs, or agent workflows.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/sparklines?keys=VALUE,MOMENTUM,QUALITY&range=1y&points=64&response_mode=compact"
+  "https://api.secapi.ai/v1/factors/sparklines?keys=VALUE,MOMENTUM,QUALITY&range=1y&points=64&response_mode=compact&include=trust"
 ```
 </RequestExample>
 
@@ -27,20 +27,190 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
+  "object": "list",
+  "data": [
+    {
+      "object": "factor_sparkline",
+      "id": "factor_sparkline:VALUE:1y:scaled_return",
+      "factorKey": "VALUE",
+      "factorName": "Value",
+      "category": "style",
+      "range": "1y",
+      "metric": "scaled_return",
+      "dateFrom": "2025-06-10",
+      "dateTo": "2026-06-09",
+      "historyStartDate": "2015-01-02",
+      "historyEndDate": "2026-06-09",
+      "observationCount": 252,
+      "pointCount": 120,
+      "asOf": "2026-06-09T22:15:00.000Z",
+      "latestValue": 0.131,
+      "latestRawReturn": 0.0038,
+      "latestPureReturn": 0.0031,
+      "latestScaledReturn": 0.0042,
+      "latestZScore": 1.42,
+      "latestLeverage": 1,
+      "summaryWindows": [
+        {
+          "window": "1m",
+          "rawReturn": 0.018,
+          "pureReturn": 0.014,
+          "scaledReturn": 0.021,
+          "observationCount": 21,
+          "startDate": "2026-05-11",
+          "endDate": "2026-06-09"
+        }
+      ],
+      "points": [
+        {
+          "date": "2025-06-10",
+          "value": 0
+        },
+        {
+          "date": "2026-06-09",
+          "value": 0.131
+        }
+      ],
+      "qualityProof": {
+        "object": "factor_quality_proof",
+        "status": "ready",
+        "proofSource": "secapi_factor_pipeline",
+        "proofObservedAt": "2026-06-09T22:15:00.000Z",
+        "rowLevelProofAvailable": true,
+        "proofReady": true,
+        "firstDate": "2015-01-02",
+        "lastDate": "2026-06-09",
+        "firstRequiredMarketDate": "2015-01-02",
+        "latestMarketDay": "2026-06-09",
+        "targetHistoryStartDate": "2015-01-01",
+        "requiredHistoryStartDate": "2015-01-01",
+        "shortHistoryExempt": false,
+        "historyStartMarketDayLag": 0,
+        "latestMarketDayLag": 0,
+        "rowCount": 2882,
+        "distinctFactorDateCount": 2882,
+        "coveredMarketDateCount": 2882,
+        "expectedMarketDateCount": 2882,
+        "missingSessionCount": 0,
+        "coveragePct": 1,
+        "methodologyVersion": "secapi_factor_returns_v1",
+        "modelName": "secapi_stock_basket_factor_model_v1",
+        "methodologyUrl": "https://docs.secapi.ai/factors/methodology",
+        "sourceMetadata": {
+          "latestAsOf": "2026-06-09",
+          "latestSourcePublishedAt": "2026-06-09T21:30:00.000Z",
+          "observedModelNameCount": 1,
+          "observedModelNamesSample": [
+            "secapi_stock_basket_factor_model_v1"
+          ],
+          "nonStockBasketRowCount": 0,
+          "metadataModelNames": [
+            "secapi_stock_basket_factor_model_v1"
+          ],
+          "metadataModelVersions": [
+            "2026-06-09"
+          ],
+          "metadataMethodologyUrls": [
+            "https://docs.secapi.ai/factors/methodology"
+          ]
+        },
+        "degradedReasons": []
+      },
+      "responseMode": "compact",
+      "dataAsOf": "2026-06-09",
+      "freshnessStatus": "fresh",
+      "methodologyVersion": "secapi_factor_returns_v1",
+      "materializationVersion": "2026-06-09",
+      "provenance": {
+        "source": "secapi_factor_pipeline",
+        "sourceLabel": "SecAPI factor pipeline",
+        "accessionNumber": null,
+        "filingUrl": "https://docs.secapi.ai/factors/methodology",
+        "acceptedAt": null,
+        "retrievedAt": "2026-06-09T22:15:00.000Z",
+        "parserVersion": "secapi-factor-pipeline"
+      },
+      "freshness": {
+        "status": "fresh",
+        "asOf": "2026-06-09T22:15:00.000Z",
+        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+        "lagMs": 2700000
+      },
+      "materialization": {
+        "parserVersion": "secapi-factor-pipeline",
+        "materializationVersion": "2026-06-09"
+      },
+      "sourceRights": {
+        "source": "secapi_owned_factor_pipeline",
+        "sourceLabel": "SecAPI factor pipeline",
+        "posture": "public_safe",
+        "publicAvailability": "public",
+        "contractStatus": "approved",
+        "restrictions": [],
+        "notes": "SecAPI-owned derived factor data."
+      },
+      "methodology": {
+        "id": "secapi_factor_returns",
+        "version": "v1",
+        "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+        "confidence": "high",
+        "launchState": "beta",
+        "inputs": [
+          "secapi_factor_returns",
+          "secapi_factor_exposures",
+          "market_calendar"
+        ],
+        "validation": {
+          "launchHistoryFloor": "2015-01-01",
+          "marketCalendarAware": true
+        }
+      },
+      "revision": {
+        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+        "retrievedAt": "2026-06-09T22:15:00.000Z",
+        "vintageId": "2026-06-09",
+        "revisedFrom": null
+      },
+      "degradedState": null
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "responseMode": "compact",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## CSV export request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/sparklines?category=style&range=1y&points=90&format=csv"
+```
+</RequestExample>
+
+## CSV response
+
+<ResponseExample>
+```csv
+factor_key,factor_name,category,range,metric,date,raw_return,pure_return,scaled_return,z_score,value,materialization_version,methodology_id,methodology_version,data_as_of
+VALUE,Value,style,1y,scaled_return,2026-06-09,0.0038,0.0031,0.0042,1.42,0.131,2026-06-09,secapi_factor_returns,v1,2026-06-09T22:15:00.000Z
+```
+</ResponseExample>
+
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API GET /v1/factors/sparklines to fetch compact sparkline data for multiple factors. Keep summary windows, latest return, row-level coverage, and freshness metadata intact. Use `keys` or `factors` for explicit factors and `response_mode=compact` for dashboard or LLM context handoff.
+<Prompt>
+Use SEC API GET /v1/factors/sparklines for compact multi-factor chart rows in sector, index, dashboard, and model UIs. Preserve each row's `factorKey`, `factorName`, `category`, `range`, `metric`, `latestValue`, `summaryWindows`, `points`, `historyStartDate`, `historyEndDate`, `qualityProof`, `requestId`, and `traceparent`. Use `points` to bound token cost.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

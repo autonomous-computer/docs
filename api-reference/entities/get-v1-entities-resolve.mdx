@@ -3,12 +3,12 @@
 Resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata
 
 <Info>
-Audience: application and coding agent. Provide at least one identifier: `ticker`, `symbol`, `cik`, `figi`, `composite_figi`, `share_class_figi`, `isin`, `cusip`, `name`, `query`, or `q`.
+Audience: application and coding agent.
 </Info>
 
 ## Agent mode
 
-Pass `view=agent` to receive the compact agent shape: entity identifiers (`id`, `ticker`, `cik`, `name`), primary identifiers, and match metadata. Aliases, jurisdiction, full identifiers list, and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `view` contract.
+Pass `?view=agent` to receive the compact agent shape: entity identifiers (id, ticker, cik, name) + primary identifiers + match metadata. Aliases, jurisdiction, full identifiers list, and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
 ## Canonical metadata
 
@@ -56,27 +56,14 @@ curl -X GET \
 ```
 </ResponseExample>
 
-## Other identifiers
-
-Use the same endpoint with any one of the supported identifiers. `symbol` is accepted as a ticker alias, and `query` or `q` are accepted as name aliases.
-
-<RequestExample>
-```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/entities/resolve?query=Acme+Corp&view=agent"
-```
-</RequestExample>
-
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/entities/resolve with `ticker=AAPL`, `symbol=AAPL`, `query=Apple+Inc`, or the identifier the user provides. Pass `view=agent` unless the workflow needs the full entity record. Preserve `requestId`. Return the resolved `id`, `ticker`, `cik`, `name`, `matchConfidence`, `matchBasis`, and primary identifiers.
+Use SEC API GET /v1/entities/resolve to resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- if the response is `missing_identifier`, retry with one of `ticker`, `symbol`, `cik`, `figi`, `composite_figi`, `share_class_figi`, `isin`, `cusip`, `name`, `query`, or `q`
-- preserve `requestId` in logs and downstream reports
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

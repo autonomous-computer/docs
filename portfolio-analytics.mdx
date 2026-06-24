@@ -5,7 +5,7 @@ description: "Factor-aware portfolio analysis, optimization, and stress testing"
 
 # Portfolio Analytics
 
-SEC API provides allocator-grade portfolio analytics: factor exposure analysis, attribution, hedge construction, optimization recommendations, stress testing, and model factor analysis.
+SEC API provides allocator-grade portfolio analytics: factor exposure analysis, attribution, hedge construction, bounded optimizer scenario generation, stress testing, and model factor analysis.
 
 ## Endpoints
 
@@ -24,11 +24,28 @@ curl -X POST "https://api.secapi.ai/v1/portfolio/analyze" \
       {"symbol": "GOOGL", "weight": 0.20},
       {"symbol": "AMZN", "weight": 0.15},
       {"symbol": "NVDA", "weight": 0.15}
-    ]
+    ],
+    "benchmarkLabel": "Equal-weight comparison",
+    "benchmarkHoldings": [
+      {"symbol": "AAPL", "weight": 0.20},
+      {"symbol": "MSFT", "weight": 0.20},
+      {"symbol": "GOOGL", "weight": 0.20},
+      {"symbol": "AMZN", "weight": 0.20},
+      {"symbol": "NVDA", "weight": 0.20}
+    ],
+    "whatIfLabel": "Reduce NVDA concentration",
+    "whatIfHoldings": [
+      {"symbol": "AAPL", "weight": 0.30},
+      {"symbol": "MSFT", "weight": 0.30},
+      {"symbol": "GOOGL", "weight": 0.20},
+      {"symbol": "AMZN", "weight": 0.15},
+      {"symbol": "NVDA", "weight": 0.05}
+    ],
+    "category": "style"
   }'
 ```
 
-Returns: factor exposures, attribution breakdown, concentration risks, and hedge suggestions.
+Returns: factor exposures, attribution breakdown, factor-model fit, idiosyncratic risk proxy, benchmark active tilts, what-if exposure deltas, concentration risks, and hedge suggestions.
 
 ### Portfolio Attribution
 
@@ -53,7 +70,7 @@ curl -X POST "https://api.secapi.ai/v1/portfolio/attribution?response_mode=compa
 
 ### Portfolio Hedge
 
-Generate constrained hedge candidates for unwanted factor exposures:
+Generate bounded benchmark-instrument hedge candidates for unwanted factor exposures. The response is an analytical proxy overlay with residual exposures and constraint diagnostics, not a trade instruction or full cross-exposure optimizer:
 
 ```bash
 curl -X POST "https://api.secapi.ai/v1/portfolio/hedge?response_mode=compact" \
@@ -67,13 +84,19 @@ curl -X POST "https://api.secapi.ai/v1/portfolio/hedge?response_mode=compact" \
       {"symbol": "JPM", "weight": 0.15}
     ],
     "objective": "factor_neutral",
-    "constraints": {"maxHedges": 3, "maxPositionWeight": 0.10}
+    "constraints": {
+      "maxHedges": 3,
+      "maxPositionWeight": 0.10,
+      "maxTotalHedgeWeight": 0.25,
+      "minLiquidityUsd": 50000000,
+      "excludedSectors": ["SECTOR_ENERGY"]
+    }
   }'
 ```
 
 ### Portfolio Optimization
 
-Generate optimization recommendations for factor neutrality, hedging, or regime-awareness:
+Generate bounded factor-aware optimizer scenarios for factor neutrality, minimum-drawdown, or regime-aware research workflows:
 
 ```bash
 curl -X POST "https://api.secapi.ai/v1/portfolio/optimize" \
@@ -82,9 +105,12 @@ curl -X POST "https://api.secapi.ai/v1/portfolio/optimize" \
   -d '{
     "holdings": [{"symbol": "AAPL", "weight": 0.5}, {"symbol": "MSFT", "weight": 0.5}],
     "objective": "factor_neutral",
-    "maxHedges": 3
+    "maxHedges": 3,
+    "constraints": {"maxCandidates": 3, "turnoverLimit": 0.2, "maxRuntimeMs": 750}
   }'
 ```
+
+Optimizer outputs are analytical model scenarios for developer workflows, not personalized investment advice. Use `include=optimizer_candidates` when you need the full candidate weights.
 
 ### Stress Testing
 
@@ -126,7 +152,8 @@ curl -X POST "https://api.secapi.ai/v1/models/factor-analysis?response_mode=comp
       {"symbol": "GOOGL", "weight": 0.15},
       {"symbol": "AMZN", "weight": 0.10}
     ],
-    "include": {"attribution": true, "hedge": true, "positionViews": true}
+    "include": {"attribution": true, "hedge": true, "optimizer": true, "positionViews": true},
+    "optimizer": {"objective": "min_drawdown", "constraints": {"maxCandidates": 3, "turnoverLimit": 0.25}}
   }'
 ```
 
@@ -134,7 +161,7 @@ curl -X POST "https://api.secapi.ai/v1/models/factor-analysis?response_mode=comp
 
 <CardGroup cols={2}>
   <Card title="Factor Neutralization" icon="scale">
-    Identify and hedge unwanted factor exposures in your portfolio.
+    Identify unwanted factor exposures and inspect bounded neutralization candidates.
   </Card>
   <Card title="Regime-Aware Rebalancing" icon="chart-line">
     Adjust portfolio weights based on the current macro regime.
@@ -143,7 +170,7 @@ curl -X POST "https://api.secapi.ai/v1/models/factor-analysis?response_mode=comp
     Allocate risk across factors and set concentration limits.
   </Card>
   <Card title="Hedge Construction" icon="umbrella">
-    Generate hedge overlay recommendations with cost estimates.
+    Generate benchmark-instrument hedge candidates with residual exposure, liquidity, and cost proxies.
   </Card>
 </CardGroup>
 
@@ -152,4 +179,4 @@ curl -X POST "https://api.secapi.ai/v1/models/factor-analysis?response_mode=comp
 - [Make Portfolio Factor Neutral](/api-reference/portfolio/post-v1-portfolio-optimize) — Interactive workflow for portfolio neutralization
 - [Decompose Return and Hedge](/api-reference/portfolio/post-v1-portfolio-analyze) — Attribution and hedge ideas for individual positions
 - [Attribute Portfolio Return](/api-reference/portfolio/post-v1-portfolio-attribution) — Dedicated explained-return and factor-contribution workflow
-- [Construct Factor Hedge](/api-reference/portfolio/post-v1-portfolio-hedge) — Constrained hedge candidate workflow
+- [Construct Factor Hedge](/api-reference/portfolio/post-v1-portfolio-hedge) — Bounded benchmark-instrument hedge candidate workflow

@@ -31,14 +31,13 @@ from secapi_client import SecApiClient
 
 client = SecApiClient(api_key="your-api-key")
 
-subs = client.companies.subsidiaries(ticker="AAPL")
+subs = client.company_subsidiaries(ticker="AAPL")
 
-print(f"Apple Inc — {len(subs.data)} subsidiaries")
-print(f"Source: {subs.accession_number} (filed {subs.filed_at})")
+print(f"Apple Inc — {len(subs['data'])} subsidiaries")
 print()
 
-for sub in subs.data[:10]:
-    print(f"  {sub.name} — {sub.jurisdiction}")
+for sub in subs["data"][:10]:
+    print(f"  {sub['name']} — {sub['jurisdiction']}")
 ```
 
 ### JavaScript
@@ -50,10 +49,9 @@ const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY!,
 });
 
-const subs = await client.companies.subsidiaries({ ticker: "AAPL" });
+const subs = await client.companySubsidiaries({ ticker: "AAPL" });
 
 console.log(`Apple Inc — ${subs.data.length} subsidiaries`);
-console.log(`Source: ${subs.accessionNumber} (filed ${subs.filedAt})`);
 console.log();
 
 for (const sub of subs.data.slice(0, 10)) {
@@ -88,9 +86,9 @@ Map subsidiary counts by jurisdiction to understand geographic exposure and tax 
 ```python
 from collections import Counter
 
-subs = client.companies.subsidiaries(ticker="AAPL")
+subs = client.company_subsidiaries(ticker="AAPL")
 
-jurisdictions = Counter(sub.jurisdiction for sub in subs.data)
+jurisdictions = Counter(sub["jurisdiction"] for sub in subs["data"])
 
 print("Subsidiary Jurisdiction Breakdown:")
 print("-" * 40)
@@ -102,7 +100,7 @@ for jurisdiction, count in jurisdictions.most_common(10):
 ### JavaScript
 
 ```ts
-const subs = await client.companies.subsidiaries({ ticker: "AAPL" });
+const subs = await client.companySubsidiaries({ ticker: "AAPL" });
 
 const jurisdictions: Record<string, number> = {};
 for (const sub of subs.data) {
@@ -149,9 +147,9 @@ print(f"{'Company':<10} {'Subsidiaries':>14} {'Jurisdictions':>15}")
 print("-" * 42)
 
 for ticker in TICKERS:
-    subs = client.companies.subsidiaries(ticker=ticker)
-    jurisdictions = set(sub.jurisdiction for sub in subs.data)
-    print(f"{ticker:<10} {len(subs.data):>14} {len(jurisdictions):>15}")
+    subs = client.company_subsidiaries(ticker=ticker)
+    jurisdictions = set(sub["jurisdiction"] for sub in subs["data"])
+    print(f"{ticker:<10} {len(subs['data']):>14} {len(jurisdictions):>15}")
 ```
 
 ### Expected output
@@ -180,13 +178,13 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 ### Python
 
 ```python
-subs = client.companies.subsidiaries(ticker="GOOG")
+subs = client.company_subsidiaries(ticker="GOOG")
 
-ireland_subs = [s for s in subs.data if "Ireland" in s.jurisdiction]
+ireland_subs = [s for s in subs["data"] if "Ireland" in s["jurisdiction"]]
 
 print(f"Google subsidiaries in Ireland: {len(ireland_subs)}")
 for sub in ireland_subs:
-    print(f"  {sub.name}")
+    print(f"  {sub['name']}")
 ```
 
 ## Next steps
@@ -197,4 +195,3 @@ for sub in ireland_subs:
 - **Corporate hierarchy**: Cross-reference subsidiary names with the `/v1/entities/resolve` endpoint to find publicly traded subsidiaries.
 
 See the [API Reference](/api-reference/companies) for the full subsidiaries endpoint specification.
-

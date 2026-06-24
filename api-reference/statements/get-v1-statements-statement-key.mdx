@@ -21,18 +21,9 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/income_statement?symbol=AAPL&period=quarter"
+  "https://api.secapi.ai/v1/statements/income_statement"
 ```
 </RequestExample>
-
-## Query parameters
-
-- `statement_key` is the statement key in the path, such as `income_statement`, `balance_sheet`, or `cash_flow_statement`.
-- `ticker`, `symbol`, or `cik` identifies the issuer. `symbol` is accepted as an alias for `ticker`.
-- `period=annual` returns annual statements. `period=quarterly`, `period=quarter`, and `period=q` return quarterly statements.
-- `fy`, `year`, `fy_from`, `fyFrom`, `fy_to`, and `fyTo` bound fiscal years.
-- `limit` caps periods returned, up to `40`.
-- `view=agent` returns compact rows and periods for agent workflows; `view=compact` returns period-indexed row arrays.
 
 ## Example response
 
@@ -65,7 +56,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/statements/{statement_key} with `ticker`, `symbol`, or `cik` to return a specific normalized statement keyed by statement type. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/statements/{statement_key} to return a specific normalized statement keyed by statement type. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

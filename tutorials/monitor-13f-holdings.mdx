@@ -31,10 +31,11 @@ from secapi_client import SecApiClient
 
 client = SecApiClient(api_key="your-api-key")
 
-holdings = client.owners.thirteenf(cik="0001067983", limit=20)
+holdings = client.latest_13f(cik="0001067983", limit=20)
 
-for holding in holdings.data:
-    print(f"{holding.issuer_name}: {holding.value:,} ({holding.shares:,} shares)")
+for holding in holdings["holdings"]:
+    value_usd = (holding["valueUsdThousands"] or 0) * 1000
+    print(f"{holding['issuer']}: ${value_usd:,.0f} ({holding['shares']:,} shares)")
 ```
 
 ### JavaScript
@@ -46,14 +47,15 @@ const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY!,
 });
 
-const holdings = await client.owners.thirteenF({
+const holdings = await client.latest13F({
   cik: "0001067983",
   limit: 20,
 });
 
-for (const holding of holdings.data) {
+for (const holding of holdings.holdings) {
+  const valueUsd = (holding.valueUsdThousands ?? 0) * 1000;
   console.log(
-    `${holding.issuerName}: ${holding.value.toLocaleString()} (${holding.shares.toLocaleString()} shares)`
+    `${holding.issuer}: $${valueUsd.toLocaleString()} (${holding.shares.toLocaleString()} shares)`
   );
 }
 ```
@@ -69,42 +71,43 @@ COCA COLA CO: 25,440,000 (400,000,000 shares)
 
 ## Step 2 — Compare holdings across quarters
 
-The `/v1/owners/13f/compare` endpoint shows what changed between two filing periods. This shows new positions, closed positions, and share count changes.
+The `/v1/owners/13f/compare` endpoint shows what changed between two filing periods. This surfaces new positions, closed positions, and share count changes.
 
 ### curl
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f/compare?cik=0001067983&period_a=2024-Q3&period_b=2024-Q4"
+  -H "content-type: application/json" \
+  -X POST \
+  -d '{"cik":"0001067983","limit":20}' \
+  "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 
 ### Python
 
 ```python
-diff = client.owners.thirteenf_compare(
+diff = client.compare_13f(
     cik="0001067983",
-    period_a="2024-Q3",
-    period_b="2024-Q4",
+    limit=20,
 )
 
-for change in diff.data:
-    direction = "+" if change.shares_change > 0 else ""
-    print(f"{change.issuer_name}: {direction}{change.shares_change:,} shares ({change.change_type})")
+for change in diff["rows"]:
+    direction = "+" if (change["deltaShares"] or 0) > 0 else ""
+    print(f"{change['issuer']}: {direction}{change['deltaShares'] or 0:,} shares ({change['status']})")
 ```
 
 ### JavaScript
 
 ```ts
-const diff = await client.owners.thirteenFCompare({
+const diff = await client.compare13F({
   cik: "0001067983",
-  periodA: "2024-Q3",
-  periodB: "2024-Q4",
+  limit: 20,
 });
 
-for (const change of diff.data) {
-  const direction = change.sharesChange > 0 ? "+" : "";
+for (const change of diff.rows) {
+  const direction = (change.deltaShares ?? 0) > 0 ? "+" : "";
   console.log(
-    `${change.issuerName}: ${direction}${change.sharesChange.toLocaleString()} shares (${change.changeType})`
+    `${change.issuer}: ${direction}${(change.deltaShares ?? 0).toLocaleString()} shares (${change.status})`
   );
 }
 ```
@@ -113,20 +116,20 @@ for (const change of diff.data) {
 
 ```json
 {
-  "data": [
+  "rows": [
     {
-      "issuer_name": "APPLE INC",
-      "shares_previous": 400000000,
-      "shares_current": 300000000,
-      "shares_change": -100000000,
-      "change_type": "reduced"
+      "issuer": "APPLE INC",
+      "previousShares": 400000000,
+      "currentShares": 300000000,
+      "deltaShares": -100000000,
+      "status": "changed"
     },
     {
-      "issuer_name": "SIRIUS XM HOLDINGS INC",
-      "shares_previous": 0,
-      "shares_current": 108752027,
-      "shares_change": 108752027,
-      "change_type": "new_position"
+      "issuer": "SIRIUS XM HOLDINGS INC",
+      "previousShares": 0,
+      "currentShares": 108752027,
+      "deltaShares": 108752027,
+      "status": "added"
     }
   ]
 }
@@ -147,22 +150,21 @@ MANAGERS = [
 THRESHOLD_PCT = 10  # flag changes over 10%
 
 for manager in MANAGERS:
-    diff = client.owners.thirteenf_compare(
+    diff = client.compare_13f(
         cik=manager["cik"],
-        period_a="2024-Q3",
-        period_b="2024-Q4",
+        limit=20,
     )
 
     significant = [
-        c for c in diff.data
-        if c.change_type in ("new_position", "closed")
-        or abs(c.shares_change / max(c.shares_previous, 1)) > THRESHOLD_PCT / 100
+        c for c in diff["rows"]
+        if c["status"] in ("added", "removed")
+        or abs((c["deltaShares"] or 0) / max(c["previousShares"] or 1, 1)) > THRESHOLD_PCT / 100
     ]
 
     if significant:
         print(f"\n--- {manager['name']} ---")
         for c in significant:
-            print(f"  {c.issuer_name}: {c.change_type} ({c.shares_change:+,} shares)")
+            print(f"  {c['issuer']}: {c['status']} ({c['deltaShares'] or 0:+,} shares)")
 ```
 
 ## Next steps
@@ -172,4 +174,3 @@ for manager in MANAGERS:
 - **Track sector exposure**: Aggregate holdings by sector to monitor allocation shifts.
 
 See the [Ownership Workflows](/ownership-workflows) guide for additional patterns.
-

@@ -1,46 +1,32 @@
----
-title: "Status"
-description: "Current SEC API status, production health checks, and incident reporting guidance."
----
-
 # Status
 
-For live uptime, incident history, and maintenance notices, use the public status site:
-
-<Card title="SEC API Status" icon="activity" href="https://status.secapi.ai">
-  Open status.secapi.ai for current production status and incident updates.
-</Card>
-
-## Current Endpoints
+## Current production surface
 
 - public docs: `https://docs.secapi.ai`
-- public status: `https://status.secapi.ai`
 - API: `https://api.secapi.ai`
 - hosted MCP: `https://api.secapi.ai/mcp`
 - API health: `https://api.secapi.ai/healthz`
 - API readiness: `https://api.secapi.ai/readyz`
 
-## Expected Signals
+## Expected signals
 
 - every API response includes `Request-Id`
 - every API response includes `traceparent`
-- API keys are the primary authentication method for all plans; hosted MCP OAuth discovery is available through the documented `.well-known` endpoints.
-- billing, search, and event APIs are live in production
-- production checks are passing for the public API
-- public site routes and API trust headers are part of the production contract
-- searchable filings and section history support a 9-year public floor; deeper inventory remains provisional rather than an equal-density production guarantee
+- API keys are the primary authentication method for all plans; hosted MCP OAuth discovery is available through the WorkOS-backed `.well-known` endpoints. Enterprise OAuth/SSO is planned for 2026 Q3+.
+- billing, search, and event surfaces are live in production
+- launch-readiness and strict validation workflows are green for the shipped v3 surface
+- public site routes and API trust headers are part of the release posture, not afterthoughts
+- searchable filings and section history are release-gated for a 9-year public floor; deeper inventory remains provisional rather than an equal-density production guarantee
 
-## How to Report an Incident
+## How to report an incident
 
 - include the failing endpoint
 - include the exact `Request-Id`
 - include the timestamp and org id if known
 - include whether the failure was API, webhook, stream, billing, or MCP related
 
-## First Checks
+## Support workflow
 
-- first inspect `https://status.secapi.ai`
-- then inspect `https://api.secapi.ai/healthz`
-- then inspect `https://api.secapi.ai/readyz`
-- if an API call fails, include the `Request-Id` when contacting support
-- if a webhook delivery fails, include the event id, delivery id, destination status, and timestamp
+- first inspect `https://api.secapi.ai/healthz`
+- then inspect `/v1/admin/orgs`, `/v1/admin/orgs/{org_id}`, and request diagnostics
+- replay webhook deliveries when downstream delivery is the only failure mode

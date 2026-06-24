@@ -3,10 +3,10 @@
 Return factor return attribution for a portfolio with explained return, alpha, and compact contribution rows
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -19,18 +19,8 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{
-    "holdings": [
-      {"symbol": "AAPL", "weight": 0.30},
-      {"symbol": "MSFT", "weight": 0.25},
-      {"symbol": "NVDA", "weight": 0.20},
-      {"symbol": "JPM", "weight": 0.15},
-      {"symbol": "XOM", "weight": 0.10}
-    ],
-    "lookback": "6m",
-    "category": "style"
-  }' \
-  "https://api.secapi.ai/v1/portfolio/attribution?response_mode=compact"
+  -d '{"country":"US","lookback":"12m","window":"3m","frequency":"weekly","exportFormat":"json","category":"style","keys":["VALUE","MOMENTUM","QUALITY"],"holdings":[{"symbol":"AAPL","weight":0.35},{"symbol":"MSFT","weight":0.3},{"symbol":"NVDA","weight":0.2},{"symbol":"JPM","weight":0.15}]}' \
+  "https://api.secapi.ai/v1/portfolio/attribution?response_mode=compact&include=trust"
 ```
 </RequestExample>
 
@@ -39,7 +29,165 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
+  "object": "portfolio_attribution",
+  "id": "portfolio_attribution:growth-quality-core:2026-06-09",
+  "analysisId": "portfolio_analysis:growth-quality-core:2026-06-09",
+  "asOf": "2026-06-09T22:15:00.000Z",
+  "country": "US",
+  "window": "3m",
+  "lookback": "12m",
+  "frequency": "weekly",
+  "holdings": [
+    {
+      "symbol": "AAPL",
+      "weight": 0.35
+    },
+    {
+      "symbol": "MSFT",
+      "weight": 0.3
+    },
+    {
+      "symbol": "NVDA",
+      "weight": 0.2
+    },
+    {
+      "symbol": "JPM",
+      "weight": 0.15
+    }
+  ],
+  "portfolioReturn": 0.082,
+  "totalExplained": 0.061,
+  "alpha": 0.021,
+  "rSquared": 0.74,
+  "contributions": [
+    {
+      "object": "portfolio_factor_attribution",
+      "rank": 1,
+      "factorKey": "MOMENTUM",
+      "factorName": "Momentum",
+      "factorCategory": "style",
+      "contributionPercent": 2.4,
+      "contributionPct": 0.024,
+      "beta": 0.37,
+      "factorReturn": 0.065,
+      "rawReturn": 0.058,
+      "pureReturn": 0.052,
+      "scaledReturn": 0.065,
+      "zScore": 1.7,
+      "leverage": 1,
+      "modelName": "secapi_stock_basket_factor_model_v1",
+      "explanation": "Positive momentum exposure explained 240 bps of the portfolio return."
+    }
+  ],
+  "returnStream": [],
+  "returnPointCount": 12,
+  "returnStreamSample": [
+    {
+      "object": "portfolio_return_point",
+      "period": "2026-W22",
+      "periodEnd": "2026-05-29",
+      "frequency": "weekly",
+      "periodReturn": 0.011,
+      "cumulativeReturn": 0.064,
+      "coverageWeight": 1,
+      "missingSymbols": []
+    }
+  ],
+  "rollingBetas": [],
+  "rollingBetaCount": 4,
+  "rollingBetasUnavailableReason": null,
+  "exposures": [
+    {
+      "object": "factor_exposure",
+      "id": "factor_exposure:AAPL:VALUE:2026-06-09",
+      "subjectType": "security",
+      "subjectKey": "AAPL",
+      "factorKey": "VALUE",
+      "beta": -0.42,
+      "percentile": 18.2,
+      "confidence": "high",
+      "modelName": "secapi_stock_basket_factor_model_v1",
+      "asOf": "2026-06-09T22:15:00.000Z",
+      "responseMode": "compact",
+      "expansionHints": [
+        "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+      ]
+    }
+  ],
+  "export": {
+    "object": "portfolio_attribution_export",
+    "requestedFormat": "json",
+    "formats": [
+      "json"
+    ],
+    "fileName": "secapi-portfolio-attribution-2026-06-09",
+    "columns": [
+      "factorKey",
+      "contributionPercent",
+      "beta",
+      "factorReturn"
+    ],
+    "csv": null,
+    "files": []
+  },
+  "summaryMd": "Momentum and quality explained most of the recent return while value detracted.",
+  "responseMode": "compact",
+  "dataAsOf": "2026-06-09",
+  "freshnessStatus": "fresh",
+  "methodologyVersion": "secapi_portfolio_attribution_v1",
+  "materializationVersion": "2026-06-09",
+  "provenance": {
+    "source": "secapi_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "accessionNumber": null,
+    "filingUrl": "https://docs.secapi.ai/factors/methodology",
+    "acceptedAt": null,
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "parserVersion": "secapi-factor-pipeline"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "lagMs": 2700000
+  },
+  "materialization": {
+    "parserVersion": "secapi-factor-pipeline",
+    "materializationVersion": "2026-06-09"
+  },
+  "sourceRights": {
+    "source": "secapi_owned_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "posture": "public_safe",
+    "publicAvailability": "public",
+    "contractStatus": "approved",
+    "restrictions": [],
+    "notes": "SecAPI-owned derived factor data."
+  },
+  "methodology": {
+    "id": "secapi_factor_returns",
+    "version": "v1",
+    "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+    "confidence": "high",
+    "launchState": "beta",
+    "inputs": [
+      "secapi_factor_returns",
+      "secapi_factor_exposures",
+      "market_calendar"
+    ],
+    "validation": {
+      "launchHistoryFloor": "2015-01-01",
+      "marketCalendarAware": true
+    }
+  },
+  "revision": {
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "vintageId": "2026-06-09",
+    "revisedFrom": null
+  },
+  "degradedState": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
@@ -47,12 +195,12 @@ curl -X POST \
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API POST /v1/portfolio/attribution to explain portfolio return through factor contributions over the requested lookback. Preserve explained return, alpha, contribution rows, weights, freshness, and methodology metadata. Use compact mode when feeding the result to a downstream model.
+<Prompt>
+Use SEC API POST /v1/portfolio/attribution to explain portfolio return through factor contributions. Preserve `portfolioReturn`, `totalExplained`, `alpha`, `rSquared`, `contributions`, `returnPointCount`, `returnStreamSample`, `rollingBetaCount`, `rollingBetasUnavailableReason`, `export`, `summaryMd`, `requestId`, and `traceparent`. Use `include=returns,rolling_betas` only when a downstream chart needs full rows.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

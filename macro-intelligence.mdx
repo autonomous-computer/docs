@@ -1,155 +1,201 @@
 ---
 title: Macro Intelligence
-description: Country-level macroeconomic data, regime classification, high-signal packs, and forward estimates
+description: Country-level macro data, release calendars, forecasts, regimes, and agent-ready country reports
 ---
 
 # Macro Intelligence
 
-SEC API provides a structured macro surface covering indicator time series, release history, forward estimates, regime classification, and curated high-signal country packs. All endpoints return `requestId` and `traceparent` for observability.
+SEC API macro data is built to make SEC, factor, and portfolio workflows more useful. It is not a generic macro database. Use it to give agents and investor systems the country context needed for return attribution, portfolio planning, factor interpretation, forward-return modeling, and risk explanation.
 
-## Macro indicators
+The fastest workflow is:
 
-Time series observations by country and indicator. Each observation carries revision-aware provenance and country-quality metadata sourced from official statistical agencies.
+1. Search for an indicator key.
+2. Fetch compact observations or the country high-signal pack.
+3. Check released history and upcoming calendar events.
+4. Add forecasts and the current macro regime.
+5. Use a compact country report when an agent needs one dense rollup.
+6. Check macro status before citing freshness-sensitive conclusions.
+7. Use scenario and sensitivity endpoints when macro needs to connect to factors or portfolios.
 
-### `GET /v1/macro/indicators`
+All endpoints return `requestId` and `traceparent`. Preserve freshness, provenance, methodology, source-rights, and degraded-state fields when they are present.
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `indicator` | string | **required** | Indicator key (alias: `indicator_key`) |
-| `country` | string | `US` | ISO country code |
-| `limit` | positive integer | -- | Maximum observations returned |
+## Workflow Quickstart
+
+### 1. Search Indicators
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/macro/indicators?country=US&indicator=GDP"
+  "https://api.secapi.ai/v1/macro/search?q=inflation&country=US&limit=10"
 ```
 
-## Macro releases
+Use the returned `indicatorKey` in later calls. For example, US CPI is available as `CPIAUCSL`.
 
-Release history with actual, prior, consensus, and surprise metadata for a given country. Optionally filter to a single indicator.
-
-### `GET /v1/macro/releases`
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `country` | string | `US` | ISO country code |
-| `indicator` | string | -- | Filter to a specific indicator key (alias: `indicator_key`) |
-| `limit` | positive integer | -- | Maximum releases returned |
+### 2. Fetch A Compact Country Pack
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/macro/releases?country=US&indicator=CPI"
-```
-
-## Macro calendar
-
-Upcoming macro events for a country, including official-source releases and central-bank events.
-
-### `GET /v1/macro/calendar`
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `country` | string | `US` | ISO country code |
-| `days` | positive integer | -- | Look-ahead window in days |
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/macro/calendar?country=US&days=14"
-```
-
-## Macro forecasts
-
-Forward estimates with methodology metadata. Optionally scope to a single indicator and control the number of forecast horizons returned.
-
-### `GET /v1/macro/forecasts`
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `country` | string | `US` | ISO country code |
-| `indicator` | string | -- | Filter to a specific indicator key (alias: `indicator_key`) |
-| `horizons` | positive integer | -- | Number of forward horizons to return |
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/macro/forecasts?country=US&indicator=GDP&horizons=4"
-```
-
-## High-signal packs
-
-Curated country packs containing the highest-signal macro series with explicit source provenance, fallback posture, and release-calendar metadata. Each pack is scoped to a single country and returns the full set of configured series.
-
-### Supported countries
-
-| Country | Code | Series count | Notes |
-|---------|------|-------------|-------|
-| United States | `US` | 24 | Daily and weekly FRED series |
-| China | `CN` | 15 | |
-| Japan | `JP` | 17 | |
-| Taiwan | `TW` | -- | |
-| Israel | `IL` | -- | |
-| Canada | `CA` | -- | |
-| United Kingdom | `GB` | -- | |
-| Eurozone | `EZ` | -- | |
-| South Korea | `KR` | -- | |
-| Brazil | `BR` | -- | |
-| India | `IN` | -- | |
-| Saudi Arabia | `SA` | -- | |
-
-### `GET /v1/macro/high-signal-pack`
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `country` | string | `JP` | ISO country code (see supported countries above) |
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/macro/high-signal-pack?country=US"
 ```
 
-## Macro regime classification
+`/v1/macro/high-signal-pack` defaults to `country=US` and `response_mode=compact`. The compact shape is designed for agents: bounded series summaries, latest value, upcoming release, forecast, regime, and source posture.
 
-Returns the current macro regime classification for a country using the canonical SEC API macro overlay. The regime reflects the aggregate positioning across growth, inflation, and monetary-policy dimensions.
-
-### `GET /v1/macro/regimes`
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `country` | string | `US` | ISO country code |
-| `lookback` | string | -- | Lookback period (e.g. `6m`, `1y`) |
+Expand only when needed:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/macro/regimes?country=US"
+  "https://api.secapi.ai/v1/macro/high-signal-pack?country=US&response_mode=standard&include=series,trust"
 ```
 
-## Country reports
+### 3. Fetch Observations
 
-Returns an intelligence bundle covering the prior period's macro path, likely drivers, and forward view for a country. This is a POST endpoint that accepts a JSON body.
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/indicators?country=US&indicator=CPIAUCSL&limit=12&response_mode=compact"
+```
 
-### `POST /v1/intelligence/country-report`
+| Parameter | Required | Default | Notes |
+|---|---:|---|---|
+| `indicator` | Yes | -- | Alias: `indicator_key` |
+| `country` | No | `US` | ISO country code |
+| `limit` | No | route default | Max `240` |
+| `response_mode` | No | `standard` | `compact`, `standard`, `verbose`, or `agent` |
+| `include` | No | -- | Comma-separated expansions such as `trust` or `series` |
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `country` | string | `US` | ISO country code (2-12 characters) |
-| `lookback` | string | -- | Lookback period (e.g. `6m`, `1y`; 2-12 characters) |
+### 4. Separate Released History From Upcoming Calendar
+
+Released history:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/releases?country=US&indicator=CPIAUCSL&status=released&limit=10"
+```
+
+Upcoming scheduled releases:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/calendar?country=US&indicator=CPIAUCSL&days=45&limit=12&response_mode=compact"
+```
+
+`/v1/macro/calendar` returns future scheduled releases only. Past rows belong in `/v1/macro/releases?status=released`.
+
+### 5. Add Forecasts And Regime
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/forecasts?country=US&indicator=CPIAUCSL&horizons=3&response_mode=compact"
+```
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/regimes?country=US&lookback=18m&response_mode=compact"
+```
+
+Country-wide forecast calls default to compact because full forecast payloads can be large.
+
+### 6. Check Macro Status
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/status?country=US&response_mode=compact"
+```
+
+`/v1/macro/status` reads validation artifacts, not live vendor probes. Use it when an agent needs to decide whether macro output is ready, degraded, stale, or unsupported.
+
+The compact response includes country status, source posture, alerts, freshness age, and methodology. Use `response_mode=verbose` or `view=full` only when you need indicator-level rows.
+
+### 7. Use Country Report For A Dense Investment Briefing
 
 ```bash
 curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{"country": "US"}' \
-  "https://api.secapi.ai/v1/intelligence/country-report"
+  -d '{"country":"US","lookback":"6m","symbols":["AAPL","NVDA"],"briefingMode":"company"}' \
+  "https://api.secapi.ai/v1/intelligence/country-report?response_mode=compact"
 ```
 
-## Failure posture
+Use country reports when an agent needs one compact answer containing indicators, releases, forecasts, regime, likely drivers, freshness, and an investor-shaped `briefing` block.
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+The `briefing` block includes:
+
+- `topLine`
+- `regime`
+- `keyDrivers`
+- `watchItems`
+- `investmentImplications`
+- `dataQuality`
+
+Optional request fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `symbols` | string array | Adds a lightweight company lens |
+| `holdings` | holding array | Adds portfolio lens using the same holding shape as portfolio endpoints |
+| `horizon` | enum | `1m`, `3m`, `6m`, `12m`, or `18m` |
+| `briefingMode` | enum | `macro`, `portfolio`, or `company` |
+
+Use full mode only when a human or downstream service needs the complete nested payload.
+
+### 8. Connect Macro To Portfolio And Factor Workflows
+
+List supported stress scenarios:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/portfolio/stress-test/scenarios?country=US&response_mode=compact"
+```
+
+Run a stress test and inspect contributions:
+
+```bash
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"country":"US","scenarioKey":"higher_for_longer","holdings":[{"symbol":"AAPL","weight":0.6},{"symbol":"MSFT","weight":0.4}]}' \
+  "https://api.secapi.ai/v1/portfolio/stress-test?response_mode=compact"
+```
+
+Ask which factors are most sensitive to a macro scenario:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/factors/macro-sensitivity?country=US&scenario_key=higher_for_longer&keys=VALUE,MOMENTUM,QUALITY&response_mode=compact"
+```
+
+`/v1/factors/macro-sensitivity` is labeled `macro_factor_sensitivity_v1_heuristic`. It combines scenario shock maps with current macro-regime factor impacts. It is explainable and fast; it is not a point-in-time empirical regression.
+
+## Supported Country Coverage
+
+| Ring | Countries | Posture |
+|---|---|---|
+| Launch ring | `US`, `CN`, `JP`, `TW`, `IL` | Curated official-source coverage, deepest launch validation |
+| Expansion ring | `CA`, `GB`, `EZ`, `KR`, `BR`, `IN`, `SA` | Smaller high-signal packs, explicit source/fallback posture |
+
+For source-level detail, see [Macro Tier-1 Official Sources](/macro-tier1).
+
+## MCP Tools
+
+Hosted MCP exposes the same workflow for agents:
+
+- `macro.search`
+- `macro.indicators`
+- `macro.high_signal_pack`
+- `macro.releases`
+- `macro.calendar`
+- `macro.forecasts`
+- `macro.regimes`
+- `macro.status`
+- `macro.credit_ratings`
+- `macro.country_report`
+- `macro.investment_briefing`
+- `portfolio.stress_scenarios`
+- `factors.macro_sensitivity`
+
+MCP macro tools default to compact response shapes where payload size matters. Ask for `response_mode: "standard"` or include `["series", "trust"]` only when the agent needs full nested data.
+
+## Failure Posture
+
+- Treat non-2xx responses as contract-aware failures, not free-form errors.
+- Search first when an indicator key is unknown.
+- Preserve `requestId` and `traceparent` in downstream artifacts.
+- Cite freshness and source posture when macro data informs an investment claim.

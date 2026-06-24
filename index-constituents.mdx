@@ -1,7 +1,3 @@
----
-title: "Index Constituents"
----
-
 # Index Constituents
 
 ## What this utility is for
@@ -10,31 +6,45 @@ title: "Index Constituents"
 - map constituent symbols into SEC API's canonical entity graph when local coverage exists
 - keep the broader index universe visible in the source inventory without pretending unsupported families are production-ready
 
-## Current support
+## Current support posture
 
 - `NDX` is fully supported — SEC API parses the public Nasdaq-100 companies page published by Nasdaq
 - SEC API returns company name, ticker, rank order, rights metadata, provenance, and any canonical entity match already available in the local graph
 - SEC API does not return weights for `NDX` because the public source page does not publish them
 
+## Operator-only indices
+
+The following indices are available to principals with `admin:operator` scope. They are derived from ClickHouse `market_reference_history` data and are approximate — not official committee selections.
+
+- `SPX` — S&P 500 approximation, derived from top ~500 US stocks by market cap
+- `DJIA` — Dow Jones Industrial Average, static 30-component list maintained in code
+- `RUT` — Russell 2000 approximation, derived from market cap rank 1001-3000
+- `XNAS_COMP` — Nasdaq Composite approximation, all active tickers with `primary_exchange = 'XNAS'`
+
+Operator-only indices appear in `/v1/market/indices` but return a 400 error from `/v1/market/indices/constituents` unless the caller has operator scope.
+
 ## Inventory-only indices
 
-- `UKX` and `SX5E` are tracked in the source inventory, but rights and extraction status are still under review
-- inventory-only indices are listed for transparency but are not returned by the public constituents endpoint
+- `UKX` and `SX5E` are tracked in the source inventory, but rights and extraction posture are still under review
+- inventory-only indices are intentionally visible in ops artifacts before they are exposed through the public API
 
-## Public export
+## Internal mapping versus public export
 
-SEC API exposes constituent rosters only when the source and redistribution rights are documented. Entity mapping quality does not by itself make a roster public.
+- these are separate decisions on purpose
+- SEC API can prove strong private mapping coverage for `SPX`, `NDX`, `DJIA`, and `RUT` without implying that every one of those rosters is public
+- public export remains constrained by rights posture, not by the current quality of the entity graph
 
 ## Rights model
 
-- `public_source_documented` means the source page and public-sharing status are documented
-- `public_source_review_required` means SEC API tracks the official source but has not cleared the roster for public constituent export
+- `public_source_documented` means the source page and public-shareability posture are documented
+- `public_source_review_required` means SEC API tracks the official source but has not yet cleared public constituent export
 - `licensed_index_not_supported` means SEC API will not expose the constituent roster until explicit licensing is in place
 
-## Sync status
+## Sync posture
 
-- `NDX` is the only public constituent roster today, and its export is generated from SEC API's source definition
-- `syncCadence` values describe source-review status and intended refresh cadence; they do not imply that every inventory-only benchmark family is already auto-synced into a public roster
+- `NDX` is the only public constituent roster today, and its export is generated from SEC API's checked-in source definition
+- inventory exports are generated from `services/datastream-api/src/lib/index-constituents.ts` with `bun run ops:index-source-inventory`
+- `syncCadence` values describe source-review posture and intended refresh cadence; they do not imply that every inventory-only benchmark family is already auto-synced into a public roster
 
 ## Example
 

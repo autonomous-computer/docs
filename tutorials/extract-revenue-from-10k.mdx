@@ -31,9 +31,9 @@ from secapi_client import SecApiClient
 
 client = SecApiClient(api_key="your-api-key")
 
-filing = client.filings.latest(ticker="AAPL", form="10-K")
-print(filing.accession_number)
-print(filing.filed_at)
+filing = client.latest_filing(ticker="AAPL", form="10-K")
+print(filing["accessionNumber"])
+print(filing["filingDate"])
 ```
 
 ### JavaScript
@@ -45,22 +45,22 @@ const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY!,
 });
 
-const filing = await client.filings.latest({
+const filing = await client.latestFiling({
   ticker: "AAPL",
   form: "10-K",
 });
 console.log(filing.accessionNumber);
-console.log(filing.filedAt);
+console.log(filing.filingDate);
 ```
 
 ### Expected output
 
 ```json
 {
-  "accession_number": "0000320193-24-000081",
+  "accessionNumber": "0000320193-24-000081",
   "form": "10-K",
-  "filed_at": "2024-11-01",
-  "company_name": "Apple Inc",
+  "filingDate": "2024-11-01",
+  "companyName": "Apple Inc",
   "cik": "0000320193"
 }
 ```
@@ -79,22 +79,22 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 ### Python
 
 ```python
-statements = client.statements.all(
+statements = client.all_statements(
     ticker="AAPL",
     period="annual",
     limit=1,
 )
 
-income = statements.income_statement
-print(f"Revenue: {income.revenue}")
-print(f"Net Income: {income.net_income}")
-print(f"Gross Profit: {income.gross_profit}")
+income = statements["income_statement"]
+print(f"Revenue: {income['revenue']}")
+print(f"Net Income: {income['net_income']}")
+print(f"Gross Profit: {income['gross_profit']}")
 ```
 
 ### JavaScript
 
 ```ts
-const statements = await client.statements.all({
+const statements = await client.allStatements({
   ticker: "AAPL",
   period: "annual",
   limit: 1,

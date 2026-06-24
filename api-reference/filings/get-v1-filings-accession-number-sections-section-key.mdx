@@ -6,31 +6,13 @@ Extract a filing item or section from a specific accession-number filing
 Audience: application and coding agent.
 </Info>
 
-## Agent mode
-
-Pass `?view=agent` to receive citation fields and a snippet without the full `contentMd` section body. Use `mode=compact` when you still need `contentMd` but want it capped for token efficiency.
-
-## Section mode
-
-Use `mode=full` for the full extracted section body or `mode=compact` for capped `contentMd`. Invalid mode values return `400 invalid_section_mode` with `details.acceptedValues`.
-
-## View values
-
-Use `view=agent` for citation-ready snippets, `view=compact` for capped `contentMd`, or `view=default` for the default full response. Invalid view values return `400 invalid_query_parameter` with `details.acceptedValues`.
-
-## Agent response fields
+## Canonical metadata
 
 - `requestId`
-- `object`
-- `ticker`
-- `key`
-- `snippet`
-- `accessionNumber`
-- `accession`
-- `section_key`
-- `source_url`
-- `startOffset`
-- `endOffset`
+- `traceparent`
+- `provenance`
+- `freshness`
+- `materialization`
 
 ## Example request
 
@@ -39,7 +21,7 @@ Use `view=agent` for citation-ready snippets, `view=compact` for capped `content
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/0000320193-25-000079/sections/item_1a?view=agent"
+  "https://api.secapi.ai/v1/filings/0000320193-25-000079/sections/item_1a"
 ```
 </RequestExample>
 
@@ -48,20 +30,25 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "object": "section",
-  "ticker": "AAPL",
-  "accessionNumber": "0000320193-25-000079",
-  "key": "item_1a",
-  "startOffset": null,
-  "endOffset": null,
-  "snippet": "The Company faces risks from macroeconomic conditions, supply constraints, platform policy changes, and competition.",
-  "accession": "0000320193-25-000079",
-  "section_key": "item_1a",
-  "char_start": null,
-  "char_end": null,
-  "highlighted_snippet": null,
-  "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "provenance": {
+    "source": "sec",
+    "accessionNumber": "0000320193-25-000079",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
+    "retrievedAt": "2026-03-17T00:00:00.000Z",
+    "parserVersion": "2026-03-13.5",
+    "rawSourceKey": "0000320193-25-000079"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-03-17T00:00:00.000Z",
+    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
+    "lagMs": 900000
+  },
+  "materialization": {
+    "parserVersion": "2026-03-13.5",
+    "materializationVersion": "datastream-3.0"
+  }
 }
 ```
 </ResponseExample>
@@ -69,12 +56,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/{accession_number}/sections/{section_key}?view=agent to extract a citation-ready section snippet from a specific filing. Preserve `requestId`, `ticker`, `key`, `snippet`, `accessionNumber`, `accession`, `section_key`, `source_url`, and any offset fields in the output.
+Use SEC API GET /v1/filings/{accession_number}/sections/{section_key} to extract a filing item or section from a specific accession-number filing. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- invalid `mode` values return `invalid_section_mode` with `details.acceptedValues`
-- invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
-- preserve `requestId`, `accessionNumber`, and `source_url` in logs and downstream reports
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
