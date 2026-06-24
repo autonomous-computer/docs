@@ -1,0 +1,64 @@
+# SDK contract surface map
+
+This page maps the customer-visible SDK contract to the public packages that developers install. It is generated from the same launch-readiness artifacts used by CI, so it should answer two questions quickly: which SDK should I use, and which operational guarantees are present in that SDK?
+
+Generated: 2026-06-24T18:46:20.575Z
+
+Status: **ready**
+
+## Package coverage
+
+| SDK | Public package | Source | Launch | Policy | Routes covered | Capability coverage |
+|---|---|---:|---:|---|---:|---|
+| JavaScript | `@secapi/sdk-js` | 1.0.1 | 1.0.2 | language_hotfix | 177 / 221 | 13 present, 0 alternate |
+| CLI | `@secapi/cli` | 1.0.1 | 1.0.2 | language_hotfix | 177 / 221 | 6 present, 7 alternate |
+| Python | `secapi-client` | 1.0.1 | 1.0.1 | full_train | 167 / 221 | 13 present, 0 alternate |
+| Rust | `sec-api-sdk-rust` | 1.0.1 | 1.0.1 | full_train | 109 / 221 | 12 present, 1 alternate |
+| Go | `github.com/secapi-ai/secapi-go` | 1.0.1 | 1.0.1 | full_train | 122 / 221 | 13 present, 0 alternate |
+
+## Version policy notes
+
+Behavior rows are measured from the monorepo SDK source. Launch versions are the public registry versions customers install with unpinned commands. Language-specific hotfix rows are still launch-ready only when the release dashboard proves the hotfix version is the registry latest and public conformance passed at that launch version.
+
+| SDK | Source version | Launch version | Policy | Rationale |
+|---|---:|---:|---|---|
+| JavaScript | 1.0.1 | 1.0.2 | language_hotfix | Registry latest is a language-specific hotfix above the full-train source version; keep explicit until the next all-SDK train reconciles source versions. |
+| CLI | 1.0.1 | 1.0.2 | language_hotfix | Registry latest is a language-specific hotfix above the full-train source version; keep explicit until the next all-SDK train reconciles source versions. |
+
+## Behavior contract
+
+| Category | Capability | Customer promise | Launch required | JavaScript | CLI | Python | Rust | Go |
+|---|---|---|---|---|---|---|---|---|
+| auth | API key env fallback | Agents, CI jobs, and local shells can authenticate with standard `SECAPI_*` environment variables. | yes | OK present | OK present | OK present | OK present | OK present |
+| auth | Bearer auth support | Human-authenticated and dashboard-issued bearer-token workflows have a supported client path. | yes | OK present | OK present | OK present | OK present | OK present |
+| config | Base URL override | Customers can target staging, preview, local mocks, and private deployments without patching clients. | yes | OK present | OK present | OK present | OK present | OK present |
+| config | SEC API version header | Requests pin the SEC API wire contract with the secapi-version header. | yes | OK present | OK present | OK present | OK present | OK present |
+| retries | Retry-After rate-limit handling | Transient rate limits back off using the server's Retry-After guidance. | yes | OK present | ALT exempted | OK present | OK present | OK present |
+| errors | Request ID error diagnostics | Failed requests expose a request ID that support can trace. | yes | OK present | ALT exempted | OK present | OK present | OK present |
+| support | Request diagnostics helper | A copied request ID can be inspected from the same SDK or CLI surface. | yes | OK present | OK present | OK present | OK present | OK present |
+| support | SDK user-agent version | Server logs identify the SDK language and version that made the request. | yes | OK present | OK present | OK present | OK present | OK present |
+| timeouts | Request timeout controls | Callers can bound long-running requests instead of hanging indefinitely. | yes | OK present | ALT exempted | OK present | OK present | OK present |
+| pagination | Cursor auto-pagination helpers | Cursor-based resources can be consumed without hand-rolling pagination loops. | yes | OK present | ALT exempted | OK present | OK present | OK present |
+| pagination | Explicit zero pagination caps | Dry runs and bounded probes can intentionally fetch zero result rows. | yes | OK present | ALT exempted | OK present | ALT exempted | OK present |
+| namespaces | Grouped service namespaces | High-level service namespaces make the API easier to discover in IDEs and agents. | no | OK present | ALT exempted | OK present | OK present | OK present |
+| examples | Agent workflow example | Each public language SDK ships an executable agent-oriented starting point. | yes | OK present | ALT exempted | OK present | OK present | OK present |
+
+## Alternate paths
+
+| SDK | Capability | Why this is still launch-ready |
+|---|---|---|
+| CLI | Retry-After rate-limit handling | CLI delegates HTTP retry policy to the bundled JavaScript SDK client; CLI launch coverage asserts request routing, diagnostics, and command behavior. |
+| CLI | Request ID error diagnostics | CLI exposes request diagnostics through commands and JSON stderr summaries rather than typed library exceptions. |
+| CLI | Request timeout controls | CLI process invocations use command execution boundaries and the JavaScript SDK client; there is no public per-call timeout API. |
+| CLI | Cursor auto-pagination helpers | CLI exposes page-sized commands and machine-readable output; streaming auto-pagination is a library SDK concern. |
+| CLI | Explicit zero pagination caps | CLI pagination is controlled by explicit command flags instead of SDK iterator caps. |
+| Rust | Explicit zero pagination caps | Rust pagination has explicit max_items zero behavior through PaginationOptions defaults and tests, but does not expose the same literal zero-cap token shape as JS/Python/Go. |
+| CLI | Grouped service namespaces | CLI grouping is command-namespace based, not service-object based. |
+| CLI | Agent workflow example | CLI ships `secapi examples` and `secapi agent-context` instead of a language-specific agent workflow source file. |
+
+## Sources
+
+- `ops/sdk-parity/latest.json`
+- `ops/sdk-release-dashboard/latest.json`
+
+Regenerate with `bun run ops:sdk-contract-surface-map` and validate with `bun run validate:sdk-contract-surface-map`.

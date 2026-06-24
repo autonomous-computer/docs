@@ -1,19 +1,14 @@
----
-title: "Hosted MCP Workflows"
-description: "Use SEC API from MCP-aware coding agents and clients."
----
-
 # Hosted MCP Workflows
 
 <Info>
-Hosted MCP lets coding agents call SEC API directly from MCP-aware tools. Use it when you want agents to resolve issuers, fetch filings, extract sections, and run intelligence workflows without writing a custom integration first.
+Hosted MCP lets coding agents call SEC API directly. That means less glue code, less local wrapper drift, and faster time from prompt to useful investor workflow.
 </Info>
 
-## Why Use Hosted MCP
+## Why use hosted MCP
 
 <CardGroup cols={3}>
-  <Card title="Less wrapper code" icon="braces">
-    Your agent can call SEC API tools directly from its MCP client.
+  <Card title="Less wrapper code" icon="cable">
+    Your agent can call the SEC API tool surface directly instead of waiting on a custom wrapper layer.
   </Card>
   <Card title="Same workflows" icon="equal">
     REST and hosted MCP sit on top of the same underlying SEC API workflows.
@@ -23,10 +18,22 @@ Hosted MCP lets coding agents call SEC API directly from MCP-aware tools. Use it
   </Card>
 </CardGroup>
 
-## Install Metadata
+## Install metadata
 
 ```bash
 curl https://api.secapi.ai/mcp
+```
+
+Inspect the fields your client will use:
+
+```bash
+curl -s https://api.secapi.ai/mcp | jq '.distribution | {
+  transport: .transport,
+  auth: .auth.supported,
+  claudeCode: .clients.claudeCode.addCommand,
+  tools: (.capabilitiesSummary.tools | length),
+  resources: (.capabilitiesSummary.resourceTemplates | length)
+}'
 ```
 
 That payload includes:
@@ -41,14 +48,14 @@ That payload includes:
   <Step title="Fetch the install metadata">
     Confirm the hosted MCP endpoint is live and returning its transport and auth metadata.
   </Step>
-  <Step title="Set the API key">
-    Export `SECAPI_API_KEY` or configure the same value as an `x-api-key` header in your MCP client.
+  <Step title="Bootstrap the machine identity">
+    Have a human operator mint a sponsor token first, then exchange it through `POST /v1/agent/bootstrap` before you start repeated MCP work.
   </Step>
   <Step title="Register the server in your client">
     Add the streamable HTTP MCP endpoint to Claude Code, Cursor, or another MCP-aware client.
   </Step>
   <Step title="Exercise a real tool path">
-    Resolve an issuer, fetch a filing, and extract a section before using the server in production workflows.
+    Resolve an issuer, fetch a filing, and extract a section before calling the setup done.
   </Step>
 </Steps>
 
@@ -57,7 +64,8 @@ That payload includes:
 ### Claude Code
 
 ```bash
-claude mcp add --transport streamable-http sec-api https://api.secapi.ai/mcp \
+export SECAPI_API_KEY="<your-api-key>"
+claude mcp add --transport http secapi https://api.secapi.ai/mcp \
   --header "x-api-key: $SECAPI_API_KEY"
 ```
 
@@ -65,7 +73,7 @@ claude mcp add --transport streamable-http sec-api https://api.secapi.ai/mcp \
 
 ```json
 {
-  "sec-api": {
+  "secapi": {
     "url": "https://api.secapi.ai/mcp",
     "headers": {
       "x-api-key": "${SECAPI_API_KEY}"
@@ -74,34 +82,91 @@ claude mcp add --transport streamable-http sec-api https://api.secapi.ai/mcp \
 }
 ```
 
-## Good first tools
+## Good First SEC Tools
 
 - `entities.resolve`
 - `filings.search`
 - `filings.latest`
+- `filings.render`
 - `sections.get`
+- `sections.search`
 - `statements.get`
-- `market.snapshots`
-- `macro.search`
-- `macro.indicators`
-- `macro.high_signal_pack`
-- `macro.releases`
-- `macro.calendar`
-- `macro.forecasts`
-- `macro.regimes`
-- `macro.credit_ratings`
-- `macro.country_report`
-- `factors.returns`
-- `factors.history`
-- `factors.sparklines`
-- `factors.extreme_moves`
-- `factors.extreme_pairs`
-- `factors.valuations`
-- `factors.valuation_stocks`
-- `portfolio.analyze`
-- `portfolio.attribution`
-- `portfolio.hedge`
-- `intelligence.query`
+- `facts.get`
+- `owners.get_13f`
+- `owners.institutional_holders`
+- `insiders.list`
+- `forms.list_144`
+- `comp.list`
+- `companies.financials`
+- `companies.ratios`
+- `intelligence.footnotes`
+
+## Agent Recipes
+
+### Claude Code
+
+```bash
+claude mcp add --transport http secapi https://api.secapi.ai/mcp \
+  --header "x-api-key: $SECAPI_API_KEY"
+```
+
+Then ask:
+
+<Prompt>
+Use SEC API MCP to resolve AAPL, fetch the latest 10-K, extract Item 1A, read annual income statements, and produce a compact diligence brief. Preserve accessionNumber, filingDate, sourceUrl, requestId, freshness, and materialization metadata.
+</Prompt>
+
+### OpenAI Agents
+
+Register `https://api.secapi.ai/mcp` as a streamable HTTP MCP server with an `x-api-key` header. Use `filings.latest`, `sections.get`, `statements.get`, and `owners.institutional_holders` as read-only tools. Prefer compact citations over copying full filing text into the model context.
+
+<Prompt>
+You have SEC API MCP tools. For NVDA, return the latest 10-K, Item 1A risks, income statement highlights, top institutional holders, and any recent Form 144 proposed sale filings. Use only compact fields and cite every claim with accession number and filing URL.
+</Prompt>
+
+### Cursor or Codex-Style Agents
+
+Store the MCP server in the project-level MCP config, then make the agent prove the install with one issuer, one filing, one section, one statement, and one ownership call before it edits code.
+
+```json
+{
+  "mcpServers": {
+    "secapi": {
+      "url": "https://api.secapi.ai/mcp",
+      "headers": {
+        "x-api-key": "${SECAPI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Generic MCP Clients
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "secapi-workflow-1",
+  "method": "tools/call",
+  "params": {
+    "name": "sections.get",
+    "arguments": {
+      "ticker": "AAPL",
+      "form": "10-K",
+      "sectionKey": "item_1a",
+      "mode": "compact"
+    }
+  }
+}
+```
+
+## Auth and error shape
+
+`GET /mcp` is public discovery metadata. Use it to confirm the deployed transport, auth expectations, and tool/resource summary before configuring a client.
+
+`POST /mcp` is the authenticated JSON-RPC transport. Send machine credentials with the `x-api-key` header. Missing or invalid credentials fail before JSON-RPC dispatch and return REST-style auth errors; a missing key returns HTTP `401` with `code: "missing_api_key"`.
+
+Transport-level gates such as auth, generic rate limits, billing, or entitlement checks can fail before JSON-RPC dispatch and use REST-style error bodies. Once the request reaches JSON-RPC dispatch, protocol, tool, AI quota, timeout, and resource failures return JSON-RPC error envelopes. Preserve `error.data.requestId` and `error.data.traceparent` from those envelopes when opening a support ticket; those fields identify the API request and distributed trace behind the failed MCP turn.
 
 ## AI query quota
 
@@ -125,36 +190,11 @@ MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhance
 }
 ```
 
-When the quota is exhausted, hosted MCP returns HTTP `429` with JSON-RPC error data such as `code: "ai_query_quota_exceeded"`. Treat quota exhaustion as non-retryable until reset or plan upgrade. If a tool circuit is open, retry only after availability backoff.
+When the quota is exhausted, hosted MCP returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`. Treat `-32004` as retryable timeout and `-32005` as non-retryable until quota reset or plan upgrade. If a tool circuit is open, hosted MCP returns HTTP `503` with JSON-RPC error code `-32006` and `error.data.code: "mcp_tool_circuit_open"`; retry it only after availability backoff.
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Set up SEC API hosted MCP in this MCP-aware client. Register the streamable HTTP MCP endpoint, resolve AAPL, fetch the latest 10-K, extract Item 1A, and return the result with requestId, provenance, freshness, and materialization metadata intact.
+<Prompt>
+Set up SEC API hosted MCP in this MCP-aware client. Register the streamable HTTP MCP endpoint, resolve AAPL, fetch the latest 10-K, extract Item 1A, read annual income statements, and return the result with requestId, accessionNumber, filingDate, sourceUrl, provenance, freshness, and materialization metadata intact.
 </Prompt>
-
-## Macro Workflow
-
-Use this sequence when an agent needs macro context for a company, factor, or portfolio analysis:
-
-1. Call `macro.search` with a natural-language query such as `inflation` or `policy rate`.
-2. Call `macro.high_signal_pack` with `country: "US"` for the compact country pack.
-3. Call `macro.calendar` for upcoming scheduled releases and `macro.releases` for released history.
-4. Call `macro.forecasts` and `macro.regimes` for forward and backdrop context.
-5. Call `macro.country_report` when the agent needs one compact rollup.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "macro_workflow",
-  "method": "tools/call",
-  "params": {
-    "name": "macro.high_signal_pack",
-    "arguments": {
-      "country": "US",
-      "response_mode": "compact"
-    }
-  }
-}
-```
 
 ## Example tool call
 
@@ -164,12 +204,12 @@ Use this sequence when an agent needs macro context for a company, factor, or po
   "id": 1,
   "method": "tools/call",
   "params": {
-    "name": "intelligence.query",
+    "name": "sections.get",
     "arguments": {
-      "query": "Decompose AAPL's last 6M return into factors, identify unusual factor moves, then suggest hedges.",
-      "entities": ["AAPL"],
-      "lookback": "6m",
-      "responseMode": "compact_json_and_md"
+      "ticker": "AAPL",
+      "form": "10-K",
+      "sectionKey": "item_1a",
+      "mode": "compact"
     }
   }
 }

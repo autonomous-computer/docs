@@ -21,17 +21,9 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/segmented-revenues?ticker=PFE&period=q&segment_type=geographic&limit=3&submission_file_limit=4"
+  "https://api.secapi.ai/v1/statements/segmented-revenues"
 ```
 </RequestExample>
-
-## Query parameters
-
-- `ticker`, `symbol`, or `cik` identifies the issuer. `symbol` is accepted as an alias for `ticker`.
-- `period=annual` returns annual revenue segments. `period=quarterly`, `period=quarter`, and `period=q` return quarterly revenue segments.
-- `segment_type` can be `geographic`, `product`, or `other`.
-- `limit`, `segment_limit`, or `segmentLimit` caps segment periods returned, up to `6`.
-- `submission_file_limit` caps recent SEC submission files inspected, up to `6`. `submissionFileLimit` is also accepted.
 
 ## Example response
 
@@ -84,7 +76,7 @@ curl -X GET \
     "retrievedAt": "2026-05-02T00:00:00.000Z",
     "parserVersion": "secapi-segmented-statements-v1"
   },
-  "requestId": "req_example"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
@@ -92,12 +84,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/statements/segmented-revenues with `ticker`, `symbol`, or `cik` and optional `segment_type=geographic|product|other` to return bounded filing-derived revenue segment history. Use `period=quarter`, `period=q`, or `period=quarterly` for quarterly segments. Preserve `requestId`, `traceparent`, `provenance`, and record-level `accessionNumber` values.
+Use SEC API GET /v1/statements/segmented-revenues to return filing-derived segmented revenue history with XBRL product or geography dimensions, capability state, and trace references when issuers disclose them. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- invalid `period` and `segment_type` values return `400 invalid_query_parameter` with `details.acceptedValues`
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

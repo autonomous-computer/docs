@@ -8121,6 +8121,125 @@
         "x-secapi-anonymous-read": true
       }
     },
+    "/v1/macro/status": {
+      "get": {
+        "summary": "Return macro source-health, country coverage, freshness, and source-rights posture from validation artifacts",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional ISO country code filter (e.g. US, JP, CN)."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Defaults to compact country/source status; pass response_mode=verbose or view=full for indicator-level rows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroStatus"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Compact response",
+                    "value": {
+                      "object": "macro_status",
+                      "status": "ready",
+                      "generatedAt": "2026-06-09T22:15:00.000Z",
+                      "countries": [
+                        {
+                          "country": "US",
+                          "status": "ready",
+                          "seriesCount": 32,
+                          "freshCount": 32,
+                          "staleCount": 0,
+                          "sourceErrorCount": 0,
+                          "fallbackCount": 0,
+                          "latestMaterializedAt": "2026-06-01T00:00:00.000Z",
+                          "oldestFreshnessAgeHours": 560,
+                          "topAlerts": []
+                        }
+                      ],
+                      "sources": [
+                        {
+                          "sourceKey": "fred",
+                          "status": "ready",
+                          "indicatorCount": 33,
+                          "unexpectedFallbackCount": 0,
+                          "sourceErrorCount": 0
+                        }
+                      ],
+                      "alerts": [],
+                      "methodology": {
+                        "id": "macro_status_artifact_v1",
+                        "version": "v1",
+                        "summary": "Macro status is derived from source-health, source-coverage, and macro data-plane validation artifacts."
+                      },
+                      "sourceRights": {
+                        "posture": "public_safe_summary",
+                        "summary": "Status exposes source posture counts and freshness health, not credentials or raw vendor payloads."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "macro.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
     "/v1/macro/regimes": {
       "get": {
         "summary": "Return the current macro regime classification for a country using the canonical SEC API macro overlay",
@@ -15039,6 +15158,222 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/factors/macro-sensitivity": {
+      "get": {
+        "summary": "Return explainable heuristic factor sensitivity to macro scenarios and shocks",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "US"
+            },
+            "description": "ISO country code for regime context."
+          },
+          {
+            "name": "scenario_key",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "us_recession",
+                "higher_for_longer",
+                "china_growth_scare"
+              ],
+              "default": "higher_for_longer"
+            },
+            "description": "Scenario key (alias: scenarioKey)."
+          },
+          {
+            "name": "keys",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated factor key filter."
+          },
+          {
+            "name": "indicators",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional comma-separated macro indicator keys used for labeling rows."
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "6m"
+            },
+            "description": "Lookback window for active regime context."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "description": "Maximum sensitivity rows to return."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorMacroSensitivity"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "factor_macro_sensitivity",
+                      "id": "factor_macro_sensitivity_US_higher_for_longer",
+                      "asOf": "2026-06-09T22:15:00.000Z",
+                      "country": "US",
+                      "scenarioKey": "higher_for_longer",
+                      "rows": [
+                        {
+                          "factorKey": "MOMENTUM",
+                          "indicatorKey": null,
+                          "macroShockKey": "policyRate",
+                          "sensitivity": -0.028,
+                          "direction": "headwind",
+                          "confidence": "medium",
+                          "rationale": "MOMENTUM is directly shocked in the Higher-for-longer rates scenario.",
+                          "observationCount": null,
+                          "methodology": "macro_factor_sensitivity_v1_heuristic"
+                        }
+                      ],
+                      "topTailwinds": [
+                        "VALUE"
+                      ],
+                      "topHeadwinds": [
+                        "MOMENTUM"
+                      ],
+                      "limitations": [
+                        "v1 sensitivity is heuristic and explainable; it is not a point-in-time empirical regression."
+                      ],
+                      "summaryMd": "US Higher-for-longer rates sensitivity highlights 1 factor headwind and 1 tailwind.",
+                      "dataAsOf": "2026-06-09",
+                      "freshnessStatus": "fresh",
+                      "methodologyVersion": "secapi_factor_returns_v1",
+                      "materializationVersion": "2026-06-09",
+                      "provenance": {
+                        "source": "secapi_factor_pipeline",
+                        "sourceLabel": "SecAPI factor pipeline",
+                        "accessionNumber": null,
+                        "filingUrl": "https://docs.secapi.ai/factors/methodology",
+                        "acceptedAt": null,
+                        "retrievedAt": "2026-06-09T22:15:00.000Z",
+                        "parserVersion": "secapi-factor-pipeline"
+                      },
+                      "freshness": {
+                        "status": "fresh",
+                        "asOf": "2026-06-09T22:15:00.000Z",
+                        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+                        "lagMs": 2700000
+                      },
+                      "materialization": {
+                        "parserVersion": "secapi-factor-pipeline",
+                        "materializationVersion": "2026-06-09"
+                      },
+                      "sourceRights": {
+                        "source": "secapi_owned_factor_pipeline",
+                        "sourceLabel": "SecAPI factor pipeline",
+                        "posture": "public_safe",
+                        "publicAvailability": "public",
+                        "contractStatus": "approved",
+                        "restrictions": [],
+                        "notes": "SecAPI-owned derived factor data."
+                      },
+                      "methodology": {
+                        "id": "secapi_factor_returns",
+                        "version": "v1",
+                        "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+                        "confidence": "high",
+                        "launchState": "beta",
+                        "inputs": [
+                          "secapi_factor_returns",
+                          "secapi_factor_exposures",
+                          "market_calendar"
+                        ],
+                        "validation": {
+                          "launchHistoryFloor": "2015-01-01",
+                          "marketCalendarAware": true
+                        }
+                      },
+                      "revision": {
+                        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+                        "retrievedAt": "2026-06-09T22:15:00.000Z",
+                        "vintageId": "2026-06-09",
+                        "revisedFrom": null
+                      },
+                      "degradedState": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "factors.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
     "/v1/portfolio/stress-test": {
       "post": {
         "summary": "Run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs",
@@ -15129,6 +15464,7 @@
                       "asOf": "2026-06-09T22:15:00.000Z",
                       "scenarioKey": "higher_for_longer",
                       "scenarioLabel": "Higher for Longer",
+                      "scenarioSource": "catalog",
                       "estimatedDrawdownPercent": -7.4,
                       "factorShocks": {
                         "VALUE": 0.02,
@@ -15139,6 +15475,17 @@
                         "rates": 0.75,
                         "credit_spreads": 0.35
                       },
+                      "contributions": [
+                        {
+                          "factorKey": "MOMENTUM",
+                          "beta": 1.1,
+                          "shock": -0.04,
+                          "contribution": -0.044,
+                          "direction": "headwind",
+                          "rationale": "MOMENTUM contribution equals current portfolio beta multiplied by the scenario shock.",
+                          "sensitivitySource": "factor_v1_macro_conditioned_portfolio_stress"
+                        }
+                      ],
                       "regime": null,
                       "conditioningNotes": [
                         "Uses bounded factor shocks from historical higher-rate episodes."
@@ -15230,6 +15577,175 @@
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
         "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/portfolio/stress-test/scenarios": {
+      "get": {
+        "summary": "List supported macro-conditioned portfolio stress scenarios before running a stress test",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional country context for supported-country labeling."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioStressScenarioCatalog"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "portfolio_stress_scenario_catalog",
+                      "asOf": "2026-06-09T22:15:00.000Z",
+                      "scenarios": [
+                        {
+                          "scenarioKey": "higher_for_longer",
+                          "label": "Higher-for-longer rates",
+                          "macroShocks": {
+                            "growth": -0.01,
+                            "unemployment": 0.004,
+                            "inflation": 0.006,
+                            "policyRate": 0.015
+                          },
+                          "factorShocks": {
+                            "VALUE": 0.03,
+                            "MOMENTUM": -0.04,
+                            "QUALITY": 0.01,
+                            "RATES": 0.04
+                          },
+                          "supportedCountries": [
+                            "US",
+                            "JP",
+                            "CN"
+                          ],
+                          "methodology": "factor_v1_macro_conditioned_portfolio_stress",
+                          "confidence": "medium",
+                          "limitations": [
+                            "Scenario shocks are deterministic launch-model assumptions, not probability-weighted forecasts."
+                          ],
+                          "sourceVersion": "2026-03-26.1"
+                        }
+                      ],
+                      "summaryMd": "Portfolio stress scenario catalog lists deterministic macro/factor shocks supported by the stress-test endpoint.",
+                      "dataAsOf": "2026-06-09",
+                      "freshnessStatus": "fresh",
+                      "methodologyVersion": "secapi_factor_returns_v1",
+                      "materializationVersion": "2026-06-09",
+                      "provenance": {
+                        "source": "secapi_factor_pipeline",
+                        "sourceLabel": "SecAPI factor pipeline",
+                        "accessionNumber": null,
+                        "filingUrl": "https://docs.secapi.ai/factors/methodology",
+                        "acceptedAt": null,
+                        "retrievedAt": "2026-06-09T22:15:00.000Z",
+                        "parserVersion": "secapi-factor-pipeline"
+                      },
+                      "freshness": {
+                        "status": "fresh",
+                        "asOf": "2026-06-09T22:15:00.000Z",
+                        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+                        "lagMs": 2700000
+                      },
+                      "materialization": {
+                        "parserVersion": "secapi-factor-pipeline",
+                        "materializationVersion": "2026-06-09"
+                      },
+                      "sourceRights": {
+                        "source": "secapi_owned_factor_pipeline",
+                        "sourceLabel": "SecAPI factor pipeline",
+                        "posture": "public_safe",
+                        "publicAvailability": "public",
+                        "contractStatus": "approved",
+                        "restrictions": [],
+                        "notes": "SecAPI-owned derived factor data."
+                      },
+                      "methodology": {
+                        "id": "secapi_factor_returns",
+                        "version": "v1",
+                        "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+                        "confidence": "high",
+                        "launchState": "beta",
+                        "inputs": [
+                          "secapi_factor_returns",
+                          "secapi_factor_exposures",
+                          "market_calendar"
+                        ],
+                        "validation": {
+                          "launchHistoryFloor": "2015-01-01",
+                          "marketCalendarAware": true
+                        }
+                      },
+                      "revision": {
+                        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+                        "retrievedAt": "2026-06-09T22:15:00.000Z",
+                        "vintageId": "2026-06-09",
+                        "revisedFrom": null
+                      },
+                      "degradedState": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "portfolio.stress_scenarios",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
       }
     },
     "/v1/portfolio/hedge": {
@@ -17084,6 +17600,39 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CountryReportRequest"
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "country": "US",
+                    "lookback": "18m",
+                    "horizon": "6m",
+                    "briefingMode": "portfolio",
+                    "symbols": [
+                      "AAPL",
+                      "NVDA"
+                    ],
+                    "holdings": [
+                      {
+                        "symbol": "AAPL",
+                        "weight": 0.35
+                      },
+                      {
+                        "symbol": "MSFT",
+                        "weight": 0.3
+                      },
+                      {
+                        "symbol": "NVDA",
+                        "weight": 0.2
+                      },
+                      {
+                        "symbol": "JPM",
+                        "weight": 0.15
+                      }
+                    ]
+                  }
+                }
               }
             }
           }
@@ -22034,7 +22583,56 @@
       "AgentBootstrapToken": {},
       "AgentBootstrap": {},
       "InstallPayload": {},
-      "Error": {},
+      "Error": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "code",
+          "type",
+          "message",
+          "requestId",
+          "details"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "docsUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
       "EntityList": {},
       "FilingList": {},
       "SectionList": {},
@@ -22402,7 +23000,92 @@
         },
         "additionalProperties": true
       },
-      "CountryReportRequest": {},
+      "CountryReportRequest": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12,
+            "default": "US"
+          },
+          "lookback": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "symbols": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "holdings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 250,
+            "items": {
+              "type": "object",
+              "required": [
+                "symbol",
+                "weight"
+              ],
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "weight": {
+                  "type": "number"
+                },
+                "shares": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "costBasis": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "horizon": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "3m",
+              "6m",
+              "12m",
+              "18m"
+            ],
+            "default": "6m"
+          },
+          "briefingMode": {
+            "type": "string",
+            "enum": [
+              "macro",
+              "portfolio",
+              "company"
+            ],
+            "default": "macro"
+          }
+        },
+        "additionalProperties": false
+      },
       "PortfolioIntelligenceRequest": {
         "type": "object",
         "required": [
@@ -26221,6 +26904,12 @@
                 "type": "null"
               }
             ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -28428,6 +29117,12 @@
                 "type": "null"
               }
             ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -28788,6 +29483,12 @@
                 "type": "null"
               }
             ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -30856,6 +31557,38 @@
           "scenarioKey": {
             "type": "string"
           },
+          "customScenario": {
+            "type": "object",
+            "required": [
+              "label"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 120
+              },
+              "factorShocks": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number",
+                  "minimum": -1,
+                  "maximum": 1
+                },
+                "default": {}
+              },
+              "macroShocks": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number",
+                  "minimum": -1,
+                  "maximum": 1
+                },
+                "default": {}
+              }
+            },
+            "additionalProperties": false
+          },
           "holdings": {
             "type": "array",
             "minItems": 1,
@@ -30928,6 +31661,13 @@
           "scenarioLabel": {
             "type": "string"
           },
+          "scenarioSource": {
+            "type": "string",
+            "enum": [
+              "catalog",
+              "ad_hoc"
+            ]
+          },
           "estimatedDrawdownPercent": {
             "type": "number"
           },
@@ -30941,6 +31681,50 @@
             "type": "object",
             "additionalProperties": {
               "type": "number"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "factorKey",
+                "beta",
+                "shock",
+                "contribution",
+                "direction",
+                "rationale",
+                "sensitivitySource"
+              ],
+              "properties": {
+                "factorKey": {
+                  "type": "string"
+                },
+                "beta": {
+                  "type": "number"
+                },
+                "shock": {
+                  "type": "number"
+                },
+                "contribution": {
+                  "type": "number"
+                },
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "headwind",
+                    "tailwind",
+                    "neutral"
+                  ]
+                },
+                "rationale": {
+                  "type": "string"
+                },
+                "sensitivitySource": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
             }
           },
           "regime": {
@@ -31463,7 +32247,835 @@
         "additionalProperties": false
       },
       "WatchlistIntelligenceBundle": {},
-      "CountryReport": {},
+      "PortfolioStressScenarioCatalog": {
+        "type": "object",
+        "required": [
+          "object",
+          "asOf",
+          "scenarios",
+          "summaryMd"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "portfolio_stress_scenario_catalog"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "scenarioKey",
+                "label",
+                "macroShocks",
+                "factorShocks",
+                "supportedCountries",
+                "methodology",
+                "confidence",
+                "limitations",
+                "sourceVersion"
+              ],
+              "properties": {
+                "scenarioKey": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "macroShocks": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                },
+                "factorShocks": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                },
+                "supportedCountries": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "methodology": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "string",
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "limitations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "sourceVersion": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorMacroSensitivity": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "asOf",
+          "country",
+          "rows",
+          "topTailwinds",
+          "topHeadwinds",
+          "limitations",
+          "summaryMd"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "factor_macro_sensitivity"
+          },
+          "id": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "scenarioKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "factorKey",
+                "sensitivity",
+                "direction",
+                "confidence",
+                "rationale",
+                "methodology"
+              ],
+              "properties": {
+                "factorKey": {
+                  "type": "string"
+                },
+                "indicatorKey": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "macroShockKey": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sensitivity": {
+                  "type": "number"
+                },
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "headwind",
+                    "tailwind",
+                    "neutral"
+                  ]
+                },
+                "confidence": {
+                  "type": "string",
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "rationale": {
+                  "type": "string"
+                },
+                "observationCount": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "methodology": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "topTailwinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "topHeadwinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CountryReport": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "asOf",
+          "country",
+          "lookback",
+          "indicators",
+          "releases",
+          "forecasts",
+          "likelyDrivers",
+          "summaryMd"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "country_report"
+          },
+          "id": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "indicators": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MacroObservation"
+            }
+          },
+          "releases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MacroRelease"
+            }
+          },
+          "forecasts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MacroForecast"
+            }
+          },
+          "regime": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MacroRegime"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "likelyDrivers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "briefing": {
+            "type": "object",
+            "required": [
+              "topLine",
+              "regime",
+              "keyDrivers",
+              "watchItems",
+              "investmentImplications",
+              "dataQuality"
+            ],
+            "properties": {
+              "topLine": {
+                "type": "string"
+              },
+              "regime": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "label": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "confidence": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "low",
+                          "medium",
+                          "high"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "keyDrivers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "theme",
+                    "label",
+                    "implication"
+                  ],
+                  "properties": {
+                    "theme": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "latest": {},
+                    "direction": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "implication": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "watchItems": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "label",
+                    "rationale"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "scheduledAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rationale": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "investmentImplications": {
+                "type": "object",
+                "required": [
+                  "factors",
+                  "sectors",
+                  "country",
+                  "portfolio",
+                  "symbols"
+                ],
+                "properties": {
+                  "factors": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "sectors": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "country": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "portfolio": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "symbols": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "symbol",
+                        "lens"
+                      ],
+                      "properties": {
+                        "symbol": {
+                          "type": "string"
+                        },
+                        "lens": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "dataQuality": {
+                "type": "object",
+                "required": [
+                  "status",
+                  "indicatorCount",
+                  "releaseCount",
+                  "forecastCount",
+                  "degraded",
+                  "notes"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "indicatorCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "releaseCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "forecastCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "sourcePosture": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "fallbackCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "degraded": {
+                    "type": "boolean"
+                  },
+                  "notes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MacroStatus": {
+        "type": "object",
+        "required": [
+          "object",
+          "status",
+          "generatedAt",
+          "countries",
+          "sources",
+          "alerts",
+          "methodology",
+          "sourceRights"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "macro_status"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "degraded",
+              "stale",
+              "unsupported"
+            ]
+          },
+          "generatedAt": {
+            "type": "string"
+          },
+          "countries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "country",
+                "status",
+                "seriesCount",
+                "freshCount",
+                "staleCount",
+                "sourceErrorCount",
+                "fallbackCount",
+                "latestMaterializedAt",
+                "oldestFreshnessAgeHours",
+                "topAlerts"
+              ],
+              "properties": {
+                "country": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ready",
+                    "degraded",
+                    "stale",
+                    "unsupported"
+                  ]
+                },
+                "seriesCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "freshCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "staleCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sourceErrorCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "fallbackCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "latestMaterializedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "oldestFreshnessAgeHours": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "topAlerts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "sourceKey",
+                "status",
+                "indicatorCount",
+                "unexpectedFallbackCount",
+                "sourceErrorCount"
+              ],
+              "properties": {
+                "sourceKey": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ready",
+                    "degraded",
+                    "stale",
+                    "unsupported"
+                  ]
+                },
+                "indicatorCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "unexpectedFallbackCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sourceErrorCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "methodology": {
+            "type": "object",
+            "required": [
+              "id",
+              "version",
+              "summary"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "sourceRights": {
+            "type": "object",
+            "required": [
+              "posture",
+              "summary"
+            ],
+            "properties": {
+              "posture": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "indicators": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "FootnoteIntelligenceRequest": {},
       "FootnoteIntelligenceResult": {},
       "FootnoteIntelligenceCollection": {},

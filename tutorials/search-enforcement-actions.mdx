@@ -31,10 +31,10 @@ from secapi_client import SecApiClient
 
 client = SecApiClient(api_key="your-api-key")
 
-actions = client.events.enforcement(limit=5)
+actions = client.enforcement_actions(limit=5)
 
-for action in actions.data:
-    print(f"{action.date} | {action.respondent_name} | {action.violation_type}")
+for action in actions["data"]:
+    print(f"{action['publishedAt']} | {action['sourceType']} | {action['title']}")
 ```
 
 ### JavaScript
@@ -46,11 +46,11 @@ const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY!,
 });
 
-const actions = await client.events.enforcement({ limit: 5 });
+const actions = await client.enforcementActions({ limit: 5 });
 
 for (const action of actions.data) {
   console.log(
-    `${action.date} | ${action.respondentName} | ${action.violationType}`
+    `${action.publishedAt} | ${action.sourceType} | ${action.title}`
   );
 }
 ```
@@ -79,32 +79,30 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 ### Python
 
 ```python
-insider_cases = client.events.enforcement(
+insider_cases = client.enforcement_actions(
     violation_type="insider_trading",
     limit=10,
 )
 
-for case in insider_cases.data:
-    print(f"{case.date} | {case.respondent_name}")
-    print(f"  Relief: {case.relief_sought}")
-    print(f"  Penalty: ${case.penalty_amount:,.0f}" if case.penalty_amount else "  Penalty: TBD")
+for case in insider_cases["data"]:
+    print(f"{case['publishedAt']} | {case['title']}")
+    print(f"  Release: {case['releaseNumber'] or 'N/A'}")
+    print(f"  URL: {case['documentUrl']}")
     print()
 ```
 
 ### JavaScript
 
 ```ts
-const insiderCases = await client.events.enforcement({
-  violationType: "insider_trading",
+const insiderCases = await client.enforcementActions({
+  violation_type: "insider_trading",
   limit: 10,
 });
 
 for (const c of insiderCases.data) {
-  console.log(`${c.date} | ${c.respondentName}`);
-  console.log(`  Relief: ${c.reliefSought}`);
-  console.log(
-    `  Penalty: ${c.penaltyAmount ? `$${c.penaltyAmount.toLocaleString()}` : "TBD"}`
-  );
+  console.log(`${c.publishedAt} | ${c.title}`);
+  console.log(`  Release: ${c.releaseNumber ?? "N/A"}`);
+  console.log(`  URL: ${c.documentUrl}`);
 }
 ```
 
@@ -116,37 +114,39 @@ Search enforcement actions within a specific time window.
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?query=2024+enforcement+actions&limit=20"
+  "https://api.secapi.ai/v1/events/enforcement?date_from=2024-01-01&date_to=2024-12-31&limit=20"
 ```
 
 ### Python
 
 ```python
-annual_actions = client.events.enforcement(
-    query="2024 enforcement actions",
+annual_actions = client.enforcement_actions(
+    date_from="2024-01-01",
+    date_to="2024-12-31",
     limit=20,
 )
 
-# Group by violation type
+# Group by source type
 from collections import Counter
-types = Counter(a.violation_type for a in annual_actions.data)
+types = Counter(a["sourceType"] for a in annual_actions["data"])
 
 print("2024 Enforcement Breakdown:")
-for vtype, count in types.most_common():
-    print(f"  {vtype}: {count}")
+for source_type, count in types.most_common():
+    print(f"  {source_type}: {count}")
 ```
 
 ### JavaScript
 
 ```ts
-const annualActions = await client.events.enforcement({
-  query: "2024 enforcement actions",
+const annualActions = await client.enforcementActions({
+  date_from: "2024-01-01",
+  date_to: "2024-12-31",
   limit: 20,
 });
 
 const types: Record<string, number> = {};
 for (const a of annualActions.data) {
-  types[a.violationType] = (types[a.violationType] || 0) + 1;
+  types[a.sourceType] = (types[a.sourceType] || 0) + 1;
 }
 
 console.log("2024 Enforcement Breakdown:");

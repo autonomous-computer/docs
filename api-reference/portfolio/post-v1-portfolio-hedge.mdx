@@ -1,12 +1,12 @@
 # POST /v1/portfolio/hedge
 
-Return constrained factor hedge candidates for a portfolio with compact residual exposure and trust metadata
+Return bounded benchmark-instrument factor hedge candidates for a portfolio with compact residual exposure and trust metadata
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -19,21 +19,8 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{
-    "holdings": [
-      {"symbol": "AAPL", "weight": 0.35},
-      {"symbol": "MSFT", "weight": 0.30},
-      {"symbol": "NVDA", "weight": 0.20},
-      {"symbol": "JPM", "weight": 0.15}
-    ],
-    "objective": "factor_neutral",
-    "constraints": {
-      "maxHedges": 3,
-      "maxPositionWeight": 0.10,
-      "allowedInstrumentTypes": ["etf"]
-    }
-  }' \
-  "https://api.secapi.ai/v1/portfolio/hedge?response_mode=compact"
+  -d '{"country":"US","lookback":"12m","category":"style","keys":["VALUE","MOMENTUM","QUALITY"],"objective":"factor_neutral","mode":"compact","constraints":{"maxHedges":3,"maxPositionWeight":0.08,"maxTotalHedgeWeight":0.2,"maxSectorWeight":0.35,"hedgeIntensity":0.75,"longOnly":false,"allowedInstrumentTypes":["etf"],"customUniverse":["QUAL","MTUM","VLUE","USMV"],"targetExposures":{"VALUE":0,"MOMENTUM":0.1},"minConfidence":"medium","minLiquidityUsd":10000000,"excludedSectors":[]},"holdings":[{"symbol":"AAPL","weight":0.35},{"symbol":"MSFT","weight":0.3},{"symbol":"NVDA","weight":0.2},{"symbol":"JPM","weight":0.15}]}' \
+  "https://api.secapi.ai/v1/portfolio/hedge?response_mode=compact&include=trust"
 ```
 </RequestExample>
 
@@ -42,7 +29,183 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
+  "object": "portfolio_hedge",
+  "id": "portfolio_hedge:growth-quality-core:2026-06-09",
+  "analysisId": "portfolio_analysis:growth-quality-core:2026-06-09",
+  "asOf": "2026-06-09T22:15:00.000Z",
+  "country": "US",
+  "lookback": "12m",
+  "objective": "factor_neutral",
+  "mode": "compact",
+  "constraints": {
+    "maxHedges": 3,
+    "maxPositionWeight": 0.08,
+    "maxTotalHedgeWeight": 0.2,
+    "maxSectorWeight": 0.35,
+    "hedgeIntensity": 0.75,
+    "longOnly": false,
+    "allowedInstrumentTypes": [
+      "etf"
+    ],
+    "customUniverse": [
+      "QUAL",
+      "MTUM",
+      "VLUE",
+      "USMV"
+    ],
+    "targetExposures": {
+      "VALUE": 0,
+      "MOMENTUM": 0.1
+    },
+    "minConfidence": "medium",
+    "minLiquidityUsd": 10000000,
+    "excludedSectors": []
+  },
+  "holdings": [
+    {
+      "symbol": "AAPL",
+      "weight": 0.35
+    },
+    {
+      "symbol": "MSFT",
+      "weight": 0.3
+    },
+    {
+      "symbol": "NVDA",
+      "weight": 0.2
+    },
+    {
+      "symbol": "JPM",
+      "weight": 0.15
+    }
+  ],
+  "targetExposures": [
+    {
+      "object": "portfolio_hedge_target_exposure",
+      "factorKey": "VALUE",
+      "factorName": "Value",
+      "factorCategory": "style",
+      "beta": -0.42,
+      "targetExposureDelta": 0.42,
+      "proposedExposureDelta": 0.18,
+      "residualBeta": -0.24,
+      "hedged": true,
+      "skipReason": null
+    }
+  ],
+  "hedges": [
+    {
+      "object": "portfolio_hedge_candidate",
+      "rank": 1,
+      "factorKey": "VALUE",
+      "factorName": "Value",
+      "factorCategory": "style",
+      "symbol": "VLUE",
+      "instrumentType": "etf",
+      "action": "long",
+      "recommendedWeight": 0.08,
+      "targetExposureDelta": 0.42,
+      "expectedExposureDelta": {
+        "VALUE": 0.18
+      },
+      "residualBeta": -0.24,
+      "constraintStatus": "ok",
+      "constraintsApplied": [
+        "maxPositionWeight"
+      ],
+      "liquidityUsd": 145000000,
+      "estimatedCostBps": 4,
+      "sectorKey": null,
+      "rationale": "Adds liquid value exposure without increasing single-name concentration.",
+      "confidence": "medium"
+    }
+  ],
+  "residualExposure": {
+    "VALUE": -0.24,
+    "MOMENTUM": 0.37
+  },
+  "exposures": [
+    {
+      "object": "factor_exposure",
+      "id": "factor_exposure:AAPL:VALUE:2026-06-09",
+      "subjectType": "security",
+      "subjectKey": "AAPL",
+      "factorKey": "VALUE",
+      "beta": -0.42,
+      "percentile": 18.2,
+      "confidence": "high",
+      "modelName": "secapi_stock_basket_factor_model_v1",
+      "asOf": "2026-06-09T22:15:00.000Z",
+      "responseMode": "compact",
+      "expansionHints": [
+        "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+      ]
+    }
+  ],
+  "optimizationNotes": [
+    "Hedge candidates are bounded by liquidity and max total hedge weight."
+  ],
+  "factorNeutralPlan": [
+    "Add VLUE at 8% funded pro rata from overweight growth names."
+  ],
+  "summaryMd": "The suggested hedge reduces negative VALUE beta while keeping total hedge weight under 20%.",
+  "responseMode": "compact",
+  "dataAsOf": "2026-06-09",
+  "freshnessStatus": "fresh",
+  "methodologyVersion": "secapi_portfolio_hedge_v1",
+  "materializationVersion": "2026-06-09",
+  "provenance": {
+    "source": "secapi_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "accessionNumber": null,
+    "filingUrl": "https://docs.secapi.ai/factors/methodology",
+    "acceptedAt": null,
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "parserVersion": "secapi-factor-pipeline"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "lagMs": 2700000
+  },
+  "materialization": {
+    "parserVersion": "secapi-factor-pipeline",
+    "materializationVersion": "2026-06-09"
+  },
+  "sourceRights": {
+    "source": "secapi_owned_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "posture": "public_safe",
+    "publicAvailability": "public",
+    "contractStatus": "approved",
+    "restrictions": [],
+    "notes": "SecAPI-owned derived factor data."
+  },
+  "methodology": {
+    "id": "secapi_factor_returns",
+    "version": "v1",
+    "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+    "confidence": "high",
+    "launchState": "beta",
+    "inputs": [
+      "secapi_factor_returns",
+      "secapi_factor_exposures",
+      "market_calendar"
+    ],
+    "validation": {
+      "launchHistoryFloor": "2015-01-01",
+      "marketCalendarAware": true
+    }
+  },
+  "revision": {
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "vintageId": "2026-06-09",
+    "revisedFrom": null
+  },
+  "degradedState": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
@@ -50,12 +213,12 @@ curl -X POST \
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API POST /v1/portfolio/hedge to generate constrained hedge candidates for unwanted factor exposures. Preserve candidate instruments, expected exposure reduction, residual exposure, constraints, freshness, and methodology metadata. Treat the output as a hedge construction input, not an execution instruction.
+<Prompt>
+Use SEC API POST /v1/portfolio/hedge for bounded benchmark-instrument hedge candidates. Preserve `targetExposures`, `hedges`, `residualExposure`, `constraints`, `optimizationNotes`, `factorNeutralPlan`, `summaryMd`, `freshness`, `methodology`, `requestId`, and `traceparent`. Treat the output as an analytical scenario, not a trade instruction.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

@@ -1,19 +1,15 @@
----
-title: "SEC Filing Types and Exhibits"
----
-
 # SEC Filing Types and Exhibits
 
 <Info>
-This page answers "which SEC EDGAR filing types and exhibits does SEC API support?" It is grounded in the current API and SEC primary sources, not a copied master list of every historical EDGAR submission code.
+This page is the SEC API-specific answer to "which SEC EDGAR filing types and exhibits do you actually support?" It is grounded in the current API surface and SEC primary sources, not a copied master list of every historical EDGAR submission code.
 </Info>
 
 ## How to read this page
 
 - `generic retrieval` means SEC API can search or fetch the filing through the [Filings reference](/api-reference/filings)
-- `workflow support` means SEC API has a purpose-built API that parses or classifies a filing family into a structured output
+- `workflow support` means SEC API has a purpose-built surface that parses or classifies a filing family into a structured output
 - `selected exhibits` means SEC API reads specific exhibit documents inside a workflow, not that it exposes a generic public exhibit-enumeration endpoint
-- `not covered by a dedicated endpoint` means the filing or exhibit may be visible in SEC source documents but does not have a dedicated normalized SEC API contract
+- `not public today` means the filing or exhibit may be visible in SEC source documents but does not yet have a dedicated normalized SEC API contract
 
 ## Current SEC API support by filing family
 
@@ -39,26 +35,26 @@ This page answers "which SEC EDGAR filing types and exhibits does SEC API suppor
 - `8-K/A`: amended current report. Supported in the same workflow families as `8-K` where the parser can use the amended filing.
 - `20-F`: annual report for foreign private issuers. Supported today through generic filing retrieval and statement-company-facts workflows.
 - `40-F`: annual report for certain Canadian issuers. Supported today through generic filing retrieval and statement-company-facts workflows.
-- `6-K`: foreign issuer report. Supported today through generic filing retrieval. There is no dedicated normalized `6-K` workflow yet.
+- `6-K`: foreign issuer report. Supported today through generic filing retrieval. There is no dedicated normalized `6-K` workflow surface yet.
 
 ### Ownership and governance filings
 
-- `3`: initial beneficial ownership statement. Supported through the insider-trading workflow.
-- `4`: statement of changes in beneficial ownership. Supported through the insider-trading workflow and contributes to volatility inputs.
-- `5`: annual statement of changes in beneficial ownership. Supported through the insider-trading workflow and contributes to volatility inputs.
-- `13F-HR`, `13F-HR/A`: institutional holdings reports. Supported through ownership APIs that parse the information-table exhibit.
-- `SC 13D`, `SC 13G` and amendments: beneficial-ownership reports. Supported through the `13d-13g` ownership API.
+- `3`: initial beneficial ownership statement. Supported through the insider-trading workflow surface.
+- `4`: statement of changes in beneficial ownership. Supported through the insider-trading workflow surface and contributes to volatility inputs.
+- `5`: annual statement of changes in beneficial ownership. Supported through the insider-trading workflow surface and contributes to volatility inputs.
+- `13F-HR`, `13F-HR/A`: institutional holdings reports. Supported through the ownership surfaces that parse the information-table exhibit.
+- `SC 13D`, `SC 13G` and amendments: beneficial-ownership reports. Supported through the `13d-13g` ownership surface.
 - `DEF 14A`: definitive proxy statement. Supported through board-composition and executive-compensation workflows.
 
 ### Registration statements, prospectuses, and deal documents
 
 - `S-1`, `S-1/A`: registration statements. Supported through the offerings workflow and generic filing retrieval.
 - `424B1` through `424B5`: prospectus filings. Supported through the offerings workflow and generic filing retrieval.
-- `S-4`, `F-4`, `425`, `DEFM14A`, `PREM14A`, `DEFA14A`, `SC TO-*`: supported today inside the M&A workflow, not as a generic deal-document normalization layer.
+- `S-4`, `F-4`, `425`, `DEFM14A`, `PREM14A`, `DEFA14A`, `SC TO-*`: supported today inside the M&A workflow surface, not as a generic deal-document normalization layer.
 
 ### Fund and adjacent filing families
 
-- `NPORT-P`, `NPORT-EX`: fund holdings support is available through the N-PORT holdings API.
+- `NPORT-P`, `NPORT-EX`: fund holdings support is available through the N-PORT holdings surface.
 - `ABS-EE`, `10-D`, `N-CSR`, `N-CEN`, `N-PX`, `N-MFP*`, `D`, `144`, `1-A`, `C`: these filing families can still appear in generic filing retrieval when the SEC submissions history exposes them, but SEC API does not currently publish dedicated normalized workflow endpoints for them.
 
 ## Exhibit handling in SEC API today
@@ -66,34 +62,34 @@ This page answers "which SEC EDGAR filing types and exhibits does SEC API suppor
 - `13F information-table exhibit`: SEC API loads the 13F XML exhibit inside the institutional ownership workflows rather than exposing it as a standalone exhibit object.
 - `EX-99.*` in earnings materials: SEC API scans selected earnings-related exhibits from `8-K` and `8-K/A` filings to classify release-only, prepared-remarks, and transcript-like coverage.
 - `selected merger and tender-offer exhibits`: SEC API loads a narrow exhibit subset for the M&A workflow when the filing family makes exhibit text materially useful.
-- `XBRL and inline XBRL exhibits`: SEC API uses SEC structured data and filing-linked XBRL context for statements, facts, segmented revenues, and share-float workflows. This is workflow support, not a public raw-exhibit endpoint.
+- `XBRL and inline XBRL exhibits`: SEC API uses SEC structured-data surfaces and filing-linked XBRL context for statements, facts, segmented revenues, and share-float workflows. This is workflow support, not a public raw-exhibit endpoint.
 
 ## Core exhibit taxonomy relevant to SEC API
 
-- `2`: plans of acquisition, reorganization, arrangement, liquidation, or succession. Often relevant to deal workflows, but SEC API does not expose a generic `EX-2.*` parser.
-- `3`: articles of incorporation and bylaws, including `3(i)` and `3(ii)`. Relevant to governance and security-rights context, but not normalized into a dedicated SEC API endpoint today.
-- `4`: instruments defining the rights of security holders, including indentures. Relevant to security-rights analysis, but SEC API does not currently expose a dedicated endpoint for these exhibits.
+- `2`: plans of acquisition, reorganization, arrangement, liquidation, or succession. Often relevant to deal workflows, but SEC API does not yet expose a generic `EX-2.*` parser.
+- `3`: articles of incorporation and bylaws, including `3(i)` and `3(ii)`. Relevant to governance and security-rights context, but not normalized into a dedicated SEC API surface today.
+- `4`: instruments defining the rights of security holders, including indentures. Relevant to security-rights analysis, but not yet a public dedicated SEC API endpoint.
 - `10`: material contracts. Important to issuer analysis, but currently available only through generic filing retrieval or filing rendering.
 - `14`: code of ethics. Not currently normalized into a dedicated SEC API endpoint.
-- `19`: insider trading policies and procedures. The SEC made this exhibit family relevant to Item 408(b) disclosures, but SEC API does not currently publish a dedicated parser for it.
-- `21`: subsidiaries of the registrant. Important to legal-entity mapping, but SEC API does not currently expose a dedicated endpoint for these exhibits.
-- `23`: consents of experts and counsel. Visible in filings, not normalized into a dedicated SEC API endpoint.
-- `31`: Rule 13a-14(a) and 15d-14(a) certifications. Visible in filings, not normalized into a dedicated SEC API endpoint.
-- `32`: Section 1350 certifications. Visible in filings, not normalized into a dedicated SEC API endpoint.
-- `95`: mine safety disclosures. Visible in covered filings, not normalized into a dedicated SEC API endpoint.
-- `97`: clawback or recovery policy exhibits. Required by the SEC's recovery-policy rules, but SEC API does not currently expose a dedicated parser for these exhibits.
+- `19`: insider trading policies and procedures. The SEC made this exhibit family relevant to Item 408(b) disclosures, but SEC API does not yet publish a dedicated parser for it.
+- `21`: subsidiaries of the registrant. Important to legal-entity mapping, but not yet a public dedicated SEC API endpoint.
+- `23`: consents of experts and counsel. Visible in filings, not normalized into a dedicated SEC API surface.
+- `31`: Rule 13a-14(a) and 15d-14(a) certifications. Visible in filings, not normalized into a dedicated SEC API surface.
+- `32`: Section 1350 certifications. Visible in filings, not normalized into a dedicated SEC API surface.
+- `95`: mine safety disclosures. Visible in covered filings, not normalized into a dedicated SEC API surface.
+- `97`: clawback or recovery policy exhibits. Required by the SEC's recovery-policy rules, but not yet exposed as a dedicated SEC API parser.
 - `99`: miscellaneous and form-specific supporting exhibits. This is the most important exhibit family for SEC API today because earnings and selected event workflows rely on it.
 - `101`: XBRL interactive data exhibit family, including `101.INS`, `101.SCH`, `101.CAL`, `101.DEF`, `101.LAB`, and `101.PRE`. SEC API uses this data indirectly in structured financial workflows.
 - `104`: cover page interactive data file. Relevant to inline XBRL filing packages and linked SEC structured data, but not exposed as a standalone SEC API endpoint.
-- `106`: asset-backed issuer asset data. Not currently a dedicated SEC API endpoint.
-- `107`: filing-fee exhibit or `EX-FILING FEES`. Not currently a dedicated SEC API endpoint.
+- `106`: asset-backed issuer asset data. Not currently a dedicated SEC API surface.
+- `107`: filing-fee exhibit or `EX-FILING FEES`. Not currently a dedicated SEC API surface.
 
 ## What SEC API does not expose yet
 
 - there is no public SEC API endpoint that lists every exhibit attached to a filing and returns a normalized exhibit manifest
 - there is no public SEC API endpoint that downloads arbitrary exhibit bodies by exhibit code
 - named section extraction is not generalized across every EDGAR filing family; the public section keys today are `item_1a`, `item_2`, and `item_7`
-- this page is intentionally not a 490-row mirror of every historical EDGAR submission code; for exhaustive submission-type coverage, use the SEC forms index and the EDGAR Filer Manual
+- this page is intentionally not a 490-row mirror of every historical EDGAR submission code; for exhaustive operational submission-type coverage, use the SEC forms index and the EDGAR Filer Manual
 
 ## Primary SEC sources
 
@@ -118,6 +114,6 @@ This page answers "which SEC EDGAR filing types and exhibits does SEC API suppor
     Open the 13F, 13D/13G, and institutional ownership workflows.
   </Card>
   <Card title="Migrate from sec-api.io" icon="git-compare" href="/migrate-from-sec-api">
-    Map sec-api.io filing and extractor habits onto SEC API.
+    Map sec-api.io filing and extractor habits onto the SEC API surface.
   </Card>
 </CardGroup>

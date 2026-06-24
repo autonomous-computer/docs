@@ -50,7 +50,7 @@ curl -X POST \
 
 ## POST /v1/portfolio/stress-test
 
-Stress-test a portfolio against supported macro and factor scenarios. Returns projected drawdown, recovery timeline, and per-holding impact when scenario inputs are available.
+Stress-test a portfolio against historical scenarios. Returns projected drawdown, recovery timeline, and per-holding impact.
 
 ### Request body
 
@@ -60,15 +60,14 @@ Stress-test a portfolio against supported macro and factor scenarios. Returns pr
     { "symbol": "AAPL", "weight": 0.50 },
     { "symbol": "TLT", "weight": 0.50 }
   ],
-  "scenarioKey": "us_recession"
+  "category": "rate_shock"
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `holdings` | array | yes | Array of `{ symbol, weight }` objects. |
-| `category` | string | no | Optional scenario category filter. |
-| `scenarioKey` | string | no | Specific supported scenario key such as `us_recession`, `higher_for_longer`, or `china_growth_scare`. |
+| `category` | string | no | Scenario category filter. One of `rate_shock`, `credit_event`, `equity_crash`, `geopolitical`, `pandemic`. Omit for all scenarios. |
 
 ### Example
 
@@ -76,7 +75,7 @@ Stress-test a portfolio against supported macro and factor scenarios. Returns pr
 curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"TLT","weight":0.5}],"scenarioKey":"us_recession"}' \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"TLT","weight":0.5}],"category":"equity_crash"}' \
   "https://api.secapi.ai/v1/portfolio/stress-test"
 ```
 
@@ -84,7 +83,7 @@ curl -X POST \
 
 ## POST /v1/portfolio/optimize
 
-Portfolio optimization across three objectives. Returns proposed weight adjustments, expected factor exposures, and constraint satisfaction metadata.
+Portfolio optimization across three objectives. Returns bounded candidate scenarios, expected-return/risk proxies, constraint satisfaction metadata, and non-advice disclosures.
 
 ### Request body
 
@@ -98,16 +97,22 @@ Portfolio optimization across three objectives. Returns proposed weight adjustme
   ],
   "objective": "min_drawdown",
   "country": "US",
-  "lookback": "3Y"
+  "lookback": "3Y",
+  "constraints": {
+    "maxCandidates": 3,
+    "turnoverLimit": 0.20,
+    "maxRuntimeMs": 750
+  }
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `holdings` | array | yes | Array of `{ symbol, weight }` objects. |
-| `objective` | string | no | Optimization objective. One of `factor_neutral`, `min_drawdown`, `regime_aware`. Defaults to `factor_neutral`. |
+| `objective` | string | yes | Optimization objective. One of `factor_neutral`, `min_drawdown`, `regime_aware`. |
 | `country` | string | no | ISO 3166-1 alpha-2 country code. Defaults to `US`. |
 | `lookback` | string | no | Lookback window. One of `1Y`, `3Y`, `5Y`. Defaults to `3Y`. |
+| `constraints` | object | no | Runtime and portfolio controls such as `maxCandidates`, `maxPositionWeight`, `turnoverLimit`, and `maxRuntimeMs`. |
 
 ### Objectives
 
@@ -115,13 +120,15 @@ Portfolio optimization across three objectives. Returns proposed weight adjustme
 - **`min_drawdown`** -- minimize expected maximum drawdown under historical stress scenarios
 - **`regime_aware`** -- tilt weights based on the current macro regime classification
 
+Optimizer outputs are analytical model scenarios for research and engineering workflows, not personalized investment advice.
+
 ### Example
 
 ```bash
 curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"JPM","weight":0.5}],"objective":"factor_neutral"}' \
+  -d '{"holdings":[{"symbol":"AAPL","weight":0.5},{"symbol":"JPM","weight":0.5}],"objective":"factor_neutral","constraints":{"maxCandidates":3,"turnoverLimit":0.2}}' \
   "https://api.secapi.ai/v1/portfolio/optimize"
 ```
 

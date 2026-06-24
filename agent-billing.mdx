@@ -2,7 +2,7 @@
 
 ## Principle
 
-Agents should check billing before expensive loops, preserve billing metadata in outputs, and warn before they move from inexpensive reads into repeated or heavy workflows.
+Agents should not treat billing as an afterthought. They should inspect billing posture before expensive loops, preserve billing metadata in outputs, and warn before they cross from cheap reads into repeated or heavy workflows.
 
 ## Required checks
 
@@ -15,20 +15,20 @@ Before a multi-step workflow:
 ## Agent-safe behavior
 
 - prefer one targeted request over a wide fan-out
-- keep `Request-Id`, `traceparent`, `secapi-meter-class`, `secapi-plan-key`, `secapi-billing-state`, `secapi-free-grant-remaining`, `secapi-token-count`, and `secapi-estimated-cost`
+- keep `Request-Id`, `traceparent`, `SECAPI-Meter-Class`, `SECAPI-Plan-Key`, `SECAPI-Billing-State`, `SECAPI-Free-Grant-Remaining`, `SECAPI-Token-Count`, and `SECAPI-Estimated-Cost`
 - warn before repeated section extraction, compare workflows, or artifact generation
 - stop and ask for card attachment if the org is in `payg_pending_card`
-- stop and ask for administrator approval if the server returns `billing_budget_approval_required`
+- stop and ask for operator approval if the server returns `billing_budget_approval_required`
 - stop immediately if the server returns `billing_budget_hard_cap_exceeded`
 
 ## Sponsored bootstrap
 
-- administrators create sponsor tokens with `POST /v1/agent/bootstrap_tokens`
+- human operators create sponsor tokens with `POST /v1/agent/bootstrap_tokens`
 - agents exchange those tokens exactly once with `POST /v1/agent/bootstrap`
-- the bootstrap response returns the first API key, billing state, limits, and MCP install metadata in one payload
+- the bootstrap response returns the first API key, billing posture, limits, and MCP install metadata in one payload
 
 ## Good pattern
 
 ```text
-Check billing state first. Quote the expensive step before repeating it. If the org is in payg_pending_card, stop and ask the administrator to activate PAYG before continuing. If the server requires approval or reports a hard cap, stop instead of retrying blindly.
+Check billing posture first. Quote the expensive step before repeating it. If the org is still on the starter grant, use the smallest high-signal request sequence possible. If the org is in payg_pending_card, stop and ask the operator to activate PAYG before continuing. If the server requires approval or reports a hard cap, stop instead of retrying blindly.
 ```

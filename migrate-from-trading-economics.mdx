@@ -1,11 +1,6 @@
----
-title: "Migrate from Trading Economics"
-sidebarTitle: "Migrate from Trading Economics"
----
-
 # Migrate from Trading Economics
 
-This guide helps Trading Economics users map their existing workflows to SEC API equivalents. SEC API provides a narrower macro API focused on high-signal indicators with factor-aware intelligence overlays.
+This guide helps Trading Economics users map their existing workflows to SEC API equivalents. SEC API provides a narrower but deeper macro surface focused on high-signal indicators with factor-aware intelligence overlays that Trading Economics does not offer.
 
 ## Endpoint mapping
 
@@ -18,10 +13,10 @@ This guide helps Trading Economics users map their existing workflows to SEC API
 | `GET /markets/commodities` | `GET /v1/market/snapshots` | Pass commodity ETF symbols |
 | `GET /markets/currency` | `GET /v1/market/snapshots` | Pass FX pair symbols |
 | `GET /markets/index` | `GET /v1/market/indices` | Supported index inventory |
-| `GET /news` | `GET /v1/news/search` | News feed search |
-| Country overview | `POST /v1/intelligence/country-report` | Factor-aware country analysis |
-| N/A | `GET /v1/macro/high-signal-pack` | Curated daily indicator bundles per country |
-| N/A | `GET /v1/macro/regimes` | Macro regime classification |
+| `GET /news` | `GET /v1/news` | News feed |
+| Country overview | `POST /v1/intelligence/country-report` | Factor-aware country analysis — goes beyond TE |
+| N/A | `GET /v1/macro/high-signal-pack` | Curated daily indicator bundles per country — no TE equivalent |
+| N/A | `GET /v1/macro/regimes` | Macro regime classification — no TE equivalent |
 
 ## Key differences
 
@@ -30,11 +25,11 @@ This guide helps Trading Economics users map their existing workflows to SEC API
 - **High-signal packs**: Curated daily/weekly indicator bundles for 12 countries (US, CN, JP, TW, IL, CA, GB, EZ, KR, BR, IN, SA) including yield curves, credit spreads, breakeven inflation, and volatility.
 - **Macro regime classification**: Automated regime detection (expansion, contraction, recovery, overheating) with factor-aware conditioning.
 - **Country reports**: AI-powered country analysis that integrates macro data with factor positioning and risk signals.
-- **Factor-conditioned macro**: Macro indicators paired with equity factor performance.
+- **Factor-conditioned macro**: Unique overlay of macro indicators with equity factor performance.
 
 ### What Trading Economics covers that SEC API does not (yet)
 
-- **Breadth**: TE covers 15,000+ series across 196 countries. SEC API focuses on a smaller allocator-oriented set.
+- **Breadth**: TE covers 15,000+ series across 196 countries. SEC API focuses on the 100-200 highest-signal series for allocators.
 - **Excel/Sheets plugins**: TE has native spreadsheet integrations. SEC API provides SDKs (JS, Python, Go, Rust) and MCP.
 - **Commodity/FX spot prices as dedicated series**: SEC API provides these via market snapshots and factor proxies rather than as standalone macro series.
 
@@ -73,7 +68,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/macro/calendar?country=US&days=7"
 ```
 
-## Example: country analysis
+## Example: country analysis (SEC API exclusive)
 
 ```bash
 curl -X POST -H "x-api-key: $SECAPI_API_KEY" \

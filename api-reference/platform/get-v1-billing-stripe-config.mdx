@@ -6,6 +6,12 @@ Return the current organization's Stripe publishable-key configuration for brows
 Audience: application and coding agent.
 </Info>
 
+## Response shape
+
+- `publishableKey` is the non-secret Stripe publishable key for the organization's current billing mode.
+- `publishableKey: null` means browser payments are not configured for that mode; render a payments-unavailable state instead of calling Stripe Elements.
+- `livemode` tells the browser whether the key is for live or test Stripe mode.
+
 ## Canonical metadata
 
 - `requestId`
@@ -34,12 +40,6 @@ curl -X GET \
 ```
 </ResponseExample>
 
-## Response shape
-
-- `publishableKey` is the non-secret Stripe publishable key for the organization's current billing mode.
-- `publishableKey: null` means browser payments are not configured for that mode; render a payments-unavailable state instead of calling Stripe Elements.
-- `livemode` tells the browser whether the key is for live or test Stripe mode.
-
 ## Give this prompt to your agent
 
 <Prompt>
@@ -49,5 +49,5 @@ Use SEC API GET /v1/billing/stripe-config to return the current organization's S
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` in logs and downstream reports
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

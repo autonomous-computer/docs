@@ -1,0 +1,129 @@
+# GET /v1/factors/macro-sensitivity
+
+Return explainable heuristic factor sensitivity to macro scenarios and shocks
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/factors/macro-sensitivity"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "factor_macro_sensitivity",
+  "id": "factor_macro_sensitivity_US_higher_for_longer",
+  "asOf": "2026-06-09T22:15:00.000Z",
+  "country": "US",
+  "scenarioKey": "higher_for_longer",
+  "rows": [
+    {
+      "factorKey": "MOMENTUM",
+      "indicatorKey": null,
+      "macroShockKey": "policyRate",
+      "sensitivity": -0.028,
+      "direction": "headwind",
+      "confidence": "medium",
+      "rationale": "MOMENTUM is directly shocked in the Higher-for-longer rates scenario.",
+      "observationCount": null,
+      "methodology": "macro_factor_sensitivity_v1_heuristic"
+    }
+  ],
+  "topTailwinds": [
+    "VALUE"
+  ],
+  "topHeadwinds": [
+    "MOMENTUM"
+  ],
+  "limitations": [
+    "v1 sensitivity is heuristic and explainable; it is not a point-in-time empirical regression."
+  ],
+  "summaryMd": "US Higher-for-longer rates sensitivity highlights 1 factor headwind and 1 tailwind.",
+  "dataAsOf": "2026-06-09",
+  "freshnessStatus": "fresh",
+  "methodologyVersion": "secapi_factor_returns_v1",
+  "materializationVersion": "2026-06-09",
+  "provenance": {
+    "source": "secapi_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "accessionNumber": null,
+    "filingUrl": "https://docs.secapi.ai/factors/methodology",
+    "acceptedAt": null,
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "parserVersion": "secapi-factor-pipeline"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "lagMs": 2700000
+  },
+  "materialization": {
+    "parserVersion": "secapi-factor-pipeline",
+    "materializationVersion": "2026-06-09"
+  },
+  "sourceRights": {
+    "source": "secapi_owned_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "posture": "public_safe",
+    "publicAvailability": "public",
+    "contractStatus": "approved",
+    "restrictions": [],
+    "notes": "SecAPI-owned derived factor data."
+  },
+  "methodology": {
+    "id": "secapi_factor_returns",
+    "version": "v1",
+    "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+    "confidence": "high",
+    "launchState": "beta",
+    "inputs": [
+      "secapi_factor_returns",
+      "secapi_factor_exposures",
+      "market_calendar"
+    ],
+    "validation": {
+      "launchHistoryFloor": "2015-01-01",
+      "marketCalendarAware": true
+    }
+  },
+  "revision": {
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "vintageId": "2026-06-09",
+    "revisedFrom": null
+  },
+  "degradedState": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/factors/macro-sensitivity to return explainable heuristic factor sensitivity to macro scenarios and shocks. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

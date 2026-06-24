@@ -1,17 +1,29 @@
----
-title: "Migrate from FactorsToday"
-sidebarTitle: "Migrate from FactorsToday"
----
-
 # Migrate from FactorsToday
 
-This guide maps FactorsToday-style factor-history, valuation, portfolio, hedge, optimizer, dashboard, and bulk-download workflows to SEC API equivalents. SEC API uses SecAPI-owned factor methodology and data-plane contracts, with compact REST, SDK, and MCP interfaces designed for agent and LLM applications.
+This guide maps FactorsToday-style factor-history, valuation, portfolio, hedge, optimizer, dashboard, and bulk-download workflows to SEC API equivalents. Use it as a practical cutover guide for moving factor screens, portfolio analytics, and agent tools onto SEC API's REST, SDK, CLI, and MCP surfaces.
 
 <Info>
-Migrate the workflow behavior, not a third-party dataset. SEC API compatibility means comparable product jobs: factor history tables, 1D through MAX windows, extreme moves, valuation screens, portfolio attribution, hedging, and optimizer flows backed by SecAPI data, methodology, freshness, and source-rights metadata.
+Start with the user workflow: history tables, 1D through MAX windows, extreme moves, valuation screens, attribution, hedging, optimization, and bulk exports. Then wire the SEC API endpoint that returns the same job with compact responses, request diagnostics, and trust metadata.
 </Info>
 
-For construction details, see [Factor Model Methodology](/factor-model-methodology). For source posture and freshness semantics, see [Factor Provenance](/factor-provenance) and [Factor Freshness](/factor-freshness).
+For construction details, see [Factor Model Methodology](/factor-model-methodology). For coverage and freshness semantics, see [Factor Provenance](/factor-provenance) and [Factor Freshness](/factor-freshness).
+
+## What improves when you switch
+
+<CardGroup cols={2}>
+  <Card title="Agent-first payloads" icon="bot" href="/api-conventions">
+    `response_mode=compact` keeps factor, portfolio, and model payloads small by default while `include=series,trust` expands only the fields your workflow needs.
+  </Card>
+  <Card title="Trust metadata beside the data" icon="shield-check" href="/factor-freshness">
+    Freshness, methodology, materialization, degraded-state, and request diagnostics travel with the response instead of living in a separate support channel.
+  </Card>
+  <Card title="One surface for REST, SDKs, CLI, and MCP" icon="blocks" href="/mcp-workflows">
+    The same factor workflows are exposed through API reference pages, generated SDKs, CLI commands, and hosted MCP tools for agentic workflows.
+  </Card>
+  <Card title="Portfolio and model workflows" icon="chart-no-axes-combined" href="/portfolio-analytics">
+    Attribution, hedging, optimization, stress testing, and model factor analysis share submitted-holdings contracts that work in apps and agents.
+  </Card>
+</CardGroup>
 
 ## Endpoint Mapping
 
@@ -36,9 +48,9 @@ For construction details, see [Factor Model Methodology](/factor-model-methodolo
 | Stock screener by factor | `GET /v1/factors/screen` | Factor-ranked stock screening. |
 | Portfolio analysis | `POST /v1/portfolio/analyze` | Portfolio factor exposure decomposition from submitted holdings. |
 | Portfolio attribution | `POST /v1/portfolio/attribution` | Explained return, factor contributions, alpha when realized portfolio return is sufficiently covered. |
-| Portfolio hedge | `POST /v1/portfolio/hedge` | Constrained hedge candidates and residual exposure. |
+| Portfolio hedge | `POST /v1/portfolio/hedge` | Bounded benchmark-instrument hedge candidates and residual exposure. |
 | Portfolio optimizer | `POST /v1/portfolio/optimize` | Factor-neutral, drawdown-aware, and regime-aware optimizer flows. |
-| Model Builder or model detail factor analysis | `POST /v1/models/factor-analysis` | Submitted model holdings with exposure, attribution, hedge, and position views. |
+| Model Builder or model detail factor analysis | `POST /v1/models/factor-analysis` | Submitted model holdings with exposure, attribution, hedge, optimizer, and position views. |
 | Factor dashboard | `GET /v1/factors/dashboard` | One-call dashboard with intraday, regime, rotation, spotlight, and optional model-portfolio drilldowns. |
 | Regime performance | `GET /v1/factors/regime-performance` | Factor returns by macro regime. |
 | Portfolio stress test | `POST /v1/portfolio/stress-test` | Scenario-based portfolio factor stress testing. |
@@ -46,7 +58,7 @@ For construction details, see [Factor Model Methodology](/factor-model-methodolo
 
 ## Launch Coverage Posture
 
-SEC API's launch factor surface is built around U.S. market, style, sector, and industry workflows. Launch factors target a `2010-01-01` history floor, but public 2010+ claims should be made only where row-level coverage, freshness, model version, methodology, and source-rights metadata prove the factor.
+SEC API's launch factor surface is built around U.S. market, style, sector, and industry workflows. Launch factors target a `2015-01-01` public history floor, and public history claims should be made only where row-level coverage, freshness, model version, and methodology metadata prove the factor.
 
 Shorter-history, beta, blocked, and deferred factors are labeled in catalog or methodology metadata. Do not treat a tracked catalog definition as a launch claim by itself.
 
@@ -105,7 +117,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 curl -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&signal=tailwind&limit=25&response_mode=compact&include=trust"
+  "https://api.secapi.ai/v1/factors/valuations/stocks?factor=VALUE&stance=beneficiaries&limit=25&response_mode=compact&include=trust"
 ```
 
 ### Portfolio, Hedge, And Optimizer
@@ -130,9 +142,28 @@ curl -X POST \
 
 For hedge-specific constraints such as `maxPositionWeight`, use `POST /v1/portfolio/hedge` with a `constraints` object. Unsupported constraints are rejected or returned as explicit degraded state rather than silently modeled.
 
-## Agent And MCP Migration
+## SDK, CLI, And MCP Migration
 
-Hosted MCP tools mirror the same migration surface. Prefer compact responses and request trust metadata when an agent will cite freshness, coverage, or methodology:
+REST is the fastest path to verify parity. Once the response shape is correct, move application code to the SDK or CLI surface that matches your runtime.
+
+```ts
+import { SecApiClient } from "@secapi/sdk-js"
+
+const client = new SecApiClient({ apiKey: process.env.SECAPI_API_KEY })
+
+const history = await client.factorHistory("VALUE", {
+  range: "1y",
+  response_mode: "compact",
+  include: "series,trust",
+})
+```
+
+```bash
+secapi factors history --factor VALUE --range 1y --response-mode compact --include series,trust
+secapi portfolio optimize --holdings-file portfolio.json --objective factor_neutral --constraints-json '{"maxCandidates":3}'
+```
+
+Hosted MCP tools mirror the same factor workflow surface. For factor MCP tools that expose response controls, pass `response_mode` and `include` with the same intent as REST: compact by default, with trust metadata when an agent will cite freshness, coverage, or methodology.
 
 ```json
 {
@@ -162,9 +193,24 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 ## Migration Checklist
 
 - Replace query-parameter API keys with the `x-api-key` header.
-- Replace downloaded third-party return files with SEC API endpoints and SecAPI-owned data-plane outputs.
+- Replace local return-file jobs with `factors/history`, `factors/sparklines`, `factors/returns`, or `factors/bulk-download` depending on the UI/export requirement.
 - Use `response_mode=compact` by default for agent/UI flows.
-- Add `include=trust` when the workflow needs freshness, materialization, methodology, source-rights, or degraded-state metadata.
+- Add `include=trust` when the workflow needs freshness, materialization, methodology, or degraded-state metadata.
 - Use `include=series` only when a full daily series is required.
-- Gate 2010+ or MAX claims on returned row-level coverage and freshness fields.
+- Gate MAX and long-history claims on returned row-level coverage and freshness fields.
 - Preserve `requestId` and `traceparent` in logs, agent responses, and support tickets.
+- Pin `secapi-version` before dual-running production traffic.
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Factor quickstart" icon="square-terminal" href="/factor-quickstart">
+    Start with copy-paste factor history, valuation, portfolio, and MCP examples.
+  </Card>
+  <Card title="Factor API reference" icon="braces" href="/api-reference/factors">
+    Open the generated REST operation pages for every factor endpoint.
+  </Card>
+  <Card title="Portfolio analytics" icon="chart-pie" href="/portfolio-analytics">
+    Wire attribution, hedging, optimization, stress testing, and model analysis workflows.
+  </Card>
+</CardGroup>

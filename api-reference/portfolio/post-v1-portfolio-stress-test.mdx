@@ -3,10 +3,10 @@
 Run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -19,14 +19,8 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{
-    "holdings": [
-      {"symbol": "AAPL", "weight": 0.50},
-      {"symbol": "MSFT", "weight": 0.50}
-    ],
-    "scenarioKey": "us_recession"
-  }' \
-  "https://api.secapi.ai/v1/portfolio/stress-test"
+  -d '{"country":"US","lookback":"12m","category":"style","keys":["VALUE","MOMENTUM","QUALITY"],"scenarioKey":"higher_for_longer","holdings":[{"symbol":"AAPL","weight":0.35},{"symbol":"MSFT","weight":0.3},{"symbol":"NVDA","weight":0.2},{"symbol":"JPM","weight":0.15}]}' \
+  "https://api.secapi.ai/v1/portfolio/stress-test?response_mode=compact&include=trust"
 ```
 </RequestExample>
 
@@ -35,7 +29,95 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
+  "object": "portfolio_stress_test",
+  "id": "portfolio_stress_test:higher_for_longer:2026-06-09",
+  "asOf": "2026-06-09T22:15:00.000Z",
+  "scenarioKey": "higher_for_longer",
+  "scenarioLabel": "Higher for Longer",
+  "scenarioSource": "catalog",
+  "estimatedDrawdownPercent": -7.4,
+  "factorShocks": {
+    "VALUE": 0.02,
+    "MOMENTUM": -0.04,
+    "QUALITY": 0.01
+  },
+  "macroShocks": {
+    "rates": 0.75,
+    "credit_spreads": 0.35
+  },
+  "contributions": [
+    {
+      "factorKey": "MOMENTUM",
+      "beta": 1.1,
+      "shock": -0.04,
+      "contribution": -0.044,
+      "direction": "headwind",
+      "rationale": "MOMENTUM contribution equals current portfolio beta multiplied by the scenario shock.",
+      "sensitivitySource": "factor_v1_macro_conditioned_portfolio_stress"
+    }
+  ],
+  "regime": null,
+  "conditioningNotes": [
+    "Uses bounded factor shocks from historical higher-rate episodes."
+  ],
+  "summaryMd": "Portfolio drawdown proxy is driven mainly by momentum and duration-sensitive exposures.",
+  "responseMode": "compact",
+  "dataAsOf": "2026-06-09",
+  "freshnessStatus": "fresh",
+  "methodologyVersion": "secapi_factor_returns_v1",
+  "materializationVersion": "2026-06-09",
+  "provenance": {
+    "source": "secapi_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "accessionNumber": null,
+    "filingUrl": "https://docs.secapi.ai/factors/methodology",
+    "acceptedAt": null,
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "parserVersion": "secapi-factor-pipeline"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "lagMs": 2700000
+  },
+  "materialization": {
+    "parserVersion": "secapi-factor-pipeline",
+    "materializationVersion": "2026-06-09"
+  },
+  "sourceRights": {
+    "source": "secapi_owned_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "posture": "public_safe",
+    "publicAvailability": "public",
+    "contractStatus": "approved",
+    "restrictions": [],
+    "notes": "SecAPI-owned derived factor data."
+  },
+  "methodology": {
+    "id": "secapi_factor_returns",
+    "version": "v1",
+    "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+    "confidence": "high",
+    "launchState": "beta",
+    "inputs": [
+      "secapi_factor_returns",
+      "secapi_factor_exposures",
+      "market_calendar"
+    ],
+    "validation": {
+      "launchHistoryFloor": "2015-01-01",
+      "marketCalendarAware": true
+    }
+  },
+  "revision": {
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "vintageId": "2026-06-09",
+    "revisedFrom": null
+  },
+  "degradedState": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
@@ -43,12 +125,12 @@ curl -X POST \
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API POST /v1/portfolio/stress-test to run portfolio stress scenarios across factor and macro shock definitions with compact traceable outputs. Preserve `requestId`, `traceparent` in the output. Keep the response fields your application uses for follow-up requests.
+<Prompt>
+Use SEC API POST /v1/portfolio/stress-test for scenario-based factor stress testing. Preserve `scenarioKey`, `scenarioLabel`, `estimatedDrawdownPercent`, `factorShocks`, `macroShocks`, `conditioningNotes`, `summaryMd`, `freshness`, `methodology`, `requestId`, and `traceparent`.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

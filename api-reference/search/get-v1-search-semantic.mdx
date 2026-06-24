@@ -25,14 +25,6 @@ When the validator can't produce a span (no section text, no query-term match, o
 
 Pass `?view=agent` to drop `score` and `retrievalMode` from each row. The seven citation fields are preserved unconditionally. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
-Valid `view` values are `default`, `compact`, and `agent`. `view=compact` is accepted for response-format consistency and currently returns the default search row shape; use `view=agent` when you need token-efficient rows. Invalid view values return `400 invalid_query_parameter` with `details.acceptedValues`.
-
-Use `ticker`, `symbol`, or `cik` to scope the search to an issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
-
-## Retrieval mode
-
-Use `mode=hybrid` for the default keyword + vector blend, `mode=semantic` for vector retrieval, or `mode=keyword` for exact-text fallback. Invalid mode values return `400 invalid_query_parameter` with `acceptedValues`.
-
 ## Canonical metadata
 
 - `requestId`
@@ -45,7 +37,7 @@ Use `mode=hybrid` for the default keyword + vector blend, `mode=semantic` for ve
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/search/semantic?q=supply+chain+risk&symbol=AAPL&form=10-K&mode=hybrid&view=agent"
+  "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20risk&ticker=AAPL&form=10-K&mode=hybrid&view=agent"
 ```
 </RequestExample>
 
@@ -62,14 +54,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/search/semantic with a required `q` query and `mode=hybrid`, `mode=semantic`, or `mode=keyword` to search SEC filing sections with citation fields on every result row. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/search/semantic to semantic vector search across SEC filing section content via Voyage AI + Pinecone, with hybrid keyword + vector RRF and citation fields on every result row. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- if `ticker` and `symbol` are both provided, they must match
-- invalid `mode` values return `invalid_query_parameter` with `acceptedValues`
-- invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
 - preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

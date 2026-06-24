@@ -25,10 +25,6 @@ When the validator can't produce a span (no section text, no query-term match, o
 
 Pass `?view=agent` to receive the compact agent shape: key + snippet + lifted `accessionNumber` / `startOffset` / `endOffset` from provenance/trace, plus the citation envelope (`accession`, `section_key`, `char_start`, `char_end`, `highlighted_snippet`, `source_url`, `ticker`). Content-md and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
-Valid `view` values are `default`, `compact`, and `agent`. `view=compact` is accepted for response-format consistency and currently returns the default search row shape; use `view=agent` when you need token-efficient rows. Invalid view values return `400 invalid_query_parameter` with `details.acceptedValues`.
-
-Use `ticker`, `symbol`, or `cik` to scope the search to an issuer. `symbol` is an alias for `ticker`; if both are provided, they must match.
-
 ## Canonical metadata
 
 - `requestId`
@@ -44,7 +40,7 @@ Use `ticker`, `symbol`, or `cik` to scope the search to an issuer. `symbol` is a
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/sections/search?q=supply+chain+risk&symbol=AAPL&form=10-K&view=agent"
+  "https://api.secapi.ai/v1/sections/search"
 ```
 </RequestExample>
 
@@ -85,7 +81,5 @@ Use SEC API GET /v1/sections/search to search filing sections and snippets with 
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- if `ticker` and `symbol` are both provided, they must match
-- invalid `view` values return `invalid_query_parameter` with `details.acceptedValues`
 - preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

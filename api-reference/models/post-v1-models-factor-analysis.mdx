@@ -1,12 +1,12 @@
 # POST /v1/models/factor-analysis
 
-Return model factor analysis for submitted Model Builder or saved-model holdings with optional attribution and hedge sections
+Return model factor analysis for submitted Model Builder or saved-model holdings with optional attribution, hedge, and optimizer sections
 
 <Info>
-Use this endpoint from server-side applications, SDKs, or agent workflows.
+Audience: application and coding agent.
 </Info>
 
-## Response metadata
+## Canonical metadata
 
 - `requestId`
 - `traceparent`
@@ -19,30 +19,8 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{
-    "model": {
-      "id": "growth-quality-core",
-      "label": "Growth Quality Core",
-      "source": "model_builder"
-    },
-    "holdings": [
-      {"symbol": "AAPL", "weight": 0.30},
-      {"symbol": "MSFT", "weight": 0.25},
-      {"symbol": "NVDA", "weight": 0.20},
-      {"symbol": "GOOGL", "weight": 0.15},
-      {"symbol": "AMZN", "weight": 0.10}
-    ],
-    "include": {
-      "attribution": true,
-      "hedge": true,
-      "positionViews": true
-    },
-    "hedge": {
-      "objective": "factor_neutral",
-      "mode": "compact"
-    }
-  }' \
-  "https://api.secapi.ai/v1/models/factor-analysis?response_mode=compact"
+  -d '{"model":{"id":"growth-quality-core","label":"Growth Quality Core","description":"Model Builder portfolio submitted for factor analysis.","tags":["model-builder","growth"],"source":"model_builder"},"country":"US","lookback":"12m","window":"3m","category":"style","keys":["VALUE","MOMENTUM","QUALITY"],"include":{"attribution":true,"hedge":true,"optimizer":true,"positionViews":true},"hedge":{"objective":"factor_neutral","mode":"compact","constraints":{"maxHedges":3,"maxPositionWeight":0.08,"maxTotalHedgeWeight":0.2,"maxSectorWeight":0.35,"hedgeIntensity":0.75,"longOnly":false,"allowedInstrumentTypes":["etf"],"customUniverse":["QUAL","MTUM","VLUE","USMV"],"targetExposures":{"VALUE":0,"MOMENTUM":0.1},"minConfidence":"medium","minLiquidityUsd":10000000,"excludedSectors":[]}},"optimizer":{"objective":"factor_neutral","constraints":{"maxCandidates":3,"maxIterations":50,"maxRuntimeMs":750,"maxPositionWeight":0.4,"minPositionWeight":0.02,"longOnly":true,"turnoverLimit":0.25,"riskFreeRate":0.04}},"holdings":[{"symbol":"AAPL","weight":0.35},{"symbol":"MSFT","weight":0.3},{"symbol":"NVDA","weight":0.2},{"symbol":"JPM","weight":0.15}]}' \
+  "https://api.secapi.ai/v1/models/factor-analysis?response_mode=compact&include=trust,optimizer_candidates"
 ```
 </RequestExample>
 
@@ -51,7 +29,702 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_example_123",
+  "object": "model_factor_analysis",
+  "id": "model_factor_analysis:growth-quality-core:2026-06-09",
+  "asOf": "2026-06-09T22:15:00.000Z",
+  "model": {
+    "id": "growth-quality-core",
+    "label": "Growth Quality Core",
+    "description": "Model Builder portfolio submitted for factor analysis.",
+    "tags": [
+      "model-builder",
+      "growth"
+    ],
+    "source": "model_builder"
+  },
+  "country": "US",
+  "lookback": "12m",
+  "window": "3m",
+  "category": "style",
+  "holdings": [
+    {
+      "symbol": "AAPL",
+      "weight": 0.35
+    },
+    {
+      "symbol": "MSFT",
+      "weight": 0.3
+    },
+    {
+      "symbol": "NVDA",
+      "weight": 0.2
+    },
+    {
+      "symbol": "JPM",
+      "weight": 0.15
+    }
+  ],
+  "include": {
+    "attribution": true,
+    "hedge": true,
+    "optimizer": true,
+    "positionViews": true
+  },
+  "analysis": {
+    "object": "portfolio_analysis",
+    "id": "portfolio_analysis:growth-quality-core:2026-06-09",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "holdings": [
+      {
+        "symbol": "AAPL",
+        "weight": 0.35
+      },
+      {
+        "symbol": "MSFT",
+        "weight": 0.3
+      },
+      {
+        "symbol": "NVDA",
+        "weight": 0.2
+      },
+      {
+        "symbol": "JPM",
+        "weight": 0.15
+      }
+    ],
+    "exposures": [
+      {
+        "object": "factor_exposure",
+        "id": "factor_exposure:AAPL:VALUE:2026-06-09",
+        "subjectType": "security",
+        "subjectKey": "AAPL",
+        "factorKey": "VALUE",
+        "beta": -0.42,
+        "percentile": 18.2,
+        "confidence": "high",
+        "modelName": "secapi_stock_basket_factor_model_v1",
+        "asOf": "2026-06-09T22:15:00.000Z",
+        "responseMode": "compact",
+        "expansionHints": [
+          "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+        ]
+      }
+    ],
+    "fit": null,
+    "benchmarkLabel": "NASDAQ 100",
+    "benchmarkTilts": [],
+    "whatIfComparison": null,
+    "positionViews": [],
+    "positionExposures": [
+      {
+        "object": "factor_exposure",
+        "id": "factor_exposure:AAPL:VALUE:2026-06-09",
+        "subjectType": "security",
+        "subjectKey": "AAPL",
+        "factorKey": "VALUE",
+        "beta": -0.42,
+        "percentile": 18.2,
+        "confidence": "high",
+        "modelName": "secapi_stock_basket_factor_model_v1",
+        "asOf": "2026-06-09T22:15:00.000Z",
+        "responseMode": "compact",
+        "expansionHints": [
+          "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+        ]
+      }
+    ],
+    "attribution": [
+      {
+        "key": "VALUE",
+        "label": "Value",
+        "category": "factor",
+        "contributionPercent": -0.48,
+        "explanation": "Negative value beta detracted as value lagged over the selected window."
+      }
+    ],
+    "hedgeSuggestions": [
+      {
+        "symbol": "VLUE",
+        "instrumentType": "etf",
+        "rationale": "Offsets the portfolio's negative value exposure with a liquid value ETF sleeve.",
+        "expectedExposureDelta": {
+          "VALUE": 0.18
+        },
+        "confidence": "medium"
+      }
+    ],
+    "optimizationNotes": [
+      "Candidate search respected max position and turnover constraints."
+    ],
+    "factorNeutralPlan": [
+      "Reduce negative VALUE exposure before increasing MOMENTUM exposure."
+    ],
+    "optimizerObjective": "factor_neutral",
+    "optimizerConstraints": {
+      "maxCandidates": 3,
+      "maxIterations": 50,
+      "maxRuntimeMs": 750,
+      "maxPositionWeight": 0.4,
+      "minPositionWeight": 0.02,
+      "longOnly": true,
+      "turnoverLimit": 0.25,
+      "riskFreeRate": 0.04
+    },
+    "optimizerRuntime": {
+      "object": "portfolio_optimizer_runtime",
+      "method": "bounded_deterministic_candidate_search",
+      "candidateCount": 3,
+      "iterationBudget": 50,
+      "iterationsRun": 38,
+      "runtimeMs": 118,
+      "maxRuntimeMs": 750,
+      "timeout": false
+    },
+    "optimizerCandidateCount": 1,
+    "optimizerCandidateSample": [
+      {
+        "object": "portfolio_optimizer_candidate",
+        "rank": 1,
+        "name": "Factor-neutral tilt",
+        "objective": "factor_neutral",
+        "expectedReturn": 0.087,
+        "expectedVolatility": 0.164,
+        "expectedSharpe": 0.53,
+        "maxDrawdownProxy": -0.18,
+        "factorExposureScore": 0.21,
+        "turnover": 0.12,
+        "score": 0.81,
+        "constraintStatus": "ok",
+        "constraintsApplied": [
+          "turnoverLimit"
+        ],
+        "rationale": "Improves factor balance without breaching turnover or concentration limits."
+      }
+    ],
+    "selectedCandidate": null,
+    "optimizerDisclosures": [
+      "Optimizer output is a deterministic scenario, not investment advice."
+    ],
+    "summaryMd": "Portfolio is growth and quality tilted with a moderate negative value exposure.",
+    "responseMode": "compact",
+    "dataAsOf": "2026-06-09",
+    "freshnessStatus": "fresh",
+    "methodologyVersion": "secapi_portfolio_factor_v1",
+    "materializationVersion": "2026-06-09",
+    "provenance": {
+      "source": "secapi_factor_pipeline",
+      "sourceLabel": "SecAPI factor pipeline",
+      "accessionNumber": null,
+      "filingUrl": "https://docs.secapi.ai/factors/methodology",
+      "acceptedAt": null,
+      "retrievedAt": "2026-06-09T22:15:00.000Z",
+      "parserVersion": "secapi-factor-pipeline"
+    },
+    "freshness": {
+      "status": "fresh",
+      "asOf": "2026-06-09T22:15:00.000Z",
+      "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+      "lagMs": 2700000
+    },
+    "materialization": {
+      "parserVersion": "secapi-factor-pipeline",
+      "materializationVersion": "2026-06-09"
+    },
+    "sourceRights": {
+      "source": "secapi_owned_factor_pipeline",
+      "sourceLabel": "SecAPI factor pipeline",
+      "posture": "public_safe",
+      "publicAvailability": "public",
+      "contractStatus": "approved",
+      "restrictions": [],
+      "notes": "SecAPI-owned derived factor data."
+    },
+    "methodology": {
+      "id": "secapi_factor_returns",
+      "version": "v1",
+      "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+      "confidence": "high",
+      "launchState": "beta",
+      "inputs": [
+        "secapi_factor_returns",
+        "secapi_factor_exposures",
+        "market_calendar"
+      ],
+      "validation": {
+        "launchHistoryFloor": "2015-01-01",
+        "marketCalendarAware": true
+      }
+    },
+    "revision": {
+      "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+      "retrievedAt": "2026-06-09T22:15:00.000Z",
+      "vintageId": "2026-06-09",
+      "revisedFrom": null
+    },
+    "degradedState": null
+  },
+  "attribution": {
+    "object": "portfolio_attribution",
+    "id": "portfolio_attribution:growth-quality-core:2026-06-09",
+    "analysisId": "portfolio_analysis:growth-quality-core:2026-06-09",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "country": "US",
+    "window": "3m",
+    "lookback": "12m",
+    "frequency": "weekly",
+    "holdings": [
+      {
+        "symbol": "AAPL",
+        "weight": 0.35
+      },
+      {
+        "symbol": "MSFT",
+        "weight": 0.3
+      },
+      {
+        "symbol": "NVDA",
+        "weight": 0.2
+      },
+      {
+        "symbol": "JPM",
+        "weight": 0.15
+      }
+    ],
+    "portfolioReturn": 0.082,
+    "totalExplained": 0.061,
+    "alpha": 0.021,
+    "rSquared": 0.74,
+    "contributions": [
+      {
+        "object": "portfolio_factor_attribution",
+        "rank": 1,
+        "factorKey": "MOMENTUM",
+        "factorName": "Momentum",
+        "factorCategory": "style",
+        "contributionPercent": 2.4,
+        "contributionPct": 0.024,
+        "beta": 0.37,
+        "factorReturn": 0.065,
+        "rawReturn": 0.058,
+        "pureReturn": 0.052,
+        "scaledReturn": 0.065,
+        "zScore": 1.7,
+        "leverage": 1,
+        "modelName": "secapi_stock_basket_factor_model_v1",
+        "explanation": "Positive momentum exposure explained 240 bps of the portfolio return."
+      }
+    ],
+    "returnStream": [],
+    "returnPointCount": 12,
+    "returnStreamSample": [
+      {
+        "object": "portfolio_return_point",
+        "period": "2026-W22",
+        "periodEnd": "2026-05-29",
+        "frequency": "weekly",
+        "periodReturn": 0.011,
+        "cumulativeReturn": 0.064,
+        "coverageWeight": 1,
+        "missingSymbols": []
+      }
+    ],
+    "rollingBetas": [],
+    "rollingBetaCount": 4,
+    "rollingBetasUnavailableReason": null,
+    "exposures": [
+      {
+        "object": "factor_exposure",
+        "id": "factor_exposure:AAPL:VALUE:2026-06-09",
+        "subjectType": "security",
+        "subjectKey": "AAPL",
+        "factorKey": "VALUE",
+        "beta": -0.42,
+        "percentile": 18.2,
+        "confidence": "high",
+        "modelName": "secapi_stock_basket_factor_model_v1",
+        "asOf": "2026-06-09T22:15:00.000Z",
+        "responseMode": "compact",
+        "expansionHints": [
+          "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+        ]
+      }
+    ],
+    "export": {
+      "object": "portfolio_attribution_export",
+      "requestedFormat": "json",
+      "formats": [
+        "json"
+      ],
+      "fileName": "secapi-portfolio-attribution-2026-06-09",
+      "columns": [
+        "factorKey",
+        "contributionPercent",
+        "beta",
+        "factorReturn"
+      ],
+      "csv": null,
+      "files": []
+    },
+    "summaryMd": "Momentum and quality explained most of the recent return while value detracted.",
+    "responseMode": "compact",
+    "dataAsOf": "2026-06-09",
+    "freshnessStatus": "fresh",
+    "methodologyVersion": "secapi_portfolio_attribution_v1",
+    "materializationVersion": "2026-06-09",
+    "provenance": {
+      "source": "secapi_factor_pipeline",
+      "sourceLabel": "SecAPI factor pipeline",
+      "accessionNumber": null,
+      "filingUrl": "https://docs.secapi.ai/factors/methodology",
+      "acceptedAt": null,
+      "retrievedAt": "2026-06-09T22:15:00.000Z",
+      "parserVersion": "secapi-factor-pipeline"
+    },
+    "freshness": {
+      "status": "fresh",
+      "asOf": "2026-06-09T22:15:00.000Z",
+      "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+      "lagMs": 2700000
+    },
+    "materialization": {
+      "parserVersion": "secapi-factor-pipeline",
+      "materializationVersion": "2026-06-09"
+    },
+    "sourceRights": {
+      "source": "secapi_owned_factor_pipeline",
+      "sourceLabel": "SecAPI factor pipeline",
+      "posture": "public_safe",
+      "publicAvailability": "public",
+      "contractStatus": "approved",
+      "restrictions": [],
+      "notes": "SecAPI-owned derived factor data."
+    },
+    "methodology": {
+      "id": "secapi_factor_returns",
+      "version": "v1",
+      "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+      "confidence": "high",
+      "launchState": "beta",
+      "inputs": [
+        "secapi_factor_returns",
+        "secapi_factor_exposures",
+        "market_calendar"
+      ],
+      "validation": {
+        "launchHistoryFloor": "2015-01-01",
+        "marketCalendarAware": true
+      }
+    },
+    "revision": {
+      "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+      "retrievedAt": "2026-06-09T22:15:00.000Z",
+      "vintageId": "2026-06-09",
+      "revisedFrom": null
+    },
+    "degradedState": null
+  },
+  "hedge": {
+    "object": "portfolio_hedge",
+    "id": "portfolio_hedge:growth-quality-core:2026-06-09",
+    "analysisId": "portfolio_analysis:growth-quality-core:2026-06-09",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "country": "US",
+    "lookback": "12m",
+    "objective": "factor_neutral",
+    "mode": "compact",
+    "constraints": {
+      "maxHedges": 3,
+      "maxPositionWeight": 0.08,
+      "maxTotalHedgeWeight": 0.2,
+      "maxSectorWeight": 0.35,
+      "hedgeIntensity": 0.75,
+      "longOnly": false,
+      "allowedInstrumentTypes": [
+        "etf"
+      ],
+      "customUniverse": [
+        "QUAL",
+        "MTUM",
+        "VLUE",
+        "USMV"
+      ],
+      "targetExposures": {
+        "VALUE": 0,
+        "MOMENTUM": 0.1
+      },
+      "minConfidence": "medium",
+      "minLiquidityUsd": 10000000,
+      "excludedSectors": []
+    },
+    "holdings": [
+      {
+        "symbol": "AAPL",
+        "weight": 0.35
+      },
+      {
+        "symbol": "MSFT",
+        "weight": 0.3
+      },
+      {
+        "symbol": "NVDA",
+        "weight": 0.2
+      },
+      {
+        "symbol": "JPM",
+        "weight": 0.15
+      }
+    ],
+    "targetExposures": [
+      {
+        "object": "portfolio_hedge_target_exposure",
+        "factorKey": "VALUE",
+        "factorName": "Value",
+        "factorCategory": "style",
+        "beta": -0.42,
+        "targetExposureDelta": 0.42,
+        "proposedExposureDelta": 0.18,
+        "residualBeta": -0.24,
+        "hedged": true,
+        "skipReason": null
+      }
+    ],
+    "hedges": [
+      {
+        "object": "portfolio_hedge_candidate",
+        "rank": 1,
+        "factorKey": "VALUE",
+        "factorName": "Value",
+        "factorCategory": "style",
+        "symbol": "VLUE",
+        "instrumentType": "etf",
+        "action": "long",
+        "recommendedWeight": 0.08,
+        "targetExposureDelta": 0.42,
+        "expectedExposureDelta": {
+          "VALUE": 0.18
+        },
+        "residualBeta": -0.24,
+        "constraintStatus": "ok",
+        "constraintsApplied": [
+          "maxPositionWeight"
+        ],
+        "liquidityUsd": 145000000,
+        "estimatedCostBps": 4,
+        "sectorKey": null,
+        "rationale": "Adds liquid value exposure without increasing single-name concentration.",
+        "confidence": "medium"
+      }
+    ],
+    "residualExposure": {
+      "VALUE": -0.24,
+      "MOMENTUM": 0.37
+    },
+    "exposures": [
+      {
+        "object": "factor_exposure",
+        "id": "factor_exposure:AAPL:VALUE:2026-06-09",
+        "subjectType": "security",
+        "subjectKey": "AAPL",
+        "factorKey": "VALUE",
+        "beta": -0.42,
+        "percentile": 18.2,
+        "confidence": "high",
+        "modelName": "secapi_stock_basket_factor_model_v1",
+        "asOf": "2026-06-09T22:15:00.000Z",
+        "responseMode": "compact",
+        "expansionHints": [
+          "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+        ]
+      }
+    ],
+    "optimizationNotes": [
+      "Hedge candidates are bounded by liquidity and max total hedge weight."
+    ],
+    "factorNeutralPlan": [
+      "Add VLUE at 8% funded pro rata from overweight growth names."
+    ],
+    "summaryMd": "The suggested hedge reduces negative VALUE beta while keeping total hedge weight under 20%.",
+    "responseMode": "compact",
+    "dataAsOf": "2026-06-09",
+    "freshnessStatus": "fresh",
+    "methodologyVersion": "secapi_portfolio_hedge_v1",
+    "materializationVersion": "2026-06-09",
+    "provenance": {
+      "source": "secapi_factor_pipeline",
+      "sourceLabel": "SecAPI factor pipeline",
+      "accessionNumber": null,
+      "filingUrl": "https://docs.secapi.ai/factors/methodology",
+      "acceptedAt": null,
+      "retrievedAt": "2026-06-09T22:15:00.000Z",
+      "parserVersion": "secapi-factor-pipeline"
+    },
+    "freshness": {
+      "status": "fresh",
+      "asOf": "2026-06-09T22:15:00.000Z",
+      "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+      "lagMs": 2700000
+    },
+    "materialization": {
+      "parserVersion": "secapi-factor-pipeline",
+      "materializationVersion": "2026-06-09"
+    },
+    "sourceRights": {
+      "source": "secapi_owned_factor_pipeline",
+      "sourceLabel": "SecAPI factor pipeline",
+      "posture": "public_safe",
+      "publicAvailability": "public",
+      "contractStatus": "approved",
+      "restrictions": [],
+      "notes": "SecAPI-owned derived factor data."
+    },
+    "methodology": {
+      "id": "secapi_factor_returns",
+      "version": "v1",
+      "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+      "confidence": "high",
+      "launchState": "beta",
+      "inputs": [
+        "secapi_factor_returns",
+        "secapi_factor_exposures",
+        "market_calendar"
+      ],
+      "validation": {
+        "launchHistoryFloor": "2015-01-01",
+        "marketCalendarAware": true
+      }
+    },
+    "revision": {
+      "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+      "retrievedAt": "2026-06-09T22:15:00.000Z",
+      "vintageId": "2026-06-09",
+      "revisedFrom": null
+    },
+    "degradedState": null
+  },
+  "optimizerObjective": "factor_neutral",
+  "optimizerConstraints": {
+    "maxCandidates": 3,
+    "maxIterations": 50,
+    "maxRuntimeMs": 750,
+    "maxPositionWeight": 0.4,
+    "minPositionWeight": 0.02,
+    "longOnly": true,
+    "turnoverLimit": 0.25,
+    "riskFreeRate": 0.04
+  },
+  "optimizerRuntime": {
+    "object": "portfolio_optimizer_runtime",
+    "method": "bounded_deterministic_candidate_search",
+    "candidateCount": 3,
+    "iterationBudget": 50,
+    "iterationsRun": 38,
+    "runtimeMs": 118,
+    "maxRuntimeMs": 750,
+    "timeout": false
+  },
+  "optimizerCandidates": [],
+  "optimizerCandidateCount": 1,
+  "optimizerCandidateSample": [
+    {
+      "object": "portfolio_optimizer_candidate",
+      "rank": 1,
+      "name": "Factor-neutral tilt",
+      "objective": "factor_neutral",
+      "expectedReturn": 0.087,
+      "expectedVolatility": 0.164,
+      "expectedSharpe": 0.53,
+      "maxDrawdownProxy": -0.18,
+      "factorExposureScore": 0.21,
+      "turnover": 0.12,
+      "score": 0.81,
+      "constraintStatus": "ok",
+      "constraintsApplied": [
+        "turnoverLimit"
+      ],
+      "rationale": "Improves factor balance without breaching turnover or concentration limits."
+    }
+  ],
+  "selectedCandidate": null,
+  "optimizerDisclosures": [
+    "Optimizer output is a deterministic scenario, not investment advice."
+  ],
+  "positionViews": [],
+  "positionExposures": [
+    {
+      "object": "factor_exposure",
+      "id": "factor_exposure:AAPL:VALUE:2026-06-09",
+      "subjectType": "security",
+      "subjectKey": "AAPL",
+      "factorKey": "VALUE",
+      "beta": -0.42,
+      "percentile": 18.2,
+      "confidence": "high",
+      "modelName": "secapi_stock_basket_factor_model_v1",
+      "asOf": "2026-06-09T22:15:00.000Z",
+      "responseMode": "compact",
+      "expansionHints": [
+        "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
+      ]
+    }
+  ],
+  "summaryMd": "Model is growth-quality tilted; hedge and optimizer sections show bounded factor-neutral alternatives.",
+  "responseMode": "compact",
+  "dataAsOf": "2026-06-09",
+  "freshnessStatus": "fresh",
+  "methodologyVersion": "secapi_model_factor_analysis_v1",
+  "materializationVersion": "2026-06-09",
+  "provenance": {
+    "source": "secapi_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "accessionNumber": null,
+    "filingUrl": "https://docs.secapi.ai/factors/methodology",
+    "acceptedAt": null,
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "parserVersion": "secapi-factor-pipeline"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "lagMs": 2700000
+  },
+  "materialization": {
+    "parserVersion": "secapi-factor-pipeline",
+    "materializationVersion": "2026-06-09"
+  },
+  "sourceRights": {
+    "source": "secapi_owned_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "posture": "public_safe",
+    "publicAvailability": "public",
+    "contractStatus": "approved",
+    "restrictions": [],
+    "notes": "SecAPI-owned derived factor data."
+  },
+  "methodology": {
+    "id": "secapi_factor_returns",
+    "version": "v1",
+    "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+    "confidence": "high",
+    "launchState": "beta",
+    "inputs": [
+      "secapi_factor_returns",
+      "secapi_factor_exposures",
+      "market_calendar"
+    ],
+    "validation": {
+      "launchHistoryFloor": "2015-01-01",
+      "marketCalendarAware": true
+    }
+  },
+  "revision": {
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "vintageId": "2026-06-09",
+    "revisedFrom": null
+  },
+  "degradedState": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
@@ -59,12 +732,12 @@ curl -X POST \
 
 ## Give this prompt to your agent
 
-<Prompt description="Copy this SEC API prompt for your agent.">
-Use SEC API POST /v1/models/factor-analysis to analyze submitted Model Builder holdings. Preserve model metadata, aggregate exposures, attribution rows, hedge candidates when requested, position views, freshness, and methodology metadata. Prefer compact mode when returning the result to an agent or LLM.
+<Prompt>
+Use SEC API POST /v1/models/factor-analysis for Model Builder or saved-model holdings analysis without first persisting a portfolio. Preserve `model`, `holdings`, `analysis`, `attribution`, `hedge`, `optimizerRuntime`, `optimizerCandidateSample`, `optimizerDisclosures`, `positionViews`, `positionExposures`, `summaryMd`, `requestId`, and `traceparent`.
 </Prompt>
 
-## Errors and partial results
+## Failure posture
 
-- Treat non-2xx responses as API errors and log the response body for debugging
-- Log `requestId` and `traceparent` so SEC API support can trace the request
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
 - if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

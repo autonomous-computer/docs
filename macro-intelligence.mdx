@@ -14,6 +14,8 @@ The fastest workflow is:
 3. Check released history and upcoming calendar events.
 4. Add forecasts and the current macro regime.
 5. Use a compact country report when an agent needs one dense rollup.
+6. Check macro status before citing freshness-sensitive conclusions.
+7. Use scenario and sensitivity endpoints when macro needs to connect to factors or portfolios.
 
 All endpoints return `requestId` and `traceparent`. Preserve freshness, provenance, methodology, source-rights, and degraded-state fields when they are present.
 
@@ -91,17 +93,76 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 Country-wide forecast calls default to compact because full forecast payloads can be large.
 
-### 6. Use Country Report For A Dense Agent Rollup
+### 6. Check Macro Status
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/status?country=US&response_mode=compact"
+```
+
+`/v1/macro/status` reads validation artifacts, not live vendor probes. Use it when an agent needs to decide whether macro output is ready, degraded, stale, or unsupported.
+
+The compact response includes country status, source posture, alerts, freshness age, and methodology. Use `response_mode=verbose` or `view=full` only when you need indicator-level rows.
+
+### 7. Use Country Report For A Dense Investment Briefing
 
 ```bash
 curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "content-type: application/json" \
-  -d '{"country":"US","lookback":"6m"}' \
+  -d '{"country":"US","lookback":"6m","symbols":["AAPL","NVDA"],"briefingMode":"company"}' \
   "https://api.secapi.ai/v1/intelligence/country-report?response_mode=compact"
 ```
 
-Use country reports when an agent needs one compact answer containing indicators, releases, forecasts, regime, likely drivers, and citations. Use full mode only when a human or downstream service needs the complete nested payload.
+Use country reports when an agent needs one compact answer containing indicators, releases, forecasts, regime, likely drivers, freshness, and an investor-shaped `briefing` block.
+
+The `briefing` block includes:
+
+- `topLine`
+- `regime`
+- `keyDrivers`
+- `watchItems`
+- `investmentImplications`
+- `dataQuality`
+
+Optional request fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `symbols` | string array | Adds a lightweight company lens |
+| `holdings` | holding array | Adds portfolio lens using the same holding shape as portfolio endpoints |
+| `horizon` | enum | `1m`, `3m`, `6m`, `12m`, or `18m` |
+| `briefingMode` | enum | `macro`, `portfolio`, or `company` |
+
+Use full mode only when a human or downstream service needs the complete nested payload.
+
+### 8. Connect Macro To Portfolio And Factor Workflows
+
+List supported stress scenarios:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/portfolio/stress-test/scenarios?country=US&response_mode=compact"
+```
+
+Run a stress test and inspect contributions:
+
+```bash
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"country":"US","scenarioKey":"higher_for_longer","holdings":[{"symbol":"AAPL","weight":0.6},{"symbol":"MSFT","weight":0.4}]}' \
+  "https://api.secapi.ai/v1/portfolio/stress-test?response_mode=compact"
+```
+
+Ask which factors are most sensitive to a macro scenario:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/factors/macro-sensitivity?country=US&scenario_key=higher_for_longer&keys=VALUE,MOMENTUM,QUALITY&response_mode=compact"
+```
+
+`/v1/factors/macro-sensitivity` is labeled `macro_factor_sensitivity_v1_heuristic`. It combines scenario shock maps with current macro-regime factor impacts. It is explainable and fast; it is not a point-in-time empirical regression.
 
 ## Supported Country Coverage
 
@@ -123,8 +184,12 @@ Hosted MCP exposes the same workflow for agents:
 - `macro.calendar`
 - `macro.forecasts`
 - `macro.regimes`
+- `macro.status`
 - `macro.credit_ratings`
 - `macro.country_report`
+- `macro.investment_briefing`
+- `portfolio.stress_scenarios`
+- `factors.macro_sensitivity`
 
 MCP macro tools default to compact response shapes where payload size matters. Ask for `response_mode: "standard"` or include `["series", "trust"]` only when the agent needs full nested data.
 

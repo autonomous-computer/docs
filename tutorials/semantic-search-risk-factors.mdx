@@ -20,14 +20,8 @@ The `/v1/search/semantic` endpoint accepts a natural language query and returns 
 ### curl
 
 ```bash
-curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "supply chain disruption risks in semiconductor industry",
-    "limit": 5
-  }' \
-  "https://api.secapi.ai/v1/search/semantic"
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20disruption%20risks%20in%20semiconductor%20industry&limit=5"
 ```
 
 ### Python
@@ -37,15 +31,15 @@ from secapi_client import SecApiClient
 
 client = SecApiClient(api_key="your-api-key")
 
-results = client.search.semantic(
-    query="supply chain disruption risks in semiconductor industry",
+results = client.semantic_search(
+    q="supply chain disruption risks in semiconductor industry",
     limit=5,
 )
 
-for hit in results.data:
-    print(f"[{hit.score:.3f}] {hit.company_name} ({hit.form} {hit.filed_at})")
-    print(f"  Section: {hit.section}")
-    print(f"  {hit.text[:200]}...")
+for hit in results["sections"]["data"]:
+    print(f"[{hit.get('score', 0):.3f}] {hit.get('companyName')} ({hit.get('form')} {hit.get('filingDate')})")
+    print(f"  Section: {hit.get('section_key')}")
+    print(f"  {hit.get('snippet', '')[:200]}...")
     print()
 ```
 
@@ -58,15 +52,15 @@ const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY!,
 });
 
-const results = await client.search.semantic({
-  query: "supply chain disruption risks in semiconductor industry",
+const results = await client.semanticSearch({
+  q: "supply chain disruption risks in semiconductor industry",
   limit: 5,
 });
 
-for (const hit of results.data) {
-  console.log(`[${hit.score.toFixed(3)}] ${hit.companyName} (${hit.form} ${hit.filedAt})`);
-  console.log(`  Section: ${hit.section}`);
-  console.log(`  ${hit.text.slice(0, 200)}...`);
+for (const hit of results.sections.data) {
+  console.log(`[${(hit.score ?? 0).toFixed(3)}] ${hit.companyName} (${hit.form} ${hit.filingDate})`);
+  console.log(`  Section: ${hit.section_key}`);
+  console.log(`  ${(hit.snippet ?? "").slice(0, 200)}...`);
   console.log();
 }
 ```
@@ -100,47 +94,36 @@ Add filters to narrow your search to a watchlist of companies or specific filing
 ### curl
 
 ```bash
-curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "cybersecurity incident disclosure requirements",
-    "tickers": ["AAPL", "MSFT", "GOOG", "AMZN"],
-    "form_types": ["10-K", "8-K"],
-    "section": "risk_factors",
-    "limit": 10
-  }' \
-  "https://api.secapi.ai/v1/search/semantic"
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/search/semantic?q=cybersecurity%20incident%20disclosure%20requirements&ticker=AAPL&form=10-K&limit=10"
 ```
 
 ### Python
 
 ```python
-results = client.search.semantic(
-    query="cybersecurity incident disclosure requirements",
-    tickers=["AAPL", "MSFT", "GOOG", "AMZN"],
-    form_types=["10-K", "8-K"],
-    section="risk_factors",
+results = client.semantic_search(
+    q="cybersecurity incident disclosure requirements",
+    ticker="AAPL",
+    form="10-K",
     limit=10,
 )
 
-for hit in results.data:
-    print(f"{hit.company_name}: {hit.text[:150]}...")
+for hit in results["sections"]["data"]:
+    print(f"{hit.get('companyName')}: {hit.get('snippet', '')[:150]}...")
 ```
 
 ### JavaScript
 
 ```ts
-const results = await client.search.semantic({
-  query: "cybersecurity incident disclosure requirements",
-  tickers: ["AAPL", "MSFT", "GOOG", "AMZN"],
-  formTypes: ["10-K", "8-K"],
-  section: "risk_factors",
+const results = await client.semanticSearch({
+  q: "cybersecurity incident disclosure requirements",
+  ticker: "AAPL",
+  form: "10-K",
   limit: 10,
 });
 
-for (const hit of results.data) {
-  console.log(`${hit.companyName}: ${hit.text.slice(0, 150)}...`);
+for (const hit of results.sections.data) {
+  console.log(`${hit.companyName}: ${(hit.snippet ?? "").slice(0, 150)}...`);
 }
 ```
 
@@ -154,19 +137,18 @@ Search for the same risk factor across multiple years of filings from one compan
 QUERY = "artificial intelligence regulatory risk"
 
 for year in [2022, 2023, 2024]:
-    results = client.search.semantic(
-        query=QUERY,
-        tickers=["MSFT"],
-        form_types=["10-K"],
-        date_from=f"{year}-01-01",
-        date_to=f"{year}-12-31",
+    results = client.semantic_search(
+        q=QUERY,
+        ticker="MSFT",
+        form="10-K",
+        filing_year=year,
         limit=1,
     )
 
-    if results.data:
-        hit = results.data[0]
-        print(f"--- {year} (score: {hit.score:.3f}) ---")
-        print(f"{hit.text[:300]}")
+    if results["sections"]["data"]:
+        hit = results["sections"]["data"][0]
+        print(f"--- {year} (score: {hit.get('score', 0):.3f}) ---")
+        print(f"{hit.get('snippet', '')[:300]}")
         print()
     else:
         print(f"--- {year}: No matching disclosure ---")
@@ -195,9 +177,8 @@ requirements, potential liability frameworks, and restrictions on training data.
 
 ## Next steps
 
-- **Build a risk dashboard**: Run semantic search across your portfolio holdings to reveal emerging risk themes.
+- **Build a risk dashboard**: Run semantic search across your portfolio holdings to surface emerging risk themes.
 - **Combine with structured data**: Cross-reference risk factor mentions with financial metrics from `/v1/statements` to quantify potential impact.
 - **Track disclosure changes**: Set up a quarterly job to re-run the same queries and diff the results.
 
 See the [API Reference](/api-reference/search) for the full semantic search endpoint specification.
-

@@ -1,0 +1,82 @@
+---
+title: "Factor V2"
+description: "Daily refreshed purified factors with intraday snapshots for dashboards"
+---
+
+# Factor V2
+
+<Warning>
+Factor V2 is in **beta** — the compute methodology is still being validated. All factor responses carry the `SECAPI-Maturity: beta` response header; do not yet treat returned values as production-grade.
+</Warning>
+
+SEC API Factor V2 provides allocator-grade factor analysis with market-calendar-aware daily refresh and intraday snapshots when current market inputs are available.
+
+For the full construction methodology, including hierarchical purification, thematic basket construction, and academic references, see [Factor Model Methodology](factor-model-methodology).
+
+## Key Improvements over V1
+
+| Feature | V1 | V2 |
+|---|---|---|
+| **Recompute frequency** | Weekly | Daily |
+| **Factor count** | ETF-proxy slice | 230+ tracked definitions; narrower launch API surface |
+| **Intraday snapshots** | Not available | Available when current market inputs are present |
+| **Portfolio drill-down** | Security-level only | Security + portfolio + model portfolio |
+| **Orthogonalization** | Basic | Full topological sort |
+
+## Endpoints
+
+### Daily Factor Returns
+```bash
+curl "https://api.secapi.ai/v1/factors/returns?lookback=30" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+### Intraday Factor Snapshots
+```bash
+curl "https://api.secapi.ai/v1/factors/returns/intraday" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+### Factor Dashboard (One Call)
+```bash
+curl "https://api.secapi.ai/v1/factors/dashboard" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+Returns: intraday returns, regime context, rotation signals, and spotlight factors.
+
+### Stock-Level Factor Loadings
+```bash
+curl "https://api.secapi.ai/v1/stocks/AAPL/loadings" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+### Portfolio Factor Exposures
+```bash
+curl -X POST "https://api.secapi.ai/v1/portfolio/analyze" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"holdings": [{"symbol": "AAPL", "weight": 0.3}, {"symbol": "MSFT", "weight": 0.3}, {"symbol": "GOOGL", "weight": 0.4}]}'
+```
+
+## Factor Catalog
+
+Access the 230+ tracked factor-definition catalog with methodology and source-rights metadata. The launch API surface is narrower; inspect catalog coverage and freshness metadata before making long-history claims:
+
+```bash
+curl "https://api.secapi.ai/v1/factors/catalog" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+Each factor includes: name, family, methodology inputs, source-rights posture, orthogonalization method, and methodology summary.
+
+Implemented stock-basket factors: `MKT_US`, `EQUAL_WEIGHT`, `MARKET_BREADTH`, `SIZE`, `VALUE`, `MOMENTUM`, `PROFITABILITY`, `QUALITY`, `GROWTH`, `LOW_VOL`, `BETA`, `INVESTMENT`, `DIVIDEND_YIELD`, `BUYBACK`, `EARNINGS_REVISIONS`, `FCF_YIELD`, `ACCRUALS`, `EARNINGS_QUALITY`, `EARNINGS_YIELD`, `CASH_FLOW_TO_PRICE`, `ROE`, `PRICE_TO_SALES`, `LIQUIDITY`, and `MULTI_FACTOR`.
+
+## Regime-Conditioned Performance
+
+See how factors perform in different macro regimes:
+
+```bash
+curl "https://api.secapi.ai/v1/factors/regime-performance" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
