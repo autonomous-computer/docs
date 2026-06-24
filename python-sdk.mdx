@@ -82,7 +82,7 @@ The Python SDK retries transient failures with exponential backoff and a per-cli
 
 - Auto-retried by default: `GET`, `HEAD`, `OPTIONS`
 - Opt-in required: `POST`, `PUT`, `PATCH`, `DELETE`, MCP `tools/call`
-- Always retried regardless of method: `429` rate limits, with `Retry-After` honored
+- Always retried regardless of method: `429` rate limits, with `Retry-After` or structured retry timing honored
 - Request timeout: `30s` by default, including when retries are disabled
 
 Disable SDK retries when your application already owns retry behavior:
@@ -118,10 +118,15 @@ except SecApiError as error:
     print(error.code)
     print(error.request_id)
     print(error.message)
+    print(error.hint)
+    print(error.docs_url)
+    print(error.action)
+    print(error.retryable)
+    print(error.details)
     print(error.payload)
 ```
 
-`SecApiError` keeps the raw `payload` and also exposes `code`, `message`, and `request_id` convenience properties. Log those fields with the failing workflow so support can trace the exact request without asking users to parse JSON by hand.
+`SecApiError` keeps the raw `payload` and also exposes `code`, `message`, `request_id`, `hint`, `docs_url`, `action`, `retryable`, and `details` convenience properties. Log those fields with the failing workflow so support can trace the exact request without asking users to parse JSON by hand.
 
 ## Dilution intelligence
 

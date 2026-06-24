@@ -8,11 +8,13 @@ The JavaScript and Python SDKs include safe-by-default retries, exponential back
 
 - Auto-retried by default: `GET`, `HEAD`, `OPTIONS`
 - Opt-in required: `POST`, `PUT`, `PATCH`, `DELETE`, MCP `tools/call`
-- Always retried regardless of method: `429` rate limits, with `Retry-After` honored unless retry is disabled
+- Always retried regardless of method: `429` rate limits, with `Retry-After` or structured retry timing honored unless retry is disabled
 - Retryable failures: network errors, `408`, `429`, `502`, `503`, `504`
 - Never retried: `400`, `401`, `403`, `404`, `422`
 
 Defaults are base `200ms`, max backoff `5s`, max retries `3`, and total request budget `30s`. The per-client circuit breaker opens after 5 consecutive terminal retryable failures and cools down for 60s.
+
+Both SDKs also fall back to structured JSON retry timing (`retryAfterSeconds`, `retry_after_seconds`, `retryAfterMs`, or `retry_after_ms`) when a proxy or browser path drops the `Retry-After` header.
 
 ## TypeScript
 

@@ -159,9 +159,12 @@ The match span is anchored by the longest query token, falling back to the snipp
 ## Versioning
 
 - production clients should send `secapi-version` and pin to a dated release
+- unpinned requests default to the current published version and responses echo the resolved version in `SECAPI-Version`
 - additive fields can ship within a pinned version without requiring a client rebuild
-- breaking behavior changes should land behind a new dated version and be called out in `/docs/changelog`
-- migration guides should be updated in the same change when a compatibility seam is moved or removed
+- breaking behavior changes require either a new dated version or an explicit deprecation notice before removal
+- compatibility aliases are for migrations and older clients; new code should use the canonical names in the API reference
+
+Read the full compatibility promise: [API versioning and compatibility](/api-versioning).
 
 ## Error model
 
@@ -180,6 +183,8 @@ Error responses use a stable JSON shape:
 ```
 
 Authentication middleware failures, billing, validation, and other shared-helper errors also include `traceparent`. When it is present, log both `requestId` and `traceparent` when opening support tickets or correlating retries. `requestId` is the customer-facing API identifier; `traceparent` links the response to SEC API's distributed trace and is especially useful for billing, authentication, and dashboard control-plane issues.
+
+For code-by-code next actions, see the [Error code catalog](/error-code-catalog).
 
 ## Auth conventions
 

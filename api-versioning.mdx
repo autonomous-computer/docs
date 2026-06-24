@@ -1,0 +1,79 @@
+# API versioning and compatibility
+
+<Info>
+Pin production traffic with the `secapi-version` request header. The header turns API changes into an explicit contract instead of a surprise dependency on whatever shipped most recently.
+</Info>
+
+## The launch promise
+
+- Versioned `/v1` requests will not receive silent breaking removals.
+- Additive changes can ship within the same dated version when they do not change existing field meanings.
+- Breaking behavior changes require either a new dated version or an explicit deprecation notice before the old behavior is removed.
+- Deprecations and migrations are documented in the [changelog](/changelog) and linked from the affected API reference page.
+- Compatibility aliases stay documented while supported, but new code should use the canonical parameter, field, route, or CLI command shown in the current reference.
+
+## Send the version header
+
+```bash
+curl "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19"
+```
+
+Official SDKs send the same header from their API-version option. Keep the version close to the client configuration so rollouts and rollbacks are easy to audit.
+
+If the header is omitted, the server uses the current published version. Every response echoes the resolved version in `SECAPI-Version`; log that value with `Request-Id` when comparing behavior across clients.
+
+## What can change without a new version
+
+These changes are treated as backward-compatible:
+
+| Change | Client guidance |
+|---|---|
+| New optional response fields | Ignore unknown fields unless you explicitly opt into them. |
+| New endpoints or SDK helpers | Adopt them when useful; existing calls keep their shape. |
+| New enum values on beta surfaces | Log unknown values and fall back to a neutral display state. |
+| Better freshness/provenance metadata | Keep the payload field and response headers with downstream artifacts. |
+| Additional documented aliases | Prefer the canonical name in new code; aliases are for compatibility and migration. |
+
+`SECAPI-Maturity: beta` marks pre-GA surfaces such as factors and dilution. Beta responses still use the same version header, but clients should expect faster additive iteration.
+
+## What counts as breaking
+
+Breaking changes include removing a documented field, changing a field's type or meaning, removing a supported route or alias, changing pagination semantics, or making a previously accepted request invalid without a migration path.
+
+When a breaking change is unavoidable, the release notes should name:
+
+- the old behavior
+- the new behavior
+- who is affected
+- the migration path
+- the last supported version or date when known
+
+## Aliases and deprecations
+
+SEC API accepts a few compatibility aliases so older clients and migration scripts keep working. Examples include `quarter`/`q` for quarterly periods, legacy CLI aliases, and migration helpers for sec-api.io-style workflows.
+
+Aliases are not the preferred contract for new integrations. Treat them as compatibility paths:
+
+<Steps>
+  <Step title="Use the canonical reference name">
+    Build new clients from the current API reference, not from old examples or compatibility aliases.
+  </Step>
+  <Step title="Log deprecation warnings">
+    Preserve `Request-Id` and any response warning or docs link so migrations can be traced.
+  </Step>
+  <Step title="Move during the notice window">
+    When a deprecation appears in the changelog, update callers before the old behavior is removed from a future version.
+  </Step>
+</Steps>
+
+## Production checklist
+
+- Set `secapi-version` in REST, SDK, CLI, and server-to-server MCP clients.
+- Store `Request-Id`, response status, and error `code` in logs.
+- Do not fail closed on unknown additive fields.
+- Treat `SECAPI-Maturity: beta` as a signal to gate production use or add extra monitoring.
+- Subscribe launch owners to the [changelog](/changelog) before moving volume to a new workflow.
+
+Read next: [API conventions](/api-conventions), [Troubleshooting](/troubleshooting), and [SDK reliability](/sdk-reliability).

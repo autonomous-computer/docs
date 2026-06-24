@@ -22,8 +22,20 @@ The drilldown includes:
 - related stream events
 - related artifacts
 - grouped meter-class and event-type counts
+- `summary.support`, a support-ready finding with next actions, latest usage
+  status, delivery failure count, and missing artifact IDs
 
 Use this first when support has a `Request-Id` from an API response.
+Start with `summary.support.status`:
+
+| Status | Meaning |
+|---|---|
+| `not_found` | Nothing was found for that request ID in the current org. Check the copied ID and tenant scope. |
+| `request_error` | The latest metered response for the request was HTTP 4xx or 5xx. Start with the usage event status, path, and retry guidance. |
+| `request_logged` | The request was metered but emitted no downstream events, deliveries, streams, or artifacts. |
+| `side_effects_emitted` | The request produced downstream records without obvious delivery or artifact gaps. |
+| `delivery_attention` | At least one webhook delivery failed or returned a non-2xx status. |
+| `artifact_attention` | A canonical event referenced an artifact that diagnostics could not load. |
 
 ## Delivery summary
 
