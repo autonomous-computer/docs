@@ -1,6 +1,6 @@
 # GET /v1/macro/status
 
-Return macro source-health, country coverage, freshness, and source-rights posture from validation artifacts
+Return macro source-health, country coverage, freshness, and source-rights posture from runtime validation artifacts or an explicit degraded fallback
 
 <Info>
 Audience: application and coding agent.
@@ -30,6 +30,9 @@ curl -X GET \
   "object": "macro_status",
   "status": "ready",
   "generatedAt": "2026-06-09T22:15:00.000Z",
+  "artifactGeneratedAt": "2026-06-09T22:15:00.000Z",
+  "computedAt": "2026-06-09T22:15:00.000Z",
+  "statusSource": "validation_artifacts",
   "countries": [
     {
       "country": "US",
@@ -50,14 +53,16 @@ curl -X GET \
       "status": "ready",
       "indicatorCount": 33,
       "unexpectedFallbackCount": 0,
-      "sourceErrorCount": 0
+      "sourceErrorCount": 0,
+      "artifactStatus": "available",
+      "topAlerts": []
     }
   ],
   "alerts": [],
   "methodology": {
     "id": "macro_status_artifact_v1",
     "version": "v1",
-    "summary": "Macro status is derived from source-health, source-coverage, and macro data-plane validation artifacts."
+    "summary": "Macro status is artifact-backed when runtime validation artifacts are available; otherwise it returns an explicit degraded runtime-registry fallback."
   },
   "sourceRights": {
     "posture": "public_safe_summary",
@@ -70,7 +75,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/macro/status to return macro source-health, country coverage, freshness, and source-rights posture from validation artifacts. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/macro/status to return macro source-health, country coverage, freshness, and source-rights posture from runtime validation artifacts or an explicit degraded fallback. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
