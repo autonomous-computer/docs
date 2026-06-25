@@ -100,9 +100,9 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/macro/status?country=US&response_mode=compact"
 ```
 
-`/v1/macro/status` reads validation artifacts, not live vendor probes. Use it when an agent needs to decide whether macro output is ready, degraded, stale, or unsupported.
+`/v1/macro/status` is artifact-backed when runtime validation artifacts are packaged with the API. If those artifacts are missing or unusable, the route returns an explicit degraded `runtime_registry_fallback` response instead of probing vendors live. Use it when an agent needs to decide whether macro output is ready, degraded, stale, or unsupported.
 
-The compact response includes country status, source posture, alerts, freshness age, and methodology. Use `response_mode=verbose` or `view=full` only when you need indicator-level rows.
+The compact response includes country status, source posture, alerts, freshness age, `statusSource`, `artifactGeneratedAt`, `computedAt`, and methodology. Agents should treat `statusSource: "runtime_registry_fallback"` as a caution flag: cite the degraded status, avoid freshness-sensitive claims, and retry later or ask for operator confirmation. Use `response_mode=verbose` or `view=full` only when you need indicator-level rows.
 
 ### 7. Use Country Report For A Dense Investment Briefing
 
@@ -191,7 +191,7 @@ Hosted MCP exposes the same workflow for agents:
 - `portfolio.stress_scenarios`
 - `factors.macro_sensitivity`
 
-MCP macro tools default to compact response shapes where payload size matters. Ask for `response_mode: "standard"` or include `["series", "trust"]` only when the agent needs full nested data.
+MCP macro tools default to compact response shapes where payload size matters. For large tools such as `macro.investment_briefing`, set `params.content_mode: "minimal"` on `tools/call` so the agent receives full `structuredContent` without a duplicate text payload. Ask for `response_mode: "standard"` or include `["series", "trust"]` only when the agent needs full nested data.
 
 ## Failure Posture
 
