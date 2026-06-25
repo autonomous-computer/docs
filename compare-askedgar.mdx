@@ -46,8 +46,8 @@ Forms covered: S-1, S-3, 424B*, FWP, 8-K (parity).
 
 ## Dilution endpoint coverage
 
-SEC API ships 14 REST endpoints under `/v1/dilution/*` plus 14 mirrored
-`dilution.*` MCP tools. AskEdgar productizes a related but smaller set
+SEC API ships 14 REST endpoints under `/v1/dilution/*` plus mirrored
+dilution MCP workflows. AskEdgar productizes a related but smaller set
 under `https://api.askedgar.com/v1`. Mapping for the most common queries:
 
 | AskEdgar route               | SEC API route(s)                                                    |
@@ -135,7 +135,7 @@ subscription ladder.
 
 | Tier              | SEC API                                            | AskEdgar Copilot                       | AskEdgar API     |
 | ----------------- | ----------------------------------------------- | -------------------------------------- | ---------------- |
-| **Free**          | 150 calls (one-time)                            | Limited AI questions                   | None             |
+| **Starter grant** | 150 calls (one-time)                            | Limited AI questions                   | None             |
 | **Pay-as-you-go** | From $0.01/call                                 | n/a                                    | $0.004–$0.019/KB |
 | **Personal/Pro**  | $55/month                                       | $59/month — 600 AI Q (7-day trial)     | n/a              |
 | **Team/Pro+**     | $239/month                                      | $199/month — 1,000 AI Q (7-day trial)  | n/a              |
@@ -186,7 +186,7 @@ read offering pressure and factor risk from the same company surface.
 | Endpoint families                                       | **39**                                | dilution-only (~5 productized)    |
 | Endpoints                                               | **186**                               | ~12 productized                   |
 | Per-field verification                                  | yes (6-dimension `verification`)      | binary `verified`                 |
-| MCP server                                              | yes (84 tools, 14 dilution.*)         | no                                |
+| MCP server                                              | yes (84 tools, including dilution workflows) | no                         |
 | SDKs                                                    | 4 (JS/TS, Python, Go, Rust)           | none published                    |
 | Custom Skills (Claude / agent-runnable)                 | 8 canonical skills                    | none                              |
 | FinanceBench score                                      | 18 / 25 (72%) canary subset, 2026-04-25 | none published                    |
@@ -203,7 +203,7 @@ read offering pressure and factor risk from the same company surface.
 | Quant factor exposures on the company surface           | yes (`/v1/companies/overview?include=factors`) | no                       |
 | Dilution score: full per-factor breakdown               | yes (`factors[]` on `/v1/dilution/score`) | categorical rating only       |
 | Dilution score: death-spiral / variable-rate flag       | yes                                   | no                                |
-| Webhooks (signed, replay, cursor)                       | yes (7 dilution event types)          | Discord automation only           |
+| Webhooks (signed, replay, cursor)                       | yes (public Delivery events)          | Discord automation only           |
 | Direct row-level back-link to competitor                | yes (`askedgar_url` field)            | n/a                               |
 
 Latency benchmarks vs AskEdgar are scheduled for a follow-up ticket; SEC API's
@@ -244,7 +244,7 @@ path to the AskEdgar UI for verification.
 | -------------------------------- | ----------------------------------- | ------------------------------ |
 | API auth header                  | `x-api-key`                         | `API-KEY`                      |
 | API base URL                     | `https://api.secapi.ai/v1`          | `https://api.askedgar.com/v1`  |
-| Onboarding                       | Free account; explicit key creation | API-key request flow + per-KB billing |
+| Onboarding                       | Starter account; explicit key creation | API-key request flow + per-KB billing |
 | OpenAPI                          | yes (Zod-generated)                 | not publicly linked from /docs |
 | MCP server                       | yes (84 tools)                      | no                             |
 | Multi-language SDKs              | JS/TS, Python, Go, Rust             | none published                 |
@@ -272,7 +272,7 @@ curl "https://api.secapi.ai/v1/dilution/events?ticker=MULN" \
   -H "x-api-key: YOUR_API_KEY"
 ```
 
-Create a free account at secapi.ai/signup to get an API key.
+Create an account at secapi.ai/signup to get an API key.
 
 ---
 

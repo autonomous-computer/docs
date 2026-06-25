@@ -1,61 +1,57 @@
 ---
-title: "Webhook Delivery SLA"
-description: "99.9% webhook delivery guarantee with signed payloads, automatic retries, and replay support"
+title: "Webhook Delivery"
+description: "Signed webhook payloads, delivery audit, replay, and the event catalog"
 ---
 
-# Webhook Delivery SLA
+# Webhook Delivery
 
-SEC API guarantees 99.9% webhook delivery for all configured endpoints.
+Webhook delivery is an at-least-once delivery surface for customer events. Each delivery is signed, logged, and replayable when the original payload is still retained. We do not promise global ordering; customers should de-dupe with the stable event id.
 
-## Delivery Guarantee
+## Delivery contract
 
 | Metric | Target |
 |---|---|
-| **Delivery rate** | 99.9% |
-| **First attempt latency** | < 5 seconds from event |
-| **Retry window** | 72 hours |
-| **Max retry attempts** | 8 (exponential backoff) |
+| **Contract** | At-least-once delivery |
+| **Ordering** | Best effort within one endpoint or subscription |
+| **Replay** | Manual replay for retained delivery attempts |
+| **Billing** | Successful customer-visible webhook and stream delivery units use `delivery_events` |
 | **Payload signing** | HMAC-SHA256 on every delivery |
 
 ## Retry Policy
 
-Failed deliveries are retried with exponential backoff:
-
-| Attempt | Delay |
-|---|---|
-| 1 | Immediate |
-| 2 | 30 seconds |
-| 3 | 2 minutes |
-| 4 | 10 minutes |
-| 5 | 1 hour |
-| 6 | 4 hours |
-| 7 | 12 hours |
-| 8 | 24 hours |
-
-After 8 failed attempts, the delivery is marked as `failed` and can be manually replayed.
+SEC API records every delivery attempt and exposes manual replay. Automatic retry and endpoint auto-pause are rollout-gated operational features; docs will list exact windows and attempt counts only after the retry worker is enabled in production.
 
 ## Signed Payloads
 
-Every webhook delivery includes an `x-secapi-signature` header with an HMAC-SHA256 signature. Verify the signature to ensure the payload is authentic:
+Every webhook delivery includes `x-secapi-signature: t=<unix_seconds>,v1=<hex_hmac>` and `x-secapi-signature-timestamp`. Verify the signature against the exact raw request body before parsing JSON:
 
 ```typescript
 import { createHmac, timingSafeEqual } from "crypto"
 
-function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
-  const expected = createHmac("sha256", secret).update(payload).digest("hex")
-  if (signature.length !== expected.length) return false
-  return timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+function verifyWebhookSignature(rawBody: Buffer, signatureHeader: string, secret: string): boolean {
+  const parts = new Map(signatureHeader.split(",").map((part) => part.split("=", 2) as [string, string]))
+  const timestamp = parts.get("t")
+  const provided = parts.get("v1")
+  if (!timestamp || !provided) return false
+
+  const expected = createHmac("sha256", secret)
+    .update(`${timestamp}.${rawBody.toString("utf8")}`)
+    .digest("hex")
+  return provided.length === expected.length
+    && timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
 }
 ```
 
 ## Event Types
 
-| Event | Description | Trigger |
-|---|---|---|
-| `filing.published` | New SEC filing detected | RSS poller detects new filing |
-| `enforcement.published` | New enforcement action | Daily enforcement sync |
-| `monitor.match` | Saved search has new matches | Monitor evaluation cycle |
-| `billing.budget.threshold` | Budget threshold crossed | 75%, 90%, 95%, 100% of spend cap |
+Use the event catalog endpoint rather than copying a static list:
+
+```bash
+curl "https://api.secapi.ai/v1/event_types?status=public_emitting" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+Only `public_emitting` entries are public product surface. Reserved event types, including filing and dilution producers, are excluded from public launch claims until their producers are enabled.
 
 ## Delivery Audit
 
@@ -91,4 +87,4 @@ curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/{id}/rotate_secret" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-The old secret remains valid for 24 hours after rotation.
+The previous secret is invalidated immediately and the new secret is returned once in the response. Update the receiving service before the next delivery arrives.

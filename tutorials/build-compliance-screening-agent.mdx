@@ -116,10 +116,13 @@ for client in CONFIG["clients"]:
 
 def verify_signature(payload: bytes, signature: str) -> bool:
     """Verify the webhook signature using HMAC-SHA256."""
+    parts = dict(part.split("=", 1) for part in signature.split(",") if "=" in part)
+    timestamp = parts.get("t", "")
+    provided = parts.get("v1", "")
     expected = hmac.new(
-        SIGNING_SECRET.encode(), payload, hashlib.sha256
+        SIGNING_SECRET.encode(), f"{timestamp}.".encode() + payload, hashlib.sha256
     ).hexdigest()
-    return hmac.compare_digest(signature, expected)
+    return hmac.compare_digest(provided, expected)
 
 
 def classify_severity(event_type: str, data: dict) -> str:
@@ -219,7 +222,7 @@ def send_slack_alert(alert: dict):
 def handle_compliance_webhook():
     """Handle incoming compliance event webhooks."""
     # Verify signature
-    signature = request.headers.get("X-Webhook-Signature", "")
+    signature = request.headers.get("X-SecAPI-Signature", "")
     if not verify_signature(request.data, signature):
         return jsonify({"error": "Invalid signature"}), 401
 
@@ -469,7 +472,7 @@ Verify the handler processes events correctly by sending a test payload.
 ```bash
 curl -X POST \
   -H "Content-Type: application/json" \
-  -H "X-Webhook-Signature: test" \
+  -H "X-SecAPI-Signature: t=1700000000,v1=test" \
   -d '{
     "event": "enforcement.new",
     "timestamp": "2025-04-11T14:30:00Z",

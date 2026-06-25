@@ -140,15 +140,18 @@ Add a second **Function** node between the Webhook node and the extraction node 
 const crypto = require("crypto");
 
 const SIGNING_SECRET = "whsec_..."; // Replace with your signing secret
-const signature = $input.first().json.headers["x-webhook-signature"];
+const signature = $input.first().json.headers["x-secapi-signature"];
+const parts = Object.fromEntries(signature.split(",").map((part) => part.split("=", 2)));
+const timestamp = parts.t;
+const provided = parts.v1;
 const body = JSON.stringify($input.first().json.body);
 
 const expected = crypto
   .createHmac("sha256", SIGNING_SECRET)
-  .update(body)
+  .update(`${timestamp}.${body}`)
   .digest("hex");
 
-if (signature !== expected) {
+if (provided !== expected) {
   throw new Error("Invalid webhook signature");
 }
 

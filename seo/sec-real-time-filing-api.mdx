@@ -1,23 +1,23 @@
 ---
-title: "Real-Time SEC Filing Stream API — WebSocket & Webhook Alerts"
-description: "Stream SEC filings the moment they hit EDGAR with WebSocket and webhook APIs. Sub-minute latency, filterable by form type and ticker. Get started free at secapi.ai/signup."
+title: "SEC Filing Monitor API — Webhook Alerts and Polling"
+description: "Monitor SEC filings with webhook alerts, email notifications, and REST polling. Filter by form type, ticker, and query. Get started at secapi.ai/signup."
 ---
 
-# Real-Time SEC Filing Stream API
+# SEC Filing Monitor API
 
-Get SEC filings delivered to your application the moment they appear on EDGAR. SEC API monitors the EDGAR full-text feed continuously and pushes new filings through WebSocket connections and webhook callbacks with sub-minute latency.
+Get SEC filing alerts delivered to your application when a saved monitor finds new matching filings. SEC API supports signed webhook delivery for `monitor.match` events, customer-configured email notifications, and REST polling for latest filings.
 
 ## Capabilities
 
 <CardGroup cols={2}>
-  <Card title="WebSocket streaming" icon="plug">
-    Open a persistent connection and receive filings as they land. Filter by form type, ticker, CIK, or SIC code.
+  <Card title="Monitor alerts" icon="bell">
+    Create monitors for forms, tickers, and keyword queries. Matching filings emit `monitor.match` delivery events.
   </Card>
-  <Card title="Webhook callbacks" icon="bell">
-    Register an endpoint and SEC API will POST structured filing data to your server with automatic retries and HMAC signing.
+  <Card title="Webhook callbacks" icon="plug">
+    Register an endpoint subscribed to `monitor.match` and SEC API will POST signed delivery payloads with retry handling.
   </Card>
-  <Card title="Sub-minute latency" icon="bolt">
-    Filings are detected, parsed, and dispatched within 60 seconds of appearing on EDGAR — often faster.
+  <Card title="Email notifications" icon="mail">
+    Send monitor matches to verified recipients with unsubscribe, bounce, complaint, and billing-pause state handled by SEC API.
   </Card>
   <Card title="Structured payloads" icon="code">
     Every event includes parsed metadata: accession number, form type, filer CIK, company name, filed date, and direct document URLs.
@@ -26,26 +26,43 @@ Get SEC filings delivered to your application the moment they appear on EDGAR. S
 
 ## Quick start
 
-Subscribe to real-time 10-K and 10-Q filings via webhook:
+Create a webhook endpoint for monitor match events:
 
 ```bash
 curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://yourapp.com/webhooks/sec",
-    "forms": ["10-K", "10-Q"],
-    "secret": "your-hmac-secret"
+    "destinationUrl": "https://yourapp.com/webhooks/sec",
+    "description": "10-K and 10-Q monitor alerts",
+    "subscribedEventTypes": ["monitor.match"]
   }' \
   "https://api.secapi.ai/v1/webhook_endpoints"
 ```
 
 ```json
 {
-  "webhook_id": "wh_abc123",
-  "status": "active",
-  "forms": ["10-K", "10-Q"],
-  "created_at": "2025-03-15T10:30:00Z"
+  "object": "webhook_endpoint",
+  "id": "wh_abc123",
+  "status": "pending_verification",
+  "subscribedEventTypes": ["monitor.match"]
 }
+```
+
+Create a monitor for 10-K and 10-Q filings. Email delivery is optional; webhook delivery comes from the org-level endpoint subscription above.
+
+```bash
+curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "10-K and 10-Q filings",
+    "query": "annual report OR quarterly report",
+    "filters": { "forms": ["10-K", "10-Q"] },
+    "delivery": {
+      "type": "email",
+      "config": { "to": "alerts@example.com" }
+    }
+  }' \
+  "https://api.secapi.ai/v1/monitors"
 ```
 
 Get the latest filings via polling (REST fallback):
@@ -59,34 +76,37 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 ### Earnings release monitoring
 
-Detect 8-K filings with Item 2.02 (Results of Operations) the moment they appear. Trigger downstream analysis pipelines or alert traders before the news hits terminals.
+Detect 8-K filings with Item 2.02 (Results of Operations) as monitor matches are swept. Trigger downstream analysis pipelines or alert internal teams from a signed webhook.
 
 ### Compliance surveillance
 
-Financial institutions can monitor filings from counterparties, portfolio companies, and regulated entities in real time without polling EDGAR.
+Financial institutions can monitor filings from counterparties, portfolio companies, and regulated entities without polling EDGAR directly.
 
 ### AI-powered filing analysis
 
-Pipe real-time filing events into LLM workflows to generate instant summaries, risk assessments, or structured extractions as filings land.
+Pipe monitor match events into LLM workflows to generate summaries, risk assessments, or structured extractions when relevant filings arrive.
 
 ## API endpoints
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /v1/webhook_endpoints` | Register a webhook for filing events |
+| `POST /v1/monitors` | Create a saved filing monitor |
+| `GET /v1/monitors` | List saved monitors |
+| `GET /v1/monitors/:monitor_id/matches` | Preview recent monitor matches |
+| `POST /v1/webhook_endpoints` | Register a webhook endpoint for delivery events |
 | `GET /v1/webhook_endpoints` | List active webhooks |
+| `POST /v1/webhook_endpoints/:webhook_id/test` | Send a signed test event |
 | `POST /v1/webhook_endpoints/:webhook_id/rotate_secret` | Rotate the HMAC signing secret |
 | `GET /v1/webhook_endpoints/:webhook_id/deliveries` | Inspect delivery history |
 | `GET /v1/filings/latest` | Poll latest filings (REST fallback) |
-| `WSS /v1/stream/ws` | WebSocket connection for real-time streaming |
 
-## Why SEC API for real-time filings
+## Why SEC API for filing monitors
 
 | Feature | SEC API | Raw EDGAR | SEC-API.io | Quiver Quant |
 |---------|-----------|-----------|------------|--------------|
-| WebSocket streaming | Yes | No | No | No |
+| Saved filing monitors | Yes | No | Limited | Limited |
 | Webhook with HMAC signing | Yes | No | Yes | No |
-| Sub-minute latency | Yes | N/A (polling) | ~5 min | ~15 min |
+| Email notification lifecycle | Yes | No | Limited | Limited |
 | Form type filtering | Yes | No | Yes | Limited |
 | Structured JSON payloads | Yes | No (raw index) | Yes | Partial |
 | Python + JS SDKs | Yes | No | No | No |
@@ -94,7 +114,7 @@ Pipe real-time filing events into LLM workflows to generate instant summaries, r
 ## Get started
 
 <Card title="Get your API key" icon="key" href="/getting-started">
-  Start streaming SEC filings in under 60 seconds. 150 free API calls (one-time).
+  Start monitoring SEC filings with 150 included API calls (one-time).
 </Card>
 
 - [Filing Search API](/seo/sec-filing-search-api)

@@ -1,16 +1,18 @@
 # Event export
 
-Operators need a support-friendly way to inspect request, webhook, and stream event history outside the live API response path. SEC API supports filtered event listing and JSON or NDJSON exports.
+Operators need a support-friendly way to inspect request, webhook, and stream event history outside the live API response path. SEC API supports filtered delivery-ledger listing and JSON or NDJSON exports backed by Postgres. `OMNI_WEBHOOK_EVENT_LOG_PATH` remains an ops-only fallback for local/no-database environments, not the public source of truth.
 
 ## Endpoints
 
-- `GET /v1/events`
-- `GET /v1/events/export`
+- `GET /v1/delivery/events`
+- `GET /v1/delivery/events/export`
+
+Use the `/v1/delivery/events` namespace for delivery history so it does not collide with SEC event APIs such as enforcement, auditor-change, and voting-result routes.
 
 ## Filtered event inspection
 
 ```bash
-curl "$SECAPI_BASE_URL/v1/events?kind=event&type=artifact.created&requestId=req_123&limit=20" \
+curl "$SECAPI_BASE_URL/v1/delivery/events?kind=event&type=artifact.created&requestId=req_123&limit=20" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
@@ -25,14 +27,14 @@ Useful filters:
 ## Export JSON
 
 ```bash
-curl "$SECAPI_BASE_URL/v1/events/export?kind=event&limit=100&format=json" \
+curl "$SECAPI_BASE_URL/v1/delivery/events/export?kind=event&limit=100&format=json" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
 ## Export NDJSON
 
 ```bash
-curl "$SECAPI_BASE_URL/v1/events/export?kind=webhook_delivery&since=2026-03-14T00:00:00Z&format=ndjson" \
+curl "$SECAPI_BASE_URL/v1/delivery/events/export?kind=webhook_delivery&since=2026-03-14T00:00:00Z&format=ndjson" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
@@ -49,4 +51,6 @@ secapi events export --kind webhook_delivery --since 2026-03-14T00:00:00Z --form
 
 - exports are tenant-scoped
 - request correlation is driven by `Request-Id`
-- support should prefer exports over direct database access for routine inspections
+- support should prefer exports over direct database access for tenant-scoped delivery history
+- stream polling uses per-subscription delivery records, so re-reading the same cursor window does not create new billable delivery units
+- when Postgres is configured and the durable ledger cannot be read, the API returns `delivery_ledger_unavailable` with HTTP 503 rather than returning an empty history

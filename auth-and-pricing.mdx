@@ -1,7 +1,7 @@
 # Auth, Billing, and First Utility
 
 <Info>
-API keys are the primary authentication method for REST, SDK, CLI, and server-to-server MCP calls. Create a free account and sign in through WorkOS to manage API keys, billing, and usage.
+API keys are the primary authentication method for REST, SDK, CLI, and server-to-server MCP calls. Create an account and sign in through WorkOS to manage API keys, billing, and usage.
 </Info>
 
 ## Auth model
@@ -50,7 +50,7 @@ For suspected key theft, revoke the key, create a replacement, rotate callers, a
 
 <Steps>
   <Step title="Create your org and API key">
-    Create a free account, then create your first org-scoped API key explicitly from the dashboard or account API using a WorkOS browser session, where it is revealed exactly once.
+    Create an account, then create your first org-scoped API key explicitly from the dashboard or account API using a WorkOS browser session, where it is revealed exactly once.
   </Step>
   <Step title="Receive the starter grant">
     Every new org starts with `150` included calls, one-time (with an optional self-serve reset every 30 days); API keys are created explicitly and revealed once.
@@ -81,7 +81,7 @@ For suspected key theft, revoke the key, create a replacement, rotate callers, a
     Default paid motion. No fixed monthly fee. Higher per-call pricing in exchange for low activation friction.
   </Card>
   <Card title="Personal" icon="user" href="/plans-and-pricing">
-    Monthly or annual commit plan for individual developers and analysts who want lower unit pricing.
+    Monthly self-serve commit plan for individual developers and analysts who want lower unit pricing.
   </Card>
   <Card title="Team" icon="users" href="/plans-and-pricing">
     Shared-org plan with higher throughput, more keys, and better economics for small teams.
@@ -95,18 +95,20 @@ For suspected key theft, revoke the key, create a replacement, rotate callers, a
 
 - every new org gets `150` included calls, one-time (with an optional self-serve reset every 30 days)
 - Pay As You Go is the default paid path
-- annual billing defaults on commit plans
+- annual billing is Commercial/contract-only until annual self-serve prices are explicitly provisioned
 - Team and Commercial are for shared or externalized usage, not just more requests
 - redistribution, embedding, resale, and broader commercial rights begin at `Commercial`
 
-## WebSocket rate posture
+## Delivery rate posture
 
-Chat messages sent through the SEC API Agent WebSocket runtime are rate-limited per user at a configurable requests-per-minute ceiling (default: 30 RPM). Non-chat messages — permission responses, plan approvals, label and source operations — are exempt because they are responses to server-initiated prompts, not user-initiated load.
+Customer delivery surfaces are gated by plan, billing state, resource caps, and budget state. Webhook and stream management routes use management limits, while successful customer-visible delivery units are billed through `delivery_events`. Customer-configured monitor email notifications are billed through `email_notifications`.
 
-Rate-limited requests receive a clear error message with a retry-after interval. The WebSocket connection stays open. This posture protects shared infrastructure without punishing interactive workflows.
+Rate-limited requests receive a clear error message with a retry-after interval. Billing-paused delivery work is paused rather than silently retried.
 
-- `RATE_LIMIT_CHAT_RPM`: per-user ceiling (default 30)
-- `RATE_LIMIT_ENABLED`: feature flag (default true in production)
+- `webhook_management`: create, list, rotate, replay, and delivery-history control-plane requests
+- `stream_management`: stream subscription create/list/poll requests
+- `delivery_events`: successful webhook and stream delivery units
+- `email_notifications`: customer monitor email recipient submissions
 
 ## Billing entry points
 
@@ -114,7 +116,7 @@ Rate-limited requests receive a clear error message with a retry-after interval.
 - `GET /v1/billing/rates`
 - `POST /v1/billing/quote`
 - `PUT /v1/billing/budget`
-- `POST /v1/billing/payg/activate`
+- `POST /v1/billing/payg/enable`
 - `POST /v1/billing/checkout`
 - `POST /v1/billing/portal`
 - `POST /v1/agent/bootstrap_tokens`

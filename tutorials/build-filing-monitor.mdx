@@ -186,14 +186,17 @@ SIGNING_SECRET = "whsec_..."
 @app.route("/webhooks/filings", methods=["POST"])
 def handle_webhook():
     # Verify signature
-    signature = request.headers.get("X-Webhook-Signature")
+    signature = request.headers.get("X-SecAPI-Signature", "")
+    parts = dict(part.split("=", 1) for part in signature.split(",") if "=" in part)
+    timestamp = parts.get("t", "")
+    provided = parts.get("v1", "")
     expected = hmac.new(
         SIGNING_SECRET.encode(),
-        request.data,
+        f"{timestamp}.".encode() + request.data,
         hashlib.sha256,
     ).hexdigest()
 
-    if not hmac.compare_digest(signature, expected):
+    if not hmac.compare_digest(provided, expected):
         return jsonify({"error": "Invalid signature"}), 401
 
     payload = request.json
@@ -214,13 +217,16 @@ const app = express();
 const SIGNING_SECRET = "whsec_...";
 
 app.post("/webhooks/filings", express.raw({ type: "application/json" }), (req, res) => {
-  const signature = req.headers["x-webhook-signature"] as string;
+  const signature = req.headers["x-secapi-signature"] as string;
+  const parts = new Map(signature.split(",").map((part) => part.split("=", 2) as [string, string]));
+  const timestamp = parts.get("t") ?? "";
+  const provided = parts.get("v1") ?? "";
   const expected = crypto
     .createHmac("sha256", SIGNING_SECRET)
-    .update(req.body)
+    .update(`${timestamp}.${req.body.toString("utf8")}`)
     .digest("hex");
 
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) {
     return res.status(401).json({ error: "Invalid signature" });
   }
 

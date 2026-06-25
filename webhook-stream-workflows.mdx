@@ -4,22 +4,23 @@
 
 1. Create an org-scoped webhook endpoint with `POST /v1/webhook_endpoints`
 2. Store the returned `signingSecret` at creation time or after a secret rotation
-3. Verify inbound signatures using the raw request body plus `x-secapi-signature-timestamp`
-4. Use `POST /v1/webhook_endpoints/{webhook_id}/rotate_secret` when a secret is exposed or stale
+3. Treat the endpoint as `pending_verification` until `POST /v1/webhook_endpoints/{webhook_id}/test` succeeds; the successful signed `webhook.test` delivery promotes it to `active`
+4. Verify inbound signatures using the raw request body plus `x-secapi-signature-timestamp`
+5. Use `POST /v1/webhook_endpoints/{webhook_id}/rotate_secret` when a secret is exposed or stale
+6. Inspect recent attempts with `GET /v1/webhook_endpoints/{webhook_id}/deliveries`
+7. Replay a failed attempt with `POST /v1/webhook_endpoints/{webhook_id}/deliveries/{delivery_id}/replay`
 
 ## Stream lifecycle
 
 1. Create a stream subscription with `POST /v1/stream_subscriptions`
 2. Subscribe to the smallest event set that supports the workflow
 3. Track the returned `cursor` and `lastEventAt` fields for replay and polling
-4. Use webhook replay tooling if a downstream consumer falls behind during the scaffold phase
+4. Use `GET /v1/delivery/events` for cross-surface delivery history and `GET /v1/stream_subscriptions/{stream_id}/events` for subscription-specific polling
+5. For live WebSocket delivery, create the subscription with `transport=websocket`, mint a ticket with `POST /v1/stream/tickets`, then connect to `/v1/stream/ws?ticket=...&stream_id={stream_id}`
 
-## Current event types
+## Event types
 
-- `artifact.created`
-- `artifact.reconciled`
-- `webhook_endpoint.created`
-- `stream_subscription.created`
+Use `GET /v1/event_types?status=public_emitting` as the source of truth for event names, producer status, replay support, retention, and billing family. Reserved event types are intentionally excluded from this public filter until their producers are shipping.
 
 ## Example CLI usage
 
@@ -28,9 +29,13 @@ secapi webhooks create \
   --destination-url https://example.com/hooks/secapi \
   --event-types artifact.created,artifact.reconciled
 
+secapi webhooks test --webhook-id wh_123
+
 secapi streams create \
   --event-types artifact.created,artifact.reconciled \
   --transport poll
 
 secapi webhooks rotate-secret --webhook-id wh_123
 ```
+
+Webhook and stream delivery units are billed through `delivery_events`. Customer monitor email notifications are billed through the separate `email_notifications` meter.

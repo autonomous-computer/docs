@@ -7,22 +7,25 @@ PAYG keeps the path from signup to first utility short:
 - no fixed monthly fee
 - card attachment only when the starter grant is exhausted
 - public per-call pricing that maps cleanly to API usage
+- Delivery usage is priced separately by unit: webhook/stream delivery uses `delivery_events` at `$0.001`, while customer-configured monitor email uses `email_notifications` at `$0.005` per submitted recipient.
 
 ## Activation flow
 
 1. create an org and explicitly create an org-scoped API key
 2. use the starter grant
-3. call `POST /v1/billing/payg/activate`
-4. attach a card in Stripe Checkout
+3. call `POST /v1/billing/payg/enable`
+4. save a card, make the initial credit top-up, and optionally configure auto top-up
 5. continue in `payg_active`
 
 ## Relevant endpoints
 
 - `GET /v1/billing`
 - `GET /v1/billing/rates`
-- `POST /v1/billing/payg/activate`
+- `POST /v1/billing/payg/enable`
 - `POST /v1/billing/portal`
 
 ## Failure posture
 
 If the starter grant is exhausted and no card is attached, billable routes return `402 billing_required` with the current plan, billing state, and quota details.
+
+Delivery creation and background fanout also respect billing state. If the account is budget-paused or lacks an active card/prepaid balance, paid webhook, stream, and customer email work is blocked instead of silently retried. Auth, lifecycle, billing, and account emails are operational messages and do not count against the `email_notifications` meter.

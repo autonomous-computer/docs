@@ -1,6 +1,6 @@
-# POST /v1/stream_subscriptions
+# PATCH /v1/stream_subscriptions/{stream_id}
 
-Create a stream subscription for event polling and replay
+Update a stream subscription description, event types, transport, or status
 
 <Info>
 Audience: application and operator.
@@ -15,12 +15,12 @@ Audience: application and operator.
 
 <RequestExample>
 ```bash
-curl -X POST \
+curl -X PATCH \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{"description":"Monitor matches polling stream","eventTypes":["monitor.match"],"transport":"poll","livemode":false}' \
-  "https://api.secapi.ai/v1/stream_subscriptions"
+  -d '{"description":"Monitor matches polling stream","eventTypes":["monitor.match"],"transport":"poll","status":"active"}' \
+  "https://api.secapi.ai/v1/stream_subscriptions/strm_example_123"
 ```
 </RequestExample>
 
@@ -51,7 +51,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/stream_subscriptions to create a stream subscription for event polling and replay. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API PATCH /v1/stream_subscriptions/{stream_id} to update a stream subscription description, event types, transport, or status. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

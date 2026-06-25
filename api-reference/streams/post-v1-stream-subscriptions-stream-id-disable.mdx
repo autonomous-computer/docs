@@ -1,6 +1,6 @@
-# POST /v1/webhook_endpoints/{webhook_id}/rotate_secret
+# POST /v1/stream_subscriptions/{stream_id}/disable
 
-Rotate the signing secret for a webhook endpoint
+Disable a stream subscription without deleting its delivery records
 
 <Info>
 Audience: application and operator.
@@ -20,7 +20,7 @@ curl -X POST \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
   -d '{}' \
-  "https://api.secapi.ai/v1/webhook_endpoints/wh_example_123/rotate_secret"
+  "https://api.secapi.ai/v1/stream_subscriptions/strm_example_123/disable"
 ```
 </RequestExample>
 
@@ -29,21 +29,20 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "object": "webhook_endpoint",
-  "id": "wh_2ZK8Q1W9F4M6P7R3",
+  "object": "stream_subscription",
+  "id": "strm_2ZK8Q1W9F4M6P7R3",
   "createdAt": "2026-06-25T15:00:00.000Z",
   "updatedAt": "2026-06-25T15:00:00.000Z",
   "livemode": false,
   "orgId": "org_example_123",
-  "description": "Production monitor matches",
-  "destinationUrl": "https://example.com/hooks/secapi",
-  "subscribedEventTypes": [
-    "monitor.match",
-    "webhook.test"
+  "description": "Monitor matches polling stream",
+  "eventTypes": [
+    "monitor.match"
   ],
-  "status": "pending_verification",
-  "lastDeliveredAt": null,
-  "signingSecret": "whsec_example_reveal_once_on_create_or_rotate",
+  "transport": "poll",
+  "status": "paused",
+  "cursor": null,
+  "lastEventAt": null,
   "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
@@ -52,7 +51,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/webhook_endpoints/{webhook_id}/rotate_secret to rotate the signing secret for a webhook endpoint. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API POST /v1/stream_subscriptions/{stream_id}/disable to disable a stream subscription without deleting its delivery records. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

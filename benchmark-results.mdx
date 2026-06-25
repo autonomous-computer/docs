@@ -79,7 +79,7 @@ The intelligence bundle pre-computes what agents would otherwise assemble from m
 ## FinanceBench canary-25 (MCP regression check)
 
 <Warning>
-**Preliminary — MCP data-layer regression check, not the full agent-chat benchmark.** Bridge-50 numbers below were produced by an eval harness that instantiates the Anthropic SDK directly and routes tool calls into SEC API's MCP surface. This validates the data layer. The full-stack benchmark exercises the agent-chat WebSocket path end to end.
+**Preliminary — MCP data-layer regression check.** Bridge-50 numbers below were produced by an eval harness that instantiates the Anthropic SDK directly and routes tool calls into SEC API's MCP surface. This validates the data layer, not an application runtime.
 </Warning>
 
 [FinanceBench](https://github.com/patronus-ai/financebench) (Patronus AI) is a 150-question benchmark over 10-K / 10-Q / 8-K filings that tests an AI system's ability to answer real financial-analyst questions with citations to source documents.
@@ -92,7 +92,7 @@ The intelligence bundle pre-computes what agents would otherwise assemble from m
 
 **What the 72% reflects:** SEC API's MCP surface scored 18/25 judge-correct on canary-25 against current production data on 2026-04-25. Compared to the 2026-04-02 baseline (25/25 judge), the gap is dominated by **production data drift** — new 10-Q/8-K filings ingested in the intervening 23 days now return as "latest" for queries that don't pin a fiscal period. The agent's tool-calling strategy and the canonical_calls hint shape don't fully compensate. Five iterations of prompt + thinking + reflection + canonical_calls fixes plateaued at this number.
 
-**What the 72% is NOT:** the launch claim for the full agent-chat path. The full-stack run exercises WebSocket transport, MCP wiring, the system prompt, and citations end to end, not just the data layer. Expect the full-stack number to differ; both are valid measurements of different surfaces.
+**What the 72% is NOT:** an end-user runtime benchmark. SEC API measures the data/API/MCP layer here; full-stack application runtime evaluation belongs in the OMNI Apps repository.
 
 **Failure decomposition (5 chronic + 2 reasoning-bound):**
 
@@ -100,12 +100,12 @@ The intelligence bundle pre-computes what agents would otherwise assemble from m
 |---|---|---|
 | `section_snippets` granularity gap | fb_055, fb_056 (BBY Q2 FY24) | Requires finer section retrieval |
 | Sonnet-4.5 reasoning ceiling | fb_054, fb_141 | Re-test on a stronger reasoning model |
-| Wrong-source (GAAP vs Non-GAAP) | fb_029 | May improve through the full agent-chat RAG path |
+| Wrong-source (GAAP vs Non-GAAP) | fb_029 | Needs stricter source selection and period pinning in the MCP/data-layer harness |
 | Production data drift | fb_028 | Needs URL-pin diagnostic |
 
 **Cost / latency (improvements vs original harness):** $0.44 / Q (down 41%), p95 latency 88s (down 8%). Cost guard ($20 / run) held throughout the iteration ladder.
 
-**Reproducibility:** every run writes a `reproducibility` block at the top of the artifact JSON (commit_sha, agent_chat_version, sec_api_version, model_version, run_date, harness_version, fixture_baseline_commit, fixture_baseline_date, `harness_routes_through_agent_chat: false` honesty flag). The flag flips to `true` for the full agent-chat path.
+**Reproducibility:** every run writes a `reproducibility` block at the top of the artifact JSON (commit_sha, sec_api_version, model_version, run_date, harness_version, fixture_baseline_commit, fixture_baseline_date, and routing metadata).
 
 ## Methodology
 

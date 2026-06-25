@@ -1718,68 +1718,102 @@
         }
       ]
     },
-    "/v1/billing/payg/activate": {
+    "/v1/billing/payg/enable": {
       "post": {
-        "summary": "Create a Stripe Checkout setup session that activates Pay As You Go card-on-file billing",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+        "summary": "Enable pay-as-you-go in one flow: save a card, make an initial credit top-up, and optionally turn on auto-top-up (returns a PaymentIntent client secret)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "amountUsd"
+                ],
+                "properties": {
+                  "amountUsd": {
+                    "type": "number",
+                    "minimum": 5,
+                    "description": "Initial prepaid credit amount to purchase while enabling PAYG."
+                  },
+                  "autoTopupThresholdCents": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Optional low-balance threshold, in cents, that enables auto-top-up after payment succeeds."
+                  },
+                  "autoTopupAmountCents": {
+                    "type": "integer",
+                    "minimum": 500,
+                    "description": "Optional refill amount, in cents, used with autoTopupThresholdCents."
+                  }
                 }
-              }
-            }
-          },
-          "default": {
-            "description": "Contract-aware error response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "amountUsd": 10,
+                    "autoTopupThresholdCents": 1000,
+                    "autoTopupAmountCents": 2500
+                  }
                 }
               }
             }
           }
         },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "x-secapi-route-id": "billing.payg_activate",
-        "x-secapi-access": "bearer_org",
-        "x-secapi-kind": "billing",
-        "x-secapi-docs": "public",
-        "x-secapi-smoke": "local"
-      },
-      "parameters": [
-        {
-          "name": "secapi-version",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string",
-            "default": "2026-03-19",
-            "example": "2026-03-19"
-          },
-          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
-        }
-      ]
-    },
-    "/v1/billing/payg/enable": {
-      "post": {
-        "summary": "Enable pay-as-you-go in one flow: save a card, make an initial credit top-up, and optionally turn on auto-top-up (returns a PaymentIntent client secret)",
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "201": {
+            "description": "PAYG enable PaymentIntent created.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "clientSecret",
+                    "paymentIntentId",
+                    "breakdown",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "payg_enable_intent"
+                    },
+                    "clientSecret": {
+                      "type": "string"
+                    },
+                    "paymentIntentId": {
+                      "type": "string"
+                    },
+                    "breakdown": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "payg_enable_intent",
+                      "clientSecret": "pi_example_secret_example",
+                      "paymentIntentId": "pi_example",
+                      "breakdown": {
+                        "creditsCents": 1000,
+                        "discountCents": 0,
+                        "feeCents": 30,
+                        "totalChargeCents": 1030,
+                        "currency": "usd"
+                      },
+                      "requestId": "req_2ZK8Q1W9F4M6P7R3"
+                    }
+                  }
                 }
               }
             }
@@ -1822,7 +1856,7 @@
     },
     "/v1/billing/grant/reset": {
       "post": {
-        "summary": "Re-grant the one-time free starter allowance (resets free-grant usage), rate-limited to once per rolling 30 days per organization",
+        "summary": "Re-grant the one-time starter allowance (resets starter-grant usage), rate-limited to once per rolling 30 days per organization",
         "responses": {
           "200": {
             "description": "Successful response",
@@ -2858,20 +2892,110 @@
         }
       ]
     },
-    "/v1/events": {
+    "/v1/event_types": {
       "get": {
-        "summary": "List canonical event, webhook delivery, and stream records for the current organization",
+        "summary": "List Delivery event types, producer status, replay support, retention, and billing family metadata",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "public_emitting",
+                "internal",
+                "reserved"
+              ]
+            },
+            "description": "Filter the catalog by producer status."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Delivery event type catalog.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "required": [
+                    "object",
+                    "data",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "event_type_catalog"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "required": [
+                          "type",
+                          "status",
+                          "schemaVersion",
+                          "billingFamily"
+                        ],
+                        "properties": {
+                          "type": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "public_emitting",
+                              "internal",
+                              "reserved"
+                            ]
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "schemaVersion": {
+                            "type": "string"
+                          },
+                          "producer": {
+                            "type": "string"
+                          },
+                          "filterable": {
+                            "type": "boolean"
+                          },
+                          "replaySupport": {
+                            "type": "string"
+                          },
+                          "retention": {
+                            "type": "string"
+                          },
+                          "billingFamily": {
+                            "type": "string",
+                            "description": "Meter family used when this event is delivered through a customer webhook, stream, or email transport."
+                          },
+                          "transports": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "samplePayload": {
+                            "type": "object",
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid status filter."
           },
           "default": {
             "description": "Contract-aware error response",
@@ -2892,7 +3016,176 @@
             "BearerAuth": []
           }
         ],
-        "x-secapi-route-id": "events.collection",
+        "x-secapi-route-id": "events.catalog",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "parameters": [
+        {
+          "name": "secapi-version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "2026-03-19",
+            "example": "2026-03-19"
+          },
+          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
+        }
+      ]
+    },
+    "/v1/delivery/events": {
+      "get": {
+        "summary": "List durable Delivery ledger, webhook delivery, and stream records for the current organization",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "event",
+                "webhook_delivery",
+                "stream_event"
+              ]
+            },
+            "description": "Filter to one Delivery ledger record family."
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by canonical event type, for example monitor.match."
+          },
+          {
+            "name": "requestId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by producer request id."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Return records recorded at or after this timestamp."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 25
+            },
+            "description": "Maximum records to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery ledger records for the current organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "data",
+                    "hasMore",
+                    "nextCursor"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "event",
+                              "webhook_delivery",
+                              "stream_event"
+                            ]
+                          },
+                          "recordedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "orgId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "eventId": {
+                            "type": "string"
+                          },
+                          "eventType": {
+                            "type": "string"
+                          },
+                          "requestId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Delivery ledger is temporarily unavailable."
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "delivery.events.collection",
         "x-secapi-access": "org",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -2912,20 +3205,121 @@
         }
       ]
     },
-    "/v1/events/export": {
+    "/v1/delivery/events/export": {
       "get": {
-        "summary": "Export filtered canonical events as JSON or NDJSON for support and operations",
+        "summary": "Export durable Delivery ledger records as JSON or NDJSON",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "event",
+                "webhook_delivery",
+                "stream_event"
+              ]
+            },
+            "description": "Filter to one Delivery ledger record family."
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by canonical event type, for example monitor.match."
+          },
+          {
+            "name": "requestId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by producer request id."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Return records recorded at or after this timestamp."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 25
+            },
+            "description": "Maximum records to return."
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "ndjson"
+              ],
+              "default": "json"
+            },
+            "description": "Export format. ndjson returns application/x-ndjson."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Delivery ledger export.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "required": [
+                    "object",
+                    "format",
+                    "count",
+                    "content"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "event_export"
+                    },
+                    "format": {
+                      "type": "string",
+                      "const": "json"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "Pretty-printed JSON array of ledger records."
+                    }
+                  }
+                }
+              },
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string",
+                  "description": "Newline-delimited JSON Delivery ledger records."
                 }
               }
             }
+          },
+          "503": {
+            "description": "Delivery ledger is temporarily unavailable."
           },
           "default": {
             "description": "Contract-aware error response",
@@ -2946,7 +3340,7 @@
             "BearerAuth": []
           }
         ],
-        "x-secapi-route-id": "events.export",
+        "x-secapi-route-id": "delivery.events.export",
         "x-secapi-access": "org",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -3223,15 +3617,92 @@
         "x-secapi-smoke": "local"
       },
       "post": {
-        "summary": "Create a signed webhook endpoint for artifact and stream events",
+        "summary": "Create a signed webhook endpoint for Delivery events",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "destinationUrl"
+                ],
+                "properties": {
+                  "destinationUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Public HTTPS endpoint URL. Self-serve endpoints must use default HTTPS port 443."
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "subscribedEventTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Delivery event types from GET /v1/event_types. Supports exact event names, `*`, and namespace wildcards such as `monitor.*`."
+                  },
+                  "livemode": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "destinationUrl": "https://example.com/hooks/secapi",
+                    "description": "Production monitor matches",
+                    "subscribedEventTypes": [
+                      "monitor.match"
+                    ],
+                    "livemode": false
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "201": {
+            "description": "Webhook endpoint created. The signing secret is revealed once on create/rotate.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/WebhookEndpoint"
+                    }
+                  ],
                   "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "webhook_endpoint",
+                      "id": "wh_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Production monitor matches",
+                      "destinationUrl": "https://example.com/hooks/secapi",
+                      "subscribedEventTypes": [
+                        "monitor.match",
+                        "webhook.test"
+                      ],
+                      "status": "pending_verification",
+                      "lastDeliveredAt": null,
+                      "signingSecret": "whsec_example_reveal_once_on_create_or_rotate"
+                    }
+                  }
                 }
               }
             }
@@ -3275,9 +3746,124 @@
         }
       ]
     },
-    "/v1/webhook_endpoints/{webhook_id}/rotate_secret": {
-      "post": {
-        "summary": "Rotate the signing secret for a webhook endpoint",
+    "/v1/webhook_endpoints/{webhook_id}": {
+      "patch": {
+        "summary": "Update a webhook endpoint URL, description, subscribed event types, or non-active status",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "destinationUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "subscribedEventTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending_verification",
+                      "disabled"
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "destinationUrl": "https://example.com/hooks/secapi",
+                    "description": "Production monitor matches",
+                    "subscribedEventTypes": [
+                      "monitor.match",
+                      "webhook.test"
+                    ],
+                    "status": "active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/WebhookEndpoint"
+                    }
+                  ],
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "webhook_endpoint",
+                      "id": "wh_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Production monitor matches",
+                      "destinationUrl": "https://example.com/hooks/secapi",
+                      "subscribedEventTypes": [
+                        "monitor.match",
+                        "webhook.test"
+                      ],
+                      "status": "pending_verification",
+                      "lastDeliveredAt": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "webhook_endpoints.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "delete": {
+        "summary": "Delete a webhook endpoint while preserving delivery audit history",
         "responses": {
           "200": {
             "description": "Successful response",
@@ -3285,7 +3871,447 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "id",
+                    "deleted",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "webhook_endpoint.deleted"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "webhook_endpoint.deleted",
+                      "id": "wh_2ZK8Q1W9F4M6P7R3",
+                      "deleted": true,
+                      "requestId": "req_2ZK8Q1W9F4M6P7R3"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "webhook_endpoints.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "parameters": [
+        {
+          "name": "secapi-version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "2026-03-19",
+            "example": "2026-03-19"
+          },
+          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
+        }
+      ]
+    },
+    "/v1/webhook_endpoints/{webhook_id}/enable": {
+      "post": {
+        "summary": "Re-enable a previously verified webhook endpoint",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/WebhookEndpoint"
+                    }
+                  ],
                   "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "webhook_endpoint",
+                      "id": "wh_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Production monitor matches",
+                      "destinationUrl": "https://example.com/hooks/secapi",
+                      "subscribedEventTypes": [
+                        "monitor.match",
+                        "webhook.test"
+                      ],
+                      "status": "pending_verification",
+                      "lastDeliveredAt": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "webhook_endpoints.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "parameters": [
+        {
+          "name": "secapi-version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "2026-03-19",
+            "example": "2026-03-19"
+          },
+          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
+        }
+      ]
+    },
+    "/v1/webhook_endpoints/{webhook_id}/disable": {
+      "post": {
+        "summary": "Disable a webhook endpoint without deleting delivery history",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/WebhookEndpoint"
+                    }
+                  ],
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "webhook_endpoint",
+                      "id": "wh_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Production monitor matches",
+                      "destinationUrl": "https://example.com/hooks/secapi",
+                      "subscribedEventTypes": [
+                        "monitor.match",
+                        "webhook.test"
+                      ],
+                      "status": "disabled",
+                      "lastDeliveredAt": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "webhook_endpoints.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "parameters": [
+        {
+          "name": "secapi-version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "2026-03-19",
+            "example": "2026-03-19"
+          },
+          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
+        }
+      ]
+    },
+    "/v1/webhook_endpoints/{webhook_id}/test": {
+      "post": {
+        "summary": "Send a signed webhook.test event to a webhook endpoint",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "eventType": {
+                    "type": "string",
+                    "const": "webhook.test",
+                    "default": "webhook.test"
+                  },
+                  "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "eventType": "webhook.test",
+                    "data": {
+                      "source": "dashboard"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": [
+                    "object",
+                    "event",
+                    "delivery",
+                    "activated",
+                    "endpoint"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "webhook_test"
+                    },
+                    "event": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "delivery": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "activated": {
+                      "type": "boolean",
+                      "description": "True when this successful test promoted a pending endpoint to active."
+                    },
+                    "endpoint": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "webhook_test",
+                      "event": {
+                        "object": "event",
+                        "id": "evt_webhook_test_123",
+                        "type": "webhook.test",
+                        "createdAt": "2026-06-25T15:01:00.000Z",
+                        "livemode": false,
+                        "orgId": "org_example_123",
+                        "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                        "data": {
+                          "message": "SEC API webhook test",
+                          "webhookId": "wh_2ZK8Q1W9F4M6P7R3",
+                          "requestedBy": "delivery_api"
+                        }
+                      },
+                      "delivery": {
+                        "kind": "webhook_delivery",
+                        "recordedAt": "2026-06-25T15:01:00.250Z",
+                        "orgId": "org_example_123",
+                        "eventId": "evt_webhook_test_123",
+                        "eventType": "webhook.test",
+                        "webhookId": "wh_2ZK8Q1W9F4M6P7R3",
+                        "destinationUrl": "https://example.com/hooks/secapi",
+                        "status": 200,
+                        "ok": true,
+                        "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                        "error": null,
+                        "latencyMs": 250,
+                        "replayedFromDeliveryId": null
+                      },
+                      "activated": true,
+                      "endpoint": {
+                        "object": "webhook_endpoint",
+                        "id": "wh_2ZK8Q1W9F4M6P7R3",
+                        "createdAt": "2026-06-25T15:00:00.000Z",
+                        "updatedAt": "2026-06-25T15:00:00.000Z",
+                        "livemode": false,
+                        "orgId": "org_example_123",
+                        "description": "Production monitor matches",
+                        "destinationUrl": "https://example.com/hooks/secapi",
+                        "subscribedEventTypes": [
+                          "monitor.match",
+                          "webhook.test"
+                        ],
+                        "status": "active",
+                        "lastDeliveredAt": "2026-06-25T15:01:00.250Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "webhook_endpoints.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "parameters": [
+        {
+          "name": "secapi-version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "2026-03-19",
+            "example": "2026-03-19"
+          },
+          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
+        }
+      ]
+    },
+    "/v1/webhook_endpoints/{webhook_id}/rotate_secret": {
+      "post": {
+        "summary": "Rotate the signing secret for a webhook endpoint",
+        "responses": {
+          "200": {
+            "description": "Signing secret rotated. The new secret is revealed once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/WebhookEndpoint"
+                    }
+                  ],
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "webhook_endpoint",
+                      "id": "wh_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Production monitor matches",
+                      "destinationUrl": "https://example.com/hooks/secapi",
+                      "subscribedEventTypes": [
+                        "monitor.match",
+                        "webhook.test"
+                      ],
+                      "status": "pending_verification",
+                      "lastDeliveredAt": null,
+                      "signingSecret": "whsec_example_reveal_once_on_create_or_rotate"
+                    }
+                  }
                 }
               }
             }
@@ -3850,14 +4876,91 @@
       },
       "post": {
         "summary": "Create a stream subscription for event polling and replay",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "eventTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Delivery event types from GET /v1/event_types. Supports exact event names, `*`, and namespace wildcards such as `monitor.*`."
+                  },
+                  "transport": {
+                    "type": "string",
+                    "enum": [
+                      "poll",
+                      "webhook_mirror",
+                      "websocket"
+                    ],
+                    "default": "poll"
+                  },
+                  "livemode": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "description": "Monitor matches polling stream",
+                    "eventTypes": [
+                      "monitor.match"
+                    ],
+                    "transport": "poll",
+                    "livemode": false
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "201": {
+            "description": "Stream subscription created.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StreamSubscription"
+                    }
+                  ],
                   "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "stream_subscription",
+                      "id": "strm_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Monitor matches polling stream",
+                      "eventTypes": [
+                        "monitor.match"
+                      ],
+                      "transport": "poll",
+                      "status": "active",
+                      "cursor": null,
+                      "lastEventAt": null
+                    }
+                  }
                 }
               }
             }
@@ -3901,9 +5004,127 @@
         }
       ]
     },
-    "/v1/stream_subscriptions/{stream_id}/events": {
-      "get": {
-        "summary": "Poll canonical stream events for a subscription with cursor semantics",
+    "/v1/stream_subscriptions/{stream_id}": {
+      "patch": {
+        "summary": "Update a stream subscription description, event types, transport, or status",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "eventTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "transport": {
+                    "type": "string",
+                    "enum": [
+                      "poll",
+                      "webhook_mirror",
+                      "websocket"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "paused"
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "description": "Monitor matches polling stream",
+                    "eventTypes": [
+                      "monitor.match"
+                    ],
+                    "transport": "poll",
+                    "status": "active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StreamSubscription"
+                    }
+                  ],
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "stream_subscription",
+                      "id": "strm_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Monitor matches polling stream",
+                      "eventTypes": [
+                        "monitor.match"
+                      ],
+                      "transport": "poll",
+                      "status": "active",
+                      "cursor": null,
+                      "lastEventAt": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "stream_subscriptions.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "delete": {
+        "summary": "Delete a stream subscription while preserving delivery records",
         "responses": {
           "200": {
             "description": "Successful response",
@@ -3911,10 +5132,369 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "id",
+                    "deleted",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "stream_subscription.deleted"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "stream_subscription.deleted",
+                      "id": "strm_2ZK8Q1W9F4M6P7R3",
+                      "deleted": true,
+                      "requestId": "req_2ZK8Q1W9F4M6P7R3"
+                    }
+                  }
                 }
               }
             }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "stream_subscriptions.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "parameters": [
+        {
+          "name": "secapi-version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "2026-03-19",
+            "example": "2026-03-19"
+          },
+          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
+        }
+      ]
+    },
+    "/v1/stream_subscriptions/{stream_id}/enable": {
+      "post": {
+        "summary": "Enable a stream subscription",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StreamSubscription"
+                    }
+                  ],
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "stream_subscription",
+                      "id": "strm_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Monitor matches polling stream",
+                      "eventTypes": [
+                        "monitor.match"
+                      ],
+                      "transport": "poll",
+                      "status": "active",
+                      "cursor": null,
+                      "lastEventAt": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "stream_subscriptions.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "parameters": [
+        {
+          "name": "secapi-version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "2026-03-19",
+            "example": "2026-03-19"
+          },
+          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
+        }
+      ]
+    },
+    "/v1/stream_subscriptions/{stream_id}/disable": {
+      "post": {
+        "summary": "Disable a stream subscription without deleting its delivery records",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StreamSubscription"
+                    }
+                  ],
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "stream_subscription",
+                      "id": "strm_2ZK8Q1W9F4M6P7R3",
+                      "createdAt": "2026-06-25T15:00:00.000Z",
+                      "updatedAt": "2026-06-25T15:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_example_123",
+                      "description": "Monitor matches polling stream",
+                      "eventTypes": [
+                        "monitor.match"
+                      ],
+                      "transport": "poll",
+                      "status": "paused",
+                      "cursor": null,
+                      "lastEventAt": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "stream_subscriptions.member",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "parameters": [
+        {
+          "name": "secapi-version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "2026-03-19",
+            "example": "2026-03-19"
+          },
+          "description": "Optional dated API version pin. Production clients should send this header so compatible behavior does not shift underneath them; unpinned requests default to the current published version."
+        }
+      ]
+    },
+    "/v1/stream_subscriptions/{stream_id}/events": {
+      "get": {
+        "summary": "Poll canonical stream events for a subscription with cursor semantics",
+        "parameters": [
+          {
+            "name": "stream_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Stream subscription id."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Last seen stream cursor. The response returns records after this cursor."
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by canonical event type."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 20
+            },
+            "description": "Maximum stream events to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cursor page of delivered stream events.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "streamId",
+                    "data",
+                    "hasMore",
+                    "nextCursor",
+                    "replayCursor"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "stream_event_page"
+                    },
+                    "streamId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "properties": {
+                          "object": {
+                            "type": "string",
+                            "const": "stream_event"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "cursor": {
+                            "type": "string"
+                          },
+                          "recordedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "requestId": {
+                            "type": "string"
+                          },
+                          "eventType": {
+                            "type": "string"
+                          },
+                          "transport": {
+                            "type": "string",
+                            "enum": [
+                              "poll",
+                              "webhook_mirror",
+                              "websocket"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "replayCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Delivery ledger is temporarily unavailable."
           },
           "default": {
             "description": "Contract-aware error response",
@@ -4012,8 +5592,8 @@
     },
     "/v1/stream/ws": {
       "get": {
-        "summary": "Upgrade to a WebSocket connection for real-time filing event streaming",
-        "description": "Upgrades the HTTP connection to a WebSocket. Clients must supply a short-lived signed `ticket` query parameter minted from `POST /v1/stream/tickets`. Streams `filing.published` events in real time with optional form/ticker filtering and cursor-based replay. Metered as `stream_connection` on upgrade and `stream_event` per delivery (1000/min default).",
+        "summary": "Upgrade to a WebSocket connection for live stream frames",
+        "description": "Upgrades the HTTP connection to a WebSocket. Clients must supply a short-lived signed `ticket` query parameter minted from `POST /v1/stream/tickets` and a `stream_id` for an active `transport=websocket` stream subscription. Delivered frames use the same delivery-event billing family as stream polling and are idempotent per subscription and event. The legacy raw filing socket without `stream_id` is disabled by default and is not part of the public Delivery v1 contract.",
         "parameters": [
           {
             "name": "ticket",
@@ -4022,6 +5602,15 @@
               "type": "string"
             },
             "description": "Short-lived signed stream ticket minted from `POST /v1/stream/tickets`."
+          },
+          {
+            "name": "stream_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Active stream subscription id with `transport=websocket` for ledger-backed, billable stream delivery."
           },
           {
             "name": "forms",
@@ -4050,7 +5639,10 @@
         ],
         "responses": {
           "101": {
-            "description": "WebSocket upgrade successful. Server sends JSON frames: connected, filing.published, pong, filters_updated, rate_limited."
+            "description": "WebSocket upgrade successful. Server sends JSON frames such as connected, event, pong, filters_updated, and rate_limited."
+          },
+          "400": {
+            "description": "Missing stream_id or stream subscription transport mismatch"
           },
           "401": {
             "description": "Missing or invalid stream ticket"
@@ -7699,7 +9291,7 @@
             "BearerAuth": []
           }
         ],
-        "x-secapi-route-id": "events.member",
+        "x-secapi-route-id": "events.ma",
         "x-secapi-access": "authenticated",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -7890,7 +9482,7 @@
             "BearerAuth": []
           }
         ],
-        "x-secapi-route-id": "events.member",
+        "x-secapi-route-id": "events.enforcement",
         "x-secapi-access": "authenticated",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -8020,7 +9612,7 @@
             "BearerAuth": []
           }
         ],
-        "x-secapi-route-id": "events.member",
+        "x-secapi-route-id": "events.restatements",
         "x-secapi-access": "authenticated",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -8150,7 +9742,7 @@
             "BearerAuth": []
           }
         ],
-        "x-secapi-route-id": "events.member",
+        "x-secapi-route-id": "events.auditor_changes",
         "x-secapi-access": "authenticated",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -8205,7 +9797,7 @@
             "BearerAuth": []
           }
         ],
-        "x-secapi-route-id": "events.member",
+        "x-secapi-route-id": "events.officer_changes",
         "x-secapi-access": "authenticated",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -8348,7 +9940,7 @@
             "BearerAuth": []
           }
         ],
-        "x-secapi-route-id": "events.member",
+        "x-secapi-route-id": "events.voting_results",
         "x-secapi-access": "authenticated",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -35971,9 +37563,36 @@
           "summaryMd"
         ],
         "properties": {
+          "dataAsOf": {
+            "type": "string"
+          },
+          "freshnessStatus": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "degraded",
+              "unknown"
+            ]
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "materializationVersion": {
+            "type": "string"
+          },
           "object": {
             "type": "string",
             "const": "portfolio_stress_scenario_catalog"
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
           },
           "asOf": {
             "type": "string"
@@ -36096,9 +37715,36 @@
           "summaryMd"
         ],
         "properties": {
+          "dataAsOf": {
+            "type": "string"
+          },
+          "freshnessStatus": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "degraded",
+              "unknown"
+            ]
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "materializationVersion": {
+            "type": "string"
+          },
           "object": {
             "type": "string",
             "const": "factor_macro_sensitivity"
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
           },
           "id": {
             "type": "string"

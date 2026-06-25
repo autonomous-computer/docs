@@ -38,10 +38,10 @@ curl "$SECAPI_BASE_URL/v1/diagnostics/deliveries/summary?since=2026-01-01T00:00:
 
 ### Event export
 
-Export the full event log in JSON or NDJSON for ingestion into external SIEM, log aggregation, or compliance tooling:
+Export the available event log in JSON or NDJSON for ingestion into external SIEM, log aggregation, or compliance tooling:
 
 ```bash
-curl "$SECAPI_BASE_URL/v1/events/export?kind=event&format=ndjson&limit=100" \
+curl "$SECAPI_BASE_URL/v1/delivery/events/export?kind=event&format=ndjson&limit=100" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
@@ -128,7 +128,7 @@ API keys can be revoked and re-created through `DELETE /v1/api_keys/:keyId` and 
 
 ## Multi-Seat Organizations
 
-The Team plan (`$239/mo` or `$2,388/yr`) supports up to five seats within a shared organization. All seats share:
+The Team plan (`$239/mo`) supports up to five seats within a shared organization. All seats share:
 
 - org-scoped API keys with configurable scopes (`read:sec`, `write:sec`, `admin:operator`)
 - a unified billing context with shared spend caps and budget alerts
@@ -155,7 +155,7 @@ curl -X POST "$SECAPI_BASE_URL/v1/api_keys" \
 
 ## SLA Guarantees
 
-SEC API provides a 99.9% webhook delivery guarantee with HMAC-SHA256 signed payloads, exponential-backoff retries over a 72-hour window, and manual replay support. See [Webhook Delivery SLA](/webhook-sla) for the full SLA terms, retry schedule, and monitoring guidance.
+SEC API provides signed, logged, at-least-once webhook delivery with manual replay for retained delivery attempts. Automatic retry and endpoint auto-pause are rollout-gated operational features; [Webhook Delivery](/webhook-sla) is the source of truth for the currently shipped contract.
 
 ## Commercial Licensing
 
@@ -173,7 +173,7 @@ See [Plans and Pricing](/plans-and-pricing) for the full plan comparison and [En
 | Category | Endpoints |
 |---|---|
 | **Auth** | `GET /v1/me`, `GET /v1/org`, `POST /v1/api_keys`, `DELETE /v1/api_keys/:keyId` |
-| **Audit** | `GET /v1/diagnostics/requests/:requestId`, `GET /v1/diagnostics/deliveries/summary`, `GET /v1/events`, `GET /v1/events/export` |
+| **Audit** | `GET /v1/diagnostics/requests/:requestId`, `GET /v1/diagnostics/deliveries/summary`, `GET /v1/delivery/events`, `GET /v1/delivery/events/export` |
 | **Observability** | Operator-only `GET /v1/observability`, `GET /v1/observability/export` |
 | **Entitlements** | `GET /v1/billing`, `GET /v1/usage`, `GET /v1/limits`, `GET /v1/billing/rates`, `GET /v1/dashboard/overview` |
 | **Budget** | `PUT /v1/billing/budget`, `POST /v1/billing/quote` |
@@ -186,8 +186,8 @@ See [Plans and Pricing](/plans-and-pricing) for the full plan comparison and [En
   <Card title="Audit Logs" icon="scroll" href="/audit-logs">
     Detailed reference for all audit log and event export endpoints.
   </Card>
-  <Card title="Webhook Delivery SLA" icon="shield-check" href="/webhook-sla">
-    99.9% delivery guarantee, retry policy, and replay support.
+  <Card title="Webhook Delivery" icon="shield-check" href="/webhook-sla">
+    Signed delivery, audit history, event catalog, and manual replay.
   </Card>
   <Card title="Plans and Pricing" icon="gauge" href="/plans-and-pricing">
     Full plan comparison including Commercial licensing.

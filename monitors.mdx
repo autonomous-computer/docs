@@ -1,32 +1,31 @@
 # Monitors
 
-Monitors are saved searches that trigger delivery to a destination — either a webhook or an email address — when new SEC filings match the query. Use monitors for inbox-grade alerting on portfolio events: 8-K material events, 13F holdings changes, insider transactions, AAERs, auditor changes, and any keyword search the filing search supports.
+Monitors are saved searches that trigger delivery when new SEC filings match the query. Use monitors for inbox-grade alerting on portfolio events: 8-K material events, 13F holdings changes, insider transactions, AAERs, auditor changes, and any keyword search the filing search supports.
 
 ## Lifecycle
 
-1. Create a monitor with `POST /v1/monitors`. Provide `name`, `query`, and optionally `filters` (e.g., `{ ticker, form, date_from, date_to }`) plus a delivery destination (webhook or email).
+1. Create a monitor with `POST /v1/monitors`. Provide `name`, `query`, and optionally `filters` (e.g., `{ ticker, form, date_from, date_to }`) plus an email delivery destination.
 2. Inspect recent matches on demand with `GET /v1/monitors/{monitor_id}/matches`.
 3. List your org's monitors with `GET /v1/monitors`.
 4. Deactivate a monitor with `DELETE /v1/monitors/{monitor_id}` (idempotent; sets `is_active=false`).
 5. Replace the delivery destination on an existing monitor with `POST /v1/monitors/{monitor_id}/delivery`.
 
-## Destination types
+## Delivery types
 
-A monitor has exactly one delivery destination in v1. Multiple destinations per monitor (e.g., email AND Slack) is a planned follow-up; until then create one monitor per channel.
+A monitor row has one typed delivery destination in v1: email. For webhooks, subscribe an org-level webhook endpoint to `monitor.match`; the monitor dispatch emits that event independently of the email destination.
 
-### Webhook (legacy single-URL path)
+### Webhook
 
-The `webhookUrl` field on a monitor sends matches to a signed webhook endpoint. Webhook delivery uses the same signing protocol as `POST /v1/webhook_endpoints` — see [Webhook and stream workflows](/webhook-stream-workflows) for the full lifecycle and signature verification details.
+Use org-level webhook endpoints for monitor-match webhooks. First create a signed webhook endpoint subscribed to `monitor.match`, then create one or more monitors. Every monitor dispatch emits a `monitor.match` event to matching org-level webhook endpoints, regardless of whether that monitor also sends email.
 
 ```bash
-curl -X POST https://api.secapi.ai/v1/monitors \
+curl -X POST https://api.secapi.ai/v1/webhook_endpoints \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Goodwill impairments",
-    "query": "goodwill impairment",
-    "filters": { "form": "8-K" },
-    "webhookUrl": "https://your-app.example.com/hooks/secapi"
+    "destinationUrl": "https://your-app.example.com/hooks/secapi",
+    "description": "Filing monitor alerts",
+    "subscribedEventTypes": ["monitor.match"]
   }'
 ```
 
@@ -64,7 +63,7 @@ The response includes a `delivery` block describing the destination:
 }
 ```
 
-`delivery.status` cycles through `active` → `unsubscribed` (one-click from email) or `bounced` (set by future bounce-webhook handling). When status is anything other than `active`, the email channel does not fire.
+`delivery.status` starts as `active`, can become `unsubscribed` through the one-click email flow, and can become `bounced`, `complaint_suppressed`, or `suppressed` when signed Resend provider feedback reports hard-bounce, spam-complaint, or provider-suppression events. When a non-active state is present, the email channel will not fire.
 
 ## Email behavior
 
@@ -84,6 +83,12 @@ The unsubscribe endpoint is **GET-render / POST-mutate** per RFC 8058:
 
 To re-enable email delivery on an unsubscribed monitor, call `POST /v1/monitors/{monitor_id}/delivery` with a fresh destination (status resets to `active`).
 
+### Provider feedback
+
+SEC API processes signed provider feedback from Resend before surfacing bounce, complaint, and suppression states in monitor delivery status. This provider ingress is an operator-managed control-plane route, not a customer API workflow; customer integrations should use the monitor delivery state, suppression state, and audit trail below.
+
+Hard bounces, spam complaints, and Resend suppression events are stored in `email_suppressions` by hashed recipient and provider event id. Suppression checks are org + recipient-wide, so a hard bounce or complaint from one monitor blocks future monitor emails to the same address in the same org. Duplicate webhook deliveries are idempotent. Delayed provider feedback updates a monitor's `delivery.status` only when the monitor still points at the same recipient, and terminal negative feedback is not downgraded by later `sent` or `delivered` events.
+
 ### Retry semantics
 
 The dispatch cron (see §Dispatch behavior below) handles retries on transient failure. A failed send writes a row to `email_delivery_attempts` with `dispatch_status='retry_pending'` and a `next_attempt_at` timestamp; the next sweep tick claims rows whose `next_attempt_at` has passed and re-attempts the send.
@@ -96,7 +101,7 @@ State machine:
 | `failed` | Adapter wrote the row but the dispatcher hasn't yet flipped it to a retry/permanent state (rare transient state). |
 | `retry_pending` | Send failed transiently; the row is queued for re-attempt at `next_attempt_at`. |
 | `sending` | A retry-drainer has claimed this row and is currently calling Resend. Re-claimed back to `retry_pending` if it sits >10 min (mid-flight crash recovery). |
-| `permanent_failed` | Three retry attempts all failed; no further attempts. Sentry-capture surfaces these. |
+| `permanent_failed` | Three total attempts all failed; no further attempts. Sentry-capture surfaces these. |
 | `rate_limited` | The send was blocked by the per-monitor hourly cap or per-org daily cap (see §Rate limits below). The daily summary picks these up. |
 | `sent_dryrun` | QA-tooling-only: the send was simulated; no Resend call was made. |
 
@@ -118,7 +123,7 @@ The SEC API Dagster cron drives monitor → email dispatch on a **15-minute cade
 
 The cron also emits a `monitor.match` SEC API event for every dispatch, so org-level webhook subscribers (configured via `POST /v1/webhook_endpoints` with `monitor.match` in `subscribed_event_types`) receive a signal regardless of email delivery outcome.
 
-Worst-case latency from filing publish to email arrival is approximately 7.5 minutes (half the 15-min tick interval). Sub-2-second alerting is planned for a future release.
+Typical latency from filing publish to email arrival is approximately 7.5 minutes (half the 15-min tick interval). Worst-case latency is one full tick plus dispatch/provider time. Sub-2-second alerting is planned for a future release.
 
 ## Rate limits
 
@@ -131,7 +136,7 @@ To prevent runaway alert storms when a customer's monitor suddenly matches thous
 
 When a send is blocked by either window, the row is persisted with `dispatch_status='rate_limited'` and **no Resend call is made**. The matches are not lost — the [daily summary](#daily-summary) picks them up. The bucket counts every dispatch intent (sent + rate_limited + retry_pending + sending + permanent_failed) — bouncing addresses cannot game the bucket by failing intentionally.
 
-Rate-limit math runs primarily through Redis (sliding-window ZSET via the same primitive that backs HTTP middleware). When Redis is unavailable, SEC API falls back to a Postgres count query against `email_delivery_attempts`. When both are unhealthy, the dispatcher fails open with a Sentry warning — better to potentially over-cap than to silently drop alerts.
+Rate-limit math runs primarily through Redis (sliding-window ZSET via the same primitive that backs HTTP middleware). In production, Redis limiter failures fail closed so monitor email dispatch cannot become an unbounded fanout path; blocked rows are persisted as rate-limited and no Resend call is made. Outside production, SEC API falls back to a Postgres count query against `email_delivery_attempts`; if that fallback is also unhealthy, the non-production dispatcher fails open with a Sentry warning to keep local/staging workflows available.
 
 ## Daily summary
 
@@ -145,7 +150,7 @@ Customers who'd like to disable the summary entirely can unsubscribe via the `Li
 
 - **Search modes**: only `keyword` is supported in monitor execution at this time. Semantic search support will land in a future release.
 - **One destination per monitor**: v1 supports a single delivery destination per monitor row. Use multiple monitors to fan out to multiple channels for now.
-- **Quota**: email delivery is metered as `email_delivery` (180 sends per minute by default per org). Adjust via the standard plan policy override env.
+- **Billing**: customer-configured monitor email is billed through the `email_notifications` meter. Operational lifecycle, billing, auth, and account emails are not customer notification units.
 - **Legacy `webhookUrl`**: the deprecated `monitor.webhookUrl` column is preserved for backward compatibility but no longer carries a live delivery path. New monitors should use `delivery.type='email'` (above) or subscribe an org-level `webhook_endpoint` to the `monitor.match` event type.
 
 ## Related

@@ -1,6 +1,6 @@
-# POST /v1/webhook_endpoints/{webhook_id}/rotate_secret
+# PATCH /v1/webhook_endpoints/{webhook_id}
 
-Rotate the signing secret for a webhook endpoint
+Update a webhook endpoint URL, description, subscribed event types, or non-active status
 
 <Info>
 Audience: application and operator.
@@ -15,12 +15,12 @@ Audience: application and operator.
 
 <RequestExample>
 ```bash
-curl -X POST \
+curl -X PATCH \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
-  "https://api.secapi.ai/v1/webhook_endpoints/wh_example_123/rotate_secret"
+  -d '{"destinationUrl":"https://example.com/hooks/secapi","description":"Production monitor matches","subscribedEventTypes":["monitor.match","webhook.test"],"status":"active"}' \
+  "https://api.secapi.ai/v1/webhook_endpoints/wh_example_123"
 ```
 </RequestExample>
 
@@ -43,7 +43,6 @@ curl -X POST \
   ],
   "status": "pending_verification",
   "lastDeliveredAt": null,
-  "signingSecret": "whsec_example_reveal_once_on_create_or_rotate",
   "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
@@ -52,7 +51,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/webhook_endpoints/{webhook_id}/rotate_secret to rotate the signing secret for a webhook endpoint. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API PATCH /v1/webhook_endpoints/{webhook_id} to update a webhook endpoint URL, description, subscribed event types, or non-active status. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

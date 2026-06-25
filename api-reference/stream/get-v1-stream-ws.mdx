@@ -1,6 +1,6 @@
 # GET /v1/stream/ws
 
-Upgrade to a WebSocket connection for real-time filing event streaming
+Upgrade to a WebSocket connection for live stream frames
 
 <Info>
 Audience: application and coding agent.
@@ -15,16 +15,24 @@ Audience: application and coding agent.
 
 <RequestExample>
 ```bash
-npx wscat -c "wss://api.secapi.ai/v1/stream/ws?ticket=$SECAPI_STREAM_TICKET" \
-  -H "secapi-version: 2026-03-19"
+# Create a WebSocket stream subscription first:
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{"transport":"websocket","eventTypes":["monitor.match"]}' \
+  "https://api.secapi.ai/v1/stream_subscriptions"
 
-# Mint the short-lived ticket first:
+# Mint the short-lived ticket:
 curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
   -d '{}' \
   "https://api.secapi.ai/v1/stream/tickets"
+
+npx wscat -c "wss://api.secapi.ai/v1/stream/ws?ticket=$SECAPI_STREAM_TICKET&stream_id=$SECAPI_STREAM_ID" \
+  -H "secapi-version: 2026-03-19"
 ```
 </RequestExample>
 
@@ -37,7 +45,19 @@ Mint the short-lived `$SECAPI_STREAM_TICKET` first with `POST /v1/stream/tickets
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "event": "connected",
+  "connectionId": "wsc_example_123",
+  "orgId": "org_example_123",
+  "filters": {
+    "forms": [],
+    "tickers": [],
+    "eventTypes": [
+      "monitor.match"
+    ]
+  },
+  "streamId": "strm_example_123",
+  "cursor": null,
+  "serverTime": "2026-06-25T00:00:00.000Z"
 }
 ```
 </ResponseExample>
@@ -45,7 +65,7 @@ Mint the short-lived `$SECAPI_STREAM_TICKET` first with `POST /v1/stream/tickets
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/stream/ws to upgrade to a WebSocket connection for real-time filing event streaming. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/stream/ws to upgrade to a WebSocket connection for live stream frames. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
