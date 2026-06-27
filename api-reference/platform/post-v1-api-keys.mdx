@@ -1,6 +1,6 @@
 # POST /v1/api_keys
 
-Create a new API key for the current organization
+Create a new API key for the current organization and reveal its secret exactly once
 
 <Info>
 Audience: application and coding agent.
@@ -19,17 +19,33 @@ curl -X POST \
   -H "Authorization: Bearer $SECAPI_BEARER_TOKEN" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{"label":"local-dev"}' \
   "https://api.secapi.ai/v1/api_keys"
 ```
 </RequestExample>
+
+<Info>
+`POST /v1/api_keys` is a dashboard/control-plane operation. Use a WorkOS browser-session bearer token with `api_keys:manage` permission to create the key. After creation, use the returned `secret` as the `x-api-key` header for REST, SDK, CLI, and server-to-server MCP requests. The `secret` is revealed exactly once; later list responses return metadata and prefix only.
+</Info>
 
 ## Example response
 
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "api_key",
+  "id": "key_123",
+  "createdAt": "2026-06-27T21:00:00.000Z",
+  "livemode": false,
+  "orgId": "org_123",
+  "label": "local-dev",
+  "keyPrefix": "secapi_live_abcd",
+  "scopes": [
+    "read:sec"
+  ],
+  "status": "active",
+  "lastUsedAt": null,
+  "secret": "secapi_live_abcd...copy_this_once"
 }
 ```
 </ResponseExample>
@@ -37,7 +53,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/api_keys to create a new API key for the current organization. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API POST /v1/api_keys to create a new API key for the current organization and reveal its secret exactly once. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

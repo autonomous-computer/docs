@@ -1,6 +1,6 @@
 # GET /v1/billing/rates
 
-Return the public pricing catalog, plan metadata, and meter-family launch rates
+Return the public pricing catalog, starter grant metadata, plan metadata, and meter-family launch rates
 
 <Info>
 Audience: application and coding agent.
@@ -22,12 +22,41 @@ curl -X GET \
 ```
 </RequestExample>
 
+<Info>
+`starterGrant` is included even though it is not a paid checkout plan. Agents should read it together with `GET /v1/billing` and `GET /v1/limits` to explain the included-call grant, overflow behavior, meter rates, and current account state without inferring from marketing copy.
+</Info>
+
 ## Example response
 
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "pricing_catalog",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "version": "2026-06-18",
+  "starterGrant": {
+    "object": "starter_grant",
+    "planKey": "sandbox_grant",
+    "billingState": "sandbox_grant",
+    "calls": 150,
+    "renewable": false,
+    "period": null,
+    "overflowPlanKey": "payg",
+    "note": "New organizations start on the starter grant; usage beyond the grant falls through to Pay As You Go rates once billing is activated."
+  },
+  "plans": [
+    {
+      "key": "payg",
+      "displayName": "Pay As You Go",
+      "kind": "metered",
+      "meterFamilyPrices": [
+        {
+          "key": "standard_reads",
+          "unitAmountUsd": 0.02
+        }
+      ]
+    }
+  ]
 }
 ```
 </ResponseExample>
@@ -35,7 +64,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/billing/rates to return the public pricing catalog, plan metadata, and meter-family launch rates. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/billing/rates to return the public pricing catalog, starter grant metadata, plan metadata, and meter-family launch rates. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

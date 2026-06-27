@@ -902,15 +902,118 @@
     },
     "/v1/billing/rates": {
       "get": {
-        "summary": "Return the public pricing catalog, plan metadata, and meter-family launch rates",
+        "summary": "Return the public pricing catalog, starter grant metadata, plan metadata, and meter-family launch rates",
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Public pricing catalog including machine-readable starter grant metadata.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": true,
+                  "required": [
+                    "object",
+                    "requestId",
+                    "version",
+                    "starterGrant",
+                    "plans"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "pricing_catalog"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "starterGrant": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "required": [
+                        "object",
+                        "planKey",
+                        "billingState",
+                        "calls",
+                        "renewable",
+                        "overflowPlanKey"
+                      ],
+                      "properties": {
+                        "object": {
+                          "type": "string",
+                          "const": "starter_grant"
+                        },
+                        "planKey": {
+                          "type": "string",
+                          "const": "sandbox_grant"
+                        },
+                        "billingState": {
+                          "type": "string",
+                          "const": "sandbox_grant"
+                        },
+                        "calls": {
+                          "type": "integer"
+                        },
+                        "renewable": {
+                          "type": "boolean"
+                        },
+                        "period": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "overflowPlanKey": {
+                          "type": "string"
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "plans": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "pricing_catalog",
+                      "requestId": "req_example_123",
+                      "version": "2026-06-18",
+                      "starterGrant": {
+                        "object": "starter_grant",
+                        "planKey": "sandbox_grant",
+                        "billingState": "sandbox_grant",
+                        "calls": 150,
+                        "renewable": false,
+                        "period": null,
+                        "overflowPlanKey": "payg",
+                        "note": "New organizations start on the starter grant; usage beyond the grant falls through to Pay As You Go rates once billing is activated."
+                      },
+                      "plans": [
+                        {
+                          "key": "payg",
+                          "displayName": "Pay As You Go",
+                          "kind": "metered",
+                          "meterFamilyPrices": [
+                            {
+                              "key": "standard_reads",
+                              "unitAmountUsd": 0.02
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             }
@@ -1682,15 +1785,125 @@
         "x-secapi-smoke": "local"
       },
       "post": {
-        "summary": "Create a new API key for the current organization",
+        "summary": "Create a new API key for the current organization and reveal its secret exactly once",
+        "requestBody": {
+          "required": true,
+          "description": "Optional API key label. Scopes and livemode are derived server-side for the current organization.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "label": "local-dev"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "201": {
+            "description": "API key created. The `secret` field is revealed exactly once in this response.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "id",
+                    "createdAt",
+                    "livemode",
+                    "orgId",
+                    "label",
+                    "keyPrefix",
+                    "scopes",
+                    "status",
+                    "lastUsedAt",
+                    "secret"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "api_key"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "livemode": {
+                      "type": "boolean"
+                    },
+                    "orgId": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "keyPrefix": {
+                      "type": "string"
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "revoked"
+                      ]
+                    },
+                    "lastUsedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "secret": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "api_key",
+                      "id": "key_123",
+                      "createdAt": "2026-06-27T21:00:00.000Z",
+                      "livemode": false,
+                      "orgId": "org_123",
+                      "label": "local-dev",
+                      "keyPrefix": "secapi_live_abcd",
+                      "scopes": [
+                        "read:sec"
+                      ],
+                      "status": "active",
+                      "lastUsedAt": null,
+                      "secret": "secapi_live_abcd...copy_this_once"
+                    }
+                  }
                 }
               }
             }
