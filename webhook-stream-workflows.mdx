@@ -4,11 +4,10 @@
 
 1. Create an org-scoped webhook endpoint with `POST /v1/webhook_endpoints`
 2. Store the returned `signingSecret` at creation time or after a secret rotation
-3. Treat the endpoint as `pending_verification` until `POST /v1/webhook_endpoints/{webhook_id}/test` succeeds; the successful signed `webhook.test` delivery promotes it to `active`
-4. Verify inbound signatures using the raw request body plus `x-secapi-signature-timestamp`
-5. Use `POST /v1/webhook_endpoints/{webhook_id}/rotate_secret` when a secret is exposed or stale
-6. Inspect recent attempts with `GET /v1/webhook_endpoints/{webhook_id}/deliveries`
-7. Replay a failed attempt with `POST /v1/webhook_endpoints/{webhook_id}/deliveries/{delivery_id}/replay`
+3. Verify inbound signatures using the raw request body plus `x-secapi-signature-timestamp`
+4. Use `POST /v1/webhook_endpoints/{webhook_id}/rotate_secret` when a secret is exposed or stale
+5. Inspect recent attempts with `GET /v1/webhook_endpoints/{webhook_id}/deliveries`
+6. Replay a failed attempt with `POST /v1/webhook_endpoints/{webhook_id}/deliveries/{delivery_id}/replay`
 
 ## Stream lifecycle
 
@@ -16,7 +15,6 @@
 2. Subscribe to the smallest event set that supports the workflow
 3. Track the returned `cursor` and `lastEventAt` fields for replay and polling
 4. Use `GET /v1/delivery/events` for cross-surface delivery history and `GET /v1/stream_subscriptions/{stream_id}/events` for subscription-specific polling
-5. For live WebSocket delivery, create the subscription with `transport=websocket`, mint a ticket with `POST /v1/stream/tickets`, then connect to `/v1/stream/ws?ticket=...&stream_id={stream_id}`
 
 ## Event types
 
@@ -28,8 +26,6 @@ Use `GET /v1/event_types?status=public_emitting` as the source of truth for even
 secapi webhooks create \
   --destination-url https://example.com/hooks/secapi \
   --event-types artifact.created,artifact.reconciled
-
-secapi webhooks test --webhook-id wh_123
 
 secapi streams create \
   --event-types artifact.created,artifact.reconciled \
