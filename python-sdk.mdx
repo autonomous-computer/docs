@@ -150,12 +150,12 @@ The full surface — `dilution_events`, `dilution_event_detail`, `dilution_warra
 Use the Python SDK to build a research workflow around AAPL. Resolve the issuer, fetch the latest 10-K in agent mode, extract Item 1A in compact mode, read annual income statements in agent mode, fetch NVDA institutional holders and Form 144 filings, and write the results into a markdown brief that preserves requestId, accessionNumber, filingDate, sourceUrl, freshness, and materialization metadata.
 </Prompt>
 
-## Operator paths
+## Admin paths
 
-The observability methods require an operator-scoped key (`admin:operator`).
+The observability methods require an admin-scoped key (`admin:operator`).
 
 ```python
-operator_client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
+admin_client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
 artifact = client.create_artifact({
     "ticker": "AAPL",
     "form": "10-K",
@@ -163,7 +163,7 @@ artifact = client.create_artifact({
     "kind": "markdown_bundle",
 })
 manifest = client.artifact_manifest(artifact["id"])
-observability = operator_client.observability()
+observability = admin_client.observability()
 ```
 
 <Warning>

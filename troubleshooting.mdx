@@ -28,7 +28,7 @@ For the full code-by-code table, use the [Error code catalog](/error-code-catalo
 | `402` | `billing_required` | The starter grant is exhausted and the org has no active paid billing path. | Inspect `GET /v1/billing`, then activate Pay As You Go or choose a plan. |
 | `402` | `billing_budget_approval_required` | The request would cross a configured approval threshold. | Ask an org billing admin to approve or adjust the budget before retrying. |
 | `402` | `billing_budget_hard_cap_exceeded` | The org reached a hard spend cap. | Stop retries and raise the cap or wait for the next billing period. |
-| `403` | `operator_scope_required` | The route is operator-only or requires a browser permission your principal lacks. | Use the correct principal; public API keys should not call `/v1/admin/*`. |
+| `403` | `operator_scope_required` | The route requires the `admin:operator` scope or a browser permission your principal lacks. | Use the correct principal; public API keys should not call `/v1/admin/*`. |
 | `429` | `ai_query_quota_exceeded` | The monthly AI-query quota or MCP quota window is exhausted. | Read `Retry-After` and quota headers, then wait for reset or change plan/budget posture. |
 | `429` | `rate_limit_exceeded` | A per-route or per-org throughput window is full. | Back off using `Retry-After`; do not fan out retries. |
 | `5xx` | `api_error` | SEC API accepted the request but an upstream service or internal dependency failed. | Retry with bounded backoff, keep the `Request-Id`, and contact support if the retry also fails. |

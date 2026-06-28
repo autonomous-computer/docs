@@ -85,7 +85,7 @@ To re-enable email delivery on an unsubscribed monitor, call `POST /v1/monitors/
 
 ### Provider feedback
 
-SEC API processes signed provider feedback from the email provider before surfacing bounce, complaint, and suppression states in monitor delivery status. This provider ingress is an operator-managed control-plane route, not a customer API workflow; customer integrations should use the monitor delivery state, suppression state, and audit trail below.
+SEC API processes signed provider feedback from the email provider before surfacing bounce, complaint, and suppression states in monitor delivery status. This provider ingress is an internally managed control-plane route, not a customer API workflow; customer integrations should use the monitor delivery state, suppression state, and audit trail below.
 
 Hard bounces, spam complaints, and provider suppression events are stored in the suppression list by hashed recipient and provider event id. Suppression checks are org + recipient-wide, so a hard bounce or complaint from one monitor blocks future monitor emails to the same address in the same org. Duplicate webhook deliveries are idempotent. Delayed provider feedback updates a monitor's `delivery.status` only when the monitor still points at the same recipient, and terminal negative feedback is not downgraded by later `sent` or `delivered` events.
 
@@ -111,7 +111,7 @@ Stable `Idempotency-Key = sha256(monitor_id + match_ids_sorted)` is set on every
 
 ### Audit trail
 
-Every send attempt — success or failure — is persisted to the delivery-attempts log with the recipient hashed (not raw), a redacted preview (`a***@example.com`), the request id, the email-provider message id (on success), the HTTP status, and the latency. This enables support cases ("did my customer get the alert?") without exposing recipient PII in operator-visible logs.
+Every send attempt — success or failure — is persisted to the delivery-attempts log with the recipient hashed (not raw), a redacted preview (`a***@example.com`), the request id, the email-provider message id (on success), the HTTP status, and the latency. This enables support cases ("did my customer get the alert?") without exposing recipient PII in internal logs.
 
 ## Dispatch behavior
 
