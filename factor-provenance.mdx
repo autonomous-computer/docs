@@ -61,18 +61,18 @@ Do not treat a tracked catalog definition as a launch claim by itself. The launc
 
 ## Materialization Versions
 
-Common factor materialization identifiers include:
+Each result's `materialization` block returns a `materializationVersion` string identifying the read model behind it. Treat the string as opaque — detect when it **changes** (a methodology or data revision that may move your numbers) rather than matching its internal format. The current materializations cover:
 
-| Identifier pattern | Meaning |
-|--------------------|---------|
-| `factor_returns_clickhouse_v2_stock_basket` | Daily factor returns served from the stock-basket ClickHouse read model. |
-| `factor_returns_clickhouse_v2_purified` | Daily factor returns served from the purified factor-return read model. |
-| `factor_exposures_latest_v2_stock_basket` | Latest security exposure read model for stock-basket factors. |
-| `factor_exposures_latest_v2_purified` | Latest security exposure read model for purified factors. |
-| `portfolio_factor_attribution_v1` | Portfolio attribution assembled from holdings, exposures, and realized factor returns. |
-| `portfolio_factor_hedge_v1` | Portfolio hedge suggestions assembled from portfolio factor exposure targets and hedge constraints. |
+| Read model | What it serves |
+|------------|----------------|
+| Stock-basket factor returns | Daily factor returns from the stock-basket model. |
+| Purified factor returns | Daily factor returns from the purified factor-return model. |
+| Latest stock-basket exposures | Latest security-level exposures for stock-basket factors. |
+| Latest purified exposures | Latest security-level exposures for purified factors. |
+| Portfolio factor attribution | Attribution assembled from holdings, exposures, and realized factor returns. |
+| Portfolio factor hedge | Hedge suggestions assembled from factor exposure targets and hedge constraints. |
 
-These identifiers are operational contracts. They let you tell whether a result came from a materialized read model, a computed fallback, or an explicit degraded path.
+The version lets you tell whether a result came from a materialized read model, a computed fallback, or an explicit degraded path.
 
 ## How Degraded States Work
 

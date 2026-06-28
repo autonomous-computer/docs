@@ -37,12 +37,12 @@ Dashboard control-plane routes require a human WorkOS browser session with the r
 
 ## API key revocation SLA
 
-Revoking a key through the dashboard or `DELETE /v1/api_keys/:keyId` marks that key `revoked` in Postgres and, when Redis is available, publishes a short-lived revocation marker for API replicas.
+Revoking a key through the dashboard or `DELETE /v1/api_keys/:keyId` marks that key `revoked` in Postgres and, when the cache is available, publishes a short-lived revocation marker for API replicas.
 
 - the replica that processes the revoke stops serving the key immediately
-- with Redis healthy, other API replicas reject cached copies within `5` seconds
-- if Redis is unavailable but Postgres is healthy, cached API key principals expire and re-check Postgres within `60` seconds
-- if Redis and Postgres are both unavailable after a key has already been cached on a replica, stale-while-revalidate is capped at `6m5s`
+- once propagation completes, other API replicas reject cached copies within `5` seconds
+- if the cache is unavailable but Postgres is healthy, cached API key principals expire and re-check Postgres within `60` seconds
+- if the cache and Postgres are both unavailable after a key has already been cached on a replica, stale-while-revalidate is capped at `6m5s`
 
 For suspected key theft, revoke the key, create a replacement, rotate callers, and monitor for `401` responses and unexpected usage. Contact support for a forced fleet cache flush if you need emergency containment beyond the normal propagation window.
 

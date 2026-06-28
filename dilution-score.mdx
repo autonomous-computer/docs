@@ -48,13 +48,13 @@ Buckets: `high` (≥70), `medium` (≥40), `low` (>0), `unknown` (0).
 - confidence: `high`, `medium`, `low`
 - factor-level breakdown with weights and per-factor explanations
 - six categorical sub-ratings + `regsho` flag
-- percentile rank (against the trailing-365-day `dilution_score_history` population at the same methodology version)
+- percentile rank (against the trailing-365-day score-history population at the same methodology version)
 - freshness metadata, degraded reasons, and provenance
 - optional `history[]` array when `?history=30d|90d|1y` is set
 
 ## Refresh cadence
 
-Daily Dagster materialization (`dilution_score_materialization` asset) runs at 09:00 UTC and UPSERTs into `dilution_score_history` via the `(ticker, methodology_version, as_of)` unique index. The endpoint reads the latest live computation on every request; `?history=` reads the persisted timeseries.
+A daily materialization in our scheduled data pipeline runs at 09:00 UTC and UPSERTs into the persisted score-history store, keyed uniquely by `(ticker, methodology_version, as_of)`. The endpoint reads the latest live computation on every request; `?history=` reads the persisted timeseries.
 
 ## Endpoints
 
@@ -63,7 +63,7 @@ Two endpoints expose the Dilution Score. They are not interchangeable — pick b
 - **`GET /v1/signals/dilution`** — the canonical Dilution Score. Returns the full envelope: score, band, confidence, factor-level breakdown, the six categorical sub-ratings, percentile rank, optional `history[]` (via `?history=30d|90d|1y`), and full provenance/freshness metadata. Use this when you need to reason about the score or display its components.
 - **`GET /v1/dilution/score`** — the `dilution_rating` view of the same score for an issuer (`ticker` required). Lighter than the signal (no percentile, no `history[]`), but it now carries the **full per-factor breakdown**: see Factor breakdown below. Use it for a band/score lookup plus factor attribution where percentile and history are not needed.
 
-Both endpoints compute the score live from the dilution inputs on each request (the legacy persisted `dilution_ratings` table was retired — see [API changelog](/changelog) OMNI-4401/OMNI-4414). `/v1/dilution/score` reshapes the same live computation into the `dilution_rating` envelope. They differ only in the surrounding metadata `/v1/signals/dilution` adds (percentile, history, full provenance) — the score, band, sub-ratings, and factor breakdown are identical.
+Both endpoints compute the score live from the dilution inputs on each request (the legacy persisted ratings table was retired — see the [API changelog](/changelog)). `/v1/dilution/score` reshapes the same live computation into the `dilution_rating` envelope. They differ only in the surrounding metadata `/v1/signals/dilution` adds (percentile, history, full provenance) — the score, band, sub-ratings, and factor breakdown are identical.
 
 ## Factor breakdown
 

@@ -84,7 +84,7 @@ compounds with scale, agents, and production requirements.
 | ------------------------------------------- | ------------------------------- | ------------------------------- |
 | Latency (hot path)                          | 34-38ms p50                     | 300-2,100ms p50                 |
 | Payload size (agent-ingestable)             | Compact JSON                    | Raw 10-K HTML / full XBRL       |
-| Semantic search                             | Yes (Pinecone + Voyage hybrid)  | No                              |
+| Semantic search                             | Yes (hybrid vector + keyword)   | No                              |
 | Intelligence bundles                        | Yes (company, security, earnings) | No (build it yourself)       |
 | Filing diff / amendment tracking            | Yes                             | No                              |
 | Monitors + webhooks                         | Yes (signed, replay, cursor)    | No                              |
@@ -163,11 +163,11 @@ const balanceSheet = await secapi.statements.balance_sheet({
 
 ## Reproducibility
 
-All numbers on this page come from public scripts:
+All numbers on this page come from our open benchmark harness:
 
-- `scripts/bench/benchmark_search.py` (SEC API)
-- `scripts/bench/benchmark_edgartools.py` (edgartools)
-- `scripts/bench/competitive_scorecard.py` (4-way aggregator)
-- `benchmarks/METHODOLOGY.md` (reviewable methodology doc)
+- A SEC API benchmark suite (entity resolve, filing search, section extract, XBRL → JSON)
+- An equivalent edgartools benchmark suite run under the same conditions
+- A 4-way competitive scorecard aggregator
+- A reviewable methodology doc
 
-Run them yourself. If you find a methodology flaw, file an issue or open a PR.
+The methodology is published so every number here is reproducible and auditable. If you spot a methodology issue, email support@secapi.ai.

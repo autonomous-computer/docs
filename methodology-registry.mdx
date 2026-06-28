@@ -59,8 +59,8 @@ This page describes the current derivation, source posture, and capability state
 ### How it works in SEC API
 
 - SEC API serves `/v1/market/indices` and `/v1/market/indices/constituents`
-- the current company-mapping audit artifact lives at `ops/company-mapping-audit/latest.json`
-- FIGI-family lookup inputs are accepted in `/v1/entities/resolve`, and the audit surface now covers `SPX`, `NDX`, `DJIA`, and `RUT`; canonical-store completeness should still be read from the current audit artifact rather than assumed
+- a company-mapping audit is maintained continuously to keep canonical-store coverage current
+- FIGI-family lookup inputs are accepted in `/v1/entities/resolve`, and the audit surface now covers `SPX`, `NDX`, `DJIA`, and `RUT`
 
 ## Segmented revenues
 
@@ -89,7 +89,7 @@ This page describes the current derivation, source posture, and capability state
 ### How it works in SEC API
 
 - SEC API serves `/v1/statements/segmented-revenues` with `segment_type`, `period`, `limit`, and `submission_file_limit` query parameters
-- SEC API revenue-segmentation flows now use SEC API-backed SEC routes instead of the prior MASSIVE/FMP path
+- SEC API revenue-segmentation flows now use SEC API-backed SEC routes instead of the prior market-data path
 - the agent harness pre-fetches geographic segments before the first LLM reasoning step and post-processes results with year-over-year comparisons when the question involves revenue change analysis
 
 ## Common equity derivation
@@ -323,7 +323,7 @@ This page describes the current derivation, source posture, and capability state
 ### How it works in SEC API
 
 - SEC API serves `/v1/owners/institutional/extract`
-- client applications can use this as the direct SEC API replacement for historical institutional ownership extracts without depending on FMP
+- client applications can use this as the direct SEC API replacement for historical institutional ownership extracts without depending on a third-party market-data provider
 
 ## Risk-category labeling
 
@@ -350,7 +350,7 @@ This page describes the current derivation, source posture, and capability state
 ### How it works in SEC API
 
 - SEC API serves `/v1/filings/latest/risk-categories`
-- client applications can now replace the prior MASSIVE risk-category workflow with a native SEC API surface
+- client applications can now replace the prior third-party risk-category workflow with a native SEC API surface
 
 ## Volatility score
 
@@ -386,7 +386,4 @@ This page describes the current derivation, source posture, and capability state
 - there is no `/v1/signals/sentiment` endpoint in the 3.0 public surface today
 - SEC API intentionally keeps sentiment behind a methodology gate until backtests, stale-input handling, and public explanations meet the launch bar
 
-### Where to look
-
-- docs posture: `apps/docs/content/sentiment-gate.md`
-- ops artifact: `ops/sentiment-gate/latest.json`
+Sentiment scoring becomes available once it clears that bar; subscribe to the [changelog](/changelog) for the release.

@@ -28,12 +28,12 @@ Freshness claims are scoped to a specific customer-visible class. A filing can b
 
 | Class | What it means | Primary evidence |
 | --- | --- | --- |
-| Raw SEC discovery | SEC API has observed the filing or source record from SEC feeds or SEC endpoints. | `source_ingest_records`, filing provenance `acceptedAt`, hot-lane/RSS telemetry |
-| Metadata availability | The filing appears in SEC API filing search/latest responses with CIK, ticker, form, date, accession, and source URL. | `filing_manifests`, `/v1/filings`, `/v1/filings/latest` |
-| Filing HTML/text availability | The filing body can be rendered or read from persisted storage without waiting on a live SEC fetch. | rendered filing routes, `filing_manifests.renderDepth`, storage/read smoke |
-| Section extraction availability | Standard 10-K/10-Q/8-K/DEF 14A item sections are available with item labels and citations. | `section_snippets`, `section_manifests`, section routes |
-| XBRL/statement availability | Facts and normalized statements are available from the DB-first XBRL store or, when missing, from the explicit SEC companyfacts fallback. | `xbrl_facts`, statement/facts provenance |
-| Semantic vector availability | Section content has been embedded with Voyage and is present in the Pinecone `section_snippets` namespace for semantic/hybrid search. | Pinecone stats, vector spot checks, bounded reindex artifact |
+| Raw SEC discovery | SEC API has observed the filing or source record from SEC feeds or SEC endpoints. | source-ingest records, filing provenance `acceptedAt`, hot-lane/RSS telemetry |
+| Metadata availability | The filing appears in SEC API filing search/latest responses with CIK, ticker, form, date, accession, and source URL. | the filing manifest store, `/v1/filings`, `/v1/filings/latest` |
+| Filing HTML/text availability | The filing body can be rendered or read from persisted storage without waiting on a live SEC fetch. | rendered filing routes, manifest render-depth, storage/read smoke |
+| Section extraction availability | Standard 10-K/10-Q/8-K/DEF 14A item sections are available with item labels and citations. | the section-snippet store, section manifests, section routes |
+| XBRL/statement availability | Facts and normalized statements are available from the DB-first XBRL store or, when missing, from the explicit SEC companyfacts fallback. | the XBRL facts store, statement/facts provenance |
+| Semantic vector availability | Section content has been embedded with finance-tuned embeddings and is present in the vector-search section namespace for semantic/hybrid search. | vector index stats, vector spot checks, bounded reindex artifact |
 
 ## Claim mapping
 
@@ -43,7 +43,7 @@ Freshness claims are scoped to a specific customer-visible class. A filing can b
 | "Filing text" or "rendered filing" | Filing HTML/text availability | Supported when storage-backed or successfully rendered; stale/missing derived text should surface as degraded rather than blocking unrelated metadata reads. |
 | "Section/item extraction" | Section extraction availability | Supported for standard item keys on core forms; freshness is separate from raw filing discovery. |
 | "Normalized statements" and "XBRL-to-JSON" | XBRL/statement availability | Supported through DB-first XBRL facts with explicit fallback/source metadata. |
-| "Semantic search" and "AI retrieval" | Semantic vector availability | Supported when vector providers are configured and Pinecone vectors are current; keyword fallback must disclose `partial_vector_search`. |
+| "Semantic search" and "AI retrieval" | Semantic vector availability | Supported when vector providers are configured and the vector index is current; keyword fallback must disclose `partial_vector_search`. |
 | "Real-time" or "webhook freshness" | Raw SEC discovery plus delivery evidence | Do not generalize this claim across all classes without delivery retry evidence and measured lag for the specific event stream. |
 
 ## Freshness status semantics
@@ -96,10 +96,10 @@ Default/full SEC data responses preserve provenance, freshness, and materializat
 
 ## XBRL facts architecture
 
-Financial data queries (facts and statements) use a DB-first architecture. Over 95 million pre-parsed XBRL facts across 9,600+ SEC-registered companies are stored in our own PostgreSQL database and refreshed daily via an automated Dagster pipeline at 07:00 UTC.
+Financial data queries (facts and statements) use a DB-first architecture. Over 95 million pre-parsed XBRL facts across 9,600+ SEC-registered companies are stored in our own PostgreSQL database and refreshed daily via our scheduled data pipeline at 07:00 UTC.
 
 The query path:
-1. Check if the company has data in the `xbrl_facts` table
+1. Check if the company has data in the XBRL facts store
 2. If data exists, query directly from the database (fast path)
 3. If no data exists, fall back to live SEC EDGAR fetch (slow path)
 
@@ -107,8 +107,8 @@ Every response includes a `source` field in its provenance or completeness objec
 
 ## Source artifacts
 
-- `ops/freshness-telemetry/latest.json`
-- `ops/freshness-dashboard/latest.json`
-- `ops/external-reference-validation/latest.json`
-- `benchmarks/competitive/results/scorecard.json`
-- `docs/strategy/sec-api-v3-evidence-matrix.md`
+- freshness telemetry
+- freshness dashboard
+- external-reference validation
+- competitive benchmark scorecard
+- the v3 evidence matrix

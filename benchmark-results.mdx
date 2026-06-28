@@ -61,7 +61,7 @@ See [Compare SEC API vs edgartools](/compare-edgartools) for the full feature ma
 ## Why SEC API is faster
 
 1. **Purpose-built for the SEC domain.** Dedicated Postgres schema with filing-aware indexes, not a generic data warehouse.
-2. **Edge-cached with tiered storage.** Hot data served from Postgres + Typesense; historical data in R2 with Cloudflare CDN.
+2. **Edge-cached with tiered storage.** Hot data served from Postgres + full-text search; historical data in tiered storage behind an edge CDN.
 3. **Compact responses by default.** Responses are shaped for AI consumption — no bloated wrappers, no redundant fields.
 4. **Semantic search reduces round-trips.** One hybrid search call returns relevant results that would require multiple keyword queries elsewhere.
 
@@ -116,10 +116,9 @@ The intelligence bundle pre-computes what agents would otherwise assemble from m
 - Each operation run 5+ times; p50, p95, p99 reported
 - Payload size measured at the HTTP transport layer for every comparand — raw response body bytes for hosted APIs, sum of SEC wire bytes (via monkey-patched `httpx.Client.send`) for edgartools
 - Token estimate = ceil(payload_bytes / 4)
-- Percentiles computed via linear-interpolation (Hyndman-Fan Type 7) for every comparand — all runners share one implementation in `scripts/bench/_common.py`
+- Percentiles computed via linear-interpolation (Hyndman-Fan Type 7) for every comparand — all runners share one implementation in our open benchmark harness
 - Network: same region, same machine, concurrent execution
-- Scripts: `scripts/bench/benchmark_sec_api.py`, `scripts/bench/benchmark_financialdatasets.py`, `scripts/bench/benchmark_edgartools.py`
-- Scorecard: `scripts/bench/competitive_scorecard.py`
+- Each comparand (SEC API, sec-api.io, financialdatasets.ai, edgartools) has a dedicated runner in our open benchmark harness, with a shared scorecard step that assembles the multi-way comparison
 - Full peer-reviewable methodology: documented in the benchmark methodology section above
 
 ## Reproduce

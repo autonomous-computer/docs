@@ -31,7 +31,7 @@ curl -X POST https://api.secapi.ai/v1/webhook_endpoints \
 
 ### Email
 
-Email delivery uses Resend as the transactional provider. Each match-batch produces a single email containing the rendered HTML + plaintext alongside an RFC 8058-compliant `List-Unsubscribe` header for one-click client integrations. The `delivery` object in the request body is a discriminated union; future channels (Slack, etc.) extend the `type` field.
+Email delivery uses our email provider for transactional sends. Each match-batch produces a single email containing the rendered HTML + plaintext alongside an RFC 8058-compliant `List-Unsubscribe` header for one-click client integrations. The `delivery` object in the request body is a discriminated union; future channels (Slack, etc.) extend the `type` field.
 
 ```bash
 curl -X POST https://api.secapi.ai/v1/monitors \
@@ -63,13 +63,13 @@ The response includes a `delivery` block describing the destination:
 }
 ```
 
-`delivery.status` starts as `active`, can become `unsubscribed` through the one-click email flow, and can become `bounced`, `complaint_suppressed`, or `suppressed` when signed Resend provider feedback reports hard-bounce, spam-complaint, or provider-suppression events. When a non-active state is present, the email channel will not fire.
+`delivery.status` starts as `active`, can become `unsubscribed` through the one-click email flow, and can become `bounced`, `complaint_suppressed`, or `suppressed` when signed email-provider feedback reports hard-bounce, spam-complaint, or provider-suppression events. When a non-active state is present, the email channel will not fire.
 
 ## Email behavior
 
 ### Sender address
 
-Emails ship from the address configured by the `EMAIL_SENDER_FROM` environment variable on the API service. The default for the production deployment is `alerts@secapi.ai`. You can override the sender per-destination via `delivery.config.from` if your Resend account has multiple verified domains.
+Emails ship from a configured sender address on the API service (for example, `alerts@secapi.ai`). You can override the sender per-destination via `delivery.config.from` if the email provider has multiple verified domains.
 
 ### Unsubscribe
 
@@ -85,43 +85,43 @@ To re-enable email delivery on an unsubscribed monitor, call `POST /v1/monitors/
 
 ### Provider feedback
 
-SEC API processes signed provider feedback from Resend before surfacing bounce, complaint, and suppression states in monitor delivery status. This provider ingress is an operator-managed control-plane route, not a customer API workflow; customer integrations should use the monitor delivery state, suppression state, and audit trail below.
+SEC API processes signed provider feedback from the email provider before surfacing bounce, complaint, and suppression states in monitor delivery status. This provider ingress is an operator-managed control-plane route, not a customer API workflow; customer integrations should use the monitor delivery state, suppression state, and audit trail below.
 
-Hard bounces, spam complaints, and Resend suppression events are stored in `email_suppressions` by hashed recipient and provider event id. Suppression checks are org + recipient-wide, so a hard bounce or complaint from one monitor blocks future monitor emails to the same address in the same org. Duplicate webhook deliveries are idempotent. Delayed provider feedback updates a monitor's `delivery.status` only when the monitor still points at the same recipient, and terminal negative feedback is not downgraded by later `sent` or `delivered` events.
+Hard bounces, spam complaints, and provider suppression events are stored in the suppression list by hashed recipient and provider event id. Suppression checks are org + recipient-wide, so a hard bounce or complaint from one monitor blocks future monitor emails to the same address in the same org. Duplicate webhook deliveries are idempotent. Delayed provider feedback updates a monitor's `delivery.status` only when the monitor still points at the same recipient, and terminal negative feedback is not downgraded by later `sent` or `delivered` events.
 
 ### Retry semantics
 
-The dispatch cron (see §Dispatch behavior below) handles retries on transient failure. A failed send writes a row to `email_delivery_attempts` with `dispatch_status='retry_pending'` and a `next_attempt_at` timestamp; the next sweep tick claims rows whose `next_attempt_at` has passed and re-attempts the send.
+The dispatch cron (see §Dispatch behavior below) handles retries on transient failure. A failed send writes a row to the delivery-attempts log with `dispatch_status='retry_pending'` and a `next_attempt_at` timestamp; the next sweep tick claims rows whose `next_attempt_at` has passed and re-attempts the send.
 
 State machine:
 
 | State | Meaning |
 | --- | --- |
-| `sent` | Resend returned 2xx; recipient should have received the email. |
+| `sent` | The email provider returned 2xx; recipient should have received the email. |
 | `failed` | Adapter wrote the row but the dispatcher hasn't yet flipped it to a retry/permanent state (rare transient state). |
 | `retry_pending` | Send failed transiently; the row is queued for re-attempt at `next_attempt_at`. |
-| `sending` | A retry-drainer has claimed this row and is currently calling Resend. Re-claimed back to `retry_pending` if it sits >10 min (mid-flight crash recovery). |
-| `permanent_failed` | Three total attempts all failed; no further attempts. Sentry-capture surfaces these. |
+| `sending` | A retry-drainer has claimed this row and is currently calling the email provider. Re-claimed back to `retry_pending` if it sits >10 min (mid-flight crash recovery). |
+| `permanent_failed` | Three total attempts all failed; no further attempts. Error monitoring surfaces these. |
 | `rate_limited` | The send was blocked by the per-monitor hourly cap or per-org daily cap (see §Rate limits below). The daily summary picks these up. |
-| `sent_dryrun` | QA-tooling-only: the send was simulated; no Resend call was made. |
+| `sent_dryrun` | QA-tooling-only: the send was simulated; no email-provider call was made. |
 
 Backoff schedule: attempt 1 fails → wait 30s → attempt 2; attempt 2 fails → wait 5min → attempt 3. If attempt 3 fails the row is `permanent_failed` (no further retries).
 
-Stable `Idempotency-Key = sha256(monitor_id + match_ids_sorted)` is set on every Resend POST, and a unique partial index `(monitor_id, idempotency_key)` on `email_delivery_attempts` enforces duplicate-safety at the database layer too.
+Stable `Idempotency-Key = sha256(monitor_id + match_ids_sorted)` is set on every email-provider POST, and a unique partial index `(monitor_id, idempotency_key)` on the delivery-attempts log enforces duplicate-safety at the database layer too.
 
 ### Audit trail
 
-Every send attempt — success or failure — is persisted to `email_delivery_attempts` with the recipient hashed (not raw), a redacted preview (`a***@example.com`), the request id, the Resend message id (on success), the HTTP status, and the latency. This enables support cases ("did my customer get the alert?") without exposing recipient PII in operator-visible logs.
+Every send attempt — success or failure — is persisted to the delivery-attempts log with the recipient hashed (not raw), a redacted preview (`a***@example.com`), the request id, the email-provider message id (on success), the HTTP status, and the latency. This enables support cases ("did my customer get the alert?") without exposing recipient PII in operator-visible logs.
 
 ## Dispatch behavior
 
-The SEC API Dagster cron drives monitor → email dispatch on a **15-minute cadence**. At each tick the sweep:
+SEC API dispatches monitor emails on a **15-minute cadence**. At each tick the sweep:
 
 1. Reclaims any `'sending'` rows that have been stuck for >10 min (mid-flight crash recovery).
-2. Drains any `retry_pending` rows whose `next_attempt_at` has passed (transient-`'sending'` short-txn pattern: claim → COMMIT lock → call Resend → COMMIT terminal state).
+2. Drains any `retry_pending` rows whose `next_attempt_at` has passed (transient-`'sending'` short-txn pattern: claim → COMMIT lock → call the email provider → COMMIT terminal state).
 3. Iterates active monitors in `last_checked_at asc nulls first` order, runs each saved search, and fans out new matches via the email channel. The cursor (`last_checked_at`) is bumped only when at least one destination returned `sent`, `deduped`, or `rate_limited` — so a totally-failed dispatch does not silently drop matches.
 
-The cron also emits a `monitor.match` SEC API event for every dispatch, so org-level webhook subscribers (configured via `POST /v1/webhook_endpoints` with `monitor.match` in `subscribed_event_types`) receive a signal regardless of email delivery outcome.
+The dispatch also emits a `monitor.match` SEC API event for every dispatch, so org-level webhook subscribers (configured via `POST /v1/webhook_endpoints` with `monitor.match` in `subscribed_event_types`) receive a signal regardless of email delivery outcome.
 
 Typical latency from filing publish to email arrival is approximately 7.5 minutes (half the 15-min tick interval). Worst-case latency is one full tick plus dispatch/provider time. Sub-2-second alerting is planned for a future release.
 
@@ -129,14 +129,14 @@ Typical latency from filing publish to email arrival is approximately 7.5 minute
 
 To prevent runaway alert storms when a customer's monitor suddenly matches thousands of filings, two windows are enforced:
 
-| Window | Default | Env override |
-| --- | --- | --- |
-| **Per-monitor, per-hour** | 100 sends | `OMNI_MONITOR_DISPATCH_RATE_LIMIT_PER_HOUR` |
-| **Per-org, per-day** | 1,000 sends | `OMNI_MONITOR_DISPATCH_DAILY_CAP` |
+| Window | Default |
+| --- | --- |
+| **Per-monitor, per-hour** | 100 sends |
+| **Per-org, per-day** | 1,000 sends |
 
-When a send is blocked by either window, the row is persisted with `dispatch_status='rate_limited'` and **no Resend call is made**. The matches are not lost — the [daily summary](#daily-summary) picks them up. The bucket counts every dispatch intent (sent + rate_limited + retry_pending + sending + permanent_failed) — bouncing addresses cannot game the bucket by failing intentionally.
+When a send is blocked by either window, the row is persisted with `dispatch_status='rate_limited'` and **no email-provider call is made**. The matches are not lost — the [daily summary](#daily-summary) picks them up. The bucket counts every dispatch intent (sent + rate_limited + retry_pending + sending + permanent_failed) — bouncing addresses cannot game the bucket by failing intentionally.
 
-Rate-limit math runs primarily through Redis (sliding-window ZSET via the same primitive that backs HTTP middleware). In production, Redis limiter failures fail closed so monitor email dispatch cannot become an unbounded fanout path; blocked rows are persisted as rate-limited and no Resend call is made. Outside production, SEC API falls back to a Postgres count query against `email_delivery_attempts`; if that fallback is also unhealthy, the non-production dispatcher fails open with a Sentry warning to keep local/staging workflows available.
+Rate-limit math runs primarily through a sliding-window rate limiter (the same limiter that backs HTTP middleware). In production, rate-limiter failures fail closed so monitor email dispatch cannot become an unbounded fanout path; blocked rows are persisted as rate-limited and no email-provider call is made. Outside production, SEC API falls back to a Postgres count query against the delivery-attempts log; if that fallback is also unhealthy, the non-production dispatcher fails open with a logged warning to keep local/staging workflows available.
 
 ## Daily summary
 
