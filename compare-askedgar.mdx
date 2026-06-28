@@ -3,97 +3,67 @@ title: "SEC API vs AskEdgar"
 description: "Feature-by-feature comparison of SEC API and AskEdgar — schema, verification, endpoints, and agent support"
 ---
 
-[AskEdgar](https://askedgar.io) launched 2026-04-22 as a focused
-dilution-intelligence product for small-cap investors. It ships a curated
-dilution schema, an AI Copilot UI, and a per-KB API priced for tactical
-workflows. SEC API ships parity on the dilution data — every entity AskEdgar
-models, plus a few they don't — and adds 38 endpoint families they don't
-touch. Each SEC API dilution row carries an `askedgar_url` field, so customers
-running both products can dual-source during cutover.
+[AskEdgar](https://askedgar.io) launched 2026-04-22 as a focused dilution-intelligence product for small-cap investors. It ships a curated dilution schema, an AI Copilot UI, and a per-KB API priced for tactical workflows. SEC API ships parity on the dilution data — every entity AskEdgar models, plus a few they don't — and adds 38 endpoint families they don't touch. Each SEC API dilution row carries an `askedgar_url` field, so customers running both products can dual-source during cutover.
 
-SEC API's dilution score is **live-computed** on every request (no persisted
-table to go stale, no permanent 404). The score now surfaces its **full
-per-factor breakdown** on `/v1/dilution/score` (key, label, score, weight,
-value, and a plain-English explanation per factor), **excludes missing factors
-and renormalizes the remaining weights** rather than substituting a neutral 50,
-flags **variable-rate / floorless ("death-spiral") convertibles** as a distinct
-surcharge, and blends a **share-float-velocity** factor (trailing-12-month
-share-issuance velocity, so the score moves with the *rate* of dilution, not
-just a point-in-time state) — contrasted with a purely state-based score.
-`/v1/dilution/ratings` reads the canonical `dilution_score_history` and returns
-the **latest** factor-weighted rating per issuer; for the rolling score time
-series use `/v1/signals/dilution?history=30d|90d|1y`.
+SEC API's dilution score is **live-computed** on every request (no persisted table to go stale, no permanent 404). The score now surfaces its **full per-factor breakdown** on `/v1/dilution/score` (key, label, score, weight, value, and a plain-English explanation per factor), **excludes missing factors and renormalizes the remaining weights** rather than substituting a neutral 50, flags **variable-rate / floorless ("death-spiral") convertibles** as a distinct surcharge, and blends a **share-float-velocity** factor (trailing-12-month share-issuance velocity, so the score moves with the _rate_ of dilution, not just a point-in-time state) — contrasted with a purely state-based score. `/v1/dilution/ratings` reads the canonical `dilution_score_history` and returns the **latest** factor-weighted rating per issuer; for the rolling score time series use `/v1/signals/dilution?history=30d|90d|1y`.
 
 ## Dilution data model
 
-| Entity                                              | SEC API fields                                          | AskEdgar fields     |
-| --------------------------------------------------- | ---------------------------------------------------- | ------------------- |
-| Dilution event                                      | 42 (`dilution_events`)                               | 42 (DilutionEntity) |
-| Warrants and convertibles                           | split: `dilution_warrants` + `dilution_convertibles` | bundled fields      |
-| Right of first refusal (RoFR)                       | dedicated table                                      | dedicated entity    |
-| Lockups                                             | dedicated table                                      | dedicated entity    |
-| Nasdaq compliance                                   | dedicated table                                      | dedicated entity    |
-| Cash position                                       | dedicated table                                      | inline sub-field    |
-| Corporate actions                                   | dedicated table                                      | inline sub-field    |
-| Reverse splits                                      | dedicated table                                      | dedicated endpoint  |
-| Share-float history (full time series)              | dedicated table                                      | dedicated endpoint  |
-| Per-field verification (confidence, sourceSpan, …)  | yes (6-dimension `verification` block)               | binary `verified`   |
-| Direct row-level cross-link to AskEdgar             | yes (`askedgar_url` on every row)                    | n/a                 |
+| Entity | SEC API fields | AskEdgar fields |
+| --- | --- | --- |
+| Dilution event | 42 (`dilution_events`) | 42 (DilutionEntity) |
+| Warrants and convertibles | split: `dilution_warrants` \+ `dilution_convertibles` | bundled fields |
+| Right of first refusal (RoFR) | dedicated table | dedicated entity |
+| Lockups | dedicated table | dedicated entity |
+| Nasdaq compliance | dedicated table | dedicated entity |
+| Cash position | dedicated table | inline sub-field |
+| Corporate actions | dedicated table | inline sub-field |
+| Reverse splits | dedicated table | dedicated endpoint |
+| Share-float history (full time series) | dedicated table | dedicated endpoint |
+| Per-field verification (confidence, sourceSpan, …) | yes (6-dimension `verification` block) | binary `verified` |
+| Direct row-level cross-link to AskEdgar | yes (`askedgar_url` on every row) | n/a |
 
-Forms covered: S-1, S-3, 424B*, FWP, 8-K (parity).
+Forms covered: S-1, S-3, 424B\*, FWP, 8-K (parity).
 
 ## Dilution endpoint coverage
 
-SEC API ships 14 REST endpoints under `/v1/dilution/*` plus mirrored
-dilution MCP workflows. AskEdgar productizes a related but smaller set
-under `https://api.askedgar.com/v1`. Mapping for the most common queries:
+SEC API ships 14 REST endpoints under `/v1/dilution/*` plus mirrored dilution MCP workflows. AskEdgar productizes a related but smaller set under `https://api.askedgar.com/v1`. Mapping for the most common queries:
 
-| AskEdgar route               | SEC API route(s)                                                    |
-| ---------------------------- | ---------------------------------------------------------------- |
-| `/v1/dilution-data`          | `/v1/dilution/events`                                            |
-| `/v1/dilution-rating`        | `/v1/dilution/score` (latest) + `/v1/dilution/ratings` (history) |
-| `/v1/offerings`              | `/v1/dilution/events?form=S-1,S-3,424B5`                         |
-| `/v1/float-outstanding`      | `/v1/dilution/share-float-history` (latest entry)                |
-| `/v1/historical-float-pro`   | `/v1/dilution/share-float-history`                               |
-| `/v1/screener`               | `/v1/dilution/coverage`                                          |
-| `/v1/reverse-splits`         | `/v1/dilution/reverse-splits`                                    |
-| `/v1/nasdaq-compliance`      | `/v1/dilution/nasdaq-compliance`                                 |
-| `/v1/registrations`          | `/v1/dilution/events?form=S-1,S-3`                               |
-| (no AskEdgar equivalent)     | `/v1/dilution/warrants`, `/v1/dilution/convertibles`             |
-| (no AskEdgar equivalent)     | `/v1/dilution/rofr`, `/v1/dilution/lockups`                      |
-| (no AskEdgar equivalent)     | `/v1/dilution/cash-position`, `/v1/dilution/corporate-actions`   |
+| AskEdgar route | SEC API route(s) |
+| --- | --- |
+| `/v1/dilution-data` | `/v1/dilution/events` |
+| `/v1/dilution-rating` | `/v1/dilution/score` (latest) \+ `/v1/dilution/ratings` (history) |
+| `/v1/offerings` | `/v1/dilution/events?form=S-1,S-3,424B5` |
+| `/v1/float-outstanding` | `/v1/dilution/share-float-history` (latest entry) |
+| `/v1/historical-float-pro` | `/v1/dilution/share-float-history` |
+| `/v1/screener` | `/v1/dilution/coverage` |
+| `/v1/reverse-splits` | `/v1/dilution/reverse-splits` |
+| `/v1/nasdaq-compliance` | `/v1/dilution/nasdaq-compliance` |
+| `/v1/registrations` | `/v1/dilution/events?form=S-1,S-3` |
+| (no AskEdgar equivalent) | `/v1/dilution/warrants`, `/v1/dilution/convertibles` |
+| (no AskEdgar equivalent) | `/v1/dilution/rofr`, `/v1/dilution/lockups` |
+| (no AskEdgar equivalent) | `/v1/dilution/cash-position`, `/v1/dilution/corporate-actions` |
 
 Full migration table at [migrate-from-askedgar](/migrate-from-askedgar).
 
 ## Dilution score model
 
-AskEdgar exposes a categorical dilution rating. SEC API's `/v1/dilution/score`
-returns a 0–100 numeric score plus a band, six categorical sub-ratings, and the
-**full per-factor breakdown** that produced it — so an agent can read *why* a
-ticker scored where it did, not just the headline.
+AskEdgar exposes a categorical dilution rating. SEC API's `/v1/dilution/score` returns a 0–100 numeric score plus a band, six categorical sub-ratings, and the **full per-factor breakdown** that produced it — so an agent can read _why_ a ticker scored where it did, not just the headline.
 
-| Property                                       | SEC API `/v1/dilution/score`                                      | AskEdgar rating |
-| ---------------------------------------------- | ----------------------------------------------------------------- | --------------- |
-| Compute model                                  | live-computed per request (no stale persisted row, no hard 404)   | state-based     |
-| Per-factor breakdown                           | yes — `factors[]` (key, label, score, weight, value, explanation) | not exposed     |
-| Missing-factor handling                        | excluded + remaining weights renormalized (no neutral-50 default) | n/a             |
-| Death-spiral / variable-rate convertible flag  | yes — distinct surcharge on the overhang factor                   | no              |
-| Float-velocity factor                          | yes — `share_float_velocity` (trailing-12mo share-issuance rate)  | no              |
-| Score history                                  | `/v1/dilution/ratings` (reads canonical `dilution_score_history`) | n/a             |
+| Property | SEC API `/v1/dilution/score` | AskEdgar rating |
+| --- | --- | --- |
+| Compute model | live-computed per request (no stale persisted row, no hard 404) | state-based |
+| Per-factor breakdown | yes — `factors[]` (key, label, score, weight, value, explanation) | not exposed |
+| Missing-factor handling | excluded \+ remaining weights renormalized (no neutral-50 default) | n/a |
+| Death-spiral / variable-rate convertible flag | yes — distinct surcharge on the overhang factor | no |
+| Float-velocity factor | yes — `share_float_velocity` (trailing-12mo share-issuance rate) | no |
+| Score history | `/v1/dilution/ratings` (reads canonical `dilution_score_history`) | n/a |
 
-The emitted per-factor `weight` is the **effective** in-score weight: with no
-missing factors the weights are the static catalog weights; when a factor is
-unavailable it is excluded and the rest renormalize to sum to 1.0, so
-`sum(score × weight)` always reconciles to the headline. The agent view
-(`?view=agent`) carries the same numeric score, sub-ratings, and a flat
-`factorExposures` map keyed by factor.
+The emitted per-factor `weight` is the **effective** in-score weight: with no missing factors the weights are the static catalog weights; when a factor is unavailable it is excluded and the rest renormalize to sum to 1.0, so `sum(score × weight)` always reconciles to the headline. The agent view (`?view=agent`) carries the same numeric score, sub-ratings, and a flat `factorExposures` map keyed by factor.
 
 ## Verification model
 
-SEC API returns a 6-dimension verification block on every dilution row.
-AskEdgar returns a single boolean. The shape difference matters when an
-agent needs to gate downstream actions on confidence or trace a number
-back to a citeable source span in the filing:
+SEC API returns a 6-dimension verification block on every dilution row. AskEdgar returns a single boolean. The shape difference matters when an agent needs to gate downstream actions on confidence or trace a number back to a citeable source span in the filing:
 
 ```json
 // AskEdgar
@@ -112,143 +82,110 @@ back to a citeable source span in the filing:
 }
 ```
 
-Every **extracted** dilution row type (events, warrants, convertibles, RoFR,
-lockups, Nasdaq compliance, reverse splits, cash position, corporate actions,
-and share-float history) exposes this block — including a `sourceSpan` filing
-anchor — on its default view, so any number an agent surfaces is one hop from
-the filing that backs it. The **derived** dilution rating/score is a composite
-of those rows rather than a single extracted field, so its `verification.sourceSpan`
-is `null`; trace it through the per-factor breakdown and the underlying rows.
+Every **extracted** dilution row type (events, warrants, convertibles, RoFR, lockups, Nasdaq compliance, reverse splits, cash position, corporate actions, and share-float history) exposes this block — including a `sourceSpan` filing anchor — on its default view, so any number an agent surfaces is one hop from the filing that backs it. The **derived** dilution rating/score is a composite of those rows rather than a single extracted field, so its `verification.sourceSpan` is `null`; trace it through the per-factor breakdown and the underlying rows.
 
-SEC API dilution verification is rolling out in stages. Schema and contract
-are live on every response; production extraction coverage expands as each
-source family clears verification.
+SEC API dilution verification is rolling out in stages. Schema and contract are live on every response; production extraction coverage expands as each source family clears verification.
 
 ## Pricing
 
-AskEdgar splits its surface into two products: an AI Copilot UI (priced
-per-month with included AI questions) and an API (priced per-KB,
-pay-as-you-go only). SEC API is API-first and offers a unified PAYG plus
-subscription ladder.
+AskEdgar splits its surface into two products: an AI Copilot UI (priced per-month with included AI questions) and an API (priced per-KB, pay-as-you-go only). SEC API is API-first and offers a unified PAYG plus subscription ladder.
 
-| Tier              | SEC API                                            | AskEdgar Copilot                       | AskEdgar API     |
-| ----------------- | ----------------------------------------------- | -------------------------------------- | ---------------- |
-| **Starter grant** | 150 calls (one-time)                            | Limited AI questions                   | None             |
-| **Pay-as-you-go** | From $0.01/call                                 | n/a                                    | $0.004–$0.019/KB |
-| **Personal/Pro**  | $55/month                                       | $59/month — 600 AI Q (7-day trial)     | n/a              |
-| **Team/Pro+**     | $239/month                                      | $199/month — 1,000 AI Q (7-day trial)  | n/a              |
-| **Enterprise**    | Custom (SLA, support, dedicated capacity)       | Custom                                 | Custom           |
+| Tier | SEC API | AskEdgar Copilot | AskEdgar API |
+| --- | --- | --- | --- |
+| **Starter grant** | 150 calls (one-time) | Limited AI questions | None |
+| **Pay-as-you-go** | From \$0.01/call | n/a |
+| **Personal/Pro** | \$55/month | \$59/month — 600 AI Q (7-day trial) | n/a |
+| **Team/Pro\+** | \$239/month | \$199/month — 1,000 AI Q (7-day trial) | n/a |
+| **Enterprise** | Custom (SLA, support, dedicated capacity) | Custom | Custom |
 
 **Cost example** for a small dilution-research workload (300 API calls/month, ~6 KB returned per `dilution-data` call):
 
-- AskEdgar API PAYG (`/v1/dilution-data` at $0.018/KB) ≈ **$32.40/month**
-- SEC API PAYG (300 × $0.01/call) ≈ **$3.00/month** (after the one-time 150-call grant)
-- SEC API Personal **$55/month** (predictable, includes the rest of the 39-family API surface)
+- AskEdgar API PAYG (`/v1/dilution-data` at $0.018/KB) ≈ **$32.40/month\*\*
+- SEC API PAYG (300 × $0.01/call) ≈ **$3.00/month\*\* (after the one-time 150-call grant)
+- SEC API Personal **\$55/month** (predictable, includes the rest of the 39-family API surface)
 
-The PAYG arithmetic is the conversion lever for any agent at small-to-medium
-volume. The subscription is the right call once dilution data is embedded
-in a workflow that touches the rest of the API surface.
+The PAYG arithmetic is the conversion lever for any agent at small-to-medium volume. The subscription is the right call once dilution data is embedded in a workflow that touches the rest of the API surface.
 
 ## Where AskEdgar wins
 
-AskEdgar has genuine strengths and a visible head start on dilution
-specifically. Customers evaluating both should know:
+AskEdgar has genuine strengths and a visible head start on dilution specifically. Customers evaluating both should know:
 
-- **Polished AI Copilot UI** for non-engineer users. SEC API is API-first
-  and does not ship a Copilot UI in the same shape today.
-- **Tight vertical scope** — schema, screener, alerts, and Discord
-  integrations tuned for one workflow (small-cap dilution forensics)
-  feel cohesive end-to-end.
-- **7-day free trial** on Pro and Pro+ Copilot tiers. SEC API does not offer
-  a separate trial; every new organization receives 150 included calls,
-  one-time (with an optional self-serve reset every 30 days).
-- **Marquee small-cap testimonials.** Aegis Capital is named on the home
-  page alongside Trillium, Seven Points Capital, SMB Capital, and others.
-- **Strict per-endpoint per-KB API pricing.** Some buyers prefer a metered
-  API with no monthly floor.
+- **Polished AI Copilot UI** for non-engineer users. SEC API is API-first and does not ship a Copilot UI in the same shape today.
+- **Tight vertical scope** — schema, screener, alerts, and Discord integrations tuned for one workflow (small-cap dilution forensics) feel cohesive end-to-end.
+- **7-day free trial** on Pro and Pro\+ Copilot tiers. SEC API does not offer a separate trial; every new organization receives 150 included calls, one-time (with an optional self-serve reset every 30 days).
+- **Marquee small-cap testimonials.** Aegis Capital is named on the home page alongside Trillium, Seven Points Capital, SMB Capital, and others.
+- **Strict per-endpoint per-KB API pricing.** Some buyers prefer a metered API with no monthly floor.
 
 ## Where SEC API wins
 
-SEC API is broader (39 endpoint families vs AskEdgar's dilution-only wedge),
-serves first-party SEC data through one consistent contract, ships per-field
-verification with citeable source spans rather than a binary flag, returns
-cost and token headers on every call, and treats agents as a first-class
-surface (hosted MCP, 4 SDKs, 8 Skills, FinanceBench score, signed webhooks,
-structured CLI). The dilution wedge now sits inside that broader surface: a
-ticker's quant factor exposures are available inline on
-`/v1/companies/overview?include=factors` (opt-in), so a dilution workflow can
-read offering pressure and factor risk from the same company surface.
+| Tier | SEC API | AskEdgar Copilot | AskEdgar API |
+| --- | --- | --- | --- |
+| **Starter grant** | 150 calls (one-time) | Limited AI questions | None |
+| **Pay-as-you-go** | From \$0.01/call | n/a |
+| **Personal/Pro** | \$55/month | \$59/month — 600 AI Q (7-day trial) | n/a |
+| **Team/Pro\+** | \$239/month | \$199/month — 1,000 AI Q (7-day trial) | n/a |
+| **Enterprise** | Custom (SLA, support, dedicated capacity) | Custom | Custom |
 
-| Dimension                                               | SEC API                                  | AskEdgar                          |
-| ------------------------------------------------------- | ------------------------------------- | --------------------------------- |
-| Endpoint families                                       | **39**                                | dilution-only (~5 productized)    |
-| Endpoints                                               | **186**                               | ~12 productized                   |
-| Per-field verification                                  | yes (6-dimension `verification`)      | binary `verified`                 |
-| MCP server                                              | yes (84 tools, including dilution workflows) | no                         |
-| SDKs                                                    | 4 (JS/TS, Python, Go, Rust)           | none published                    |
-| Custom Skills (Claude / agent-runnable)                 | 8 canonical skills                    | none                              |
-| FinanceBench score                                      | 18 / 25 (72%) canary subset, 2026-04-25 | none published                    |
-| Filing search / sections / XBRL                         | yes                                   | no                                |
-| 13F holdings + comparison                               | yes                                   | no                                |
-| Insider trading + Form 144                              | yes                                   | no                                |
-| Executive compensation                                  | yes                                   | no                                |
-| 8-K 5.07 voting (structured)                            | yes (first in market)                 | no                                |
-| Form ADV (+ AUM filters)                                | yes                                   | no                                |
-| Enforcement (5,993+ records)                            | yes                                   | no                                |
-| Semantic search (hybrid vector + keyword)               | yes                                   | no                                |
-| Macro intelligence (12 countries)                       | yes                                   | no                                |
-| Factor analysis (broad catalog with narrower launch surface) | yes                              | no                                |
-| Quant factor exposures on the company surface           | yes (`/v1/companies/overview?include=factors`) | no                       |
-| Dilution score: full per-factor breakdown               | yes (`factors[]` on `/v1/dilution/score`) | categorical rating only       |
-| Dilution score: death-spiral / variable-rate flag       | yes                                   | no                                |
-| Webhooks (signed, replay, cursor)                       | yes (public Delivery events)          | Discord automation only           |
-| Direct row-level back-link to competitor                | yes (`askedgar_url` field)            | n/a                               |
+SEC API is broader (39 endpoint families vs AskEdgar's dilution-only wedge), serves first-party SEC data through one consistent contract, ships per-field verification with citeable source spans rather than a binary flag, returns cost and token headers on every call, and treats agents as a first-class surface (hosted MCP, 4 SDKs, 8 Skills, FinanceBench score, signed webhooks, structured CLI). The dilution wedge now sits inside that broader surface: a ticker's quant factor exposures are available inline on `/v1/companies/overview?include=factors` (opt-in), so a dilution workflow can read offering pressure and factor risk from the same company surface.
 
-Latency benchmarks vs AskEdgar are scheduled for a follow-up ticket; SEC API's
-published p50 across the 4-workflow harness is at
-[/benchmark-results](/benchmark-results).
+| Dimension | SEC API | AskEdgar |
+| --- | --- | --- |
+| Endpoint families | **39** | dilution-only (~5 productized) |
+| Endpoints | **186** | ~12 productized |
+| Per-field verification | yes (6-dimension `verification`) | binary `verified` |
+| MCP server | yes (84 tools, including dilution workflows) | no |
+| SDKs | 4 (JS/TS, Python, Go, Rust) | none published |
+| Custom Skills (Claude / agent-runnable) | 8 canonical skills | none |
+| FinanceBench score | 18 / 25 (72%) canary subset, 2026-04-25 | none published |
+| Filing search / sections / XBRL | yes | no |
+| 13F holdings \+ comparison | yes | no |
+| Insider trading \+ Form 144 | yes | no |
+| Executive compensation | yes | no |
+| 8-K 5.07 voting (structured) | yes (first in market) | no |
+| Form ADV (\+ AUM filters) | yes | no |
+| Enforcement (5,993\+ records) | yes | no |
+| Semantic search (hybrid vector \+ keyword) | yes | no |
+| Macro intelligence (12 countries) | yes | no |
+| Factor analysis (broad catalog with narrower launch surface) | yes | no |
+| Quant factor exposures on the company surface | yes (`/v1/companies/overview?include=factors`) | no |
+| Dilution score: full per-factor breakdown | yes (`factors[]` on `/v1/dilution/score`) | categorical rating only |
+| Dilution score: death-spiral / variable-rate flag | yes | no |
+| Webhooks (signed, replay, cursor) | yes (public Delivery events) | Discord automation only |
+| Direct row-level back-link to competitor | yes (`askedgar_url` field) | n/a |
+
+Latency benchmarks vs AskEdgar are scheduled for a follow-up ticket; SEC API's published p50 across the 4-workflow harness is at [/benchmark-results](/benchmark-results).
 
 ## When to choose which
 
 **Choose AskEdgar when:**
 
-- You are a small-cap investor who wants an AI Copilot UI today and dilution
-  is your only need.
+- You are a small-cap investor who wants an AI Copilot UI today and dilution is your only need.
 - You want to start with a 7-day free trial on the Copilot tier.
-- You are billing-compliant with strictly-metered per-KB API charges and
-  do not need broader SEC data.
+- You are billing-compliant with strictly-metered per-KB API charges and do not need broader SEC data.
 
 **Choose SEC API when:**
 
-- You are building agents or integrations that touch dilution AND broader
-  SEC data (filings, statements, factors, insiders, board, comp, macro).
-- You need per-field verification with citeable source spans rather than a
-  binary `verified` flag.
-- You need a transparent dilution score — the full per-factor breakdown,
-  renormalized weights, and a death-spiral / variable-rate-convertible flag —
-  not just a categorical rating.
+- You are building agents or integrations that touch dilution AND broader SEC data (filings, statements, factors, insiders, board, comp, macro).
+- You need per-field verification with citeable source spans rather than a binary `verified` flag.
+- You need a transparent dilution score — the full per-factor breakdown, renormalized weights, and a death-spiral / variable-rate-convertible flag — not just a categorical rating.
 - You need an MCP server, multi-language SDKs, or signed webhooks.
-- You expect to migrate between tactical (PAYG) and predictable
-  (subscription) billing as your workload grows.
+- You expect to migrate between tactical (PAYG) and predictable (subscription) billing as your workload grows.
 
-**Use both** if your dilution research happens in the AskEdgar Copilot UI
-and your agent layer reads directly from SEC API for everything else — the
-`askedgar_url` field on each SEC API dilution row gives you a one-click return
-path to the AskEdgar UI for verification.
+**Use both** if your dilution research happens in the AskEdgar Copilot UI and your agent layer reads directly from SEC API for everything else — the `askedgar_url` field on each SEC API dilution row gives you a one-click return path to the AskEdgar UI for verification.
 
 ## Developer experience
 
-| Capability                       | SEC API                                | AskEdgar                       |
-| -------------------------------- | ----------------------------------- | ------------------------------ |
-| API auth header                  | `x-api-key`                         | `API-KEY`                      |
-| API base URL                     | `https://api.secapi.ai/v1`          | `https://api.askedgar.com/v1`  |
-| Onboarding                       | Starter account; explicit key creation | API-key request flow + per-KB billing |
-| OpenAPI                          | yes (Zod-generated)                 | not publicly linked from /docs |
-| MCP server                       | yes (84 tools)                      | no                             |
-| Multi-language SDKs              | JS/TS, Python, Go, Rust             | none published                 |
-| Skills (Claude / agent-runnable) | 8 canonical                         | none published                 |
-| Webhooks                         | signed + replay + cursor            | Discord-only                   |
-| FinanceBench                     | 18 / 25 (72%) canary, 2026-04-25    | not published                  |
+| Capability | SEC API | AskEdgar |
+| --- | --- | --- |
+| API auth header | `x-api-key` | `API-KEY` |
+| API base URL | `https://api.secapi.ai/v1` | `https://api.askedgar.com/v1` |
+| Onboarding | Starter account; explicit key creation | API-key request flow \+ per-KB billing |
+| OpenAPI | yes (Zod-generated) | not publicly linked from /docs |
+| MCP server | yes (84 tools) | no |
+| Multi-language SDKs | JS/TS, Python, Go, Rust | none published |
+| Skills (Claude / agent-runnable) | 8 canonical | none published |
+| Webhooks | signed \+ replay \+ cursor | Discord-only |
+| FinanceBench | 18 / 25 (72%) canary, 2026-04-25 | not published |
 
 ## Migration
 
@@ -260,8 +197,7 @@ path to the AskEdgar UI for verification.
 # API-KEY: $ASKEDGAR_API_KEY                            ->  x-api-key: $SECAPI_API_KEY
 ```
 
-Full guide at [migrate-from-askedgar](/migrate-from-askedgar) — endpoint
-mapping, auth diff, verification-model rewrite, pricing-impact table.
+Full guide at [migrate-from-askedgar](/migrate-from-askedgar) — endpoint mapping, auth diff, verification-model rewrite, pricing-impact table.
 
 ## Try SEC API
 
@@ -274,4 +210,4 @@ Create an account at secapi.ai/signup to get an API key.
 
 ---
 
-*AskEdgar facts and numeric claims reflect data captured as of 2026-04-26 (re-verified at askedgar.io on 2026-04-26). SEC API dilution-score and factor-exposure capabilities updated 2026-06-18 to reflect the shipped live-compute score, per-factor breakdown, missing-factor renormalization, death-spiral / variable-rate-convertible flag, float-velocity factor, and the opt-in `/v1/companies/overview?include=factors` enrichment.*
+_AskEdgar facts and numeric claims reflect data captured as of 2026-04-26 (re-verified at askedgar.io on 2026-04-26). SEC API dilution-score and factor-exposure capabilities updated 2026-06-18 to reflect the shipped live-compute score, per-factor breakdown, missing-factor renormalization, death-spiral / variable-rate-convertible flag, float-velocity factor, and the opt-in `/v1/companies/overview?include=factors` enrichment._
