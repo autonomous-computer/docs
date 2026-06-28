@@ -27,29 +27,30 @@ Operations pages are for the people who have to prove the system is healthy, exp
   <Step title="Downstream fetches">
     SEC API forwards request correlation headers on downstream SEC fetches so ingest and serving traces stay tied together.
   </Step>
-  <Step title="Operator follow-up">
+  <Step title="Follow up">
     Use those IDs in request diagnostics, replay tools, and support workflows before trying to reproduce blindly.
   </Step>
 </Steps>
 
 ## Deploy verification
 
-Run:
+After pointing your integration at the API, confirm connectivity and auth with these checks:
 
 ```bash
-SECAPI_BASE_URL=https://your-api.example.com \
-SECAPI_API_KEY=... \
-bun run verify:release
+curl -sf "$SECAPI_BASE_URL/healthz"
+curl -sf "$SECAPI_BASE_URL/readyz"
+curl -sf "$SECAPI_BASE_URL/.well-known/oauth-protected-resource"
+curl -sf "$SECAPI_BASE_URL/.well-known/oauth-authorization-server"
+curl -sf "$SECAPI_BASE_URL/v1/limits" -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-The verification script checks:
-- `/healthz`
-- `/readyz`
-- OAuth discovery endpoints
-- `/v1/limits` when an API key is supplied
+These confirm:
+- `/healthz` and `/readyz` — the API is reachable and ready
+- OAuth discovery endpoints resolve (for bearer and MCP flows)
+- `/v1/limits` returns your plan limits when an API key is supplied
 
 <Prompt>
-Run the SEC API release verification flow against the target environment. Check health, readiness, OAuth discovery, and limits. If any step fails, report the failing endpoint, requestId, and likely blast radius before attempting rollout.
+Check SEC API connectivity and auth against the target environment: health, readiness, OAuth discovery, and limits. If any step fails, report the failing endpoint, requestId, and likely blast radius before relying on the integration.
 </Prompt>
 
 ## Current production posture
