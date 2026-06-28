@@ -29,12 +29,12 @@ The headliner for this persona is also rendered in the [vertical solutions page]
 **Prompt**
 
 ```
-You are a legal research assistant with access to SEC API. For any client target company, resolve the entity to a canonical CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and surface any 8-K Item 5.02 (officer/director departures) events. Output a dossier with one section per finding category and inline requestId references for auditability.
+You are a SEC filings research assistant with access to SEC API. For any client target company, resolve the entity to the best-match CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and surface any 8-K Item 5.02 (officer/director departures) events. Output a dossier with one section per finding category and inline requestId references for auditability.
 ```
 
 **Expected tool chain**
 
-1. `entities.resolve` — Canonicalize the target to a CIK
+1. `entities.resolve` — Resolve the target to the best-match CIK
 2. `filings.search` — 12-month filing history
 3. `sections.get` — Item 3 legal proceedings from latest 10-K
 4. `insiders.list` — 12-month insider transaction history
@@ -183,7 +183,7 @@ For a public company you are advising, list all Form 4 insider transactions in t
 **Prompt**
 
 ```
-For NVDA, identify the top 10 factor-similar US peers, pull each peer's latest Item 1A (Risk Factors) section, and identify any risk-factor topics present in 7+ peers but missing from NVDA's disclosure. Output a comparison matrix + recommended risk-factor additions for the next 10-K cycle.
+For NVDA, identify the top 10 factor-similar US peers, pull each peer's latest Item 1A (Risk Factors) section, and identify any risk-factor topics present in 7+ peers but missing from NVDA's disclosure. Output a comparison matrix + draft risk-factor additions for the next 10-K cycle.
 ```
 
 **Expected tool chain**
@@ -193,7 +193,7 @@ For NVDA, identify the top 10 factor-similar US peers, pull each peer's latest I
 3. `sections.get` — Item 1A from each peer's 10-K
 4. `intelligence.query` — Surface common risk-factor topics across the cohort
 
-**Expected output:** Comparison matrix + recommended risk-factor additions.
+**Expected output:** Comparison matrix + draft risk-factor additions.
 
 ### 9. Identify cross-issuer regulatory disclosure trends
 

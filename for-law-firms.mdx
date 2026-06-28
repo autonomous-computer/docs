@@ -29,7 +29,7 @@ SEC API gives law firms programmatic access to SEC enforcement actions, filing h
 |----------|--------|----------|
 | `/v1/events/enforcement` | `GET` | Search enforcement actions by entity, date, or source type |
 | `/v1/filings` | `GET` | Filing search with form type, ticker, date filters |
-| `/v1/entities/resolve` | `GET` | Resolve ticker, CIK, or company name to a canonical entity |
+| `/v1/entities/resolve` | `GET` | Resolve ticker, CIK, or company name to a best-match SEC entity |
 | `/v1/events/8k` | `GET` | Material event monitoring (leadership, restatements, M&A) |
 | `/v1/insiders` | `GET` | Insider transaction history for a given entity |
 | `/v1/filings/latest/sections/{item}` | `GET` | Extract specific filing sections (risk factors, legal proceedings) |
@@ -45,7 +45,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/events/enforcement?query=Acme+Corp&limit=25"
 ```
 
-Combine with entity resolution to find the canonical CIK first:
+Combine with entity resolution to find the best-match CIK first:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
@@ -107,7 +107,7 @@ secapi mcp install --client claude-code
 </CardGroup>
 
 <Prompt>
-You are a legal research assistant with access to SEC API. For any client target company, resolve the entity to a canonical CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and surface any 8-K Item 5.02 (officer/director departures) events. Output a dossier with one section per finding category and inline requestId references for auditability.
+You are a SEC filings research assistant with access to SEC API. For any client target company, resolve the entity to the best-match CIK, pull the past 12 months of filings (8-K, 10-K, 10-Q, DEF 14A), extract the legal-proceedings section (Item 3) from the most recent 10-K, list insider trading activity from the past 12 months, and surface any 8-K Item 5.02 (officer/director departures) events. Output a dossier with one section per finding category and inline requestId references for auditability.
 </Prompt>
 
 _See the full 12-prompt [Law firm library](/agents/prompt-library/law-firm)._
