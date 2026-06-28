@@ -1,13 +1,18 @@
+---
+title: "Insurance & risk — Agent Prompt Library"
+description: "D&O underwriting profile, auditor-change detection, material-weakness scans, and renewal-book monitoring for risk and underwriting teams."
+---
+
 {/* DO NOT HAND-EDIT — generated from the agent-prompts contract. */}
 {/* Re-run `bun run docs:agent-prompts` after editing the contract. */}
 
 # Insurance & risk — Agent Prompt Library
 
-<Info>6 v1 prompts live on `api.secapi.ai/mcp` today · 6 v2 expansion prompts queued.</Info>
+<Info>6 ready-to-run prompts live on `api.secapi.ai/mcp` today.</Info>
 
 D&O underwriting profile, auditor-change detection, material-weakness scans, and renewal-book monitoring for risk and underwriting teams.
 
-<Note>v1 framing: D&O profile via comp/13F/insider stack + keyword-search auditor changes + semantic material-weakness. v2 expansion adds typed AAER enrichment, typed auditor-change events, Form 144 monitoring, and subsidiaries discovery once supporting MCP tools merge.</Note>
+<Note>D&O risk workflows: D&O profile via comp/13F/insider stack, keyword-search auditor changes, and semantic material-weakness detection.</Note>
 
 Run any prompt by pasting it into Claude Desktop, Claude Code, or Cursor with the SEC API MCP server installed. Or use the CLI:
 
@@ -44,11 +49,11 @@ You are a risk assessment agent with access to SEC API. For any company under re
 **Expected output:** D&O underwriting memo + scorecard + requestId citations.
 
 **Caveats**
-- AAER (Accounting and Auditing Enforcement Releases) enrichment is keyword-search only in v1; typed AAER ships with the v2 backfill.
+- AAER (Accounting and Auditing Enforcement Releases) enrichment is keyword-search based.
 
 ---
 
-## All v1 workflows
+## All workflows
 
 ### 2. Scan watchlist for auditor changes via Item 4.01 keyword search
 
@@ -72,7 +77,7 @@ For a watchlist of 50 insureds, search the past 90 days of 8-K filings for any '
 **Expected output:** Watchlist alert table ranked by claim-trigger likelihood.
 
 **Caveats**
-- Keyword-search-based; typed auditor-change events ship with v2 backfill (typed audit-change MCP wrap).
+- Keyword-search-based auditor-change detection.
 
 ### 3. Semantic scan for material-weakness disclosures
 
@@ -157,151 +162,6 @@ For an insured renewal candidate, generate the top 10 factor-similar peer compan
 4. `intelligence.query` — Peer-specific risk events
 
 **Expected output:** Renewal pricing context table.
-
-
----
-
-## v2 expansion (queued)
-
-Prompts in this section reference MCP tools that are not yet live on `api.secapi.ai/mcp`. They ship as part of the v2 expansion when the listed tickets merge.
-
-### 7. Enrich AAER respondent profile for D&O claims investigation
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Pull typed AAER metadata + respondent comp + ownership for claims investigation.*
-
-**Category:** AAER enrichment (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `insurance-aaer-enrichment-respondent-profile`
-
-**Prompt**
-
-```
-For an AAER respondent (Accounting and Auditing Enforcement Release), pull events.enforcement for the typed AAER record, comp.list for the respondent's comp history, owners.get_13f for institutional context, and insiders.list for trading activity in the AAER window. Output an enriched respondent profile.
-```
-
-**Expected tool chain**
-
-1. `events.enforcement` — Typed AAER metadata (FUTURE)
-2. `comp.list` — Respondent comp history
-3. `owners.get_13f` — Institutional context
-4. `insiders.list` — Trading activity in AAER window
-
-**Expected output:** Enriched AAER respondent profile.
-
-### 8. Build an AAER enforcement timeline for an issuer
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Walk all AAERs for an issuer and build a typed enforcement timeline.*
-
-**Category:** AAER enrichment (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `insurance-aaer-timeline-enforcement`
-
-**Prompt**
-
-```
-For an issuer with multiple AAER findings, pull events.enforcement to enumerate all AAERs in the past 5 years, cross-reference with filings.search for any related 8-K disclosures, and pull the latest 10-K Item 9A. Output a typed enforcement timeline + AAER-to-disclosure mapping.
-```
-
-**Expected tool chain**
-
-1. `events.enforcement` — AAER enumeration (FUTURE)
-2. `filings.search` — Related 8-K disclosures
-3. `sections.get` — Item 9A internal-controls text
-4. `intelligence.query` — Cross-period analyst commentary
-
-**Expected output:** Typed AAER enforcement timeline + AAER-to-disclosure mapping.
-
-### 9. Match an insured's filings to historical AAER fact patterns
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Compare insured's disclosure language to historical AAER cases for risk scoring.*
-
-**Category:** AAER enrichment (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `insurance-aaer-enforcement-match`
-
-**Prompt**
-
-```
-For an insured, pull the latest 10-K, run intelligence.query against the AAER corpus to find the 5 most similar historical AAER cases via events.enforcement, and produce an AAER-similarity risk score. Cross-reference with comp.list for executive context.
-```
-
-**Expected tool chain**
-
-1. `intelligence.query` — Semantic AAER similarity
-2. `events.enforcement` — Historical AAER cases (FUTURE)
-3. `sections.get` — Insured's latest 10-K Item 9A
-4. `comp.list` — Executive context
-
-**Expected output:** AAER-similarity risk score + 5 most-similar historical cases.
-
-### 10. Use typed auditor-change events for renewal monitoring
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Replace keyword search with a typed auditor-change MCP event stream.*
-
-**Category:** Auditor monitoring (v2)  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-typed-auditor-change-event`
-
-**Prompt**
-
-```
-For a renewal book, pull events.auditor_changes for typed auditor-change events in the past 90 days. For each event, fetch the predecessor and successor auditor, the related 8-K filing, and any 10-K/A amendments. Output a typed auditor-change watchlist.
-```
-
-**Expected tool chain**
-
-1. `events.auditor_changes` — Typed auditor-change stream (FUTURE)
-2. `filings.search` — Related 8-K filings
-3. `sections.get` — Item 4.01 corroboration
-4. `filings.search` — Related 10-K/A inventory
-
-**Expected output:** Typed auditor-change watchlist.
-
-### 11. Monitor Form 144 affiliate-sale notices
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Track Form 144 (Notice of Proposed Sale of Securities) filings across renewal book.*
-
-**Category:** Form 144 monitoring (v2)  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-form-144-monitoring`
-
-**Prompt**
-
-```
-For a renewal book, pull forms.144 for the past 30 days of Form 144 affiliate-sale notices. For each notice, identify the filer, the planned sale size, and cross-reference with insiders.list for actual transactions. Output a Form 144 watchlist with planned-vs-actual sale tracking.
-```
-
-**Expected tool chain**
-
-1. `forms.144` — Form 144 affiliate-sale notices (FUTURE)
-2. `insiders.list` — Actual Form 4 transactions
-3. `comp.list` — Filer comp context
-4. `entities.resolve` — Resolve filer identifier
-
-**Expected output:** Form 144 watchlist with planned-vs-actual sale tracking.
-
-### 12. Map insured's subsidiaries for coverage scope
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Pull subsidiaries graph for an insured to scope D&O coverage correctly.*
-
-**Category:** Subsidiaries discovery (v2)  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-subsidiaries-discovery`
-
-**Prompt**
-
-```
-For an insured, pull companies.subsidiaries for the full subsidiaries graph, cross-reference with filings.search for any subsidiary-level filings, and pull comp comparison context for the parent. Output a subsidiaries map + coverage-scope scenario.
-```
-
-**Expected tool chain**
-
-1. `companies.subsidiaries` — Subsidiaries graph (FUTURE)
-2. `filings.search` — Subsidiary-level filings
-3. `entities.resolve` — Resolve subsidiary entities
-4. `comp.compare` — Parent comp comparison context
-
-**Expected output:** Subsidiaries map + coverage-scope scenario.
 
 
 ---

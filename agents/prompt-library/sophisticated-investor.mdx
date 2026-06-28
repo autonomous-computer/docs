@@ -1,13 +1,18 @@
+---
+title: "Sophisticated investor — Agent Prompt Library"
+description: "Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows."
+---
+
 {/* DO NOT HAND-EDIT — generated from the agent-prompts contract. */}
 {/* Re-run `bun run docs:agent-prompts` after editing the contract. */}
 
 # Sophisticated investor — Agent Prompt Library
 
-<Info>8 v1 prompts live on `api.secapi.ai/mcp` today · 4 v2 expansion prompts queued.</Info>
+<Info>8 ready-to-run prompts live on `api.secapi.ai/mcp` today.</Info>
 
 Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows.
 
-<Note>v1 framing: forensic accounting (footnote forensics + insider/13F divergence + cash-flow stress). v2 expansion adds dilution forensics (warrants, convertibles, ATM-program tracking, cash runway) as the API surface expands.</Note>
+<Note>Forensic accounting workflows: footnote forensics, insider/13F divergence, and cash-flow stress.</Note>
 
 Run any prompt by pasting it into Claude Desktop, Claude Code, or Cursor with the SEC API MCP server installed. Or use the CLI:
 
@@ -43,7 +48,7 @@ For a high-growth issuer with heavy equity-comp use (e.g., SNOW), pull the lates
 
 ---
 
-## All v1 workflows
+## All workflows
 
 ### 2. Debt covenant headroom check
 
@@ -191,105 +196,6 @@ For a diversified issuer (e.g., GE), pull the segment-disclosure footnote and se
 4. `factors.related_stocks` — Peer-set comparison
 
 **Expected output:** Segment-aggregation forensic memo + peer disclosure granularity comparison.
-
-
----
-
-## v2 expansion (queued)
-
-Prompts in this section reference MCP tools that are not yet live on `api.secapi.ai/mcp`. They ship as part of the v2 expansion when the listed tickets merge.
-
-### 9. Surface warrant + convertible overhang for dilution thesis
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Walk warrants, convertibles, and shares outstanding to estimate dilution overhang.*
-
-**Category:** Dilution forensics (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-warrants-overhang`
-
-**Prompt**
-
-```
-For a low-float small cap with active capital raises, pull the dilution.warrants_query for outstanding warrants, dilution.convertibles for convertible debt, dilution.cash_position for runway, and cross-reference with the latest balance sheet + named-executive comp. Compute share-overhang at exercise and probability-weighted dilution at 12m horizon.
-```
-
-**Expected tool chain**
-
-1. `dilution.warrants_query` — Outstanding warrant inventory (FUTURE)
-2. `dilution.convertibles` — Convertible debt inventory (FUTURE)
-3. `dilution.cash_position` — Runway + burn (FUTURE)
-4. `companies.balance_sheets` — Reported balance sheet
-
-**Expected output:** Dilution-overhang memo + 12m probability-weighted share-count scenario table.
-
-### 10. Track ATM program activity for dilution-velocity signal
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Detect ATM program issuance velocity and cross-reference with insider trading.*
-
-**Category:** Dilution forensics (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-atm-program-tracking`
-
-**Prompt**
-
-```
-For an issuer with an active ATM (at-the-market) program, pull dilution.events for the latest ATM issuance, dilution.cash_position for runway impact, owners.compare_13f for institutional response, and insiders.list for any insider trading around the ATM dates. Output a dilution-velocity dashboard.
-```
-
-**Expected tool chain**
-
-1. `dilution.events` — ATM issuance events (FUTURE)
-2. `dilution.cash_position` — Runway impact (FUTURE)
-3. `owners.compare_13f` — Institutional response
-4. `insiders.list` — Insider trades around ATM dates
-
-**Expected output:** Dilution-velocity dashboard.
-
-### 11. Stress-test convertible overhang against share price scenarios
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Walk convertible inventory + price-based conversion mechanics for dilution risk.*
-
-**Category:** Dilution forensics (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-convertible-overhang-stress`
-
-**Prompt**
-
-```
-For an issuer with toxic convertibles, pull dilution.convertibles for the inventory + conversion mechanics (variable-reset, full-ratchet), dilution.warrants_query for any associated warrants, and stress-test share-count at -25%/-50% price scenarios. Cross-reference with companies.balance_sheets for cash + debt.
-```
-
-**Expected tool chain**
-
-1. `dilution.convertibles` — Convertible inventory + mechanics (FUTURE)
-2. `dilution.warrants_query` — Associated warrant inventory (FUTURE)
-3. `dilution.cash_position` — Cash + runway (FUTURE)
-4. `companies.balance_sheets` — Reported balance sheet
-
-**Expected output:** Convertible stress-test memo + scenario share-count table.
-
-### 12. Cash runway forensics with corporate-action overlay
-
-<Note>**Coming soon** — this workflow references future MCP surfaces and is shown for visibility into the expansion roadmap.</Note>
-
-*Compute cash runway and overlay reverse-split/de-SPAC corporate-action history.*
-
-**Category:** Dilution forensics (v2)  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-cash-runway-forensics`
-
-**Prompt**
-
-```
-For a small-cap with cash burn concerns, pull dilution.cash_position for runway, dilution.corporate_actions for any reverse splits or de-SPACs in the past 24 months, dilution.ratings for the composite risk score, and cross-reference with companies.cash_flow_statements. Output a runway forensics memo.
-```
-
-**Expected tool chain**
-
-1. `dilution.cash_position` — Cash + burn + runway (FUTURE)
-2. `dilution.corporate_actions` — Reverse-split / de-SPAC history (FUTURE)
-3. `dilution.ratings` — Composite dilution risk score (FUTURE)
-4. `companies.cash_flow_statements` — Burn-rate context
-
-**Expected output:** Cash runway forensics memo with corporate-action overlay.
 
 
 ---

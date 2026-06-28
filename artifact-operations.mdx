@@ -1,3 +1,8 @@
+---
+title: "Artifact Operations | SEC API"
+description: "List, create, reconcile, and export generated artifact bundles and their manifests through the SEC API without touching object storage directly."
+---
+
 # Artifact operations
 
 SEC API exposes artifact inventory and lifecycle summaries so you can inspect generated bundles without going through object storage directly.
@@ -9,7 +14,9 @@ SEC API exposes artifact inventory and lifecycle summaries so you can inspect ge
 - `POST /v1/artifacts`
 - `POST /v1/artifacts/{artifact_id}/reconcile`
 - `GET /v1/artifacts/{artifact_id}`
+- `GET /v1/artifacts/{artifact_id}/manifest`
 - `GET /v1/artifacts/{artifact_id}/download`
+- `GET /v1/artifacts/{artifact_id}/export?format=json|markdown`
 
 ## List artifacts
 
@@ -40,6 +47,12 @@ Use this for support and admin workflows such as:
 - confirming whether reconcile jobs are promoting artifacts into storage
 - spotting an accumulation of `pending` or `failed` artifacts
 - validating tenant-specific generation volume during beta
+
+## Manifests and exports
+
+Every persisted artifact has a structured manifest with byte length, line count, checksum, storage mode and object key, filing and section context, and supported export formats.
+
+Use `GET /v1/artifacts/{artifact_id}/manifest` for deterministic inventory workflows, and `GET /v1/artifacts/{artifact_id}/export?format=json|markdown` when a downstream consumer wants a stable envelope rather than a raw download redirect.
 
 ## CLI
 
