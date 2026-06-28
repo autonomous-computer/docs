@@ -3,10 +3,10 @@ title: "Competitive Benchmarks"
 description: "Latency, payload size, and token efficiency comparisons: SEC API vs sec-api.io, financialdatasets.ai, and edgartools"
 ---
 
-SEC API runs a first-party, reproducible head-to-head benchmark against three peers — sec-api.io and financialdatasets.ai (hosted APIs) and edgartools (open-source Python library) — across core SEC data operations. These are our own measurements, not a third-party study; all runs are reproducible and run from the same network location against production endpoints.
+SEC API runs a first-party head-to-head benchmark against three peers — sec-api.io and financialdatasets.ai (hosted APIs) and edgartools (open-source Python library) — across core SEC data operations. These are our own measurements, not a third-party study; every run uses the same network location and production endpoints under identical conditions.
 
 <Info>
-Last updated: 2026-03-18 (vs sec-api.io and financialdatasets.ai); 2026-04-23 preliminary (vs edgartools, pending external methodology review). See the methodology notes on this page for the peer-reviewable benchmark setup.
+Last updated: 2026-03-18 (vs sec-api.io and financialdatasets.ai); 2026-04-23 preliminary (vs edgartools, pending final verification). See the methodology notes on this page for the benchmark setup.
 </Info>
 
 ## vs sec-api.io
@@ -36,9 +36,8 @@ Token estimates are based on payload size ÷ 4 (average characters per token). S
 ## vs edgartools (preliminary)
 
 <Warning>
-**Preliminary — pending external methodology review**. Numbers below
-will be re-verified by an external SRE before the full comparison is linked
-from the docs sidebar.
+**Preliminary — pending final verification**. Numbers below will be
+re-verified before the full comparison is linked from the docs sidebar.
 </Warning>
 
 [edgartools](https://github.com/dgunning/edgartools) is a well-designed, MIT-licensed Python library that talks directly to SEC EDGAR. Same four workflows, N=5 iterations, each iteration runs in a fresh subprocess with all caches cleared so every call is a truly cold SEC fetch:
@@ -103,8 +102,6 @@ The intelligence bundle pre-computes what agents would otherwise assemble from m
 
 **Cost / latency (improvements vs original harness):** $0.44 / Q (down 41%), p95 latency 88s (down 8%). Cost guard ($20 / run) held throughout the iteration ladder.
 
-**Reproducibility:** every run writes a `reproducibility` block at the top of the artifact JSON (commit_sha, sec_api_version, model_version, run_date, harness_version, fixture_baseline_commit, fixture_baseline_date, and routing metadata).
-
 ## Methodology
 
 - Hosted APIs (SEC API, sec-api.io, financialdatasets.ai) use production endpoints with authenticated API keys
@@ -114,11 +111,6 @@ The intelligence bundle pre-computes what agents would otherwise assemble from m
 - Each operation run 5+ times; p50, p95, p99 reported
 - Payload size measured at the HTTP transport layer for every comparand — raw response body bytes for hosted APIs, sum of SEC wire bytes (via monkey-patched `httpx.Client.send`) for edgartools
 - Token estimate = ceil(payload_bytes / 4)
-- Percentiles computed via linear-interpolation (Hyndman-Fan Type 7) for every comparand — all runners share one implementation in our open benchmark harness
+- Percentiles computed via linear-interpolation (Hyndman-Fan Type 7) for every comparand — all runners share one implementation in our benchmark harness
 - Network: same region, same machine, concurrent execution
-- Each comparand (SEC API, sec-api.io, financialdatasets.ai, edgartools) has a dedicated runner in our open benchmark harness, with a shared scorecard step that assembles the multi-way comparison
-- Full peer-reviewable methodology: documented in the benchmark methodology section above
-
-## Reproduce
-
-Each comparand runs through a dedicated benchmark runner against its live API — SEC API and sec-api.io with paid keys, financialdatasets.ai with a paid key, and edgartools with no key — and a shared scorecard step assembles the four-way comparison. The full methodology is documented in the section above; email support@secapi.ai for the harness and raw run artifacts.
+- Each comparand (SEC API, sec-api.io, financialdatasets.ai, edgartools) has a dedicated runner in our benchmark harness, with a shared scorecard step that assembles the multi-way comparison
