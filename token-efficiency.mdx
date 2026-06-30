@@ -81,6 +81,50 @@ Total: 1 API call, ~800 tokens
 3. **Pre-computed intelligence.** One bundle call replaces 8+ raw API calls.
 4. **Semantic search.** Find relevant content in one call instead of paginating through keyword results.
 
+## Field selection and tabular output (MCP)
+
+Over MCP, `tools/call` accepts two `params`-level controls (siblings of `name` and `arguments`, **not** inside `arguments`). Both shape only the human/agent-facing **text** content — `structuredContent` always stays canonical JSON, so typed clients and `outputSchema` validation are unaffected.
+
+### `params.fields` — keep only the fields you asked for
+
+Pass a comma-separated list of dotted paths to project the text content down to those fields. For a list result the projection is applied to each row in `data`; envelope keys (`object`, `requestId`, `traceparent`, and the list keys `data`/`hasMore`/`nextCursor`/`degradedState`) are always retained so the result stays schema-valid. Paths address object fields — the projection does not descend into nested arrays.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "companies.overview",
+    "arguments": { "tickers": ["AAPL", "MSFT", "NVDA"] },
+    "fields": "identity.ticker,financialSnapshot.metrics.revenue.value"
+  }
+}
+```
+
+### `params.response_format` — compact columnar or CSV for lists
+
+`json` (default) returns the full object form. `table` returns a compact columnar envelope (`{ object: "table", columns, rows }`) that lists the columns once and emits one array of cells per row, dropping the repeated per-row keys; `csv` returns RFC-4180 CSV text. Both apply to the `data` array of list-shaped results and shine on flat rows; non-list results fall back to JSON. Decoding is trivial — pair each `columns[i]` with `rows[n][i]`.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "insiders.list",
+    "arguments": { "ticker": "META" },
+    "response_format": "table"
+  }
+}
+```
+
+`fields` and `response_format` compose: projection runs first, so a table's columns are exactly the (flat) fields you kept. This pairs naturally with the multi-entity batch tools (`companies.overview`, `companies.financials`, `companies.ratios` accept a `tickers` array of up to 50) — request a portfolio in one call, then trim and tabularize it.
+
+### `include=` — REST opt-in for expensive sub-objects
+
+`include=` is a **REST query param**, not an MCP control: where `fields` *subtracts*, `include` *adds* bounded enrichments that are omitted by default — for example `GET /v1/companies/overview?include=segments,footnotes,dilution,factors`. Omitted enrichments report `status: not_requested` rather than being computed.
+
 ## Measure It Yourself
 
 The `?view=agent` reduction is the easiest to reproduce — compare the agent view

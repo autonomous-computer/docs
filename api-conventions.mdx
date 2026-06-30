@@ -110,6 +110,15 @@ Expanded agent-mode endpoints:
 - `GET /v1/funds/nport/holdings` — N-PORT holdings with nested `holdings[]` (shaped)
 - `GET /v1/companies/subsidiaries` — subsidiary list with citation envelope (API-consistency, byte-neutral)
 
+### MCP response controls (`fields` / `response_format`)
+
+Over MCP, `tools/call` accepts two `params`-level controls (siblings of `name` and `arguments`, not inside `arguments`) that shape the agent-facing **text** content only — `structuredContent` always stays canonical JSON, so typed clients and `outputSchema` validation are unaffected:
+
+- `params.fields` — a comma-separated list of dotted paths (e.g. `identity.ticker,financialSnapshot.metrics.revenue.value`) that projects the text content down to those fields. For a list result the projection runs per row in `data`; envelope keys (`object`, `requestId`, `traceparent`, and list keys `data`/`hasMore`/`nextCursor`/`degradedState`) are always retained. Paths address object fields and do not descend into nested arrays.
+- `params.response_format` — `json` (default), `table` (a compact columnar `{ object: "table", columns, rows }` envelope that lists columns once and drops repeated per-row keys), or `csv` (RFC-4180). Applies to the `data` array of list-shaped results; non-list results fall back to JSON.
+
+`fields` projects first, so a `table`'s columns equal the (flat) fields you kept. Separately, `include=` is a **REST** query param (not an MCP control) that *adds* bounded enrichments — e.g. `GET /v1/companies/overview?include=segments,footnotes,dilution,factors`. See [Token Efficiency](/token-efficiency#field-selection-and-tabular-output-mcp) for worked examples.
+
 ## Citation + char-range spans
 
 Two endpoints emit machine-verifiable citations on every result row:
