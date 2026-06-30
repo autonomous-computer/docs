@@ -50,6 +50,30 @@ secapi events list --kind event --request-id req_123 --limit 20
 secapi events export --kind webhook_delivery --since 2026-03-14T00:00:00Z --format ndjson
 ```
 
+## Job-completion webhooks (no polling)
+
+Async jobs announce their terminal state as webhook events, so you no longer have to poll:
+
+- `intelligence.query.completed` / `intelligence.query.failed` — an async `/v1/intelligence/query` job finished.
+- `export.completed` / `export.failed` — an async bulk export finished and a signed download URL is available.
+
+Subscribe by adding the type to a webhook endpoint's `subscribedEventTypes` (see webhook-stream-workflows). Sample `export.completed` payload:
+
+```json
+{ "jobId": "exp_…", "status": "completed", "dataset": "company_overview", "format": "csv", "rowCount": 50, "downloadUrl": "https://…signed…", "expiresAt": "2026-06-30T00:15:00Z" }
+```
+
+### Verifying webhook signatures
+
+Outbound webhooks are signed exactly like Stripe: an HMAC-SHA256 over `${timestamp}.${rawBody}` using your endpoint's signing secret, delivered in the signature header. Recompute the HMAC over the raw request body and compare in constant time before trusting a payload.
+
+## Bulk export → signed URL
+
+For datasets too large to inline in a tool result, materialize them once to a short-lived signed download URL.
+
+- MCP tool `exports.create` — e.g. `{ "dataset": "company_overview", "tickers": ["AAPL","MSFT",…], "format": "csv", "idempotency_key": "portfolio-A" }` returns an `export_job` with the `downloadUrl` (valid ~15 min) directly in the response, and also emits `export.completed` (for webhook subscribers / audit). Reusing the same `idempotency_key` returns the same file instead of regenerating. Bills per entity, like `companies.overview`.
+- MCP tool `exports.get` — re-sign the URL later with `{ "jobId": "exp_…", "format": "csv" }`. Returns not-found for an unknown or expired job.
+
 ## Operational notes
 
 - exports are tenant-scoped
