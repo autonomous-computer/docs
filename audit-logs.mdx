@@ -1,16 +1,9 @@
 ---
 title: "Audit Logs"
-description: "Trace every SEC API interaction with request diagnostics, delivery event listing and export, and delivery summaries for compliance and debugging."
+description: "Export delivery events, usage, limits, and billing activity for compliance and debugging."
 ---
 
-SEC API records every API interaction as a traceable event. Audit surfaces are available through request diagnostics, delivery event listing/export, delivery summaries, and admin observability exports. Request, event, and delivery endpoints require org-scoped authentication via API key or bearer token; observability endpoints require `admin:operator`.
-
-## Request diagnostics
-
-Investigate a single request by its `Request-Id`, or review aggregated webhook and stream delivery activity over a window. See **[Request diagnostics](/request-diagnostics)** for the full reference — the `summary.support.status` triage table and the CLI bundle.
-
-- `GET /v1/diagnostics/requests/:requestId` — request-scoped drilldown
-- `GET /v1/diagnostics/deliveries/summary` — aggregated delivery activity
+SEC API records API activity as traceable events. Customer-visible audit surfaces are available through delivery event listing/export, usage, limits, and billing endpoints using org-scoped authentication via API key or bearer token.
 
 ## Event export
 
@@ -18,40 +11,6 @@ List and export your request, webhook, and stream delivery history as JSON or ND
 
 - `GET /v1/delivery/events` — filtered event listing
 - `GET /v1/delivery/events/export` — JSON or NDJSON export
-
-## Observability
-
-### GET /v1/observability
-
-Returns the current observability configuration. No secrets are exposed. This endpoint requires `admin:operator`.
-
-```bash
-curl "$SECAPI_BASE_URL/v1/observability" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-**Response includes:**
-
-- which providers are configured at the environment level
-- whether usage and webhook event logs are enabled
-- the current quota table used by the API layer
-
-### GET /v1/observability/export
-
-Bundles observability config, usage summary, billing health, and recent events into a single response. This endpoint requires `admin:operator`.
-
-```bash
-curl "$SECAPI_BASE_URL/v1/observability/export?limit=20" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `limit` | integer | 20 | Maximum number of recent events to include |
-
-Use this when preparing a support ticket or validating pre-production environments.
 
 ## Usage Tracking
 
@@ -109,12 +68,8 @@ Every API response includes `Request-Id` and `traceparent` headers. Preserve the
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/v1/diagnostics/requests/:requestId` | GET | Request-scoped diagnostic drilldown |
-| `/v1/diagnostics/deliveries/summary` | GET | Aggregated delivery activity |
 | `/v1/delivery/events` | GET | Filtered event listing |
 | `/v1/delivery/events/export` | GET | JSON or NDJSON event export |
-| `/v1/observability` | GET | Admin-only observability configuration |
-| `/v1/observability/export` | GET | Admin-only bundled observability export |
 | `/v1/usage` | GET | Metered usage summary |
 | `/v1/limits` | GET | Plan limits and rate ceilings |
 | `/v1/billing` | GET | Full billing snapshot |
@@ -124,9 +79,6 @@ Every API response includes `Request-Id` and `traceparent` headers. Preserve the
 <CardGroup cols={3}>
   <Card title="Enterprise Features" icon="building-2" href="/enterprise">
     Key rotation, multi-seat organizations, and commercial licensing. OAuth/SSO roadmap noted inline.
-  </Card>
-  <Card title="Request Diagnostics" icon="stethoscope" href="/request-diagnostics">
-    Detailed guide for request-scoped investigation.
   </Card>
   <Card title="Event Export" icon="file-export" href="/event-export">
     Filtering, JSON, and NDJSON export workflows.

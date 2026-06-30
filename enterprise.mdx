@@ -19,26 +19,6 @@ Hosted MCP clients use `x-api-key` for server-to-server access and can discover 
 
 Every API request generates a traceable event chain. SEC API provides multiple surfaces for inspecting activity after the fact.
 
-### Request diagnostics
-
-Drill into a single request by its `Request-Id`:
-
-```bash
-curl "$SECAPI_BASE_URL/v1/diagnostics/requests/req_abc123" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-Returns usage events, canonical events, webhook deliveries, stream events, artifacts, and grouped meter-class counts for that request. See [Request Diagnostics](/request-diagnostics) for the full reference.
-
-### Delivery summary
-
-Aggregate webhook and stream delivery activity over a time window:
-
-```bash
-curl "$SECAPI_BASE_URL/v1/diagnostics/deliveries/summary?since=2026-01-01T00:00:00Z&limit=200" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
 ### Event export
 
 Export the available event log in JSON or NDJSON for ingestion into external SIEM, log aggregation, or compliance tooling:
@@ -49,17 +29,6 @@ curl "$SECAPI_BASE_URL/v1/delivery/events/export?kind=event&format=ndjson&limit=
 ```
 
 Filters: `kind`, `type`, `requestId`, `since`, `limit`, `format` (`json` or `ndjson`). See [Event Export](/event-export) for details.
-
-### Observability export
-
-Bundle observability config, usage summary, billing health, and recent events into a single response for support or pre-production validation. Requires an API key with the `admin:operator` scope:
-
-```bash
-curl "$SECAPI_BASE_URL/v1/observability/export?limit=20" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-See [Audit logs](/audit-logs) for the full reference.
 
 ## Entitlement Reporting
 
@@ -104,15 +73,6 @@ curl -X PUT "$SECAPI_BASE_URL/v1/billing/budget" \
 ```
 
 Budget events are recorded with the acting principal, previous values, and request ID for audit purposes.
-
-### Dashboard overview
-
-A single call that bundles organization, billing, usage, and API key data for dashboard rendering:
-
-```bash
-curl "$SECAPI_BASE_URL/v1/dashboard/overview" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
 
 ## Key Rotation
 
@@ -176,9 +136,8 @@ See [Plans and Pricing](/plans-and-pricing) for the full plan comparison and [En
 | Category | Endpoints |
 |---|---|
 | **Auth** | `GET /v1/me`, `GET /v1/org`, `POST /v1/api_keys`, `DELETE /v1/api_keys/:keyId` |
-| **Audit** | `GET /v1/diagnostics/requests/:requestId`, `GET /v1/diagnostics/deliveries/summary`, `GET /v1/delivery/events`, `GET /v1/delivery/events/export` |
-| **Observability** | Admin-only `GET /v1/observability`, `GET /v1/observability/export` |
-| **Entitlements** | `GET /v1/billing`, `GET /v1/usage`, `GET /v1/limits`, `GET /v1/billing/rates`, `GET /v1/dashboard/overview` |
+| **Audit** | `GET /v1/delivery/events`, `GET /v1/delivery/events/export` |
+| **Entitlements** | `GET /v1/billing`, `GET /v1/usage`, `GET /v1/limits`, `GET /v1/billing/rates` |
 | **Budget** | `PUT /v1/billing/budget`, `POST /v1/billing/quote` |
 | **Key rotation** | `POST /v1/webhook_endpoints/:webhookId/rotate_secret` |
 | **Checkout** | `POST /v1/billing/checkout`, `POST /v1/billing/portal` |
