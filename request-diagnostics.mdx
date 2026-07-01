@@ -1,72 +1,46 @@
 ---
 title: "Request Diagnostics"
-description: "Inspect request-scoped diagnostics to investigate a single workflow and review delivery summaries without database access."
+description: "Capture the request identifiers, headers, status, and billing context SEC API support needs to debug a failed REST, SDK, CLI, or MCP request."
 ---
 
-SEC API exposes request-scoped diagnostics so support can investigate a single workflow without database access.
+Use this checklist when a request still fails after the first troubleshooting pass. The goal is to preserve enough context for support or an internal operator to reproduce the request without exposing secrets.
 
-## Endpoints
+## Capture identifiers
 
-- `GET /v1/diagnostics/requests/{request_id}`
-- `GET /v1/diagnostics/deliveries/summary`
+- `Request-Id` response header
+- `traceparent` response header, when present
+- HTTP method and endpoint path
+- UTC timestamp and timezone
+- SDK, CLI, MCP client, or direct HTTP caller version
+- Organization, workspace, or environment name, but never the API key value
 
-## Request drilldown
+## Capture the response
+
+- HTTP status code
+- Error `code`
+- Error `message`
+- `docsUrl`, when present
+- `Retry-After`, quota, and rate-limit headers
+- Whether the same key succeeds against `GET /v1/limits`
+
+## Capture billing and quota context
+
+Run the two baseline checks with the same API key:
 
 ```bash
-curl "$SECAPI_BASE_URL/v1/diagnostics/requests/req_123" \
+curl "https://api.secapi.ai/v1/limits" \
+  -H "x-api-key: $SECAPI_API_KEY"
+
+curl "https://api.secapi.ai/v1/billing" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-The drilldown includes:
+For `402` and `429` responses, include quota headers, billing state, budget state, and the approximate retry schedule your application used. Do not keep retrying quota or hard-cap errors in a loop.
 
-- usage events for the request
-- canonical events emitted for the request
-- related webhook deliveries
-- related stream events
-- related artifacts
-- grouped meter-class and event-type counts
-- `summary.support`, a support-ready finding with next actions, latest usage
-  status, delivery failure count, and missing artifact IDs
+## Redact before sharing
 
-Use this first when support has a `Request-Id` from an API response.
-Start with `summary.support.status`:
+- Redact `x-api-key`, bearer tokens, cookies, and organization secrets.
+- Redact unreleased filing text, private portfolio holdings, customer names, and proprietary prompts unless support explicitly asks for a narrowed reproduction.
+- Keep accession numbers, endpoint paths, request IDs, status codes, and error codes visible.
 
-| Status | Meaning |
-|---|---|
-| `not_found` | Nothing was found for that request ID in the current org. Check the copied ID and tenant scope. |
-| `request_error` | The latest metered response for the request was HTTP 4xx or 5xx. Start with the usage event status, path, and retry guidance. |
-| `request_logged` | The request was metered but emitted no downstream events, deliveries, streams, or artifacts. |
-| `side_effects_emitted` | The request produced downstream records without obvious delivery or artifact gaps. |
-| `delivery_attention` | At least one webhook delivery failed or returned a non-2xx status. |
-| `artifact_attention` | A canonical event referenced an artifact that diagnostics could not load. |
-
-## Delivery summary
-
-```bash
-curl "$SECAPI_BASE_URL/v1/diagnostics/deliveries/summary?since=2026-03-14T00:00:00Z&limit=200" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-This returns grouped webhook and stream delivery activity so support can answer:
-
-- which destinations are failing
-- which event types are replaying frequently
-- whether stream polling activity is flowing as expected
-
-## CLI
-
-```bash
-secapi diagnostics request --request-id req_123
-secapi diagnostics deliveries-summary --since 2026-03-14T00:00:00Z --limit 200
-```
-
-For support tickets or agent handoffs, generate one redacted bundle instead of
-pasting several commands separately:
-
-```bash
-secapi diagnostics request --request-id req_123
-```
-
-The bundle includes local CLI config, `doctor` checks, request metadata, and the
-request drilldown when a request id is provided. Credential values are redacted
-recursively before output.
+Read next: [Troubleshooting](/troubleshooting), [Error code catalog](/error-code-catalog), and [Event Export](/event-export).
