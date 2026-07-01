@@ -17,6 +17,39 @@ secapi doctor
 
 The package installs the `secapi` binary. The legacy `omni-sec` alias may appear in older examples, but new scripts should use `secapi`.
 
+## Interactive mode (REPL)
+
+Running `secapi` with no arguments in a terminal opens the interactive REPL — "the
+trading desk in your terminal." You can also launch it explicitly with `secapi chat` or `secapi tui`:
+
+```bash
+secapi          # no-arg TTY → opens the interactive REPL
+```
+
+The REPL is a persistent session over the full command surface, with:
+
+- **Slash commands** for meta/session actions: `/help`, `/login`, `/logout`,
+  [Status](/status), `/cost`, `/skills`, `/personas`, `/clear`, `/quit`, and more. Type
+  `/` to open the fuzzy **command palette** over every command, with auth, cost,
+  and mutation badges.
+- **Skill shortcuts** that expand a bundled workflow into a cited, cost-previewed
+  run-view — e.g. `/due-diligence AAPL`, `/track-insiders AAPL`,
+  `/factor-dashboard`, `/country-report JP`.
+- **Plan / Ask / Run modes** (cycle with <kbd>shift</kbd>+<kbd>tab</kbd>): Plan
+  previews the endpoints and estimated cost before running, Ask is read-only, Run
+  executes.
+- **Resource cards** — filings, factor tables, portfolios, financials, and search
+  results render as compact human cards in the terminal, each with a cost footer
+  (`⎿ $0.0012 · 1,240 tok · ⚡cache · maturity: ga`). A per-session cost meter
+  tracks spend.
+
+<Warning>
+The interactive UI renders **only** in a real terminal (`stdout` and `stdin` are
+TTYs). In a pipe, in CI, or with `--json`/`--output`, every command emits the
+exact same machine-readable JSON as before — the interactive layer never changes
+the scriptable contract.
+</Warning>
+
 ## Authenticate
 
 Set your API key in the environment before calling authenticated API commands:
