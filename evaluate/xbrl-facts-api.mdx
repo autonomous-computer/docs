@@ -1,0 +1,60 @@
+---
+title: "Evaluate XBRL Facts API"
+description: "Evaluate normalized XBRL facts and financial statement retrieval for models, agents, and investor analytics."
+---
+
+Use this page to decide whether SEC API can replace raw XBRL parsing or a brittle statement pipeline. For implementation details, see the [XBRL API guide](/seo/xbrl-api) and [facts API reference](/api-reference/facts).
+
+<CardGroup cols={3}>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
+    Create an account and run statement and fact requests against the live API.
+  </Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
+    Explore statement and filing examples before building a refresh job.
+  </Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
+    Review pricing before refreshing large issuer universes.
+  </Card>
+</CardGroup>
+
+## What to test
+
+- Normalized all-statements retrieval with `GET /v1/statements/all`
+- Tag-level facts with `GET /v1/facts`
+- Period alignment across annual and quarterly filings
+- Provenance fields that connect values back to filings
+- Token and cost headers for repeated model-refresh jobs
+
+## Proof-of-concept prompt
+
+<Prompt>
+Evaluate SEC API XBRL facts for a financial-model refresh. Resolve MSFT, fetch the latest annual all-statements bundle, pull Revenues facts for the last four annual periods, and return each value with unit, period end, accession number, source filing URL, requestId, freshness, and any caveat about normalization.
+</Prompt>
+
+## Evaluation path
+
+<Steps>
+  <Step title="Compare statements and raw facts">
+    Pull both normalized statements and a tag-level fact series for one issuer. Confirm the reconciliation trail is good enough for your analyst or agent.
+  </Step>
+  <Step title="Exercise edge cases">
+    Test a company with segment disclosures, amended filings, or extension tags before judging the integration complete.
+  </Step>
+  <Step title="Budget the refresh loop">
+    Estimate cost for the issuer universe and cadence you actually need. Agents should inspect billing and limits before wide fanout.
+  </Step>
+</Steps>
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="XBRL implementation guide" icon="braces" href="/seo/xbrl-api">
+    Endpoint examples and comparison notes.
+  </Card>
+  <Card title="Statements and facts product page" icon="table" href="https://secapi.ai/apis/statements-and-facts">
+    Product-level overview for buyers and evaluators.
+  </Card>
+  <Card title="Pricing and limits" icon="gauge" href="/evaluate/pricing-and-limits">
+    Plan, budget, and quota checks for repeated data pulls.
+  </Card>
+</CardGroup>
