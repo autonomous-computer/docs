@@ -2815,6 +2815,181 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/monitors/compile": {
+      "post": {
+        "summary": "Compile a natural-language alert request into a structured monitor spec",
+        "description": "Turns a plain-English trigger (e.g. \"notify me about mergers at AAPL\") into a validated structured monitor subscription spec plus a ready-to-POST create body. Read-only: it returns a spec, it does not create the monitor.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "monitors.member.manage.post",
+        "x-secapi-access": "bearer_org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/alerts/plan": {
+      "get": {
+        "summary": "Retrieve the public free-tier plan descriptor (included features, alert limits, and upgrade paths)",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "alerts.free_plan",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/alerts/signup": {
+      "post": {
+        "summary": "Register an email for the free alerts tier (idempotent lead capture)",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "alerts.signup",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/embed/feed": {
+      "get": {
+        "summary": "Public embeddable reverse-chronological situations feed for third-party sites (JSON, cacheable, CORS-enabled)",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.feed",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/embed/widget.js": {
+      "get": {
+        "summary": "Public embeddable feed widget script that renders the situations feed into a host element",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.widget_script",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
     "/v1/delivery/unsubscribe": {
       "get": {
         "summary": "Render an unsubscribe confirmation page for a signed token",
