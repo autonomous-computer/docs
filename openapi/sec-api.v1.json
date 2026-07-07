@@ -21899,6 +21899,558 @@
         "x-secapi-anonymous-read": true
       }
     },
+    "/v1/filings/events": {
+      "get": {
+        "summary": "Persisted AI-tagged 8-K/6-K filing feed (StockInsights-style ai_insights). Cursor-paginated, replayable, one durable row per tagged filing.",
+        "parameters": [
+          {
+            "name": "forms",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated form types (e.g. 8-K,6-K)."
+          },
+          {
+            "name": "categories",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated filing_event_category values."
+          },
+          {
+            "name": "tickers",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated ticker symbols."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive lower bound on filedAt (ISO date)."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive upper bound on filedAt (ISO date)."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingEventList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "filings.events",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/filings/diff": {
+      "get": {
+        "summary": "Filing-diff v2 report: auto prior-period pairing, per-section change badges, word-level redline hunks, and materiality scores across two filings of the same form.",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Form type to pair (e.g. 10-K)."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Base filing selector: accession number or ISO date. Defaults to the prior filing of `form`."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Compare filing selector: accession number or ISO date. Defaults to the latest filing of `form`."
+          },
+          {
+            "name": "sections",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated canonical section keys to restrict the diff."
+          },
+          {
+            "name": "include_hunks",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "Include redline hunks (default true)."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingDiffReport"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "filings.diff",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/filings/transcripts": {
+      "get": {
+        "summary": "Persisted earnings-transcript store: speaker attribution, prepared-remarks/Q&A segmentation, and summaries extracted from EX-99 materials.",
+        "parameters": [
+          {
+            "name": "tickers",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated ticker symbols."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fiscal_period",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsTranscriptList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "filings.transcripts",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/filings/guidance": {
+      "get": {
+        "summary": "Structured guidance store: metric, direction, target period, and value ranges extracted from earnings materials and transcripts.",
+        "parameters": [
+          {
+            "name": "tickers",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated ticker symbols."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Normalized metric label (e.g. revenue, eps)."
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "raised",
+                "lowered",
+                "reaffirmed",
+                "initiated",
+                "withdrawn"
+              ]
+            }
+          },
+          {
+            "name": "fiscal_period",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingGuidanceList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "filings.guidance",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/intelligence/coverage": {
+      "get": {
+        "summary": "AI coverage-report composer: single-issuer rollup over the persisted filings-intelligence stores (tagged events, guidance, transcripts, footnote newness).",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker (ticker or cik required)."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK (ticker or cik required)."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingCoverageReport"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "intelligence.coverage",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
     "/v1/situations": {
       "get": {
         "summary": "List durable special situations (M&A, tender offers, going-private, spin-offs, activist campaigns, restructuring, bankruptcy, …) with lifecycle status, deal terms, and market snapshot.",
@@ -33193,7 +33745,12 @@
       "SituationPerformance": {},
       "DilutionCoverage": {},
       "DilutionScore": {},
-      "DilutionScoreEnhanced": {}
+      "DilutionScoreEnhanced": {},
+      "FilingEventList": {},
+      "FilingDiffReport": {},
+      "EarningsTranscriptList": {},
+      "FilingGuidanceList": {},
+      "FilingCoverageReport": {}
     },
     "securitySchemes": {
       "ApiKeyAuth": {
