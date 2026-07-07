@@ -1,0 +1,213 @@
+---
+title: "POST /v1/portfolio/risk"
+description: "Return ex-ante portfolio risk: tracking error, CTEV by factor group and by security, ex-ante beta, and the factor-vs-idiosyncratic split, labelled with mod…"
+---
+
+Return ex-ante portfolio risk: tracking error, CTEV by factor group and by security, ex-ante beta, and the factor-vs-idiosyncratic split, labelled with model coverage
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  -H "content-type: application/json" \
+  -d '{"country":"US","lookback":"6m","category":"style","keys":["VALUE","MOMENTUM","QUALITY"],"holdings":[{"symbol":"AAPL","weight":0.35},{"symbol":"MSFT","weight":0.3},{"symbol":"NVDA","weight":0.2},{"symbol":"JPM","weight":0.15}],"benchmark":"SPY"}' \
+  "https://api.secapi.ai/v1/portfolio/risk?response_mode=compact&include=trust"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "portfolio_risk",
+  "asOf": "2026-06-09T22:15:00.000Z",
+  "lookback": "6m",
+  "benchmarkLabel": "S&P 500 (SPY proxy)",
+  "trackingError": 0.0412,
+  "totalRisk": 0.1783,
+  "exAnteBeta": 1.06,
+  "factorRiskShare": 0.71,
+  "specificRiskShare": 0.29,
+  "factorGroups": [
+    {
+      "object": "portfolio_factor_group_risk",
+      "group": "style",
+      "label": "Style",
+      "activeExposure": 0.18,
+      "ctevShare": 0.42,
+      "ctev": 0.0173,
+      "shorterHistory": false
+    },
+    {
+      "object": "portfolio_factor_group_risk",
+      "group": "sector",
+      "label": "Sector",
+      "activeExposure": -0.07,
+      "ctevShare": 0.29,
+      "ctev": 0.012,
+      "shorterHistory": false
+    },
+    {
+      "object": "portfolio_factor_group_risk",
+      "group": "macro",
+      "label": "Macro",
+      "activeExposure": 0.03,
+      "ctevShare": 0,
+      "ctev": 0,
+      "shorterHistory": true
+    }
+  ],
+  "factorExposures": [
+    {
+      "object": "portfolio_factor_exposure_risk",
+      "factorKey": "MOMENTUM",
+      "factorName": "Momentum",
+      "group": "style",
+      "portfolioBeta": 0.22,
+      "benchmarkBeta": 0.05,
+      "activeBeta": 0.17,
+      "ctevShare": 0.31,
+      "ctev": 0.0128,
+      "shorterHistory": false
+    },
+    {
+      "object": "portfolio_factor_exposure_risk",
+      "factorKey": "VALUE",
+      "factorName": "Value",
+      "group": "style",
+      "portfolioBeta": -0.11,
+      "benchmarkBeta": 0.02,
+      "activeBeta": -0.13,
+      "ctevShare": 0.18,
+      "ctev": 0.0074,
+      "shorterHistory": false
+    }
+  ],
+  "securities": [
+    {
+      "object": "portfolio_security_risk",
+      "symbol": "NVDA",
+      "weight": 0.12,
+      "modeled": true,
+      "activeWeight": 0.09,
+      "specificVol": 0.28,
+      "ctevShare": 0.14,
+      "ctev": 0.0058,
+      "note": null
+    },
+    {
+      "object": "portfolio_security_risk",
+      "symbol": "PRIVATECO",
+      "weight": 0.03,
+      "modeled": false,
+      "activeWeight": 0.03,
+      "specificVol": 0.35,
+      "ctevShare": 0.04,
+      "ctev": 0.0016,
+      "note": "Outside the ~4k US factor plane — beta-only / specific-risk-floor treatment."
+    }
+  ],
+  "coverage": {
+    "object": "portfolio_risk_coverage",
+    "modeledWeight": 0.94,
+    "modeledHoldings": 18,
+    "unmodeledHoldings": 1,
+    "unmodeledSymbols": [
+      "PRIVATECO"
+    ],
+    "totalHoldings": 19,
+    "covarianceObservations": 156,
+    "covarianceEstimable": true
+  },
+  "disclosures": [
+    "Ex-ante risk uses an EWMA factor covariance (~2y half-life, weekly) over the style/sector/industry factor plane (2015→).",
+    "Model coverage: 94% of portfolio NAV is inside the ~4k US factor plane. Unmodelled names use a beta-only / specific-risk-floor treatment.",
+    "Macro-factor covariance only reaches 2022; macro figures are labelled shorter-history and excluded from the P0 covariance basis."
+  ],
+  "summaryMd": "Ex-ante tracking error is 4.12% (annualised active risk); 71% factor / 29% specific.",
+  "responseMode": "compact",
+  "dataAsOf": "2026-06-09",
+  "freshnessStatus": "fresh",
+  "methodologyVersion": "secapi_factor_returns_v1",
+  "materializationVersion": "2026-06-09",
+  "provenance": {
+    "source": "secapi_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "accessionNumber": null,
+    "filingUrl": "https://docs.secapi.ai/factors/methodology",
+    "acceptedAt": null,
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "parserVersion": "secapi-factor-pipeline"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-06-09T22:15:00.000Z",
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "lagMs": 2700000
+  },
+  "materialization": {
+    "parserVersion": "secapi-factor-pipeline",
+    "materializationVersion": "2026-06-09"
+  },
+  "sourceRights": {
+    "source": "secapi_owned_factor_pipeline",
+    "sourceLabel": "SecAPI factor pipeline",
+    "posture": "public_safe",
+    "publicAvailability": "public",
+    "contractStatus": "approved",
+    "restrictions": [],
+    "notes": "SecAPI-owned derived factor data."
+  },
+  "methodology": {
+    "id": "secapi_factor_returns",
+    "version": "v1",
+    "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+    "confidence": "high",
+    "launchState": "beta",
+    "inputs": [
+      "secapi_factor_returns",
+      "secapi_factor_exposures",
+      "market_calendar"
+    ],
+    "validation": {
+      "launchHistoryFloor": "2015-01-01",
+      "marketCalendarAware": true
+    }
+  },
+  "revision": {
+    "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+    "retrievedAt": "2026-06-09T22:15:00.000Z",
+    "vintageId": "2026-06-09",
+    "revisedFrom": null
+  },
+  "degradedState": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API POST /v1/portfolio/risk to return ex-ante portfolio risk: tracking error, CTEV by factor group and by security, ex-ante beta, and the factor-vs-idiosyncratic split, labelled with model coverage. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

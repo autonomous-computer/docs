@@ -14501,6 +14501,285 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/portfolio/risk": {
+      "post": {
+        "summary": "Return ex-ante portfolio risk: tracking error, CTEV by factor group and by security, ex-ante beta, and the factor-vs-idiosyncratic split, labelled with model coverage",
+        "parameters": [
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioRiskRequest"
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "country": "US",
+                    "lookback": "6m",
+                    "category": "style",
+                    "keys": [
+                      "VALUE",
+                      "MOMENTUM",
+                      "QUALITY"
+                    ],
+                    "holdings": [
+                      {
+                        "symbol": "AAPL",
+                        "weight": 0.35
+                      },
+                      {
+                        "symbol": "MSFT",
+                        "weight": 0.3
+                      },
+                      {
+                        "symbol": "NVDA",
+                        "weight": 0.2
+                      },
+                      {
+                        "symbol": "JPM",
+                        "weight": 0.15
+                      }
+                    ],
+                    "benchmark": "SPY"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioRisk"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "portfolio_risk",
+                      "asOf": "2026-06-09T22:15:00.000Z",
+                      "lookback": "6m",
+                      "benchmarkLabel": "S&P 500 (SPY proxy)",
+                      "trackingError": 0.0412,
+                      "totalRisk": 0.1783,
+                      "exAnteBeta": 1.06,
+                      "factorRiskShare": 0.71,
+                      "specificRiskShare": 0.29,
+                      "factorGroups": [
+                        {
+                          "object": "portfolio_factor_group_risk",
+                          "group": "style",
+                          "label": "Style",
+                          "activeExposure": 0.18,
+                          "ctevShare": 0.42,
+                          "ctev": 0.0173,
+                          "shorterHistory": false
+                        },
+                        {
+                          "object": "portfolio_factor_group_risk",
+                          "group": "sector",
+                          "label": "Sector",
+                          "activeExposure": -0.07,
+                          "ctevShare": 0.29,
+                          "ctev": 0.012,
+                          "shorterHistory": false
+                        },
+                        {
+                          "object": "portfolio_factor_group_risk",
+                          "group": "macro",
+                          "label": "Macro",
+                          "activeExposure": 0.03,
+                          "ctevShare": 0,
+                          "ctev": 0,
+                          "shorterHistory": true
+                        }
+                      ],
+                      "factorExposures": [
+                        {
+                          "object": "portfolio_factor_exposure_risk",
+                          "factorKey": "MOMENTUM",
+                          "factorName": "Momentum",
+                          "group": "style",
+                          "portfolioBeta": 0.22,
+                          "benchmarkBeta": 0.05,
+                          "activeBeta": 0.17,
+                          "ctevShare": 0.31,
+                          "ctev": 0.0128,
+                          "shorterHistory": false
+                        },
+                        {
+                          "object": "portfolio_factor_exposure_risk",
+                          "factorKey": "VALUE",
+                          "factorName": "Value",
+                          "group": "style",
+                          "portfolioBeta": -0.11,
+                          "benchmarkBeta": 0.02,
+                          "activeBeta": -0.13,
+                          "ctevShare": 0.18,
+                          "ctev": 0.0074,
+                          "shorterHistory": false
+                        }
+                      ],
+                      "securities": [
+                        {
+                          "object": "portfolio_security_risk",
+                          "symbol": "NVDA",
+                          "weight": 0.12,
+                          "modeled": true,
+                          "activeWeight": 0.09,
+                          "specificVol": 0.28,
+                          "ctevShare": 0.14,
+                          "ctev": 0.0058,
+                          "note": null
+                        },
+                        {
+                          "object": "portfolio_security_risk",
+                          "symbol": "PRIVATECO",
+                          "weight": 0.03,
+                          "modeled": false,
+                          "activeWeight": 0.03,
+                          "specificVol": 0.35,
+                          "ctevShare": 0.04,
+                          "ctev": 0.0016,
+                          "note": "Outside the ~4k US factor plane — beta-only / specific-risk-floor treatment."
+                        }
+                      ],
+                      "coverage": {
+                        "object": "portfolio_risk_coverage",
+                        "modeledWeight": 0.94,
+                        "modeledHoldings": 18,
+                        "unmodeledHoldings": 1,
+                        "unmodeledSymbols": [
+                          "PRIVATECO"
+                        ],
+                        "totalHoldings": 19,
+                        "covarianceObservations": 156,
+                        "covarianceEstimable": true
+                      },
+                      "disclosures": [
+                        "Ex-ante risk uses an EWMA factor covariance (~2y half-life, weekly) over the style/sector/industry factor plane (2015→).",
+                        "Model coverage: 94% of portfolio NAV is inside the ~4k US factor plane. Unmodelled names use a beta-only / specific-risk-floor treatment.",
+                        "Macro-factor covariance only reaches 2022; macro figures are labelled shorter-history and excluded from the P0 covariance basis."
+                      ],
+                      "summaryMd": "Ex-ante tracking error is 4.12% (annualised active risk); 71% factor / 29% specific.",
+                      "responseMode": "compact",
+                      "dataAsOf": "2026-06-09",
+                      "freshnessStatus": "fresh",
+                      "methodologyVersion": "secapi_factor_returns_v1",
+                      "materializationVersion": "2026-06-09",
+                      "provenance": {
+                        "source": "secapi_factor_pipeline",
+                        "sourceLabel": "SecAPI factor pipeline",
+                        "accessionNumber": null,
+                        "filingUrl": "https://docs.secapi.ai/factors/methodology",
+                        "acceptedAt": null,
+                        "retrievedAt": "2026-06-09T22:15:00.000Z",
+                        "parserVersion": "secapi-factor-pipeline"
+                      },
+                      "freshness": {
+                        "status": "fresh",
+                        "asOf": "2026-06-09T22:15:00.000Z",
+                        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+                        "lagMs": 2700000
+                      },
+                      "materialization": {
+                        "parserVersion": "secapi-factor-pipeline",
+                        "materializationVersion": "2026-06-09"
+                      },
+                      "sourceRights": {
+                        "source": "secapi_owned_factor_pipeline",
+                        "sourceLabel": "SecAPI factor pipeline",
+                        "posture": "public_safe",
+                        "publicAvailability": "public",
+                        "contractStatus": "approved",
+                        "restrictions": [],
+                        "notes": "SecAPI-owned derived factor data."
+                      },
+                      "methodology": {
+                        "id": "secapi_factor_returns",
+                        "version": "v1",
+                        "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
+                        "confidence": "high",
+                        "launchState": "beta",
+                        "inputs": [
+                          "secapi_factor_returns",
+                          "secapi_factor_exposures",
+                          "market_calendar"
+                        ],
+                        "validation": {
+                          "launchHistoryFloor": "2015-01-01",
+                          "marketCalendarAware": true
+                        }
+                      },
+                      "revision": {
+                        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
+                        "retrievedAt": "2026-06-09T22:15:00.000Z",
+                        "vintageId": "2026-06-09",
+                        "revisedFrom": null
+                      },
+                      "degradedState": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "portfolio.risk",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/model-portfolios/{portfolioId}/factor-view": {
       "get": {
         "summary": "Return a model-portfolio factor view with aggregate analysis and per-position exposures for drill-down workflows",
@@ -24682,6 +24961,407 @@
         },
         "additionalProperties": false
       },
+      "PortfolioRiskRequest": {
+        "type": "object",
+        "required": [
+          "holdings"
+        ],
+        "properties": {
+          "country": {
+            "type": "string",
+            "default": "US",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "lookback": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 12
+          },
+          "category": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "holdings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 250,
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          },
+          "benchmark": {
+            "type": "string",
+            "enum": [
+              "SPY",
+              "ACWX",
+              "QQQ",
+              "IWM",
+              "SIXTY_FORTY"
+            ]
+          },
+          "benchmarkLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "benchmarkHoldings": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 250,
+            "items": {
+              "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioRiskCoverage": {
+        "type": "object",
+        "required": [
+          "object",
+          "modeledWeight",
+          "modeledHoldings",
+          "unmodeledHoldings",
+          "totalHoldings",
+          "covarianceObservations",
+          "covarianceEstimable"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "portfolio_risk_coverage"
+          },
+          "modeledWeight": {
+            "type": "number",
+            "description": "Share of portfolio NAV inside the modelled factor plane (0-1)."
+          },
+          "modeledHoldings": {
+            "type": "integer"
+          },
+          "unmodeledHoldings": {
+            "type": "integer"
+          },
+          "unmodeledSymbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "totalHoldings": {
+            "type": "integer"
+          },
+          "covarianceObservations": {
+            "type": "integer",
+            "description": "Weekly observations backing the factor covariance estimate."
+          },
+          "covarianceEstimable": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioFactorGroupRisk": {
+        "type": "object",
+        "required": [
+          "object",
+          "group",
+          "label",
+          "activeExposure",
+          "ctevShare",
+          "ctev",
+          "shorterHistory"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "portfolio_factor_group_risk"
+          },
+          "group": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "activeExposure": {
+            "type": "number"
+          },
+          "ctevShare": {
+            "type": "number",
+            "description": "Contribution to tracking-error variance (fraction of total TEV)."
+          },
+          "ctev": {
+            "type": "number",
+            "description": "Contribution to tracking error (annualised)."
+          },
+          "shorterHistory": {
+            "type": "boolean",
+            "description": "True for macro factors with a shorter (2022-) covariance history."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioFactorExposureRisk": {
+        "type": "object",
+        "required": [
+          "object",
+          "factorKey",
+          "factorName",
+          "group",
+          "portfolioBeta",
+          "benchmarkBeta",
+          "activeBeta",
+          "ctevShare",
+          "ctev",
+          "shorterHistory"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "portfolio_factor_exposure_risk"
+          },
+          "factorKey": {
+            "type": "string"
+          },
+          "factorName": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "portfolioBeta": {
+            "type": "number"
+          },
+          "benchmarkBeta": {
+            "type": "number"
+          },
+          "activeBeta": {
+            "type": "number"
+          },
+          "ctevShare": {
+            "type": "number"
+          },
+          "ctev": {
+            "type": "number"
+          },
+          "shorterHistory": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioSecurityRisk": {
+        "type": "object",
+        "required": [
+          "object",
+          "symbol",
+          "weight",
+          "modeled",
+          "activeWeight",
+          "specificVol",
+          "ctevShare",
+          "ctev"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "portfolio_security_risk"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "modeled": {
+            "type": "boolean"
+          },
+          "activeWeight": {
+            "type": "number"
+          },
+          "specificVol": {
+            "type": "number",
+            "description": "Annualised specific (idiosyncratic) volatility for this name."
+          },
+          "ctevShare": {
+            "type": "number"
+          },
+          "ctev": {
+            "type": "number"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortfolioRisk": {
+        "type": "object",
+        "required": [
+          "object",
+          "asOf",
+          "lookback",
+          "trackingError",
+          "totalRisk",
+          "exAnteBeta",
+          "factorRiskShare",
+          "specificRiskShare",
+          "factorGroups",
+          "factorExposures",
+          "securities",
+          "coverage",
+          "disclosures",
+          "summaryMd"
+        ],
+        "properties": {
+          "dataAsOf": {
+            "type": "string"
+          },
+          "freshnessStatus": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "degraded",
+              "unknown"
+            ]
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "materializationVersion": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "const": "portfolio_risk"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "lookback": {
+            "type": "string"
+          },
+          "benchmarkLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trackingError": {
+            "type": "number",
+            "description": "Ex-ante total active risk (tracking error), annualised fraction."
+          },
+          "totalRisk": {
+            "type": "number",
+            "description": "Ex-ante absolute portfolio volatility, annualised fraction."
+          },
+          "exAnteBeta": {
+            "type": "number",
+            "description": "Ex-ante portfolio beta vs the market factor."
+          },
+          "factorRiskShare": {
+            "type": "number",
+            "description": "Fraction of active variance from factor exposures (0-1)."
+          },
+          "specificRiskShare": {
+            "type": "number",
+            "description": "Fraction of active variance from idiosyncratic risk (0-1)."
+          },
+          "factorGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioFactorGroupRisk"
+            }
+          },
+          "factorExposures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioFactorExposureRisk"
+            }
+          },
+          "securities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioSecurityRisk"
+            }
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/PortfolioRiskCoverage"
+          },
+          "disclosures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
       "PortfolioAttributionRequest": {
         "type": "object",
         "required": [
@@ -24742,6 +25422,58 @@
             "maxItems": 250,
             "items": {
               "$ref": "#/components/schemas/PortfolioHoldingInput"
+            }
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "factor",
+              "brinson"
+            ],
+            "default": "factor"
+          },
+          "benchmark": {
+            "type": "string",
+            "enum": [
+              "SPY",
+              "ACWX",
+              "QQQ",
+              "IWM",
+              "SIXTY_FORTY"
+            ]
+          },
+          "benchmarkSectors": {
+            "type": "array",
+            "maxItems": 24,
+            "items": {
+              "type": "object",
+              "required": [
+                "sector",
+                "portfolioWeight",
+                "benchmarkWeight",
+                "portfolioReturn",
+                "benchmarkReturn"
+              ],
+              "properties": {
+                "sector": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "portfolioWeight": {
+                  "type": "number"
+                },
+                "benchmarkWeight": {
+                  "type": "number"
+                },
+                "portfolioReturn": {
+                  "type": "number"
+                },
+                "benchmarkReturn": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
             }
           }
         },
@@ -33043,6 +33775,28 @@
           },
           "scenarioKey": {
             "type": "string"
+          },
+          "namedScenarioKey": {
+            "type": "string",
+            "enum": [
+              "gfc_2008",
+              "covid_2020",
+              "rate_shock_2022",
+              "taper_tantrum_2013",
+              "oil_shock_2014",
+              "oil_shock_2022"
+            ],
+            "description": "Named historical scenario (GFC 2008, COVID 2020, 2022 rate shock, 2013 taper, oil shocks)."
+          },
+          "benchmark": {
+            "type": "string",
+            "enum": [
+              "SPY",
+              "ACWX",
+              "QQQ",
+              "IWM",
+              "SIXTY_FORTY"
+            ]
           },
           "customScenario": {
             "type": "object",
