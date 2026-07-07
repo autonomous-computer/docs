@@ -8714,6 +8714,232 @@
         "x-secapi-anonymous-read": true
       }
     },
+    "/v1/macro/overview": {
+      "get": {
+        "summary": "Return a one-call country macro dashboard: headline indicators with latest/previous/change/direction and next release, the current regime, upcoming releases, and the sovereign credit rating",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "US"
+            },
+            "description": "ISO country code (e.g. US, JP, CN). Defaults to US."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "agent"
+              ],
+              "default": "standard"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroOverview"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "macro.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/macro/all": {
+      "get": {
+        "summary": "Return a bulk, filterable export of macro observations across countries and indicators, with cursor pagination and CSV or async export",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO country code, or a comma-separated list (alias: countries). Defaults to US."
+          },
+          {
+            "name": "indicator_type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "growth",
+                "inflation",
+                "labor",
+                "rates",
+                "trade",
+                "fiscal",
+                "housing",
+                "sentiment",
+                "money",
+                "other"
+              ]
+            },
+            "description": "Filter by macro indicator type."
+          },
+          {
+            "name": "indicator",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by a specific indicator key."
+          },
+          {
+            "name": "frequency",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "weekly",
+                "monthly",
+                "quarterly",
+                "annual"
+              ]
+            },
+            "description": "Filter by observation frequency."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive lower bound on the observation period (ISO date)."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive upper bound on the observation period (ISO date)."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque pagination cursor from the previous page's nextCursor."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 250
+            },
+            "description": "Maximum observations per page (default 250, max 1000)."
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            },
+            "description": "Response format. csv returns an attachment; oversized exports are materialized asynchronously and returned as an export job."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of macro observations, or — when the filtered result set is too large to inline — an async export job whose signed download URL is delivered via the export.completed webhook event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/MacroObservationList"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MacroExportJob"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "macro.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
     "/v1/macro/credit-ratings": {
       "get": {
         "summary": "Return sovereign credit ratings from S&P, Moody's, and Fitch for tracked countries and G20 members",
@@ -17632,6 +17858,56 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/intelligence/macro-exposure": {
+      "post": {
+        "summary": "Return revenue-weighted macro sensitivities for a portfolio: geographic revenue segments crossed with the country macro plane, with per-holding contributions and a coverage percentage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioMacroExposureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioMacroExposure"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "intelligence.macro_exposure",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/intelligence/footnotes/query": {
       "post": {
         "summary": "Return a structured filing-footnote investigation bundle. Single-ticker latest-only requests return a footnote_intelligence_result; multi-ticker or date-range requests return a footnote_intelligence_collection.",
@@ -19233,6 +19509,100 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CompanySegments"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "companies.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
+    "/v1/companies/macro-exposure": {
+      "get": {
+        "summary": "Return revenue-weighted macro sensitivities for a single company: geographic revenue segments crossed with the country macro plane, with per-indicator beta, direction, confidence, and a coverage percentage that degrades gracefully when segments are unavailable",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker (alias: symbol). Either ticker or cik is required."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Either ticker or cik is required."
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "US"
+            },
+            "description": "Domestic macro-plane country used for unmapped revenue. Defaults to US."
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional lookback window label echoed on the response."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "annual",
+                "quarterly"
+              ],
+              "default": "annual"
+            },
+            "description": "Reporting period for the geographic revenue segments. Defaults to annual."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyMacroExposure"
                 }
               }
             }
@@ -24701,6 +25071,7 @@
       "WatchlistIntelligenceRequest": {},
       "MarketReference": {},
       "MacroObservation": {},
+      "MacroObservationList": {},
       "MacroRelease": {},
       "MacroForecast": {},
       "MacroRegime": {},
@@ -25259,6 +25630,11 @@
         },
         "additionalProperties": false
       },
+      "MacroOverview": {},
+      "CompanyMacroExposure": {},
+      "PortfolioMacroExposure": {},
+      "PortfolioMacroExposureRequest": {},
+      "MacroExportJob": {},
       "FactorCatalogStatus": {
         "type": "string",
         "enum": [
