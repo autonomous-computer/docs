@@ -7,7 +7,7 @@ LlamaIndex ships first-party MCP support via `llama-index-tools-mcp`. The `Basic
 
 ## Prerequisites
 
-- SEC API key (free — 150 calls, one-time). Sign up at [secapi.ai](https://secapi.ai). Set `SECAPI_API_KEY`.
+- SEC API key (free — 150 calls, one-time). Create an account at [secapi.ai/signup](https://secapi.ai/signup). Set `SECAPI_API_KEY`.
 - `llama-index-tools-mcp` ≥ 0.4 with `llama-index-core` ≥ 0.13 and `llama-index-llms-anthropic`.
 
 ## Install
@@ -25,12 +25,15 @@ from llama_index.llms.anthropic import Anthropic
 
 async def main():
     http = httpx.AsyncClient(headers={"x-api-key": os.environ["SECAPI_API_KEY"]})
-    mcp = BasicMCPClient("https://api.secapi.ai/mcp", http_client=http)
-    tools = await McpToolSpec(client=mcp).to_tool_list_async()
+    try:
+        mcp = BasicMCPClient("https://api.secapi.ai/mcp", http_client=http)
+        tools = await McpToolSpec(client=mcp).to_tool_list_async()
 
-    agent = FunctionAgent(tools=tools, llm=Anthropic(model="claude-sonnet-4-5"))
-    response = await agent.run("Show me Apple's latest 8-K filing.")
-    print(response)
+        agent = FunctionAgent(tools=tools, llm=Anthropic(model="claude-sonnet-4-5"))
+        response = await agent.run("Show me Apple's latest 8-K filing.")
+        print(response)
+    finally:
+        await http.aclose()
 
 asyncio.run(main())
 ```

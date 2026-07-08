@@ -14,7 +14,7 @@ The Python SDK is built for research, ETL, notebooks, and backend services that 
     Add the package to the environment where your notebook, worker, or service will run.
   </Step>
   <Step title="Set the API key and base URL">
-    Default to `https://api.secapi.ai` unless you are testing a local or staging environment.
+    Export `SECAPI_API_KEY` and default to `https://api.secapi.ai` unless you are testing a local or staging environment.
   </Step>
   <Step title="Run one issuer workflow and one semantic investor workflow">
     Prove both the investor path and the one-call intelligence path before you move on.
@@ -45,10 +45,11 @@ pip install secapi-client
 ## First useful calls
 
 ```python
+import os
 from secapi_client import SecApiClient
 
 client = SecApiClient(
-    api_key="secapi_test_...",
+    api_key=os.environ["SECAPI_API_KEY"],
     base_url="https://api.secapi.ai",
 )
 
@@ -72,7 +73,7 @@ integration check: it resolves AAPL, fetches the latest 10-K, and extracts Item
 1A in compact mode using `SECAPI_API_KEY` from the environment.
 
 ```bash
-export SECAPI_API_KEY="secapi_live_..."
+export SECAPI_API_KEY="<your-api-key>"
 python3 agent_workflow.py
 ```
 
@@ -91,7 +92,10 @@ The Python SDK retries transient failures with exponential backoff and a per-cli
 Disable SDK retries when your application already owns retry behavior:
 
 ```python
-client = SecApiClient(api_key="secapi_test_...", retry=False, telemetry=False, timeout=10)
+import os
+from secapi_client import SecApiClient
+
+client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"], retry=False, telemetry=False, timeout=10)
 ```
 
 Set `timeout=None` only when your own transport wrapper enforces socket deadlines.
