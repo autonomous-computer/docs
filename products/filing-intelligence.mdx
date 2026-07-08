@@ -1,0 +1,97 @@
+---
+title: "Filing Intelligence API"
+description: "AI-tagged 8-K/6-K event feed, section-level filing diffs, earnings transcripts, structured guidance, and single-issuer coverage reports through one SEC API surface."
+---
+
+Turn raw SEC filings into a persisted, replayable intelligence feed. AI-tagged material events, section-level redline diffs, earnings transcripts, structured guidance, and single-issuer coverage rollups — all durable, cursor-paginated, and built for agents.
+
+## Why use this
+
+Reading filings one-by-one does not scale, and re-deriving "what changed" or "what did management guide" on every request is slow and non-reproducible. The Filing Intelligence surface persists these derivations: one durable row per tagged filing, a stable diff report per filing pair, and structured transcript and guidance stores you can replay and cite.
+
+- **Tagged event feed** -- persisted AI-tagged 8-K/6-K events, one durable row per filing, cursor-paginated and replayable
+- **Section-level diffs** -- auto prior-period pairing, per-section change badges, word-level redline hunks, and materiality scores
+- **Earnings transcripts** -- speaker attribution, prepared-remarks/Q&A segmentation, and summaries from EX-99 materials
+- **Structured guidance** -- metric, direction, target period, and value ranges extracted from earnings materials
+- **Coverage reports** -- a single-issuer rollup over tagged events, guidance, transcripts, and footnote newness
+
+## Quick start
+
+```bash
+# Recent AI-tagged 8-K events for a ticker
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/events?forms=8-K&tickers=AAPL&limit=25"
+```
+
+## Diff two filings
+
+Compare two filings of the same form. With no `from`/`to`, the endpoint auto-pairs the latest filing against its prior period:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K"
+```
+
+`ticker` and `form` are required. Restrict the diff with `sections`, choose explicit `from`/`to` selectors (accession number or ISO date), and set `include_hunks=false` to drop the word-level redline when you only need per-section change badges and materiality scores.
+
+## Transcripts and guidance
+
+```bash
+# Earnings transcripts
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/transcripts?tickers=AAPL&limit=4"
+
+# Structured guidance, raised only
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/guidance?tickers=AAPL&direction=raised"
+```
+
+## Single-issuer coverage report
+
+Roll up the persisted stores into one issuer-level report:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/coverage?ticker=AAPL"
+```
+
+Either `ticker` or `cik` is required. Bound the window with `date_from` / `date_to`.
+
+## Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/filings/events` | Persisted AI-tagged 8-K/6-K event feed |
+| `GET /v1/filings/diff` | Section-level diff report across two filings of the same form |
+| `GET /v1/filings/transcripts` | Earnings-transcript store with speaker attribution |
+| `GET /v1/filings/guidance` | Structured guidance store (metric, direction, period, range) |
+| `GET /v1/intelligence/coverage` | Single-issuer coverage rollup |
+
+## SDK and CLI
+
+The `secapi` CLI mirrors the plane:
+
+```bash
+secapi filings events --forms 8-K --tickers AAPL --limit 25
+secapi filings diff --ticker AAPL --form 10-K
+secapi filings transcripts --tickers AAPL --limit 4
+secapi filings guidance --tickers AAPL --direction raised
+secapi filings coverage --ticker AAPL
+```
+
+The JavaScript SDK exposes the same surface under `client.filingsIntelligence`:
+
+```js
+await client.filingsIntelligence.events({ forms: "8-K", tickers: "AAPL", limit: 25 })
+await client.filingsIntelligence.diff({ ticker: "AAPL", form: "10-K" })
+await client.filingsIntelligence.transcripts({ tickers: "AAPL", limit: 4 })
+await client.filingsIntelligence.guidance({ tickers: "AAPL", direction: "raised" })
+await client.filingsIntelligence.coverage({ ticker: "AAPL" })
+```
+
+## Related
+
+- [API Reference: Filings](/api-reference/filings)
+- [API Reference: Intelligence](/api-reference/intelligence)
+- [Filing Search API](/products/filing-search)
+- [Special Situations API](/products/special-situations)

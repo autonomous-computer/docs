@@ -162,6 +162,39 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 `/v1/factors/macro-sensitivity` is labeled `macro_factor_sensitivity_v1_heuristic`. It combines scenario shock maps with current macro-regime factor impacts. It is explainable and fast; it is not a point-in-time empirical regression.
 
+### 9. One-Call Country Overview
+
+When an agent wants the whole country picture in a single request — headline indicators with latest/previous/change/direction and next release, the current regime, upcoming releases, and the sovereign credit rating — use the overview endpoint:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/overview?country=US"
+```
+
+`/v1/macro/overview` defaults to `country=US`. It is the fastest way to orient on an economy before drilling into `indicators`, `releases`, or `forecasts`.
+
+### 10. Bulk Observation Export
+
+For research or backfill, pull a filterable page of raw observations across countries and indicators:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/macro/all?country=US&indicator_type=inflation&limit=250"
+```
+
+`/v1/macro/all` is cursor-paginated (follow `nextCursor`) and accepts `country` (single or comma-separated), `indicator_type`, `indicator`, `frequency`, `date_from`, `date_to`, and `limit` (max `1000`). Pass `format=csv` for an attachment; oversized exports are materialized asynchronously and returned as an export job whose signed download URL arrives via the `export.completed` webhook event.
+
+### 11. Company Macro Exposure
+
+Cross a single company's geographic revenue segments with the country macro plane to get revenue-weighted macro sensitivities:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/companies/macro-exposure?ticker=AAPL"
+```
+
+Either `ticker` (alias `symbol`) or `cik` is required. The response carries per-indicator beta, direction, confidence, and a `coverage` percentage that degrades gracefully when revenue segments are unavailable. Use `period=quarterly` to source the geographic segments from the latest quarterly rather than annual reporting, and `country` to set the domestic macro plane used for unmapped revenue (defaults to `US`).
+
 ## Supported Country Coverage
 
 | Ring | Countries | Posture |

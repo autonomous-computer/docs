@@ -1,0 +1,115 @@
+---
+title: "Special Situations API"
+description: "Track durable special situations — M&A, tender offers, going-private, spin-offs, activist campaigns, restructuring, and bankruptcy — with lifecycle status, deal terms, per-filing timelines, and browse-by-form access through one SEC API surface."
+---
+
+Track durable special situations across their full lifecycle. Mergers, tender offers, going-private transactions, spin-offs, activist campaigns, restructuring, and bankruptcy — each with lifecycle status, deal terms, a market snapshot, and a per-filing timeline assembled from the underlying EDGAR record.
+
+## Why use this
+
+A special situation is not a single filing — it is a durable, evolving object that accretes filings over weeks or months. The SEC API Special Situations surface stitches the triggering and follow-on filings into one situation with a stable `situation_id`, a lifecycle status, and a timeline, so agents and applications never have to reassemble a deal from raw EDGAR events.
+
+- **Durable situations** -- one object per deal, with a stable `situation_id` that survives across follow-on filings
+- **Lifecycle status** -- announced, pending, completed, terminated, and related states, so deal risk is legible at a glance
+- **Browse by EDGAR form** -- resolve "what did this `SC 13D` / `SC TO-T` / `425` / `DEFM14A` filing trigger?" directly, with the form expanded to the situation types it drives
+- **Per-filing timeline** -- the ordered filing history behind each situation, available inline or as a paginated sub-resource
+- **Enriched or stripped** -- request the full projection, or the lean stripped shape for wide scans (billed identically)
+
+## Quick start
+
+```bash
+# List active mergers
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations?types=merger&limit=10"
+```
+
+## Enriched vs. stripped
+
+Every situation list and detail endpoint accepts `enrich`:
+
+- `enrich=true` (default) returns the full projection — deal terms, market snapshot, and timeline context.
+- `enrich=false` returns the minimal stripped projection: identity, status, and key dates only.
+
+Both are **billed identically** — choose `enrich=false` only to reduce payload size on wide scans, never to save quota.
+
+```bash
+# Lean stripped shape for a wide scan
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations?statuses=pending&enrich=false&limit=100"
+```
+
+## Browse by form
+
+When you already have an EDGAR form in hand and want the situations it opened or advanced, use the by-form endpoint. The form is expanded server-side to the situation types it triggers. URL-encode the form (a space becomes `%20`):
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/by-form/SC%2013D?limit=10"
+```
+
+Filter further with `statuses`, `tickers`, and `enrich`. Common triggering forms include `SC 13D` (activist stake), `SC TO-T` (third-party tender offer), `425` (merger communications), and `DEFM14A` (merger proxy).
+
+## The filing timeline
+
+Each situation carries an ordered, oldest-first timeline of the filings that built it. Fetch it inline with the situation, or page it as a standalone sub-resource:
+
+```bash
+# Full situation, timeline included
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/sit_abc123"
+
+# Just the timeline, paginated
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/sit_abc123/filings?limit=50"
+```
+
+## Compact summary
+
+When you need the headline — rendered markdown, deal terms, and the latest timeline event — without the full timeline, use the summary sub-resource:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/sit_abc123/summary"
+```
+
+## Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/situations` | List situations; filter by `types`, `statuses`, `tickers`, `forms`, `enrich` |
+| `GET /v1/situations/feed` | Reverse-chronological feed of situation events |
+| `GET /v1/situations/calendar` | Upcoming key dates (record, vote, expiry, expected close) |
+| `GET /v1/situations/stats` | Counts by type, status, sector, and market-cap bucket |
+| `GET /v1/situations/performance` | Closed-situation outcome cohorts |
+| `GET /v1/situations/by-form/{form}` | Situations opened or advanced by an EDGAR form |
+| `GET /v1/situations/{situation_id}` | One situation with its full per-filing timeline |
+| `GET /v1/situations/{situation_id}/filings` | Paginated per-filing timeline |
+| `GET /v1/situations/{situation_id}/summary` | Compact summary: markdown, deal terms, latest event |
+
+## SDK and CLI
+
+The `secapi` CLI mirrors the plane:
+
+```bash
+secapi situations list --types merger --limit 10
+secapi situations by-form --form "SC 13D"
+secapi situations get --situation-id sit_abc123
+secapi situations filings --situation-id sit_abc123
+secapi situations summary --situation-id sit_abc123
+```
+
+The JavaScript SDK exposes the same surface under `client.situations`:
+
+```js
+await client.situations.list({ types: "merger", limit: 10 })
+await client.situations.byForm("SC 13D")
+await client.situations.get("sit_abc123")
+await client.situations.filings("sit_abc123")
+await client.situations.summary("sit_abc123")
+```
+
+## Related
+
+- [API Reference: Special Situations](/api-reference/situations)
+- [Filing Search API](/products/filing-search)
+- [Ownership & Insider Trading API](/products/ownership)
