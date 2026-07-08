@@ -25,12 +25,15 @@ from llama_index.llms.anthropic import Anthropic
 
 async def main():
     http = httpx.AsyncClient(headers={"x-api-key": os.environ["SECAPI_API_KEY"]})
-    mcp = BasicMCPClient("https://api.secapi.ai/mcp", http_client=http)
-    tools = await McpToolSpec(client=mcp).to_tool_list_async()
+    try:
+        mcp = BasicMCPClient("https://api.secapi.ai/mcp", http_client=http)
+        tools = await McpToolSpec(client=mcp).to_tool_list_async()
 
-    agent = FunctionAgent(tools=tools, llm=Anthropic(model="claude-sonnet-4-5"))
-    response = await agent.run("Show me Apple's latest 8-K filing.")
-    print(response)
+        agent = FunctionAgent(tools=tools, llm=Anthropic(model="claude-sonnet-4-5"))
+        response = await agent.run("Show me Apple's latest 8-K filing.")
+        print(response)
+    finally:
+        await http.aclose()
 
 asyncio.run(main())
 ```
