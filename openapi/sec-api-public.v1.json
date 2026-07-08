@@ -23813,6 +23813,201 @@
         "x-secapi-docs": "public",
         "x-secapi-smoke": "local"
       }
+    },
+    "/v1/metrics/history": {
+      "get": {
+        "summary": "Return a per-security time series of selected Coverage Grid metrics (valuation-band history).",
+        "parameters": [
+          {
+            "name": "security_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "WS1 security_id (share-class grain), e.g. sec_figi_XXXX."
+          },
+          {
+            "name": "metrics",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated taxonomy metric keys (max 8), e.g. ltm_pe,ltm_ev_to_ebitda."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower bound on metric_date (YYYY-MM-DD)."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper bound on metric_date (YYYY-MM-DD)."
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "default": "daily"
+            },
+            "description": "Server-side downsample interval; max 4000 points."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. series carries one point per interval bucket with the requested metric columns.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsHistoryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "metrics.history",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/metrics/batch": {
+      "post": {
+        "summary": "Return the latest (or as-of-date) Coverage Grid metric row for many securities.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetricsBatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response. One row per security at its latest metric_date within the as-of cut.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsBatchResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "metrics.batch",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/screener/query": {
+      "post": {
+        "summary": "Run the closed, typed Coverage Grid screener DSL (field enum from the frozen taxonomy; closed operators; parameterized, readonly, execution-time-capped SQL).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenerQueryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response. rows carry the selected columns; total_count reflects the returned page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenerQueryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "screener.query",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
     }
   },
   "components": {
@@ -26536,6 +26731,11 @@
       "PortfolioMacroExposure": {},
       "PortfolioMacroExposureRequest": {},
       "MacroExportJob": {},
+      "MetricsHistoryResponse": {},
+      "MetricsBatchRequest": {},
+      "MetricsBatchResponse": {},
+      "ScreenerQueryRequest": {},
+      "ScreenerQueryResponse": {},
       "FactorCatalogStatus": {
         "type": "string",
         "enum": [
