@@ -1,9 +1,9 @@
 ---
-title: "13F API — Institutional Holdings Data for Investors and Agents"
-description: "Use SEC API to query structured Form 13F holdings, compare quarters, monitor managers, and feed institutional ownership data into investor agents."
+title: "13F API — Institutional Holdings Data for Investors and AI Agents"
+description: "Use SEC API to query structured Form 13F holdings, compare manager filings, monitor institutional ownership changes, and preserve source evidence for investor agents."
 ---
 
-Every institutional investment manager with over $100M in qualifying assets must file SEC Form 13F within 45 days of each quarter end. SEC API parses these filings and exposes structured holdings data through a simple REST API.
+Use this page when you need Form 13F holdings in a product, screen, monitor, or AI agent. SEC API parses institutional manager filings and exposes structured holdings data through REST, SDKs, CLI, and hosted MCP while preserving the filing evidence you need to audit the result.
 
 <CardGroup cols={3}>
   <Card title="Evaluate this workflow" icon="clipboard-check" href="/evaluate/13f-api">
@@ -17,12 +17,13 @@ Every institutional investment manager with over $100M in qualifying assets must
   </Card>
 </CardGroup>
 
-## What you get
+## What to verify first
 
-- **Current holdings**: Full position list for any 13F filer by CIK
-- **Quarter-over-quarter comparison**: See new positions, closed positions, and share changes
-- **Historical data**: Access 13F filings going back to 1999
-- **Normalized identifiers**: Holdings mapped to tickers, CUSIPs, and CIKs
+- **Manager identity**: Confirm manager CIK, manager name, report period, filed date, and accession number.
+- **Issuer identity**: Verify CUSIP, issuer name, ticker, and any issuer CIK mapping your workflow depends on.
+- **Change semantics**: Decide how you will treat added, removed, increased, reduced, and unchanged positions across quarters.
+- **Timing**: 13F filings are quarterly and delayed. They are useful for ownership history and manager behavior, not real-time position proof.
+- **Agent contract**: Require the final answer to preserve source URL, request ID, filing date, report period, and caveats.
 
 ## Quick start
 
@@ -59,6 +60,12 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f/compare?cik=0001067983&period_a=2024-Q3&period_b=2024-Q4"
 ```
 
+## Give this prompt to your agent
+
+<Prompt>
+Evaluate SEC API for a 13F manager-monitor workflow. Pull the latest reported holdings for Berkshire Hathaway, compare the two latest available quarters if the endpoint supports it, and return added, removed, increased, and reduced positions. Preserve manager CIK, issuer identifiers, report period, filed date, accession number, source URL, requestId, and a caveat that 13F data is quarterly and delayed.
+</Prompt>
+
 ## Use cases
 
 ### Track position changes for top managers
@@ -81,23 +88,28 @@ Use 13F endpoints when your agent needs to answer questions like "which managers
 
 Wealth managers and fund administrators can use 13F data to verify holdings disclosures and track competitive positioning.
 
+## When SEC API is the right layer
+
+Raw EDGAR is still the source of record. SEC API is the right layer when you want a normalized contract for managers, holdings, identifiers, source links, and agent-readable responses without maintaining your own 13F parser and quarter-comparison code.
+
+<CardGroup cols={3}>
+  <Card title="13F monitor workflow" icon="workflow" href="https://secapi.ai/workflows/13f-monitor-agent">
+    See how the ownership data becomes a recurring investor-agent workflow.
+  </Card>
+  <Card title="Ownership API page" icon="users" href="https://secapi.ai/apis/ownership">
+    Review the broader ownership surface: 13F, insiders, holders, and governance.
+  </Card>
+  <Card title="Pricing and limits" icon="credit-card" href="/evaluate/pricing-and-limits">
+    Check the meter and fanout posture before monitoring many managers.
+  </Card>
+</CardGroup>
+
 ## API endpoints
 
 | Endpoint | Description |
 |----------|-------------|
 | `GET /v1/owners/13f` | List holdings for a 13F filer |
 | `GET /v1/owners/13f/compare` | Compare holdings between two quarters |
-
-## Why SEC API for 13F data
-
-| Feature | SEC API | Raw EDGAR | WhaleWisdom | Fintel |
-|---------|-----------|-----------|-------------|--------|
-| Structured JSON API | Yes | No (XML/SGML) | Partial | Partial |
-| Quarter-over-quarter diff | Built-in | Manual | Manual | Manual |
-| Historical coverage | 1999+ | 1999+ | 2001+ | 2013+ |
-| Webhook alerts | Yes | No | No | No |
-| Python + JS SDKs | Yes | No | No | No |
-| Pricing | Pay-as-you-go | Free (raw) | $150+/mo | $100+/mo |
 
 ## Get started
 

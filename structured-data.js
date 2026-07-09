@@ -102,6 +102,13 @@
       breadcrumb: ["Evaluate SEC API", "Evaluate Pricing and Limits"],
       sameAs: [marketingOrigin + "/pricing", marketingOrigin + "/pricing.md", marketingOrigin + "/pricing.txt"],
     },
+    "/seo/sec-edgar-api": {
+      type: "TechArticle",
+      title: "SEC EDGAR API",
+      description: "Evaluate SEC API as a production SEC EDGAR API for filing search, sections, XBRL facts, ownership, and AI-agent workflows.",
+      breadcrumb: ["API guides by topic", "SEC EDGAR API"],
+      sameAs: [marketingOrigin + "/compare/sec-edgar-api-vs-secapi", marketingOrigin + "/apis/filing-search", marketingOrigin + "/features/filing-search"],
+    },
     "/seo/sec-filing-search-api": {
       type: "TechArticle",
       title: "SEC Filing Search API",

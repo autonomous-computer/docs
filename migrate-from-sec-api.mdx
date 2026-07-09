@@ -1,10 +1,10 @@
 ---
 title: "Migrate from sec-api.io to SEC API"
-description: "Translate common sec-api.io workflows to SEC API for filing search, entity resolution, XBRL facts, sections, insiders, compensation, REST, SDKs, and MCP."
+description: "Plan a source-preserving migration from sec-api.io to SEC API for filing search, entity resolution, XBRL facts, sections, insiders, compensation, REST, SDKs, and MCP."
 ---
 
 <Info>
-This guide translates common `sec-api.io` jobs onto SEC API without forcing you to relearn the whole product in one sitting.
+This guide is for teams that already have a working `sec-api.io` integration and want to dual-run SEC API before cutting over. It translates common workflows, calls out current fallback cases, and gives your agent or engineer a checklist for preserving evidence during the migration.
 </Info>
 
 <CardGroup cols={3}>
@@ -18,6 +18,22 @@ This guide translates common `sec-api.io` jobs onto SEC API without forcing you 
     Create an account and dual-run the first workflow.
   </Card>
 </CardGroup>
+
+## Migration strategy
+
+Do not migrate by replacing every URL in one pass. Pick one production workflow, run it side by side, and compare the evidence your application actually consumes.
+
+<Steps>
+  <Step title="Start with issuer and filing identity">
+    Map ticker and CIK resolution first. Confirm company identity, form type, accession number, filing date, source URL, and any internal identifier you join on downstream.
+  </Step>
+  <Step title="Replace the narrowest workflow">
+    Move filing search, latest filing retrieval, or one section-extraction path before broader XBRL, ownership, or intelligence workflows.
+  </Step>
+  <Step title="Keep a fallback for unsupported parity">
+    If your current integration depends on arbitrary historical filing URLs or rendered HTML extractor output, keep that specific path on the old provider until the SEC API replacement passes your acceptance test.
+  </Step>
+</Steps>
 
 ## What changes when you switch
 
@@ -45,14 +61,17 @@ This guide translates common `sec-api.io` jobs onto SEC API without forcing you 
 If you depend on arbitrary historical filing URLs or HTML extractor output, keep a temporary fallback path while you finish historical filing-target support. SEC API is stronger on normalized workflows than on raw URL-style extractor parity.
 </Warning>
 
-- `/mapping/ticker/{ticker}` -> `/v1/entities/resolve?ticker={ticker}`
-- `/mapping/cik/{cik}` -> `/v1/entities/resolve?cik={cik}`
-- `/` filing search POST body -> `/v1/filings` query params
-- `list of filing types and exhibits` -> [SEC Filing Types and Exhibits](/filing-types-and-exhibits)
-- `/extractor?url=...&item=1A&type=text` -> `/v1/filings/latest/sections/item_1a?...&mode=compact` when latest filing mapping is sufficient
-- `/xbrl-to-json` -> `/v1/statements/{statement_key}` or `/v1/facts`
-- `/insider-trading` -> `/v1/insiders`
-- `/compensation/{ticker}` -> `/v1/compensation?ticker={ticker}`
+| Current job | SEC API path | Migration note |
+|-------------|--------------|----------------|
+| Ticker mapping | `/v1/entities/resolve?ticker={ticker}` | Preserve both ticker and CIK in your stored result. |
+| CIK mapping | `/v1/entities/resolve?cik={cik}` | Normalize leading zero behavior in tests. |
+| Filing search | `/v1/filings` query params | Compare form, filed date, accession number, source URL, and pagination behavior. |
+| Filing types and exhibits | [SEC Filing Types and Exhibits](/filing-types-and-exhibits) | Confirm generic retrieval versus workflow-specific normalization. |
+| Latest section extraction | `/v1/filings/latest/sections/item_1a?...&mode=compact` | Best for latest filing workflows where compact agent payloads matter. |
+| Arbitrary historical URL extraction | Temporary fallback while you qualify historical target support | Keep this path explicit in your dual-run plan. |
+| XBRL to JSON | `/v1/statements/{statement_key}` or `/v1/facts` | Compare tags, periods, units, and source filing references. |
+| Insider transactions | `/v1/insiders` | Preserve Form 3/4/5 identity and transaction date fields. |
+| Compensation | `/v1/compensation?ticker={ticker}` | Validate proxy filing source links and role/year semantics. |
 
 ## Request translation examples
 
@@ -78,7 +97,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 ```
 
 <Prompt>
-Migrate this sec-api.io workflow to SEC API. Replace mapping calls with entity resolution, replace filing search with /v1/filings query params, and replace extractor workflows with SEC API section endpoints where possible. Keep requestId, freshness, provenance, and any current fallback gaps in the final implementation notes.
+Migrate this sec-api.io workflow to SEC API. Replace mapping calls with entity resolution, replace filing search with /v1/filings query params, and replace extractor workflows with SEC API section endpoints where possible. Dual-run the old and new path for one issuer and one filing family. Return a migration table with old endpoint, new endpoint, fields compared, accession number, source URL, requestId, freshness, and any fallback gap that should remain before cutover.
 </Prompt>
 
 ## Migration notes
@@ -95,6 +114,17 @@ Migrate this sec-api.io workflow to SEC API. Replace mapping calls with entity r
 3. statements and facts
 4. section extraction in `compact` mode
 5. compare and artifact flows once the target plan is enabled
+
+## What to compare during dual-run
+
+| Dimension | What to check |
+|-----------|---------------|
+| Identity | Ticker, CIK, company name, accession number, form type, filed date, report period |
+| Source trail | SEC source URL, filing URL, request ID, freshness, materialization metadata |
+| Payload shape | Field names, nullable fields, nested objects, pagination, compact versus verbose response modes |
+| Cost and limits | Meter family, expected fanout, retry behavior, and plan fit |
+| Agent behavior | Whether the prompt can complete using compact evidence without reading the full filing |
+| Fallback policy | Exact workflows that remain on the old provider until parity is accepted |
 
 ## Migration acceptance checklist
 
