@@ -1,0 +1,62 @@
+---
+title: "GET /v1/situations/{situation_id}/export"
+description: "Render a source-cited Markdown Copy-for-LLM brief for one situation"
+---
+
+Render the full situation record as a source-cited Markdown brief for downstream LLM and agent workflows. The export includes the situation headline, lifecycle state, structured deal terms and dates when present, business profile, narrative, and the filing timeline with EDGAR source links.
+
+<Info>
+Audience: application and coding agent. This is an authenticated, paid API read. The response is Markdown, not a JSON envelope.
+</Info>
+
+## Canonical metadata
+
+- `Content-Type: text/markdown; charset=utf-8`
+- `SECAPI-Meter-Class: situations_export`
+- `requestId` and `traceparent` are available as response headers
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/situations/sit_example_123/export"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```markdown
+# Example Corp (EXMP) — merger
+
+## Situation
+
+- Status: announced
+- Counterparty: Example Holdings, Inc.
+- Deal value: $1.2B
+
+## Filing timeline
+
+- 2026-07-09 — 8-K — [Source filing](https://www.sec.gov/Archives/edgar/data/0000000000/000000000026000001/example.htm)
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/situations/{situation_id}/export to retrieve a source-cited Markdown brief for one special situation. Preserve the situation ID, filing accession numbers, EDGAR source URLs, requestId, and traceparent. Summarize the lifecycle state, deal terms, key dates, latest filing update, and any missing fields without inventing values.
+</Prompt>
+
+## Usage and limits
+
+The export is metered separately from normal situation lookups so usage and plan limits can distinguish Copy-for-LLM export requests from list/detail reads. It currently uses the standard-read Stripe pricing family; plan-level rates may change independently of the route contract.
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- treat absent deal terms, dates, or market values as unknown; do not infer them from prose
+- use the paid detail or filings endpoints when a machine-readable JSON timeline is required
