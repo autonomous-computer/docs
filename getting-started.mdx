@@ -1,153 +1,108 @@
 ---
-title: "Getting Started"
-description: "Make your first request and retrieve one issuer, one filing, and one structured statement to validate your integration quickly."
+title: "Make your first API request"
+description: "Authenticate with an SEC API key and resolve Apple to its SEC identity in one request."
 ---
 
-## The shortest useful path
+Use one authenticated request to confirm that your API key, headers, and client can reach SEC API. This takes about three minutes.
 
-Get one issuer, one filing, and one structured statement working first. Do that before you chase a broader integration.
+## Before you start
 
-If you are starting as an external coding agent or developer, begin at `https://secapi.ai/agents` first. That page is the public discovery surface for the sponsored bootstrap flow and the hosted MCP posture.
+You need:
 
-## Before you make a request
+1. An [SEC API account](https://secapi.ai/signup)
+2. An API key from the dashboard
+3. A shell with `curl`
 
-Start here, then move directly into a real workflow.
+Export the key in the shell that will make the request:
 
-1. [Create an account](https://secapi.ai/signup), or use an existing org API key
-2. Export `SECAPI_API_KEY` in the shell, CI job, or secret store that will make requests
-3. Check platform health at `https://api.secapi.ai/healthz` and readiness at `https://api.secapi.ai/readyz`
-4. Choose one client surface: REST, SDK, CLI, or MCP
-5. Pick one identifier you already trust: ticker, CIK, FIGI, ISIN, or CUSIP
+```bash
+export SECAPI_API_KEY="secapi_..."
+```
 
 <Warning>
-Use the `x-api-key` header for API keys. Do not send SEC API keys as `Authorization: Bearer`; bearer tokens are WorkOS browser/session credentials, not machine API keys.
+Send machine API keys in the `x-api-key` header. Do not use `Authorization: Bearer`; bearer tokens are for WorkOS browser sessions, not SEC API keys.
 </Warning>
 
-## Dashboard access
+## Make the request
 
-[Create an account](https://secapi.ai/signup), then sign in to the dashboard to manage API keys, billing, and usage.
-
-Use [secapi.ai/login](https://secapi.ai/login) to start the WorkOS flow. The dashboard lets approved users create and reveal API keys once, view usage and request activity, manage credits and billing entry points, and update profile, organization, appearance, security, logout, and account deletion-request settings.
-
-Control-plane actions require a WorkOS browser session. Machine API keys are for REST, SDK, CLI, and server-to-server MCP calls.
-
-## REST quickstart
+Resolve Apple to the identifiers SEC API uses across filings, facts, ownership records, and other datasets:
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
-
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
-
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
 
-## JavaScript quickstart
+`secapi-version` pins your client to a dated API contract. `view=agent` returns the compact response shape.
+
+## Expected response
+
+The entity ID and request ID will differ, but a successful response has this shape:
+
+```json
+{
+  "object": "entity",
+  "id": "cent_f3913349312cbf5bfd60ecdb",
+  "ticker": "AAPL",
+  "cik": "0000320193",
+  "name": "Apple Inc.",
+  "primaryIdentifiers": [
+    {
+      "type": "ticker",
+      "value": "AAPL"
+    },
+    {
+      "type": "cik",
+      "value": "0000320193"
+    }
+  ],
+  "matchConfidence": 1,
+  "matchBasis": "ticker",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+}
+```
+
+You are ready to continue when the response identifies Apple, returns CIK `0000320193`, and includes a `requestId`.
+
+## What to keep
+
+- **`id`, `ticker`, and `cik`** identify the issuer in later requests.
+- **`matchConfidence` and `matchBasis`** explain why this record matched your input.
+- **`requestId`** identifies the API call for logs, support, and debugging.
+
+The compact `view=agent` response intentionally omits larger metadata envelopes. Endpoints that return filing-derived data can also include source, freshness, materialization, or trace fields. Keep those fields when they are present; do not infer them from this entity-resolution response.
+
+## If the request fails
+
+### `401 missing_api_key`
+
+Confirm that the environment variable is set in the same shell:
 
 ```bash
-npm install @secapi/sdk-js
+test -n "$SECAPI_API_KEY" && echo "SECAPI_API_KEY is set"
 ```
 
-```ts
-import { SecApiClient } from "@secapi/sdk-js"
+Then confirm the request uses `x-api-key`.
 
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
-})
+### `401 authentication_failed`
 
-const issuer = await client.resolveEntity({ ticker: "AAPL" })
-const filing = await client.latestFiling({ ticker: "AAPL", form: "10-K" })
-const statements = await client.allStatements({ ticker: "AAPL", period: "annual", limit: 1 })
-```
+Remove any `Authorization: Bearer` header and send the SEC API key through `x-api-key` instead.
 
-## Python quickstart
+### `429` or a budget error
 
-```python
-import os
-from secapi_client import SecApiClient
+Read the response code and limit details before retrying. An agent should stop or back off rather than repeat the same call without a bound.
 
-client = SecApiClient(
-    api_key=os.environ["SECAPI_API_KEY"],
-    base_url="https://api.secapi.ai",
-)
+### The service appears unavailable
 
-issuer = client.resolve_entity(ticker="AAPL")
-filing = client.latest_filing(ticker="AAPL", form="10-K")
-statements = client.all_statements(ticker="AAPL", period="annual", limit=1)
-```
+Check [service health](https://api.secapi.ai/healthz), [readiness](https://api.secapi.ai/readyz), and [SEC API status](https://status.secapi.ai). These are troubleshooting tools, not prerequisites for a normal first request.
 
-## CLI quickstart
+For response envelopes, versioning, errors, and request metadata, read [API conventions](/api-conventions). For a broader failure checklist, use [Troubleshooting](/troubleshooting).
 
-Install the CLI via npm:
+## Choose your next step
 
-```bash
-npm install -g @secapi/cli
-```
-
-Then run your first queries:
-
-```bash
-secapi entities resolve --ticker AAPL
-secapi filings latest --ticker AAPL --form 10-K
-secapi statements get --ticker AAPL --statement all --period annual
-```
-
-Command-specific help is local and safe to run before authentication:
-
-```bash
-secapi filings latest --help
-```
-
-Typos fail locally with nearest-command suggestions, so `secapi filings latset`
-points back to `secapi filings latest` without making an API request.
-Unknown option typos fail locally too, so `secapi filings search --limt 5`
-points back to `--limit` before credentials are read or an API request is sent.
-Agents can run `secapi agent-context` to get a machine-readable inventory of the
-full current CLI command surface, including auth needs, output shape, mutating
-posture, required flags, and examples.
-
-## Trace hydration quickstart
-
-When a filing-derived response includes trace references, hydrate them by trace id.
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/traces/<trace_id>"
-```
-
-```ts
-const trace = await client.getTrace("<trace_id>")
-```
-
-```bash
-secapi traces get --trace-id <trace_id>
-secapi traces list --ids <trace_id_1>,<trace_id_2>
-```
-
-## MCP quickstart
-
-- MCP server: `https://api.secapi.ai/mcp`
-- Protected resource metadata: `https://api.secapi.ai/.well-known/oauth-protected-resource`
-- Authorization server metadata: `https://api.secapi.ai/.well-known/oauth-authorization-server`
-- Sponsored bootstrap: `POST https://api.secapi.ai/v1/agent/bootstrap_tokens` then `POST https://api.secapi.ai/v1/agent/bootstrap`
-
-### First MCP tools to call
-
-- `entities.resolve`
-- `filings.latest`
-- `statements.get`
-
-## What to keep from your first success
-
-- the `Request-Id`
-- the exact endpoint or tool you called
-- the provenance, freshness, and trace metadata from the response
-
-## Next pages
-
-- [First request flows](/first-request-flows)
-- [Libraries & SDKs](/libraries-and-sdks)
-- [CLI guide](/cli)
-- [Give this prompt to your agent](/give-this-prompt-to-your-agent)
+- [Find the latest 10-K](/api-reference/filings/get-v1-filings-latest) and preserve its accession number and SEC source URL.
+- [Use the JavaScript, Python, Go, or Rust SDK](/libraries-and-sdks).
+- [Install and use the CLI](/cli).
+- [Connect an agent through hosted MCP](/mcp-workflows).
+- [Inspect the entity-resolution contract](/api-reference/entities/get-v1-entities-resolve).
