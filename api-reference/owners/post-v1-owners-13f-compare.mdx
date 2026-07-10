@@ -1,9 +1,9 @@
 ---
 title: "POST /v1/owners/13f/compare"
-description: "Compare the latest two 13F ownership reports for a manager CIK"
+description: "Compare the latest two parsable 13F ownership reports for a manager CIK"
 ---
 
-Compare the latest two 13F ownership reports for a manager CIK
+Compare the latest two parsable 13F ownership reports for a manager CIK
 
 <Info>
 Audience: application and coding agent.
@@ -25,7 +25,7 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{"cik":"0001350694","limit":50}' \
   "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 </RequestExample>
@@ -35,25 +35,28 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "object": "ownership_comparison",
+  "id": "owncmp_0001350694_20250214_20241114",
+  "createdAt": "2026-07-10T18:00:00.000Z",
+  "livemode": false,
+  "entityId": "ent_example_manager",
+  "ticker": null,
+  "managerName": "Example Manager",
+  "currentFilingDate": "2025-02-14",
+  "previousFilingDate": "2024-11-14",
+  "rows": [{
+    "issuer": "Example Issuer",
+    "cusip": "000000000",
+    "status": "changed",
+    "currentValueUsdThousands": 1200,
+    "previousValueUsdThousands": 900,
+    "deltaValueUsdThousands": 300,
+    "currentShares": 10000,
+    "previousShares": 8000,
+    "deltaShares": 2000
+  }],
+  "summaryMd": "Compared the latest two parsable 13F reports.",
+  "provenance": { "source": "sec", "accessionNumber": "0000000000-00-000000", "filingUrl": "https://www.sec.gov/Archives/edgar/data/example", "retrievedAt": "2026-07-10T18:00:00.000Z", "parserVersion": "example", "rawSourceKey": "0000000000-00-000000" }
 }
 ```
 </ResponseExample>
@@ -61,7 +64,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/owners/13f/compare to compare the latest two 13F ownership reports for a manager CIK. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API POST /v1/owners/13f/compare to compare the latest two parsable 13F ownership reports for a manager CIK. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

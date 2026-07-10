@@ -1,98 +1,94 @@
 ---
-title: "13F Holdings Comparison API — Quarter-over-Quarter Institutional Changes"
-description: "Compare 13F institutional holdings quarter over quarter via API. Track new positions, exits, share changes, and portfolio turnover for any institutional investor. Get started free at secapi.ai/signup."
+title: "13F Holdings Comparison API — Compare a Manager's Latest Disclosed Reports"
+description: "Compare a manager's two most recent parsable 13F reports by CIK. Inspect added, removed, and changed positions with filing provenance and clear timing limits."
 ---
 
-Institutional investors file 13F reports every quarter, but the real signal is in what changed. SEC API's comparison endpoint diffs two quarters of 13F data automatically — surfacing new positions, exited positions, increased holdings, and decreased holdings without you having to compute the diff yourself.
+Institutional investors file Form 13F on a delayed schedule. The useful question is usually not simply what a manager owns, but what changed between its two most recent disclosed reports. SEC API compares the latest two parsable 13F reports for a manager CIK and returns a row-level position diff alongside the source record for the current report.
 
 ## Capabilities
 
 <CardGroup cols={2}>
-  <Card title="Automatic quarter diff" icon="code-compare">
-    Compare any two quarters for a 13F filer in a single request. New, exited, increased, and decreased positions returned separately.
+  <Card title="Latest disclosed-report diff" icon="code-compare">
+    Compare the latest two parsable 13F reports for one manager CIK. Each position is classified as added, removed, changed, or unchanged.
   </Card>
   <Card title="Share and value changes" icon="arrow-up-right-dots">
-    Both absolute and percentage changes in shares and market value for every position that changed.
+    Inspect current and prior shares and value, with absolute deltas for positions that changed.
   </Card>
-  <Card title="Portfolio-level metrics" icon="chart-pie">
-    Total portfolio value, position count, turnover rate, and concentration metrics for each quarter.
+  <Card title="Filing provenance" icon="file-check">
+    Keep the current filing accession, source URL, filing date, and request metadata with the comparison output.
   </Card>
-  <Card title="Multi-filer comparison" icon="people-arrows">
-    Compare holdings across multiple filers to find stocks being accumulated (or dumped) by the smart money simultaneously.
+  <Card title="Bounded position output" icon="list-tree">
+    Set a position limit when you need a concise comparison; use the underlying reports when a full filing review is required.
   </Card>
 </CardGroup>
 
 ## Quick start
 
-Compare Bridgewater's holdings between Q3 and Q4 2024:
+Compare a manager's two most recent parsable disclosed reports:
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f/compare?cik=0001350694&period_a=2024-Q3&period_b=2024-Q4"
+curl -X POST "https://api.secapi.ai/v1/owners/13f/compare" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"cik":"0001350694","limit":50}'
 ```
 
 ```json
 {
-  "manager": "BRIDGEWATER ASSOCIATES, LP",
-  "period_a": "2024-Q3",
-  "period_b": "2024-Q4",
-  "new_positions": [
+  "managerName": "Example Manager",
+  "currentFilingDate": "2025-02-14",
+  "previousFilingDate": "2024-11-14",
+  "rows": [
     {
-      "issuer_name": "NVIDIA CORP",
-      "cusip": "67066G104",
-      "shares": 5200000,
-      "value": 720000000
+      "issuer": "Example Issuer",
+      "cusip": "000000000",
+      "status": "changed",
+      "currentValueUsdThousands": 1200,
+      "previousValueUsdThousands": 900,
+      "deltaValueUsdThousands": 300,
+      "currentShares": 10000,
+      "previousShares": 8000,
+      "deltaShares": 2000
     }
-  ],
-  "exited_positions": [
-    {
-      "issuer_name": "INTEL CORP",
-      "cusip": "458140100",
-      "shares_sold": 12000000
-    }
-  ],
-  "increased": 145,
-  "decreased": 89,
-  "portfolio_turnover": 0.23
+  ]
 }
 ```
+
+The route selects the latest two parsable reports. It does not accept arbitrary reporting periods. For a period-specific report, retrieve the underlying 13F filing first and retain both the filing date and the report date in your research record.
 
 ## Use cases
 
 ### Smart money tracking
 
-Monitor what the top hedge funds and asset managers are buying and selling each quarter. Identify consensus trades across multiple filers.
+Monitor how a selected manager's disclosed positions changed from one report to the next. Treat the result as a delayed disclosure signal, not a view of its current book.
 
 ### Crowded trade detection
 
-Find stocks where many institutions are building positions simultaneously — a potential crowded trade signal.
+Use the row-level diff to identify positions worth investigating, then compare the issuer's filings, valuation, and other managers separately.
 
 ### Portfolio rebalancing signals
 
-Use quarter-over-quarter changes from top managers as an input signal for systematic or discretionary strategies.
+Use disclosed changes as one input to a research process. Shares and reported value may move for reasons other than a discretionary buy or sell.
 
 ### Client reporting
 
-Wealth managers can generate reports showing how major institutional investors are positioning relative to client portfolios.
+Create a reviewed report that links each change to the relevant 13F source filing and explains the timing limitations to its reader.
 
 ## API endpoints
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /v1/owners/13f/compare` | Compare two quarters for a filer |
-| `GET /v1/owners/13f` | List holdings for a specific quarter |
-| `GET /v1/owners/13f/top-changes` | Biggest position changes across all filers |
+| `POST /v1/owners/13f/compare` | Compare the latest two parsable reports for a manager CIK |
+| `GET /v1/owners/13f` | Retrieve a normalized 13F report, with optional quarter selection |
 
 ## Why SEC API for 13F comparison
 
-| Feature | SEC API | Raw EDGAR | WhaleWisdom | Fintel |
-|---------|-----------|-----------|-------------|--------|
-| Built-in quarter diff | Yes | No (manual) | Manual | Manual |
-| Share + value changes | Yes | Manual calc | Partial | Partial |
-| Portfolio turnover metrics | Yes | No | No | No |
-| Multi-filer aggregation | Yes | No | Premium | Premium |
-| REST API | Yes | No | No | Limited |
-| Pricing | Pay-as-you-go | Free (raw) | $150+/mo | $100+/mo |
+| What to check | Why it matters |
+|---------|-----------|
+| Filing date versus report date | 13F data is delayed. The report date and the date the SEC received it answer different questions. |
+| Added or removed versus changed | The response labels each position, but a changed row does not explain the manager's decision. |
+| Shares versus reported value | Reported value is not a live market value and can change independently of share count. |
+| Source filing | A comparison is a navigation aid. Review the source 13F before citing a position change. |
 
 ## Get started
 
