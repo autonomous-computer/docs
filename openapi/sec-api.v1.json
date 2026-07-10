@@ -18552,7 +18552,7 @@
     },
     "/v1/signals/dilution/enhanced": {
       "get": {
-        "summary": "Return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest context)",
+        "summary": "Return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder)",
         "parameters": [
           {
             "name": "ticker",
@@ -24036,6 +24036,59 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SituationSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/situations/{situation_id}/export": {
+      "get": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "Render a source-cited Markdown Copy-for-LLM brief for one situation",
+        "parameters": [
+          {
+            "name": "situation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Markdown situation brief",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
