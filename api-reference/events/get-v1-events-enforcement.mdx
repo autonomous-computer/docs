@@ -1,0 +1,81 @@
+---
+title: "GET /v1/events/enforcement"
+description: "Search SEC litigation releases, administrative proceedings, and AAERs with source-linked respondent and category filters"
+---
+
+Search SEC litigation releases, administrative proceedings, and AAERs with source-linked respondent and category filters
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Agent mode
+
+Pass `?view=agent` to receive the compact agent shape: source type, publication date, release number, title, excerpt, and SEC release URLs. The longer summary, capability fields, trace reference, and metadata blocks are omitted. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+- `per-row provenance`
+- `per-row freshness`
+- `per-row materialization`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/events/enforcement?violation_type=insider_trading&limit=10"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "enforcement_action",
+      "sourceType": "litigation_release",
+      "publishedAt": "2026-03-18T16:00:00.000Z",
+      "releaseNumber": "LR-00000",
+      "title": "Illustrative SEC enforcement release",
+      "excerpt": "Illustrative excerpt. Review the cited SEC release before drawing conclusions.",
+      "respondents": [
+        {
+          "name": "Example respondent",
+          "entityId": null,
+          "ticker": null,
+          "cik": null
+        }
+      ],
+      "violationType": "fraud",
+      "penaltyAmount": null,
+      "relatedReleaseNumber": null,
+      "documentUrl": "https://www.sec.gov/litigation/litreleases/example.htm",
+      "htmlUrl": null
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/events/enforcement to search SEC litigation releases, administrative proceedings, and AAERs with source-linked respondent and category filters. Preserve `requestId`, `traceparent`, `per-row provenance`, `per-row freshness`, `per-row materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

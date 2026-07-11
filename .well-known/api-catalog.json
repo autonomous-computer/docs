@@ -801,9 +801,54 @@
     {
       "slug": "events",
       "title": "Events",
-      "description": "Filing-derived event surfaces such as SEC-native M&A and related structured event workflows.",
+      "description": "Search disclosure-derived M&A, restatement, auditor, officer, voting, IPO, and SEC enforcement events before reviewing the cited filing or release.",
       "docs_path": "/api-reference/events",
       "operations": [
+        {
+          "method": "GET",
+          "path": "/v1/events/auditor-changes",
+          "title": "GET /v1/events/auditor-changes",
+          "summary": "Return 8-K Item 4.01 auditor change events with change-type classification (dismissal, resignation, engagement)",
+          "docs_path": "/api-reference/events/get-v1-events-auditor-changes",
+          "audience": "application and coding agent",
+          "metadata_fields": [
+            "requestId",
+            "traceparent",
+            "per-row provenance",
+            "per-row freshness",
+            "per-row materialization"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/v1/events/enforcement",
+          "title": "GET /v1/events/enforcement",
+          "summary": "Search SEC litigation releases, administrative proceedings, and AAERs with source-linked respondent and category filters",
+          "docs_path": "/api-reference/events/get-v1-events-enforcement",
+          "audience": "application and coding agent",
+          "metadata_fields": [
+            "requestId",
+            "traceparent",
+            "per-row provenance",
+            "per-row freshness",
+            "per-row materialization"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/v1/events/ipo",
+          "title": "GET /v1/events/ipo",
+          "summary": "Return filing-derived IPO events with the cited registration statement or prospectus",
+          "docs_path": "/api-reference/events/get-v1-events-ipo",
+          "audience": "application and coding agent",
+          "metadata_fields": [
+            "requestId",
+            "traceparent",
+            "per-row provenance",
+            "per-row freshness",
+            "per-row materialization"
+          ]
+        },
         {
           "method": "GET",
           "path": "/v1/events/ma",
@@ -814,9 +859,54 @@
           "metadata_fields": [
             "requestId",
             "traceparent",
-            "provenance",
-            "freshness",
-            "materialization"
+            "per-row provenance",
+            "per-row freshness",
+            "per-row materialization"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/v1/events/officer-changes",
+          "title": "GET /v1/events/officer-changes",
+          "summary": "Return 8-K Item 5.02 officer and director change events with the cited filing",
+          "docs_path": "/api-reference/events/get-v1-events-officer-changes",
+          "audience": "application and coding agent",
+          "metadata_fields": [
+            "requestId",
+            "traceparent",
+            "per-row provenance",
+            "per-row freshness",
+            "per-row materialization"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/v1/events/restatements",
+          "title": "GET /v1/events/restatements",
+          "summary": "Return 8-K Item 4.02 restatement and non-reliance events with severity classification and affected-period extraction",
+          "docs_path": "/api-reference/events/get-v1-events-restatements",
+          "audience": "application and coding agent",
+          "metadata_fields": [
+            "requestId",
+            "traceparent",
+            "per-row provenance",
+            "per-row freshness",
+            "per-row materialization"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/v1/events/voting-results",
+          "title": "GET /v1/events/voting-results",
+          "summary": "Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes",
+          "docs_path": "/api-reference/events/get-v1-events-voting-results",
+          "audience": "application and coding agent",
+          "metadata_fields": [
+            "requestId",
+            "traceparent",
+            "per-row provenance",
+            "per-row freshness",
+            "per-row materialization"
           ]
         }
       ]
@@ -2071,7 +2161,7 @@
           "method": "GET",
           "path": "/v1/offerings",
           "title": "GET /v1/offerings",
-          "summary": "Return recent S-1 and 424B prospectus records with cursor pagination and date filters",
+          "summary": "Return S-1 registration statements and 424B prospectuses with issuer, form, date, and cursor filters",
           "docs_path": "/api-reference/offerings/get-v1-offerings",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2486,66 +2576,6 @@
           "title": "POST /v1/billing/webhooks/stripe",
           "summary": "Receive and process signed Stripe subscription lifecycle webhooks",
           "docs_path": "/api-reference/platform/post-v1-billing-webhooks-stripe",
-          "audience": "application and coding agent",
-          "metadata_fields": [
-            "requestId",
-            "traceparent"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/v1/events/auditor-changes",
-          "title": "GET /v1/events/auditor-changes",
-          "summary": "Return 8-K Item 4.01 auditor change events with change-type classification (dismissal, resignation, engagement)",
-          "docs_path": "/api-reference/platform/get-v1-events-auditor-changes",
-          "audience": "application and coding agent",
-          "metadata_fields": [
-            "requestId",
-            "traceparent"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/v1/events/enforcement",
-          "title": "GET /v1/events/enforcement",
-          "summary": "Return official SEC litigation releases and administrative proceedings with explicit release-source semantics and shared trace references",
-          "docs_path": "/api-reference/platform/get-v1-events-enforcement",
-          "audience": "application and coding agent",
-          "metadata_fields": [
-            "requestId",
-            "traceparent"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/v1/events/officer-changes",
-          "title": "GET /v1/events/officer-changes",
-          "summary": "Return 8-K Item 5.02 officer and director change events with change-type classification (appointment, departure, resignation, termination)",
-          "docs_path": "/api-reference/platform/get-v1-events-officer-changes",
-          "audience": "application and coding agent",
-          "metadata_fields": [
-            "requestId",
-            "traceparent"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/v1/events/restatements",
-          "title": "GET /v1/events/restatements",
-          "summary": "Return 8-K Item 4.02 restatement and non-reliance events with severity classification and affected-period extraction",
-          "docs_path": "/api-reference/platform/get-v1-events-restatements",
-          "audience": "application and coding agent",
-          "metadata_fields": [
-            "requestId",
-            "traceparent"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/v1/events/voting-results",
-          "title": "GET /v1/events/voting-results",
-          "summary": "Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes — first-in-market parser ahead of sec-api.io's open bug",
-          "docs_path": "/api-reference/platform/get-v1-events-voting-results",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",

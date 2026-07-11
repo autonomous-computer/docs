@@ -5997,7 +5997,105 @@
     },
     "/v1/offerings": {
       "get": {
-        "summary": "Return recent S-1 and 424B prospectus records with cursor pagination and date filters",
+        "summary": "Return S-1 registration statements and 424B prospectuses with issuer, form, date, and cursor filters",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional issuer ticker filter."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional issuer CIK filter."
+          },
+          {
+            "name": "forms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated offering forms, such as S-1, S-1/A, 424B4, or 424B5."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive filing-date lower bound."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive filing-date upper bound."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            },
+            "description": "Maximum offering records to return."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 500,
+              "default": 0
+            },
+            "description": "Non-negative pagination offset."
+          },
+          {
+            "name": "submission_file_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "Maximum SEC submission files to inspect while looking for offering filings."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Use agent for a compact citation-oriented offering record. Compact currently matches the default row shape."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -6902,6 +7000,20 @@
               "maximum": 50
             },
             "description": "Maximum SEC submission files to inspect while looking for M&A events."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Response shape. Use agent for a compact cited deal record; compact currently matches the default row shape."
           }
         ],
         "responses": {
@@ -6945,7 +7057,7 @@
     },
     "/v1/events/enforcement": {
       "get": {
-        "summary": "Return official SEC litigation releases and administrative proceedings with explicit release-source semantics and shared trace references",
+        "summary": "Search SEC litigation releases, administrative proceedings, and AAERs with source-linked respondent and category filters",
         "parameters": [
           {
             "name": "query",
@@ -7080,6 +7192,20 @@
               "default": 0
             },
             "description": "Non-negative pagination offset."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Response shape. Use agent for a compact cited release record; compact currently matches the default row shape."
           }
         ],
         "responses": {
@@ -7357,7 +7483,81 @@
     },
     "/v1/events/officer-changes": {
       "get": {
-        "summary": "Return 8-K Item 5.02 officer and director change events with change-type classification (appointment, departure, resignation, termination)",
+        "summary": "Return 8-K Item 5.02 officer and director change events with the cited filing",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive filing-date lower bound."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive filing-date upper bound."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            },
+            "description": "Maximum officer-change events to return."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Non-negative pagination offset."
+          },
+          {
+            "name": "submission_file_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "Maximum SEC submission files to inspect while looking for officer-change events."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -7397,9 +7597,125 @@
         "x-secapi-anonymous-read": true
       }
     },
+    "/v1/events/ipo": {
+      "get": {
+        "summary": "Return filing-derived IPO events with the cited registration statement or prospectus",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive filing-date lower bound."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive filing-date upper bound."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            },
+            "description": "Maximum IPO events to return."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Non-negative pagination offset."
+          },
+          {
+            "name": "submission_file_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "Maximum SEC submission files to inspect while looking for IPO events."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "events.ipo",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
     "/v1/events/voting-results": {
       "get": {
-        "summary": "Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes — first-in-market parser ahead of sec-api.io's open bug",
+        "summary": "Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes",
         "parameters": [
           {
             "name": "ticker",
@@ -7486,6 +7802,20 @@
               "maximum": 50
             },
             "description": "Maximum SEC submission files to inspect while looking for voting-results events."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Response shape. Use agent for a compact cited voting-results record; compact currently matches the default row shape."
           }
         ],
         "responses": {

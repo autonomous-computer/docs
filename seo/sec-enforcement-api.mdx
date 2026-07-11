@@ -1,110 +1,54 @@
 ---
-title: "SEC Enforcement Actions API — Search Violations and Penalties"
-description: "Access structured SEC enforcement action data via API. Search by violation type, respondent, date range, and penalty amount. Track fraud cases and regulatory trends. Get started free at secapi.ai/signup."
+title: "SEC Enforcement Actions API: Search Releases, Respondents, and Penalties"
+description: "Use a structured SEC enforcement API to search litigation releases, administrative proceedings, and AAERs with source links for review."
 ---
 
-The SEC brings hundreds of enforcement actions each year against individuals and companies for securities fraud, insider trading, accounting violations, and other regulatory breaches. SEC API structures this data and exposes it through a searchable API.
+# SEC Enforcement Actions API
 
-## What you get
+SEC enforcement material is published across litigation releases, administrative proceedings, and Accounting and Auditing Enforcement Releases. `GET /v1/events/enforcement` gives developers one API surface for searching those public sources by respondent, issuer, date, normalized category, and disclosed penalty amount.
 
-- **Structured enforcement data**: Respondent names, violation types, relief sought, penalty amounts, and dates
-- **Flexible filtering**: By violation type, date range, and respondent
-- **Historical coverage**: Enforcement actions from 2010 to present
-- **Real-time updates**: New actions indexed within hours of SEC publication
+It is designed for evidence discovery. The returned record helps a researcher find and organize the relevant SEC release; it does not replace the release or establish liability for a person, company, or security mentioned in it.
 
-## Quick start
-
-Search for recent enforcement actions:
+## Search an enforcement category
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?limit=5"
+  "https://api.secapi.ai/v1/events/enforcement?violation_type=fraud&date_from=2025-01-01&limit=25"
 ```
 
-```json
-{
-  "data": [
-    {
-      "date": "2024-12-15",
-      "respondent_name": "Acme Corp",
-      "violation_type": "Securities Fraud",
-      "relief_sought": "Injunction, Disgorgement, Civil Penalty",
-      "penalty_amount": 15000000,
-      "litigation_release_number": "LR-26123",
-      "summary": "SEC charges Acme Corp and two executives with securities fraud for overstating revenue..."
-    }
-  ]
-}
-```
+Use `source_type=aaer` when the accounting and auditing release stream is specifically relevant. Use `respondent`, `ticker`, or `cik` to focus a search, but verify the match against the source document because names and issuer references are not unique identifiers.
 
-Filter by violation type:
+## What the API returns
 
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?violation_type=insider_trading&date_from=2024-01-01&limit=10"
-```
+The list response contains `data`, `hasMore`, `nextCursor`, and `requestId`. An enforcement row can include:
 
-## Use cases
+- `sourceType`, `publishedAt`, `releaseNumber`, `title`, and `excerpt`
+- `respondents`, with any resolved `ticker` or `cik` exposed as an aid rather than a legal conclusion
+- `violationType`, a normalized retrieval label derived from release language
+- `penaltyAmount` and `relatedReleaseNumber` where the release makes those values available
+- `documentUrl`, the SEC release to review, and `htmlUrl` when a rendered SEC page was found
 
-### Compliance and due diligence
+## Supported normalized categories
 
-Screen counterparties, portfolio companies, and potential hires against SEC enforcement history. Automate checks that compliance teams currently do manually.
+`fraud`, `insider_trading`, `reporting_violation`, `market_manipulation`, `registration_violation`, `investment_adviser`, `broker_dealer`, `municipal_securities`, and `other`.
 
-### Regulatory trend analysis
+These categories make a broad release set easier to search. They are not a substitute for the SEC's allegations, legal theories, or final disposition.
 
-Track enforcement volume, penalty amounts, and violation types over time to identify where the SEC is focusing attention. Useful for policy teams and legal practices.
+## Common uses
 
-### Risk assessment
+**Research and diligence:** screen a watchlist or counterparty list, then link the relevant releases into a research record.
 
-Cross-reference enforcement respondents against your portfolio holdings. Flag companies or executives with prior SEC actions.
+**Compliance triage:** find potentially relevant source material by respondent and date before a human review.
 
-### Legal research
+**Regulatory trend work:** group releases by source type or normalized category, while preserving the underlying source URLs for a reproducible study.
 
-Search enforcement actions by violation type and date range. Replace manual searches on the SEC litigation releases page with structured API queries.
+## Start building
 
-## Violation types
-
-| Type | Description |
-|------|-------------|
-| `fraud` | Securities fraud, wire fraud |
-| `insider_trading` | Trading on material non-public information |
-| `accounting` | Accounting fraud, improper revenue recognition |
-| `market_manipulation` | Pump and dump, spoofing, layering |
-| `investment_adviser` | Investment adviser fraud, breach of fiduciary duty |
-| `offering_violations` | Unregistered offerings, Reg D violations |
-| `fcpa` | Foreign Corrupt Practices Act violations |
-| `whistleblower` | Whistleblower retaliation |
-
-## API endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/events/enforcement` | Search and filter enforcement actions |
-
-### Filter parameters
-
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `violation_type` | Category of violation | `insider_trading` |
-| `date_from` / `date_to` | Date range | `2024-01-01` |
-| `limit` | Results per page | `20` |
-
-## Why SEC API for enforcement data
-
-| Feature | SEC API | SEC.gov | LexisNexis | Bloomberg Law |
-|---------|-----------|---------|------------|---------------|
-| Structured JSON API | Yes | No (HTML) | No (proprietary) | No (terminal) |
-| Violation type filtering | Yes | No | Manual | Manual |
-| Penalty amount search | Yes | No | Limited | Limited |
-| Webhook alerts | Yes | No | No | No |
-| Pricing | Pay-as-you-go | Free (unstructured) | Enterprise | Enterprise |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="/getting-started">
-  Start searching enforcement actions in under 60 seconds.
-</Card>
-
-- [Search Enforcement Actions Tutorial](/tutorials/search-enforcement-actions)
-- [API Reference — Events](/api-reference/events)
-- [Full documentation](/api-overview)
+<CardGroup cols={2}>
+  <Card title="Read the API reference" icon="brackets-curly" href="/api-reference/events/get-v1-events-enforcement">
+    Parameters, pagination, and the list response contract.
+  </Card>
+  <Card title="Follow the tutorial" icon="graduation-cap" href="/tutorials/search-enforcement-actions">
+    Build a small, source-aware enforcement search.
+  </Card>
+</CardGroup>

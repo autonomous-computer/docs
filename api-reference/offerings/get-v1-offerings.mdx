@@ -1,9 +1,9 @@
 ---
 title: "GET /v1/offerings"
-description: "Return recent S-1 and 424B prospectus records with cursor pagination and date filters"
+description: "Return S-1 registration statements and 424B prospectuses with issuer, form, date, and cursor filters"
 ---
 
-Return recent S-1 and 424B prospectus records with cursor pagination and date filters
+Return S-1 registration statements and 424B prospectuses with issuer, form, date, and cursor filters
 
 <Info>
 Audience: application and coding agent.
@@ -11,7 +11,7 @@ Audience: application and coding agent.
 
 ## Agent mode
 
-Pass `?view=agent` to receive the compact agent shape: offering identifiers (ticker, form, family, amendment flag, filingDate, accessionNumber, offeringType, title) + `prospectusUrl` + lifted `filingUrl`. Company name, source surface, legal shareability, and metadata envelopes are dropped. Typical reduction: **~50%**. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+Pass `?view=agent` to receive the compact agent shape: offering identifiers (ticker, form, family, amendment flag, filing date, accession number, type, and title) plus prospectus and filing URLs. Company metadata and per-row provenance, freshness, and materialization blocks are omitted. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
 ## Canonical metadata
 
@@ -28,7 +28,7 @@ Pass `?view=agent` to receive the compact agent shape: offering identifiers (tic
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/offerings"
+  "https://api.secapi.ai/v1/offerings?ticker=AAPL&forms=S-1,424B4&limit=10"
 ```
 </RequestExample>
 
@@ -37,25 +37,31 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "object": "list",
+  "data": [
+    {
+      "object": "offering_record",
+      "ticker": "EXAMPLE",
+      "form": "S-1",
+      "offeringFamily": "S-1",
+      "isAmendment": false,
+      "filingDate": "2026-03-18",
+      "accessionNumber": "0000000000-26-000001",
+      "offeringType": "registration_statement",
+      "title": "Example issuer registration statement",
+      "prospectusUrl": "https://www.sec.gov/Archives/edgar/data/0000000/example.htm",
+      "provenance": {
+        "source": "sec",
+        "accessionNumber": "0000000000-26-000001",
+        "filingUrl": "https://www.sec.gov/Archives/edgar/data/0000000/example.htm",
+        "retrievedAt": "2026-03-18T16:00:00.000Z",
+        "parserVersion": "2026-03-18.1"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
@@ -63,7 +69,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/offerings to return recent S-1 and 424B prospectus records with cursor pagination and date filters. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/offerings to return S-1 registration statements and 424B prospectuses with issuer, form, date, and cursor filters. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

@@ -1,175 +1,90 @@
 ---
 title: "Search SEC Enforcement Actions"
-description: "Find and filter SEC enforcement actions by violation type, date range, and respondent using the SEC API. Includes curl, Python, and JavaScript examples."
+description: "Search SEC litigation releases, administrative proceedings, and AAERs by category, respondent, date, and disclosed penalty amount."
 ---
 
-The SEC publishes enforcement actions for securities fraud, insider trading, accounting violations, and other regulatory breaches. This tutorial shows how to search, filter, and analyze enforcement data programmatically.
+This tutorial builds a small source-aware search over SEC enforcement releases. The useful result is not a label by itself: it is a short list of releases, each with a stable URL a researcher can read.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- Basic familiarity with REST APIs
-- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
+- An API key in `SECAPI_API_KEY`
+- Node.js 18+ for the JavaScript example, or curl
 
-## Step 1 — Search for recent enforcement actions
-
-The `/v1/events/enforcement` endpoint returns enforcement actions with structured metadata. Start with a broad query to see the data shape.
-
-### curl
+## 1. Start with a bounded query
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?limit=5"
+  "https://api.secapi.ai/v1/events/enforcement?source_type=litigation_release&date_from=2025-01-01&limit=10"
 ```
 
-### Python
+The endpoint returns a list envelope: `data`, `hasMore`, `nextCursor`, and `requestId`. Each row includes a source type, publication date, title, excerpt, document URL, and any respondent or classification fields that were available from the release.
 
-```python
-import os
+## 2. Add a retrieval filter
 
-from secapi_client import SecApiClient
+The API accepts these normalized `violation_type` values:
 
-client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
+`fraud`, `insider_trading`, `reporting_violation`, `market_manipulation`, `registration_violation`, `investment_adviser`, `broker_dealer`, `municipal_securities`, and `other`.
 
-actions = client.enforcement_actions(limit=5)
-
-for action in actions["data"]:
-    print(f"{action['publishedAt']} | {action['sourceType']} | {action['title']}")
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?violation_type=insider_trading&respondent=example&limit=10"
 ```
 
-### JavaScript
+You can also pass `ticker` or `cik`, `penalty_min`, `penalty_max`, `date_from`, and `date_to`. These filters help discover releases; they are not evidence that an issuer or person is a respondent.
+
+## 3. Keep the source with the result
 
 ```ts
 import { SecApiClient } from "@secapi/sdk-js";
 
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
-});
-
-const actions = await client.enforcementActions({ limit: 5 });
-
-for (const action of actions.data) {
-  console.log(
-    `${action.publishedAt} | ${action.sourceType} | ${action.title}`
-  );
-}
-```
-
-### Expected output
-
-```
-2024-12-15 | Acme Corp | Securities Fraud
-2024-12-12 | John Smith | Insider Trading
-2024-12-10 | Global Advisors LLC | Investment Adviser Fraud
-2024-12-08 | XYZ Capital | Market Manipulation
-2024-12-05 | Jane Doe | Accounting Fraud
-```
-
-## Step 2 — Filter by violation type
-
-Narrow your search to specific violation categories. Common types include `fraud`, `insider_trading`, `accounting`, `market_manipulation`, and `offering_violations`.
-
-### curl
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?violation_type=insider_trading&limit=10"
-```
-
-### Python
-
-```python
-insider_cases = client.enforcement_actions(
-    violation_type="insider_trading",
-    limit=10,
-)
-
-for case in insider_cases["data"]:
-    print(f"{case['publishedAt']} | {case['title']}")
-    print(f"  Release: {case['releaseNumber'] or 'N/A'}")
-    print(f"  URL: {case['documentUrl']}")
-    print()
-```
-
-### JavaScript
-
-```ts
-const insiderCases = await client.enforcementActions({
+const client = new SecApiClient({ apiKey: process.env.SECAPI_API_KEY! });
+const result = await client.enforcementActions({
   violation_type: "insider_trading",
+  date_from: "2025-01-01",
   limit: 10,
 });
 
-for (const c of insiderCases.data) {
-  console.log(`${c.publishedAt} | ${c.title}`);
-  console.log(`  Release: ${c.releaseNumber ?? "N/A"}`);
-  console.log(`  URL: ${c.documentUrl}`);
+for (const action of result.data) {
+  console.log({
+    publishedAt: action.publishedAt,
+    sourceType: action.sourceType,
+    title: action.title,
+    release: action.documentUrl,
+  });
 }
 ```
 
-## Step 3 — Filter by date range
+When you save a match, retain `documentUrl` and `requestId`. Read the release before assigning a risk label, calculating a penalty total, or joining the record to an issuer.
 
-Search enforcement actions within a specific time window.
-
-### curl
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?date_from=2024-01-01&date_to=2024-12-31&limit=20"
-```
-
-### Python
-
-```python
-annual_actions = client.enforcement_actions(
-    date_from="2024-01-01",
-    date_to="2024-12-31",
-    limit=20,
-)
-
-# Group by source type
-from collections import Counter
-types = Counter(a["sourceType"] for a in annual_actions["data"])
-
-print("2024 Enforcement Breakdown:")
-for source_type, count in types.most_common():
-    print(f"  {source_type}: {count}")
-```
-
-### JavaScript
+## 4. Page safely
 
 ```ts
-const annualActions = await client.enforcementActions({
-  date_from: "2024-01-01",
-  date_to: "2024-12-31",
-  limit: 20,
-});
+let cursor: string | undefined;
 
-const types: Record<string, number> = {};
-for (const a of annualActions.data) {
-  types[a.sourceType] = (types[a.sourceType] || 0) + 1;
-}
+do {
+  const page = await client.enforcementActions({
+    source_type: "aaer",
+    limit: 50,
+    cursor,
+  });
 
-console.log("2024 Enforcement Breakdown:");
-for (const [type, count] of Object.entries(types).sort((a, b) => b[1] - a[1])) {
-  console.log(`  ${type}: ${count}`);
-}
+  for (const action of page.data) {
+    // Store the source URL alongside your own review status.
+    console.log(action.documentUrl);
+  }
+
+  cursor = page.hasMore ? page.nextCursor ?? undefined : undefined;
+} while (cursor);
 ```
 
-### Expected output
+## What still requires judgment
 
-```
-2024 Enforcement Breakdown:
-  Securities Fraud: 47
-  Insider Trading: 31
-  Investment Adviser Fraud: 28
-  Accounting Fraud: 19
-  Market Manipulation: 14
-```
+- `violationType` is a retrieval label inferred from release language, not the SEC's final legal classification.
+- `penaltyAmount` can be null or can capture only the amount the release made machine-readable.
+- A name, ticker, or CIK association should be checked against the linked release before it is used in a compliance, legal, or investment workflow.
 
 ## Next steps
 
-- **Set up alerts**: Use [webhooks](/tutorials/build-filing-monitor) to get notified when new enforcement actions are published.
-- **Cross-reference with filings**: Match enforcement respondents against company tickers to assess regulatory risk in your portfolio.
-- **Analyze trends**: Track enforcement volume and penalty amounts over time to identify regulatory focus areas.
-
-See the [API Reference](/api-reference/events) for the full enforcement endpoint specification.
+- [Events API reference](/api-reference/events/get-v1-events-enforcement)
+- [Enforcement product guide](/products/enforcement)
+- [Search filings](/api-reference/filings)
