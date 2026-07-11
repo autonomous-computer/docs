@@ -1,32 +1,39 @@
 ---
 title: "Build a Compliance Screening Agent"
-description: "Build a compliance monitoring agent using the REST API and webhooks that alerts on enforcement actions, restatements, auditor changes, and officer changes for client companies."
+description: "Build a compliance screening agent that routes monitor.match webhook events for filing-based signals and polls SEC event endpoints for non-monitor data."
 ---
 
-Compliance teams need to stay on top of regulatory actions and corporate governance events across their client universe. This tutorial builds an agent that monitors enforcement actions, financial restatements, auditor changes, and officer changes using the SEC API REST API and webhooks, then delivers structured alerts.
+Compliance teams often need two alerting paths:
+
+- Filing-based signals, such as 8-K restatements, auditor changes, officer changes, and risk-factor language, can be watched with saved monitors. Matching monitor batches emit the public `monitor.match` Delivery event.
+- Non-monitor datasets, such as SEC enforcement actions, should be checked through their REST endpoints unless a public-emitting Delivery event exists for that dataset.
+
+This tutorial builds a small compliance screening agent around those contracts. It does not rely on custom webhook event names like `enforcement.new` or `restatement.new`; those are not public Delivery events. Use `GET /v1/event_types?status=public_emitting` as the source of truth for webhook event names.
 
 ## What you will build
 
-- A webhook-based compliance monitoring system
-- Screening for enforcement actions, restatements, auditor changes, and officer changes
-- Structured alert payloads with severity classification
-- A webhook handler that routes alerts by type and severity
-- A polling fallback for environments where webhooks are not available
+- One org-level webhook endpoint subscribed to `monitor.match`
+- Filing monitors for compliance-relevant form/query combinations
+- A signed webhook handler that classifies monitor matches and routes Slack alerts
+- A polling fallback for enforcement and other REST-only event surfaces
+
+Monitor delivery runs on a 15-minute sweep. Typical latency is about 7.5 minutes; worst-case latency is one full sweep plus dispatch/provider time. Use polling for workflows that need an explicit schedule or for datasets that are not emitted as Delivery events.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- Python 3.9+ (for the webhook handler)
-- A publicly accessible HTTPS endpoint (use [ngrok](https://ngrok.com) for local development)
-- (Optional) Node.js 18+ for the JavaScript handler variant
+- An SEC API key in `SECAPI_API_KEY`
+- Python 3.9+
+- A publicly accessible HTTPS endpoint for webhook delivery
+- A Slack incoming webhook URL, or replace the Slack function with your ticketing/email system
 
-## Step 1 — Define your client universe
-
-Create a configuration file that defines the companies you are monitoring and the alert routing rules.
+## Step 1 - Create the project
 
 ```bash
 mkdir -p compliance-screening-agent
 cd compliance-screening-agent
+python -m venv .venv
+source .venv/bin/activate
+pip install flask requests gunicorn
 ```
 
 Create `config.json`:
@@ -37,482 +44,430 @@ Create `config.json`:
     {
       "name": "Portfolio A",
       "tickers": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
-      "alert_email": "compliance-team-a@yourfirm.com"
+      "alert_email": "compliance-team-a@example.com"
     },
     {
       "name": "Portfolio B",
       "tickers": ["JPM", "GS", "MS", "BAC", "WFC"],
-      "alert_email": "compliance-team-b@yourfirm.com"
+      "alert_email": "compliance-team-b@example.com"
     }
   ],
   "severity_rules": {
-    "enforcement": "critical",
-    "restatement": "high",
+    "restatement": "critical",
     "auditor_change": "high",
-    "officer_change": "medium"
+    "officer_change": "medium",
+    "risk_factor": "medium",
+    "enforcement": "critical"
   },
   "slack_webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
 }
 ```
 
-## Step 2 — Register webhook endpoints
+## Step 2 - Create the webhook endpoint
 
-Set up webhook endpoints with the SEC API to receive push notifications for compliance events.
+Register a signed org-level endpoint subscribed to `monitor.match`.
 
 ```bash
-# Register a webhook endpoint for compliance events
-curl -X POST \
+curl -X POST "https://api.secapi.ai/v1/webhook_endpoints" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://your-server.com/webhooks/compliance",
-    "description": "Compliance screening agent",
-    "events": [
-      "enforcement.new",
-      "restatement.new",
-      "auditor_change.new",
-      "officer_change.new"
-    ]
-  }' \
-  "https://api.secapi.ai/v1/webhook_endpoints"
+    "destinationUrl": "https://your-app.example.com/webhooks/secapi/compliance",
+    "description": "Compliance screening monitor matches",
+    "subscribedEventTypes": ["monitor.match"],
+    "livemode": false
+  }'
 ```
 
-Save the returned `id` and `signing_secret` for use in your handler.
+Save the returned `id` and `signingSecret`. You will use `id` for test deliveries and `signingSecret` in the handler.
 
-## Step 3 — Build the webhook handler
+## Step 3 - Create compliance monitors
 
-Create `handler.py` with a Flask server that receives and processes compliance events.
+Create one or more monitors for each filing signal. The example below creates monitors for each client portfolio using the public monitor contract: `name`, `query`, and `filters`.
+
+Create `create_monitors.py`:
 
 ```python
-"""Compliance Screening Agent — webhook handler for regulatory events."""
+import json
+import os
 
+import requests
+
+API_BASE = "https://api.secapi.ai"
+HEADERS = {
+    "x-api-key": os.environ["SECAPI_API_KEY"],
+    "content-type": "application/json",
+}
+
+SIGNALS = [
+    {
+        "key": "restatement",
+        "label": "Restatement / non-reliance",
+        "query": "\"Item 4.02\" OR restatement OR \"non-reliance\"",
+        "forms": ["8-K", "8-K/A", "10-K/A", "10-Q/A"]
+    },
+    {
+        "key": "auditor_change",
+        "label": "Auditor change",
+        "query": "\"Item 4.01\" OR auditor OR accountant",
+        "forms": ["8-K", "8-K/A"]
+    },
+    {
+        "key": "officer_change",
+        "label": "Officer or director change",
+        "query": "\"Item 5.02\" OR resignation OR appointment OR departure",
+        "forms": ["8-K", "8-K/A"]
+    },
+    {
+        "key": "risk_factor",
+        "label": "Risk factor language",
+        "query": "\"material weakness\" OR \"going concern\" OR investigation",
+        "forms": ["10-K", "10-Q", "10-K/A", "10-Q/A"]
+    }
+]
+
+
+with open("config.json") as f:
+    config = json.load(f)
+
+for client in config["clients"]:
+    for signal in SIGNALS:
+        body = {
+            "name": f"{client['name']} - {signal['label']}",
+            "query": signal["query"],
+            "filters": {
+                "forms": signal["forms"],
+                "tickers": client["tickers"]
+            }
+        }
+        response = requests.post(
+            f"{API_BASE}/v1/monitors",
+            headers=HEADERS,
+            json=body,
+            timeout=30,
+        )
+        response.raise_for_status()
+        monitor = response.json()
+        print(f"{signal['key']} {client['name']}: {monitor['id']}")
+```
+
+Run it:
+
+```bash
+SECAPI_API_KEY="your-api-key" python create_monitors.py
+```
+
+If you want to preview a monitor before waiting for the sweep:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
+```
+
+## Step 4 - Build the webhook handler
+
+Create `handler.py`. This handler verifies the SEC API signature, accepts `monitor.match`, classifies the match from the monitor name/query and filing form, and sends a Slack alert.
+
+```python
 import hashlib
 import hmac
 import json
 import os
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-# Configuration
-SIGNING_SECRET = os.environ.get("WEBHOOK_SIGNING_SECRET", "whsec_...")
-SECAPI_API_KEY = os.environ["SECAPI_API_KEY"]
-API_BASE = "https://api.secapi.ai"
+SIGNING_SECRET = os.environ["SECAPI_WEBHOOK_SIGNING_SECRET"]
+MAX_SKEW_SECONDS = 300
 
 with open("config.json") as f:
     CONFIG = json.load(f)
 
-# Build a reverse lookup: ticker -> client info
 TICKER_TO_CLIENT = {}
 for client in CONFIG["clients"]:
     for ticker in client["tickers"]:
         TICKER_TO_CLIENT[ticker.upper()] = client
 
 
-def verify_signature(payload: bytes, signature: str) -> bool:
-    """Verify the webhook signature using HMAC-SHA256."""
-    parts = dict(part.split("=", 1) for part in signature.split(",") if "=" in part)
-    timestamp = parts.get("t", "")
-    provided = parts.get("v1", "")
+def parse_signature(header: str) -> tuple[str, str]:
+    parts = {}
+    for item in header.split(","):
+        if "=" in item:
+            key, value = item.split("=", 1)
+            parts[key] = value
+    return parts.get("t", ""), parts.get("v1", "")
+
+
+def verify_signature(raw_body: bytes, header: str) -> bool:
+    timestamp, provided = parse_signature(header)
+    if not timestamp or not provided:
+        return False
+    try:
+        signed_at = int(timestamp)
+    except ValueError:
+        return False
+    if abs(int(time.time()) - signed_at) > MAX_SKEW_SECONDS:
+        return False
+
     expected = hmac.new(
-        SIGNING_SECRET.encode(), f"{timestamp}.".encode() + payload, hashlib.sha256
+        SIGNING_SECRET.encode("utf-8"),
+        f"{timestamp}.".encode("utf-8") + raw_body,
+        hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(provided, expected)
 
 
-def classify_severity(event_type: str, data: dict) -> str:
-    """Classify the alert severity based on event type and content."""
-    base_severity = CONFIG["severity_rules"].get(event_type, "medium")
-
-    # Upgrade severity for specific conditions
-    if event_type == "enforcement" and data.get("penalty_amount", 0) > 1_000_000:
-        return "critical"
-    if event_type == "restatement" and data.get("restatement_type") == "material":
-        return "critical"
-    if event_type == "auditor_change" and data.get("reason") == "disagreement":
-        return "critical"
-    if event_type == "officer_change" and data.get("role") in ("CEO", "CFO"):
-        return "high"
-
-    return base_severity
-
-
-def format_alert(event_type: str, data: dict, severity: str) -> dict:
-    """Format a compliance alert for Slack delivery."""
-    severity_emoji = {
-        "critical": "🔴",
-        "high": "🟠",
-        "medium": "🟡",
-        "low": "🟢",
-    }
-    emoji = severity_emoji.get(severity, "⚪")
-
-    ticker = data.get("ticker", "UNKNOWN")
-    company = data.get("company_name", ticker)
-
-    templates = {
-        "enforcement": (
-            f"{emoji} *ENFORCEMENT ACTION* — {company} ({ticker})\n"
-            f"*Violation:* {data.get('violation_type', 'N/A')}\n"
-            f"*Respondent:* {data.get('respondent_name', 'N/A')}\n"
-            f"*Penalty:* ${data.get('penalty_amount', 0):,.0f}\n"
-            f"*Date:* {data.get('date', 'N/A')}"
-        ),
-        "restatement": (
-            f"{emoji} *FINANCIAL RESTATEMENT* — {company} ({ticker})\n"
-            f"*Type:* {data.get('restatement_type', 'N/A')}\n"
-            f"*Periods affected:* {data.get('periods_affected', 'N/A')}\n"
-            f"*Filed:* {data.get('filed_at', 'N/A')}"
-        ),
-        "auditor_change": (
-            f"{emoji} *AUDITOR CHANGE* — {company} ({ticker})\n"
-            f"*Previous:* {data.get('previous_auditor', 'N/A')}\n"
-            f"*New:* {data.get('new_auditor', 'N/A')}\n"
-            f"*Reason:* {data.get('reason', 'N/A')}\n"
-            f"*Effective:* {data.get('effective_date', 'N/A')}"
-        ),
-        "officer_change": (
-            f"{emoji} *OFFICER CHANGE* — {company} ({ticker})\n"
-            f"*Officer:* {data.get('officer_name', 'N/A')}\n"
-            f"*Role:* {data.get('role', 'N/A')}\n"
-            f"*Change:* {data.get('change_type', 'N/A')}\n"
-            f"*Effective:* {data.get('effective_date', 'N/A')}"
-        ),
-    }
-
-    return {
-        "text": templates.get(event_type, f"{emoji} Unknown event: {event_type}"),
-        "severity": severity,
-        "ticker": ticker,
-        "event_type": event_type,
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-
-
-def send_slack_alert(alert: dict):
-    """Send a formatted alert to the Slack webhook."""
-    payload = {
-        "blocks": [
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": alert["text"]},
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"Severity: *{alert['severity'].upper()}* | {alert['timestamp']}",
-                    }
-                ],
-            },
+def infer_signal(monitor: dict, match: dict) -> str:
+    text = " ".join(
+        str(value).lower()
+        for value in [
+            monitor.get("name", ""),
+            monitor.get("query", ""),
+            match.get("form", ""),
         ]
-    }
+    )
+    if "4.02" in text or "restatement" in text or "non-reliance" in text:
+        return "restatement"
+    if "4.01" in text or "auditor" in text or "accountant" in text:
+        return "auditor_change"
+    if "5.02" in text or "officer" in text or "director" in text:
+        return "officer_change"
+    if "risk" in text or "material weakness" in text or "going concern" in text:
+        return "risk_factor"
+    return "filing_match"
 
-    resp = requests.post(CONFIG["slack_webhook_url"], json=payload)
-    resp.raise_for_status()
+
+def classify_severity(signal: str) -> str:
+    return CONFIG["severity_rules"].get(signal, "medium")
 
 
-@app.route("/webhooks/compliance", methods=["POST"])
+def send_slack_alert(alert: dict) -> None:
+    text = (
+        f"[{alert['severity'].upper()}] {alert['signal']} - "
+        f"{alert['company']} ({alert['ticker']})\n"
+        f"Monitor: {alert['monitor_name']}\n"
+        f"Form: {alert['form']} | Filed: {alert['filing_date']}\n"
+        f"{alert['url']}"
+    )
+    response = requests.post(
+        CONFIG["slack_webhook_url"],
+        json={"text": text},
+        timeout=10,
+    )
+    response.raise_for_status()
+
+
+@app.post("/webhooks/secapi/compliance")
 def handle_compliance_webhook():
-    """Handle incoming compliance event webhooks."""
-    # Verify signature
-    signature = request.headers.get("X-SecAPI-Signature", "")
-    if not verify_signature(request.data, signature):
-        return jsonify({"error": "Invalid signature"}), 401
+    raw_body = request.get_data()
+    signature = request.headers.get("x-secapi-signature", "")
+    if not verify_signature(raw_body, signature):
+        return jsonify({"error": "invalid_signature"}), 401
 
-    payload = request.json
-    event_type = payload.get("event", "").replace(".new", "")
-    data = payload.get("data", {})
-    ticker = data.get("ticker", "").upper()
+    event = json.loads(raw_body)
+    if event.get("type") != "monitor.match":
+        return jsonify({"status": "ignored", "type": event.get("type")}), 200
 
-    # Check if this ticker is in our monitored universe
-    client = TICKER_TO_CLIENT.get(ticker)
-    if not client:
-        return jsonify({"status": "ignored", "reason": "not in watchlist"}), 200
+    data = event.get("data", {})
+    monitor = data.get("monitor", {})
+    processed = 0
 
-    # Classify and format
-    severity = classify_severity(event_type, data)
-    alert = format_alert(event_type, data, severity)
+    for match in data.get("matches", []):
+        ticker = str(match.get("ticker") or "").upper()
+        client = TICKER_TO_CLIENT.get(ticker)
+        if not client:
+            continue
 
-    # Send alert
-    send_slack_alert(alert)
+        signal = infer_signal(monitor, match)
+        severity = classify_severity(signal)
+        alert = {
+            "signal": signal,
+            "severity": severity,
+            "ticker": ticker,
+            "company": match.get("companyName") or ticker,
+            "form": match.get("form") or "filing",
+            "filing_date": match.get("filingDate") or "unknown",
+            "url": match.get("htmlUrl") or match.get("id") or "",
+            "monitor_id": monitor.get("id"),
+            "monitor_name": monitor.get("name", "SEC API monitor"),
+            "client": client["name"],
+            "event_id": event.get("id"),
+            "received_at": datetime.now(timezone.utc).isoformat(),
+        }
+        send_slack_alert(alert)
+        with open("audit_log.jsonl", "a") as f:
+            f.write(json.dumps(alert) + "\n")
+        processed += 1
 
-    # Log for audit trail
-    log_entry = {
-        "timestamp": datetime.utcnow().isoformat(),
-        "event_type": event_type,
-        "ticker": ticker,
-        "severity": severity,
-        "client": client["name"],
-        "data": data,
-    }
-    with open("audit_log.jsonl", "a") as f:
-        f.write(json.dumps(log_entry) + "\n")
-
-    return jsonify({"status": "processed", "severity": severity}), 200
+    return jsonify({"status": "processed", "matches": processed}), 200
 
 
-@app.route("/health", methods=["GET"])
+@app.get("/health")
 def health():
-    return jsonify({"status": "ok"}), 200
+    return jsonify({"status": "ok"})
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
 ```
 
-## Step 4 — Build the polling fallback
+Run locally:
 
-For environments where webhooks are not feasible, create `poller.py` that checks for new events on a schedule.
+```bash
+SECAPI_WEBHOOK_SIGNING_SECRET="whsec_..." python handler.py
+```
+
+Expose it with ngrok or your hosting provider, then patch the webhook endpoint if the URL changed:
+
+```bash
+curl -X PATCH "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destinationUrl": "https://your-ngrok-url.ngrok.app/webhooks/secapi/compliance"
+  }'
+```
+
+## Step 5 - Test webhook connectivity
+
+Webhook endpoint tests emit `webhook.test`, not `monitor.match`. That is intentional: it verifies HTTPS reachability and signature verification without pretending a monitor matched.
+
+```bash
+curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID/test" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventType": "webhook.test",
+    "data": { "source": "compliance-screening-agent" }
+  }'
+```
+
+The handler should return an ignored status for the `webhook.test` event after signature verification:
+
+```json
+{
+  "status": "ignored",
+  "type": "webhook.test"
+}
+```
+
+## Step 6 - Poll REST-only event surfaces
+
+SEC enforcement actions and some other event datasets are exposed through REST endpoints. Poll them on your own schedule until they are listed as public-emitting Delivery events.
+
+Create `poller.py`:
 
 ```python
-"""Compliance Screening Agent — polling fallback for environments without webhooks."""
-
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import date, timedelta
 
 import requests
 
-SECAPI_API_KEY = os.environ["SECAPI_API_KEY"]
 API_BASE = "https://api.secapi.ai"
-HEADERS = {"x-api-key": SECAPI_API_KEY}
+HEADERS = {"x-api-key": os.environ["SECAPI_API_KEY"]}
 
 with open("config.json") as f:
     CONFIG = json.load(f)
 
-ALL_TICKERS = []
-for client in CONFIG["clients"]:
-    ALL_TICKERS.extend(client["tickers"])
-ALL_TICKERS = list(set(ALL_TICKERS))
 
-
-def load_state():
+def load_state() -> dict:
     try:
         with open("poller_state.json") as f:
             return json.load(f)
     except FileNotFoundError:
-        return {"last_checked": None}
+        return {"date_from": (date.today() - timedelta(days=1)).isoformat()}
 
 
-def save_state(state):
+def save_state(state: dict) -> None:
     with open("poller_state.json", "w") as f:
         json.dump(state, f, indent=2)
 
 
-def check_enforcement_actions(since: str) -> list[dict]:
-    """Check for new enforcement actions since the given date."""
-    events = []
-    for ticker in ALL_TICKERS:
-        resp = requests.get(
-            f"{API_BASE}/v1/events/enforcement",
-            headers=HEADERS,
-            params={"ticker": ticker, "start_date": since, "limit": 50},
-        )
-        if resp.ok:
-            data = resp.json().get("data", [])
-            for item in data:
-                item["_event_type"] = "enforcement"
-            events.extend(data)
-    return events
+def get_json(path: str, params: dict) -> list[dict]:
+    response = requests.get(
+        f"{API_BASE}{path}",
+        headers=HEADERS,
+        params=params,
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json().get("data", [])
 
 
-def check_restatements(since: str) -> list[dict]:
-    """Check for new financial restatements since the given date."""
-    events = []
-    for ticker in ALL_TICKERS:
-        resp = requests.get(
-            f"{API_BASE}/v1/events/restatements",
-            headers=HEADERS,
-            params={"ticker": ticker, "start_date": since, "limit": 50},
-        )
-        if resp.ok:
-            data = resp.json().get("data", [])
-            for item in data:
-                item["_event_type"] = "restatement"
-            events.extend(data)
-    return events
+def poll_enforcement(date_from: str) -> list[dict]:
+    actions = get_json(
+        "/v1/events/enforcement",
+        {"date_from": date_from, "limit": 100},
+    )
+    for action in actions:
+        action["_signal"] = "enforcement"
+    return actions
 
 
-def check_auditor_changes(since: str) -> list[dict]:
-    """Check for auditor changes since the given date."""
-    events = []
-    for ticker in ALL_TICKERS:
-        resp = requests.get(
-            f"{API_BASE}/v1/events/auditor-changes",
-            headers=HEADERS,
-            params={"ticker": ticker, "start_date": since, "limit": 50},
-        )
-        if resp.ok:
-            data = resp.json().get("data", [])
-            for item in data:
-                item["_event_type"] = "auditor_change"
-            events.extend(data)
-    return events
-
-
-def check_officer_changes(since: str) -> list[dict]:
-    """Check for officer changes since the given date."""
-    events = []
-    for ticker in ALL_TICKERS:
-        resp = requests.get(
-            f"{API_BASE}/v1/events/officer-changes",
-            headers=HEADERS,
-            params={"ticker": ticker, "start_date": since, "limit": 50},
-        )
-        if resp.ok:
-            data = resp.json().get("data", [])
-            for item in data:
-                item["_event_type"] = "officer_change"
-            events.extend(data)
-    return events
-
-
-def run_poll():
-    """Run a single polling cycle."""
+def run() -> None:
     state = load_state()
-    since = state.get("last_checked") or (
-        datetime.utcnow() - timedelta(days=1)
-    ).strftime("%Y-%m-%d")
+    date_from = state["date_from"]
+    actions = poll_enforcement(date_from)
 
-    print(f"Polling for compliance events since {since}...")
+    print(f"Found {len(actions)} enforcement action(s) since {date_from}")
+    for action in actions:
+        print(
+            f"[ENFORCEMENT] {action.get('publishedAt') or action.get('date')}: "
+            f"{action.get('title') or action.get('respondentName') or 'Untitled'}"
+        )
 
-    all_events = []
-    all_events.extend(check_enforcement_actions(since))
-    all_events.extend(check_restatements(since))
-    all_events.extend(check_auditor_changes(since))
-    all_events.extend(check_officer_changes(since))
-
-    print(f"Found {len(all_events)} event(s).")
-
-    for event in all_events:
-        event_type = event.pop("_event_type")
-        severity = CONFIG["severity_rules"].get(event_type, "medium")
-        ticker = event.get("ticker", "UNKNOWN")
-        print(f"  [{severity.upper()}] {event_type}: {ticker} — {event.get('date', 'N/A')}")
-
-    # Update state
-    state["last_checked"] = datetime.utcnow().strftime("%Y-%m-%d")
+    state["date_from"] = date.today().isoformat()
     save_state(state)
-
-    return all_events
 
 
 if __name__ == "__main__":
-    run_poll()
+    run()
 ```
 
-## Step 5 — Deploy the webhook handler
-
-Run the handler locally for testing with ngrok, then deploy to your server.
-
-### Local testing with ngrok
+Schedule it with cron, a job runner, or your workflow orchestrator:
 
 ```bash
-# Terminal 1: Start the handler
-pip install flask requests
-python handler.py
-
-# Terminal 2: Expose with ngrok
-ngrok http 5000
+0 8,12,16,20 * * 1-5 cd /path/to/compliance-screening-agent && .venv/bin/python poller.py >> /var/log/compliance-poller.log 2>&1
 ```
 
-Copy the ngrok URL and update your webhook endpoint:
+## Step 7 - Inspect delivery and monitor state
+
+Use these checks during rollout:
 
 ```bash
-curl -X PATCH \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://your-ngrok-url.ngrok.io/webhooks/compliance"}' \
-  "https://api.secapi.ai/v1/webhook_endpoints/we_abc123"
+# Confirm public Delivery event names
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/event_types?status=public_emitting"
+
+# List recent monitor.match events
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/delivery/events?type=monitor.match&limit=25"
+
+# Inspect webhook attempts
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID/deliveries?limit=25"
+
+# Preview one monitor
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
 ```
 
-### Production deployment (Docker)
+## Production notes
 
-Create a `Dockerfile`:
-
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-EXPOSE 5000
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "handler:app"]
-```
-
-Create `requirements.txt`:
-
-```
-flask>=3.0.0
-requests>=2.31.0
-gunicorn>=21.2.0
-```
-
-Build and run:
-
-```bash
-docker build -t compliance-agent .
-docker run -d -p 5000:5000 \
-  -e SECAPI_API_KEY="<your-api-key>" \
-  -e WEBHOOK_SIGNING_SECRET="whsec_..." \
-  compliance-agent
-```
-
-## Step 6 — Test with sample events
-
-Verify the handler processes events correctly by sending a test payload.
-
-```bash
-curl -X POST \
-  -H "Content-Type: application/json" \
-  -H "X-SecAPI-Signature: t=1700000000,v1=test" \
-  -d '{
-    "event": "enforcement.new",
-    "timestamp": "2025-04-11T14:30:00Z",
-    "data": {
-      "ticker": "AAPL",
-      "company_name": "Apple Inc",
-      "violation_type": "Disclosure Violation",
-      "respondent_name": "Apple Inc",
-      "penalty_amount": 500000,
-      "date": "2025-04-11"
-    }
-  }' \
-  "http://localhost:5000/webhooks/compliance"
-```
-
-### Expected output
-
-The handler will return:
-
-```json
-{
-  "status": "processed",
-  "severity": "high"
-}
-```
-
-And your Slack channel will receive a formatted alert with the enforcement action details.
-
-## Step 7 — Set up the polling schedule
-
-For the polling fallback, schedule it to run every 4 hours during business days.
-
-```bash
-# Crontab: every 4 hours on weekdays
-0 8,12,16,20 * * 1-5 cd /path/to/compliance-screening-agent && python poller.py >> /var/log/compliance-poller.log 2>&1
-```
+- Keep the raw request body intact until after signature verification.
+- Return a 2xx response only after you have durably accepted or intentionally ignored the event.
+- Keep your own idempotency key, such as the SEC API `event.id`, when forwarding to Slack, queues, or case-management systems.
+- Use the Delivery event catalog, not guessed event names, when subscribing webhook endpoints.
+- For filing-derived signals, `monitor.match` tells you that a saved monitor matched. Your handler should still classify and enrich the match for your policy workflow.
 
 ## Next steps
 
-- **Add email alerts**: Extend the handler to send email notifications using the `alert_email` from the config for critical severity events.
-- **Build a compliance dashboard**: Store events in a database and build a web UI that shows the compliance status for each portfolio.
-- **Regulatory filing analysis**: Use the `/v1/intelligence/query` endpoint to analyze filing content and surface potential compliance issues.
-- **Integration with GRC platforms**: Forward alerts to ServiceNow, Archer, or other governance, risk, and compliance platforms via their APIs.
-
-See the [Search SEC Enforcement Actions](/tutorials/search-enforcement-actions) tutorial for more on the enforcement data model.
+- Store accepted alerts in a database keyed by `event.id` and match `id`.
+- Add queue-based Slack/ticket delivery so webhook acknowledgements stay fast.
+- Use `/v1/intelligence/query` or filing section endpoints to enrich the matched filing after receiving `monitor.match`.
+- Expand the polling script for `/v1/events/restatements`, `/v1/events/auditor-changes`, or `/v1/events/officer-changes` if your workflow needs those REST surfaces outside monitor delivery.

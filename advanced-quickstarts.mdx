@@ -4,27 +4,29 @@ description: "Build real SEC API workflows beyond your first request, with pract
 ---
 
 <Info>
-Use these once the first request works. Each quickstart is a real workflow, not a toy example.
+Use these once your first request works. Each quickstart is a small workflow you can keep in an integration, not a throwaway sample.
 </Info>
 
 ## Pick the next job
 
 <CardGroup cols={2}>
   <Card title="Compare 13F positions" icon="users" href="/api-reference/owners">
-    Compare manager positions and quarter-over-quarter changes.
+    Compare the latest two 13F reports for one institutional manager.
   </Card>
   <Card title="Compare executive compensation" icon="wallet-cards" href="/api-reference/compensation">
-    Compare pay packages and compensation mix across time.
+    Compare the latest two compensation disclosures for one issuer.
   </Card>
   <Card title="Search offerings activity" icon="briefcase-business" href="/api-reference/offerings">
-    Pull new S-1 and 424B4 activity without staying in EDGAR all day.
+    Pull recent S-1 and 424B prospectus activity without staying in EDGAR all day.
   </Card>
-  <Card title="Open billing or portal" icon="credit-card" href="/auth-and-pricing">
-    Move from evaluation to a paid plan or inspect the billing portal.
+  <Card title="Inspect billing posture" icon="credit-card" href="/auth-and-pricing">
+    Read billing state, public rates, and quote a workflow with an API key.
   </Card>
 </CardGroup>
 
 ### Compare 13F positions
+
+Use this when you know the institutional manager CIK and want the latest quarter-over-quarter position changes.
 
 ```bash
 curl -X POST \
@@ -36,6 +38,8 @@ curl -X POST \
 
 ### Compare executive compensation
 
+Use this when you want the latest year-over-year compensation comparison for one issuer.
+
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
@@ -46,21 +50,33 @@ curl -X POST \
 
 ### Search offerings activity
 
+Use this when you want recent registration statements or prospectus filings as structured rows.
+
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/offerings?forms=S-1,424B4&limit=10"
 ```
 
-### Create a billing or portal session
+### Inspect billing and quote a workflow
+
+API keys can read billing state and quote usage. They cannot start Checkout, open the Billing Portal, save payment methods, enable PAYG, top up credits, or change budgets.
 
 ```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/billing"
+
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/billing/rates"
+
 curl -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
-  https://api.secapi.ai/v1/billing/checkout \
-  -d '{"planKey":"personal","successUrl":"https://secapi.ai/onboarding?checkout=success","cancelUrl":"https://secapi.ai/onboarding?checkout=cancel"}'
+  https://api.secapi.ai/v1/billing/quote \
+  -d '{"path":"/v1/offerings","method":"GET","units":10}'
 ```
 
+For browser-session billing changes, sign in at `https://secapi.ai/login` and use the dashboard Billing and Credits area. Checkout, Billing Portal, payment-method setup, PAYG activation, credit top-ups, auto top-up, refunds, and budget changes require a WorkOS browser session with billing permissions.
+
 <Prompt>
-Take the next SEC API workflow after the first request. Choose one of: compare 13F positions, compare executive compensation, search offerings activity, or open the billing flow. Implement it with the exact endpoint, preserve requestId and freshness metadata, and summarize the result in markdown.
+Take the next SEC API workflow after the first request. Choose one of: compare 13F positions, compare executive compensation, search offerings activity, or inspect billing and quote a workflow. Implement it with the exact endpoint, preserve requestId and freshness metadata when present, and summarize the result in markdown. For billing mutations, direct the user to the signed-in dashboard instead of using an API-key curl.
 </Prompt>

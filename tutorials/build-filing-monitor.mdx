@@ -1,270 +1,287 @@
 ---
 title: "Build a Filing Monitor with Webhooks"
-description: "Set up real-time monitors for SEC filings and receive webhook notifications when new 8-K events are filed. Includes curl, Python, and JavaScript examples."
+description: "Create a saved SEC filing monitor, subscribe an org-level webhook endpoint to monitor.match, and verify signed webhook deliveries."
 ---
 
-Stop polling for new filings. Instead, register a webhook endpoint and create a monitor rule so the API pushes events to you the moment a filing hits EDGAR.
+Use this tutorial to receive signed webhook notifications when a saved filing monitor finds new matches. SEC API monitor webhooks are not a direct EDGAR firehose: monitor dispatch runs on a scheduled sweep, emits the public `monitor.match` Delivery event, and sends that event to org-level webhook endpoints subscribed to `monitor.match`.
+
+Typical delivery latency is about half of the 15-minute sweep interval. Worst-case latency is one full sweep plus dispatch and provider time. Use `GET /v1/monitors/{monitor_id}/matches` when you need an on-demand preview or audit check.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- A publicly accessible HTTPS endpoint to receive webhooks (use [webhook.site](https://webhook.site) for testing)
-- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
+- An SEC API key in `SECAPI_API_KEY`
+- A publicly reachable HTTPS URL for webhook delivery
+- Python 3.9+ if you want to run the sample handler
 
-## Step 1 — Register a webhook endpoint
+## Step 1 - Create a signed webhook endpoint
 
-Tell the API where to send events by creating a webhook endpoint with `/v1/webhook_endpoints`.
-
-### curl
+Create one org-level webhook endpoint and subscribe it to `monitor.match`.
 
 ```bash
-curl -X POST \
+curl -X POST "https://api.secapi.ai/v1/webhook_endpoints" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "destinationUrl": "https://your-server.com/webhooks/filings",
-    "description": "Filing monitor webhook",
-    "subscribedEventTypes": ["monitor.match"]
-  }' \
-  "https://api.secapi.ai/v1/webhook_endpoints"
+    "destinationUrl": "https://your-app.example.com/webhooks/secapi",
+    "description": "Filing monitor matches",
+    "subscribedEventTypes": ["monitor.match"],
+    "livemode": false
+  }'
 ```
 
-### Python
-
-```python
-import os
-
-from secapi_client import SecApiClient
-
-client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
-
-endpoint = client.create_webhook_endpoint(
-    destination_url="https://your-server.com/webhooks/filings",
-    description="Filing monitor webhook",
-    subscribed_event_types=["monitor.match"],
-)
-
-print(f"Endpoint ID: {endpoint['id']}")
-print(f"Signing secret: {endpoint['signingSecret']}")
-```
-
-### JavaScript
-
-```ts
-import { SecApiClient } from "@secapi/sdk-js";
-
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
-});
-
-const endpoint = await client.createWebhookEndpoint({
-  destinationUrl: "https://your-server.com/webhooks/filings",
-  description: "Filing monitor webhook",
-  subscribedEventTypes: ["monitor.match"],
-});
-
-console.log(`Endpoint ID: ${endpoint.id}`);
-console.log(`Signing secret: ${endpoint.signingSecret}`);
-```
-
-### Expected output
+The response includes the signing secret only when the endpoint is created or rotated:
 
 ```json
 {
-  "id": "we_abc123",
-  "destinationUrl": "https://your-server.com/webhooks/filings",
-  "signingSecret": "whsec_...",
-  "subscribedEventTypes": ["monitor.match"]
+  "object": "webhook_endpoint",
+  "id": "wh_2ZK8Q1W9F4M6P7R3",
+  "destinationUrl": "https://your-app.example.com/webhooks/secapi",
+  "subscribedEventTypes": ["monitor.match"],
+  "status": "active",
+  "signingSecret": "whsec_..."
 }
 ```
 
-Save the `signingSecret` securely. You will use it to verify incoming webhook payloads.
+Store `signingSecret` in your secret manager. SEC API sends webhook deliveries with `x-secapi-signature: t=<unix_seconds>,v1=<hex_hmac>` and `x-secapi-signature-timestamp`. Verify the signature against the exact raw request body before parsing JSON.
 
-## Step 2 — Create a filing monitor
+## Step 2 - Create a filing monitor
 
-A monitor defines what filings trigger a webhook delivery. Use `/v1/monitors` to watch for specific form types and companies.
-
-### curl
+Create a monitor for the query, forms, and tickers you care about. For webhook delivery, do not put a URL on the monitor. The monitor match is emitted as a `monitor.match` event and delivered through the org-level endpoint from Step 1.
 
 ```bash
-curl -X POST \
+curl -X POST "https://api.secapi.ai/v1/monitors" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "FAANG 8-K Monitor",
-    "query": "latest FAANG 8-K filings",
+    "name": "Mega-cap 8-K monitor",
+    "query": "material agreement OR results of operations OR departure of directors",
     "filters": {
       "forms": ["8-K", "8-K/A"],
-      "tickers": ["AAPL", "AMZN", "GOOG", "META", "NFLX"]
+      "tickers": ["AAPL", "MSFT", "AMZN", "GOOGL", "META"]
     }
-  }' \
-  "https://api.secapi.ai/v1/monitors"
+  }'
 ```
 
-### Python
-
-```python
-monitor = client.create_monitor(
-    name="FAANG 8-K Monitor",
-    query="latest FAANG 8-K filings",
-    filters={
-        "forms": ["8-K", "8-K/A"],
-        "tickers": ["AAPL", "AMZN", "GOOG", "META", "NFLX"],
-    },
-)
-
-print(f"Monitor ID: {monitor['id']}")
-print(f"Active: {monitor['isActive']}")
-```
-
-### JavaScript
-
-```ts
-const monitor = await client.createMonitor({
-  name: "FAANG 8-K Monitor",
-  query: "latest FAANG 8-K filings",
-  filters: {
-    forms: ["8-K", "8-K/A"],
-    tickers: ["AAPL", "AMZN", "GOOG", "META", "NFLX"],
-  },
-});
-
-console.log(`Monitor ID: ${monitor.id}`);
-console.log(`Active: ${monitor.isActive}`);
-```
-
-### Expected output
+The response includes the saved query, filters, delivery type, and cursor state:
 
 ```json
 {
-  "id": "mon_xyz789",
-  "name": "FAANG 8-K Monitor",
-  "query": "latest FAANG 8-K filings",
+  "object": "monitor",
+  "id": "mon_9a1b2c3d",
+  "name": "Mega-cap 8-K monitor",
+  "query": "material agreement OR results of operations OR departure of directors",
   "filters": {
     "forms": ["8-K", "8-K/A"],
-    "tickers": ["AAPL", "AMZN", "GOOG", "META", "NFLX"]
+    "tickers": ["AAPL", "MSFT", "AMZN", "GOOGL", "META"]
   },
-  "isActive": true
+  "searchMode": "keyword",
+  "delivery": {
+    "type": "webhook",
+    "config": {},
+    "status": "active"
+  },
+  "isActive": true,
+  "lastCheckedAt": null
 }
 ```
 
-## Step 3 — Handle incoming webhooks
+## Step 3 - Preview matches
 
-When a matching filing is published, SEC API emits a `monitor.match` event to the org-level webhook endpoint you subscribed in Step 1. Here is what the payload looks like and how to verify it.
+Before waiting for the scheduled dispatch, preview what the monitor currently matches:
 
-### Webhook payload
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/mon_9a1b2c3d/matches?limit=10"
+```
+
+This endpoint runs the saved search on demand. It is useful for setup checks, but it is not the same thing as webhook delivery. Webhook delivery happens during the monitor sweep.
+
+## Step 4 - Handle `monitor.match`
+
+A monitor webhook delivery is a Delivery event envelope. The event type is `monitor.match`; details live under `data`.
 
 ```json
 {
-  "eventType": "monitor.match",
-  "timestamp": "2024-12-15T14:30:00Z",
+  "object": "event",
+  "id": "evt_6f1b7d99",
+  "type": "monitor.match",
+  "createdAt": "2026-07-10T18:30:00.000Z",
+  "livemode": false,
+  "orgId": "org_123",
+  "requestId": "req_123",
   "data": {
-    "monitorId": "mon_xyz789",
+    "monitor": {
+      "id": "mon_9a1b2c3d",
+      "name": "Mega-cap 8-K monitor",
+      "query": "material agreement OR results of operations OR departure of directors",
+      "searchMode": "keyword",
+      "deliveryType": "webhook"
+    },
     "matches": [
       {
-        "accessionNumber": "0000320193-24-000095",
+        "id": "0000320193-26-000001",
         "form": "8-K",
         "ticker": "AAPL",
-        "companyName": "Apple Inc",
-        "filingDate": "2024-12-15"
+        "filingDate": "2026-07-10",
+        "htmlUrl": "https://www.sec.gov/Archives/edgar/data/...",
+        "companyName": "Apple Inc."
       }
-    ]
+    ],
+    "matchCount": 1,
+    "dispatchedAt": "2026-07-10T18:30:00.000Z",
+    "deliveryResults": []
   }
 }
 ```
 
-### Python handler (Flask)
+Fields can vary by match source. Treat `data.matchCount`, `data.monitor.id`, and the normalized fields in `data.matches[]` as the stable routing surface.
+
+Create `handler.py`:
 
 ```python
-import hmac
 import hashlib
-from flask import Flask, request, jsonify
+import hmac
+import json
+import os
+import time
+
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
-SIGNING_SECRET = "whsec_..."
+SIGNING_SECRET = os.environ["SECAPI_WEBHOOK_SIGNING_SECRET"]
+MAX_SKEW_SECONDS = 300
 
-@app.route("/webhooks/filings", methods=["POST"])
-def handle_webhook():
-    # Verify signature
-    signature = request.headers.get("X-SecAPI-Signature", "")
-    parts = dict(part.split("=", 1) for part in signature.split(",") if "=" in part)
-    timestamp = parts.get("t", "")
-    provided = parts.get("v1", "")
+
+def parse_signature(header: str) -> tuple[str, str]:
+    parts = {}
+    for item in header.split(","):
+        if "=" in item:
+            key, value = item.split("=", 1)
+            parts[key] = value
+    return parts.get("t", ""), parts.get("v1", "")
+
+
+def verify_signature(raw_body: bytes, header: str) -> bool:
+    timestamp, provided = parse_signature(header)
+    if not timestamp or not provided:
+        return False
+
+    try:
+        signed_at = int(timestamp)
+    except ValueError:
+        return False
+
+    if abs(int(time.time()) - signed_at) > MAX_SKEW_SECONDS:
+        return False
+
     expected = hmac.new(
-        SIGNING_SECRET.encode(),
-        f"{timestamp}.".encode() + request.data,
+        SIGNING_SECRET.encode("utf-8"),
+        f"{timestamp}.".encode("utf-8") + raw_body,
         hashlib.sha256,
     ).hexdigest()
+    return hmac.compare_digest(provided, expected)
 
-    if not hmac.compare_digest(provided, expected):
-        return jsonify({"error": "Invalid signature"}), 401
 
-    payload = request.json
-    for match in payload["data"].get("matches", []):
-        print(f"New {match['form']} from {match['ticker']}")
-        print(f"Accession: {match['accessionNumber']}")
+@app.post("/webhooks/secapi")
+def handle_secapi_webhook():
+    raw_body = request.get_data()
+    signature = request.headers.get("x-secapi-signature", "")
+    if not verify_signature(raw_body, signature):
+        return jsonify({"error": "invalid_signature"}), 401
+
+    event = json.loads(raw_body)
+    if event.get("type") != "monitor.match":
+        return jsonify({"status": "ignored", "type": event.get("type")}), 200
+
+    data = event.get("data", {})
+    monitor = data.get("monitor", {})
+    for match in data.get("matches", []):
+        print(
+            f"{monitor.get('name')} matched "
+            f"{match.get('form', 'filing')} for {match.get('ticker', 'UNKNOWN')}: "
+            f"{match.get('htmlUrl') or match.get('id')}"
+        )
 
     return jsonify({"received": True}), 200
+
+
+@app.get("/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
 ```
 
-### JavaScript handler (Express)
-
-```ts
-import express from "express";
-import crypto from "crypto";
-
-const app = express();
-const SIGNING_SECRET = "whsec_...";
-
-app.post("/webhooks/filings", express.raw({ type: "application/json" }), (req, res) => {
-  const signature = req.headers["x-secapi-signature"] as string;
-  const parts = new Map(signature.split(",").map((part) => part.split("=", 2) as [string, string]));
-  const timestamp = parts.get("t") ?? "";
-  const provided = parts.get("v1") ?? "";
-  const expected = crypto
-    .createHmac("sha256", SIGNING_SECRET)
-    .update(`${timestamp}.${req.body.toString("utf8")}`)
-    .digest("hex");
-
-  if (provided.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) {
-    return res.status(401).json({ error: "Invalid signature" });
-  }
-
-  const payload = JSON.parse(req.body.toString());
-  for (const match of payload.data.matches ?? []) {
-    console.log(`New ${match.form} from ${match.ticker}`);
-    console.log(`Accession: ${match.accessionNumber}`);
-  }
-
-  res.json({ received: true });
-});
-
-app.listen(3000);
-```
-
-## Step 4 — List and manage monitors
-
-### curl
+Run it locally:
 
 ```bash
-# List all active monitors
+pip install flask
+SECAPI_WEBHOOK_SIGNING_SECRET="whsec_..." python handler.py
+```
+
+Use a tunnel such as ngrok or your hosting provider to expose `https://.../webhooks/secapi`, then update the webhook endpoint if needed:
+
+```bash
+curl -X PATCH "https://api.secapi.ai/v1/webhook_endpoints/wh_2ZK8Q1W9F4M6P7R3" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destinationUrl": "https://your-ngrok-url.ngrok.app/webhooks/secapi"
+  }'
+```
+
+## Step 5 - Send a signed test event
+
+Use the webhook test route to validate connectivity and signature verification. Tests emit `webhook.test`, not `monitor.match`, so your handler should verify the signature and then ignore the event type.
+
+```bash
+curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/wh_2ZK8Q1W9F4M6P7R3/test" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "eventType": "webhook.test",
+    "data": { "source": "filing-monitor-tutorial" }
+  }'
+```
+
+## Step 6 - Inspect delivery history
+
+Use delivery history when debugging endpoint failures:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/webhook_endpoints/wh_2ZK8Q1W9F4M6P7R3/deliveries?limit=10"
+```
+
+You can also list your org's durable Delivery events:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/delivery/events?type=monitor.match&limit=10"
+```
+
+## Manage the monitor
+
+```bash
+# List monitors
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors"
 
-# Check recent matches
+# Get one monitor
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/mon_xyz789/matches?limit=10"
+  "https://api.secapi.ai/v1/monitors/mon_9a1b2c3d"
 
 # Deactivate a monitor
 curl -X DELETE \
   -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/mon_xyz789"
+  "https://api.secapi.ai/v1/monitors/mon_9a1b2c3d"
 ```
 
-## Next steps
+## Delivery limitations
 
-- **Monitor more form types**: Add `10-K`, `10-Q`, `13F-HR`, or any other form type to your monitors.
-- **Route by event type**: Create different webhook endpoints for different teams (e.g., compliance gets enforcement actions, research gets earnings filings).
-- **Audit delivery**: Use the [Webhook Delivery Audit](/webhook-delivery-audit) page to inspect delivery logs and retry failures.
-
-See the [Webhook Stream Workflows](/webhook-stream-workflows) guide for advanced patterns.
+- `monitor.match` is the public webhook event for monitor hits. Do not subscribe to custom event names such as `filing.new` or `8k.published` unless they appear in `GET /v1/event_types?status=public_emitting`.
+- Monitor dispatch is scheduled. It is not guaranteed to fire the moment EDGAR publishes a filing.
+- The deprecated `webhookUrl` field on monitors may remain stored for backward compatibility, but it no longer delivers events. Use an org-level `/v1/webhook_endpoints` subscription to `monitor.match`.
+- Webhook retries and delivery audit records are tied to Delivery events. Use the webhook deliveries endpoint for troubleshooting and replay.
