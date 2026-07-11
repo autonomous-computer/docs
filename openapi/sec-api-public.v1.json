@@ -23560,6 +23560,88 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/situations/feed.rss": {
+      "get": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "Paid authenticated RSS feed of situation events",
+        "description": "RSS XML version of the paid Special Situations event feed. This is distinct from the anonymous public embed RSS surface.",
+        "parameters": [
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated situation_type values."
+          },
+          {
+            "name": "categories",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated filing_event_category values."
+          },
+          {
+            "name": "tickers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated tickers."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Lower bound (ISO datetime) on event time."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RSS XML feed of situation events",
+            "content": {
+              "application/rss+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/situations/calendar": {
       "get": {
         "tags": [
@@ -23807,6 +23889,15 @@
             "description": "EDGAR form type, URL-encoded (e.g. SC%2013D)."
           },
           {
+            "name": "subtypes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated subtype values."
+          },
+          {
             "name": "statuses",
             "in": "query",
             "required": false,
@@ -23825,6 +23916,60 @@
             "description": "Comma-separated tickers."
           },
           {
+            "name": "sectors",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated sectors."
+          },
+          {
+            "name": "market_cap",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated market-cap buckets (nano|micro|small|mid|large|mega)."
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO 3166-1 alpha-2 country filter."
+          },
+          {
+            "name": "announced_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Lower bound (ISO date) on announced date."
+          },
+          {
+            "name": "announced_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Upper bound (ISO date) on announced date."
+          },
+          {
+            "name": "updated_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Lower bound (ISO datetime) on last update."
+          },
+          {
             "name": "enrich",
             "in": "query",
             "required": false,
@@ -23836,7 +23981,7 @@
               ],
               "default": "true"
             },
-            "description": "When false, returns the minimal stripped projection. Billed identically."
+            "description": "When false, returns a minimal stripped projection instead of the full situation. Billed identically."
           },
           {
             "name": "cursor",

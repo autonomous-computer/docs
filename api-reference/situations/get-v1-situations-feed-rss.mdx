@@ -1,0 +1,58 @@
+---
+title: "GET /v1/situations/feed.rss"
+description: "RSS XML version of the paid Special Situations event feed. This authenticated API route is distinct from the capped anonymous embed RSS surface."
+---
+
+RSS XML version of the paid Special Situations event feed. This authenticated API route is distinct from the capped anonymous embed RSS surface.
+
+<Info>
+Audience: application and coding agent. This is an authenticated, paid API read. The response is RSS XML, not a JSON envelope.
+</Info>
+
+## Canonical metadata
+
+- `Content-Type: application/rss+xml; charset=utf-8`
+- `SECAPI-Meter-Class: situations_feed_read`
+- `Request-Id`
+- `traceparent`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/situations/feed.rss?types=merger,tender_offer"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>SEC API Special Situations</title>
+    <item>
+      <title>Example Corp announces definitive merger</title>
+      <link>https://secapi.ai/situations/sit_example_123</link>
+      <guid>sit_example_123</guid>
+    </item>
+  </channel>
+</rss>
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/situations/feed.rss to monitor paid Special Situations updates in an RSS-compatible workflow. Preserve the source link, event time, `Request-Id`, and `traceparent` for each item. Treat this as the authenticated full API feed, not the capped anonymous embed RSS feed.
+</Prompt>
+
+## Failure posture
+
+- treat `401`, `402`, and `403` as authentication or entitlement failures; do not fall back to the anonymous embed feed silently
+- treat RSS as a transport format; use `GET /v1/situations/feed` when an agent needs the full structured event payload
+- preserve `Request-Id` and `traceparent` when retrying `429` and `5xx` responses with bounded backoff
