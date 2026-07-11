@@ -3,7 +3,7 @@ title: "Evaluate Pricing and Limits"
 description: "Evaluate SEC API pricing, starter grant, pay-as-you-go behavior, plan rights, budget controls, quotas, and agent-safe usage limits."
 ---
 
-Use this page before running broad crawls, recurring monitors, or agent loops. Pricing and limits are part of the integration contract, not a purchasing footnote.
+Use this page before running broad crawls, recurring monitors, customer-facing embeds, or agent loops. Pricing, rights, budget gates, and rate limits are part of the integration contract, not a purchasing footnote.
 
 <CardGroup cols={3}>
   <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
@@ -22,33 +22,66 @@ Use this page before running broad crawls, recurring monitors, or agent loops. P
 
 ## What to check
 
-- Starter grant and first API key path
-- Meter class for the endpoints in your workflow
-- Plan rights for internal use, redistribution, embedding, and external commercial workflows
-- Budget alerts and hard caps
-- AI-query and MCP quota posture
-- Rate-limit and retry headers
-- Current meter-family rates from [GET /v1/billing/rates](/api-reference/platform/get-v1-billing-rates)
+- Starter grant state, remaining calls, and whether PAYG has been activated.
+- The meter class and meter family for each endpoint in the workflow.
+- The rights boundary: evaluation, internal use, customer-facing embedding, redistribution, resale, or Bulk Factor Export.
+- Budget soft caps, approval thresholds, hard caps, prepaid-credit state, and current invoice-period usage.
+- AI-query quota fields where the route uses that quota family.
+- Rate-limit, retry, metering, billing, and trace headers that your client preserves.
+- Whether a billing change requires a WorkOS browser session instead of an API key.
 
 ## Proof-of-concept prompt
 
 <Prompt>
-Evaluate SEC API pricing and limits for this workflow before implementation. Identify the endpoint families involved, estimate call volume by meter class, check GET /v1/billing and GET /v1/limits, call POST /v1/billing/quote for repeated heavy workflows where available, and return a go/no-go note with budget, quota, plan-rights, and retry-header caveats.
+Evaluate SEC API pricing and limits for this workflow before implementation. Identify the endpoint families involved, estimate call volume by meter class, call GET /v1/billing and GET /v1/limits, call POST /v1/billing/quote for repeated or heavy workflow steps, and return a go/no-go note with budget, quota, plan-rights, authentication, and retry-header caveats.
 </Prompt>
 
 ## Evaluation path
 
 <Steps>
   <Step title="Map the workflow to endpoint families">
-    Filing search, section extraction, facts, ownership, delivery events, and intelligence routes can have different cost and quota behavior.
+    Filing search, section extraction, facts, ownership, delivery events, email notifications, intelligence, market data, semantic search, MCP, and artifact routes can have different meter classes, unit prices, and rate limits.
   </Step>
   <Step title="Check live billing state">
-    Agents should read billing and limits before high-fanout work. Do not infer plan posture from a cached note.
+    Read `GET /v1/billing`, `GET /v1/billing/rates`, and `GET /v1/limits` before high-fanout work. Do not infer plan posture from a cached note, docs page, or UI screenshot.
   </Step>
-  <Step title="Choose the right commercial boundary">
-    Internal research, shared-team use, redistribution, embedding, and resale have different rights expectations.
+  <Step title="Quote repeated work">
+    Use `POST /v1/billing/quote` with a `meterClass`, or a `method` and `path`, before repeating section extraction, compare workflows, artifact generation, intelligence queries, semantic search, or market-data reads.
+  </Step>
+  <Step title="Respect auth and billing permissions">
+    Use `x-api-key` for machine traffic. Billing-control actions require a WorkOS browser-session bearer token with `billing:manage`, `admin:operator`, or `*`; API keys are rejected for those mutations. Paid billing and payment setup also require current legal acceptance.
+  </Step>
+  <Step title="Pick the right rights boundary">
+    Starter grant is for evaluation. PAYG, Personal, and Team are for internal use. Redistribution, embedding in customer-facing products, white-label, resale, and Bulk Factor Export require Commercial.
   </Step>
 </Steps>
+
+## Billing and limit signals
+
+Preserve these fields in logs, agent notes, and support requests:
+
+- `requestId` and `traceparent`
+- `SECAPI-Meter-Class`
+- `SECAPI-Plan-Key`
+- `SECAPI-Billing-State` and `SECAPI-Billing-Status`
+- `SECAPI-Free-Grant-Remaining`
+- `SECAPI-Credit-Balance-Cents` when present
+- `SECAPI-Token-Count`, `SECAPI-Token-Count-Estimated`, and `SECAPI-Estimated-Cost`
+- `SECAPI-AI-Quota-Limit`, `SECAPI-AI-Quota-Used`, `SECAPI-AI-Quota-Remaining`, and `SECAPI-AI-Quota-Reset` when present
+
+Stop instead of retrying when the API returns `payg_pending_card`, `insufficient_credits`, `billing_budget_approval_required`, `billing_budget_hard_cap_exceeded`, or `restricted_read_only`.
+
+## Plan and payment boundaries
+
+- New organizations start with a one-time `150` call `sandbox_grant` allowance.
+- Pay As You Go activation creates a card-backed, prepaid-credit wallet; after activation, usage debits that wallet.
+- Manual top-ups are available only for PAYG organizations that already debit credits.
+- Personal, Team, and Commercial usage is billed through the plan and budget system, not the PAYG wallet.
+- Personal includes one seat and three API keys; Team includes five seats and ten API keys; Commercial includes five seats and twenty-five API keys.
+- Commercial has a published contract floor of `$18,000/yr`; final scope, rights, and billing terms are set in the commercial agreement.
+- Payment setup, checkout, PAYG enablement, credit top-ups, auto-top-up, refunds, saved payment methods, billing portal sessions, starter-grant reset, and budget changes require `billing:manage`, `admin:operator`, or `*`.
+
+Paid tiers do not use a fixed monthly AI-query count by default. Sandbox usage has a trial AI-query limit; paid usage is governed by metered pricing, rate limits, payment state, and budget gates.
 
 ## Read next
 

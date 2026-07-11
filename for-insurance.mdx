@@ -4,23 +4,23 @@ description: "Monitor financial health, restatements, auditor changes, executive
 ---
 
 <Info>
-SEC API gives insurance and risk teams programmatic access to financial health indicators, restatement and auditor change alerts, executive compensation data, and enforcement history -- all through a single API with webhook-driven monitoring and full provenance.
+SEC API helps insurance, D&O underwriting, and counterparty-risk teams turn public-company filings into repeatable review packets: entity resolution, filing sections, compensation, ownership, enforcement releases, and monitor delivery.
 </Info>
 
 ## Why insurance and risk teams use SEC API
 
 <CardGroup cols={2}>
   <Card title="Financial health monitoring" icon="heart-pulse" href="/investment-intelligence">
-    Track financial statement trends, key ratios, and segment breakdowns for insured entities and counterparties using intelligence bundles.
+    Pull company intelligence and structured financial statements for renewal reviews, counterparty checks, and portfolio surveillance.
   </Card>
   <Card title="Restatement and auditor alerts" icon="triangle-alert" href="/api-reference/events">
-    Detect restatements, auditor changes, and going concern opinions as they appear in SEC filings. Route alerts via webhooks.
+    Review filing-derived restatement, auditor-change, and officer-change event routes, then route saved-search matches to review queues.
   </Card>
   <Card title="Executive compensation screening" icon="dollar-sign" href="/compensation-workflows">
-    Screen executive pay structures, compare year-over-year changes, and flag outlier compensation arrangements.
+    Retrieve named-executive compensation and compare year-over-year disclosures as part of governance and D&O context.
   </Card>
   <Card title="Enforcement history" icon="gavel" href="/api-reference/events">
-    Search SEC enforcement actions by entity for underwriting due diligence. Every action carries a trace to the original SEC release.
+    Search SEC enforcement releases by source type, violation type, penalty range, and date window for underwriting support.
   </Card>
 </CardGroup>
 
@@ -30,94 +30,76 @@ SEC API gives insurance and risk teams programmatic access to financial health i
 
 | Endpoint | Method | Use case |
 |----------|--------|----------|
-| `/v1/events/enforcement` | `GET` | Enforcement action search for underwriting screening |
+| `/v1/entities/resolve` | `GET` | Resolve insureds and counterparties before deeper reads |
+| `/v1/intelligence/company` | `GET` | Company intelligence bundle for issuer-level context |
+| `/v1/filings` | `GET` | Filing search with form type and date filters |
+| `/v1/filings/latest/sections/{section_key}` | `GET` | Extract risk factors, controls, or auditor-related sections |
+| `/v1/events/restatements` | `GET` | Filing-derived restatement events |
+| `/v1/events/auditor-changes` | `GET` | Filing-derived auditor change events |
+| `/v1/events/enforcement` | `GET` | SEC enforcement releases for diligence support |
 | `/v1/compensation` | `GET` | Executive compensation records by company |
 | `/v1/compensation/compare` | `POST` | Year-over-year compensation changes |
-| `/v1/intelligence/company` | `GET` | Financial health and governance analysis bundle |
-| `/v1/filings` | `GET` | Filing search with form type and date filters |
-| `/v1/filings/latest/sections/{item}` | `GET` | Extract specific sections (auditor report, risk factors) |
-| `/v1/webhook_endpoints` | `POST` | Register webhook endpoints for event-driven monitoring |
+| `/v1/monitors` | `POST` | Create saved-search monitors with a signed-in browser session |
+| `/v1/delivery/events/export` | `GET` | Export delivery history for audit review |
 
 ---
 
-## Example: screen counterparty risk using enforcement history
+## Example: screen a renewal candidate
 
-Check whether a counterparty has any SEC enforcement history:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?query=Acme+Corp&limit=25"
-```
-
-Pull the company intelligence bundle for a financial health overview:
+Resolve the issuer and pull a compact company intelligence bundle:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/company?ticker=XYZ&includeGovernance=true"
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AIG"
 ```
-
-Review executive compensation for red flags:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/compensation?ticker=XYZ&limit=10"
+  "https://api.secapi.ai/v1/intelligence/company?ticker=AIG"
 ```
 
-Every response includes `requestId` and `traceparent` for audit trails.
-
----
-
-## Example: webhook-driven restatement monitoring
-
-Register an org-level webhook endpoint to receive monitor-match alerts:
-
-```bash
-curl -X POST \
-  -H "content-type: application/json" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -d '{"destinationUrl":"https://your-system.example.com/webhooks/sec","description":"Insurance risk monitor","subscribedEventTypes":["monitor.match"]}' \
-  "https://api.secapi.ai/v1/webhook_endpoints"
-```
-
-Monitor for restatements by extracting auditor opinion sections from new filings:
+Review compensation and auditor-change context as separate, cited reads:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=XYZ&form=10-K&mode=compact"
+  "https://api.secapi.ai/v1/compensation?ticker=AIG&limit=10"
 ```
 
-Webhook deliveries include the same provenance and `requestId` metadata as direct API calls. Use `/v1/delivery/events/export` to audit delivery history.
-
----
-
-## Recommended skills
-
-These Claude Code skills accelerate insurance and risk workflows:
-
-| Skill | What it does |
-|-------|-------------|
-| `sections.search` | Search filing sections for underwriting screening |
-| `companies.financials` | Pull normalized issuer financial statements |
-| `comp.list` | Retrieve executive compensation records |
-| `filings.search` | Find filings by company, form type, and date range |
-| `events.monitor` | Configure webhook-driven event monitoring |
-
-Install via MCP for agent-driven risk assessment:
-
 ```bash
-secapi mcp install --client claude-code
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/events/auditor-changes?ticker=AIG&date_from=2024-01-01&limit=10"
 ```
 
 ---
 
-## Pricing for insurance teams
+## Example: monitor filings for risk language
+
+Create a saved-search monitor for material-weakness language from the signed-in dashboard. Monitor creation is a human-authenticated action: it requires a WorkOS browser session and does not accept an API key. Use a name such as `Material weakness watch`, query `material weakness internal control`, and a 10-K / 10-K/A form filter. For webhook delivery, subscribe an org-level endpoint to `monitor.match` as described in [Build a Filing Monitor](/tutorials/build-filing-monitor).
+
+When a filing needs review, extract the controls section directly:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=AIG&form=10-K&mode=compact"
+```
+
+Export delivery history when you need an audit trail for what was sent:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/delivery/events/export?kind=webhook_delivery&format=ndjson&limit=100"
+```
+
+---
+
+## How to use this in an underwriting workflow
 
 <CardGroup cols={2}>
-  <Card title="Webhook-driven monitoring" icon="radio" href="/webhook-stream-workflows">
-    Create org-level webhook endpoints for monitor matches; define entity and form filters on monitors. No polling infrastructure required.
+  <Card title="Separate facts from judgment" icon="list-checks">
+    Keep extracted filing text, compensation rows, and enforcement records separate from risk scoring or underwriting interpretation.
   </Card>
-  <Card title="Commercial plan" icon="building" href="/plans-and-pricing">
-    For teams monitoring large portfolios of insured entities. Custom throughput, dedicated support, and bulk event export.
+  <Card title="Use generated prompts" icon="terminal" href="/agents/prompt-library/insurance">
+    Start from the insurance prompt library for D&O profiles, auditor-change scans, material-weakness reviews, and renewal monitoring.
   </Card>
 </CardGroup>
 

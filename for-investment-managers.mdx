@@ -4,23 +4,23 @@ description: "Structured SEC filings, factor analytics, and 13F ownership tracki
 ---
 
 <Info>
-SEC API delivers structured SEC data, factor analytics, ownership tracking, and intelligence bundles through a single API built for agent-driven investment research. Every response carries provenance, freshness metadata, and request traceability.
+SEC API gives investment managers and research teams a single way to resolve issuers, pull filings and sections, inspect factor routes, review 13F/insider activity, and package intelligence bundles with traceable source context.
 </Info>
 
 ## Why investment managers use SEC API
 
 <CardGroup cols={2}>
   <Card title="Factor decomposition" icon="chart-line" href="/factor-intelligence">
-    Factor intelligence across a broad catalog with a narrower launch-ready surface. Decompose portfolios, run correlation analysis, and monitor regime shifts while preserving freshness metadata.
+    Query factor returns, exposures, decomposition, correlations, and related-stock routes for systematic research workflows.
   </Card>
   <Card title="13F ownership tracking" icon="building-2" href="/ownership-workflows">
-    Retrieve and compare institutional 13F holdings by quarter. Track position changes across your coverage universe.
+    Retrieve manager-level 13F holdings, compare quarters, and separately review issuer-level institutional holders where available.
   </Card>
   <Card title="Intelligence bundles" icon="brain" href="/investment-intelligence">
-    Single-call endpoints that join filings, financials, ownership, signals, and macro context into analyst-ready outputs.
+    Use company, security, earnings-preview, portfolio, and watchlist intelligence routes to package common research reads.
   </Card>
   <Card title="Insider trade monitoring" icon="user-check" href="/api-reference/insiders">
-    Track Form 4 insider transactions by company or executive. Filter by transaction type, date range, and dollar value.
+    Track Form 3, 4, and 5 activity by ticker, CIK, owner, form type, transaction code, and date range.
   </Card>
 </CardGroup>
 
@@ -30,20 +30,23 @@ SEC API delivers structured SEC data, factor analytics, ownership tracking, and 
 
 | Endpoint | Method | Use case |
 |----------|--------|----------|
+| `/v1/entities/resolve` | `GET` | Resolve ticker, CIK, or name before research reads |
 | `/v1/factors/exposures` | `GET` | Per-stock factor exposure loadings |
 | `/v1/factors/returns` | `GET` | Historical factor return series with z-scores |
+| `/v1/factors/decomposition` | `GET` | Factor decomposition for a single ticker |
 | `/v1/intelligence/security` | `GET` | Comprehensive single-security analysis bundle |
 | `/v1/intelligence/earnings-preview` | `GET` | Pre-earnings analysis with guidance history |
 | `/v1/intelligence/portfolio` | `POST` | Portfolio-level macro and factor analysis |
-| `/v1/owners/13f` | `GET` | Latest 13F ownership report for an institution |
+| `/v1/owners/13f` | `GET` | Latest 13F holdings report for a manager filer |
 | `/v1/owners/13f/compare` | `POST` | Quarter-over-quarter 13F position changes |
+| `/v1/owners/institutional/ticker` | `GET` | Issuer-level institutional holder lookup |
 | `/v1/insiders` | `GET` | Insider transactions by company or executive |
 
 ---
 
-## Example: track institutional ownership changes across your portfolio
+## Example: track manager-level ownership changes
 
-Compare the latest two 13F filings for a major institution:
+13F routes are keyed by the manager filer's CIK, not the issuer ticker. For Berkshire Hathaway:
 
 ```bash
 curl -X POST \
@@ -53,68 +56,58 @@ curl -X POST \
   "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 
-Pull current factor exposures for a ticker in your portfolio:
+If you need issuer-level holders, use the institutional-holder route instead:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/factors/exposures?symbols=NVDA"
+  "https://api.secapi.ai/v1/owners/institutional/ticker?ticker=AAPL&limit=25"
 ```
 
-Run a pre-earnings intelligence bundle before a reporting date:
+Then cross-check with recent insider activity for the issuer:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=TSLA&includeGuidance=true"
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
 ```
 
 ---
 
-## Example: portfolio-level factor decomposition
+## Example: factor and portfolio context
 
-Decompose a portfolio across supported factor exposures in a single call:
+Pull current factor exposures for a ticker in your portfolio:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/factors/exposures?symbols=NVDA&response_mode=compact"
+```
+
+Package a portfolio-level intelligence read for an internal research note:
 
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   -d '{"holdings":[{"symbol":"AAPL","weight":0.25},{"symbol":"MSFT","weight":0.25},{"symbol":"NVDA","weight":0.25},{"symbol":"GOOGL","weight":0.25}]}' \
   "https://api.secapi.ai/v1/intelligence/portfolio"
 ```
 
-Returns factor attribution, concentration metrics, and macro sensitivity analysis.
-
----
-
-## Recommended skills
-
-These Claude Code skills accelerate investment research workflows:
-
-| Skill | What it does |
-|-------|-------------|
-| `filings.latest` | Pull the latest issuer filing with citation metadata |
-| `sections.get` | Extract high-signal filing sections in compact form |
-| `owners.get_13f` | Retrieve manager-level 13F holdings |
-| `owners.institutional_holders` | Retrieve issuer-level institutional ownership positions |
-| `insiders.list` | Scan insider transactions with flexible filters |
-
-Install via MCP for agent-driven portfolio research:
+For an earnings setup, keep the bundle separate from your analyst interpretation:
 
 ```bash
-secapi mcp install --client claude-code
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=TSLA"
 ```
 
 ---
 
-## Pricing for investment managers
+## How to use this in a research workflow
 
 <CardGroup cols={2}>
-  <Card title="Pay-as-you-go" icon="credit-card" href="/pay-as-you-go">
-    No commitment. Metered billing scales with your research volume. Intelligence bundles, factor queries, and ownership lookups are billed per request.
+  <Card title="Keep route semantics explicit" icon="route">
+    Treat manager-level 13F reads, issuer-level holders, insider activity, and factor analytics as separate evidence streams.
   </Card>
-  <Card title="Team plan" icon="users" href="/plans-and-pricing">
-    Shared access for multi-analyst teams with higher throughput limits and consolidated billing.
+  <Card title="Use generated prompts" icon="terminal" href="/agents/prompt-library/investment-manager">
+    Start from the investment-manager prompt library for factor research, 13F rotation, earnings context, and issuer briefs.
   </Card>
 </CardGroup>
 

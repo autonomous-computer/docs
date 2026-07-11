@@ -4,23 +4,23 @@ description: "Give law firms programmatic access to SEC enforcement actions, fil
 ---
 
 <Info>
-SEC API gives law firms programmatic access to SEC enforcement actions, filing histories, entity resolution, and compliance-grade event monitoring -- all through a single API with full provenance and request traceability.
+SEC API helps legal teams move from a company name or ticker to SEC filings, extracted filing sections, enforcement releases, insider reports, and saved-search monitoring without hand-copying EDGAR URLs into every matter file.
 </Info>
 
 ## Why legal teams use SEC API
 
 <CardGroup cols={2}>
   <Card title="Enforcement action search" icon="shield" href="/api-reference/events">
-    Search and monitor SEC enforcement actions by entity, date range, or source type. Every result carries a trace reference back to the original SEC release.
+    Search SEC litigation releases, administrative proceedings, and AAER records with release metadata and links back to SEC source documents.
   </Card>
   <Card title="Filing monitoring" icon="files" href="/filing-types-and-exhibits">
-    Track 10-K, 10-Q, 8-K, and proxy filings for client companies. Filter by form type, date, or specific exhibits.
+    Find 10-K, 10-Q, 8-K, proxy, and ownership filings by resolved issuer, form type, filing date, or accession number.
   </Card>
   <Card title="Compliance screening" icon="search-code" href="/api-reference/entities">
-    Resolve entities by ticker, CIK, or name and cross-reference against enforcement history, insider transactions, and ownership disclosures.
+    Resolve a target to the best available SEC entity before pulling filings, sections, insider activity, and enforcement context.
   </Card>
   <Card title="8-K event alerts" icon="bell" href="/webhook-stream-workflows">
-    Monitor material events -- leadership changes, restatements, M&A announcements -- in real time via webhooks or polling.
+    Use saved-search monitors and webhook delivery for event-driven review queues tied to filings and disclosure language.
   </Card>
 </CardGroup>
 
@@ -30,82 +30,66 @@ SEC API gives law firms programmatic access to SEC enforcement actions, filing h
 
 | Endpoint | Method | Use case |
 |----------|--------|----------|
-| `/v1/events/enforcement` | `GET` | Search enforcement actions by entity, date, or source type |
+| `/v1/entities/resolve` | `GET` | Resolve ticker, CIK, or company name before matter research |
 | `/v1/filings` | `GET` | Filing search with form type, ticker, date filters |
-| `/v1/entities/resolve` | `GET` | Resolve ticker, CIK, or company name to a best-match SEC entity |
-| `/v1/events/8k` | `GET` | Material event monitoring (leadership, restatements, M&A) |
+| `/v1/filings/latest/sections/{section_key}` | `GET` | Extract a section from the latest matching filing |
+| `/v1/sections/search` | `GET` | Search filing sections for terms such as litigation or restatement |
+| `/v1/events/enforcement` | `GET` | Search SEC enforcement releases by source, violation type, penalty, or date |
+| `/v1/events/officer-changes` | `GET` | Review filing-derived officer and director change events |
 | `/v1/insiders` | `GET` | Insider transaction history for a given entity |
-| `/v1/filings/latest/sections/{item}` | `GET` | Extract specific filing sections (risk factors, legal proceedings) |
+| `/v1/monitors` | `POST` | Create a saved-search monitor with webhook or email delivery |
 
 ---
 
-## Example: monitor enforcement actions mentioning your client
+## Example: build a filing and enforcement trail
 
-Search for all SEC enforcement actions that reference a specific company:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?query=Acme+Corp&limit=25"
-```
-
-Combine with entity resolution to find the best-match CIK first:
+Resolve the client or counterparty first, then reuse the CIK downstream:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?query=Acme+Corp"
+  "https://api.secapi.ai/v1/entities/resolve?name=Tesla"
 ```
 
-Then monitor filings for that entity:
+Pull recent 8-K and 10-K filings for the resolved issuer:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings?cik=0001234567&form=8-K&limit=10"
+  "https://api.secapi.ai/v1/filings?cik=0001318605&forms=8-K,10-K&limit=10"
 ```
 
-Every response includes `requestId` and `traceparent` for downstream audit trails.
+Search SEC enforcement releases separately; use supported filters rather than assuming a free-text client-name match:
 
----
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?source_type=aaer&ticker=TSLA&date_from=2024-01-01&limit=10"
+```
 
 ## Example: extract legal proceedings from a 10-K
 
-Pull the legal proceedings section directly from the latest annual filing:
+Pull Item 3 from the latest annual filing when you need the source text behind a litigation memo:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_3?ticker=AAPL&form=10-K&mode=compact"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_3?ticker=TSLA&form=10-K&mode=compact"
 ```
 
-Use `mode=compact` for machine-first payloads suited to downstream analysis pipelines.
-
----
-
-## Recommended skills
-
-These Claude Code skills accelerate legal research workflows:
-
-| Skill | What it does |
-|-------|-------------|
-| `sections.search` | Search filing sections for litigation, risk, and regulatory language |
-| `filings.search` | Find filings by company, form type, and date range |
-| `entities.resolve` | Resolve ambiguous company references to canonical identifiers |
-| `events.monitor` | Set up webhook-driven monitoring for material events |
-
-Install via MCP for agent-driven legal research:
+For broader review, search sections first and extract only the filings that matter:
 
 ```bash
-secapi mcp install --client claude-code
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/sections/search?q=legal%20proceedings&ticker=TSLA&form=10-K&limit=5"
 ```
 
 ---
 
-## Pricing for legal teams
+## How to use this in a matter workflow
 
 <CardGroup cols={2}>
-  <Card title="Starter grant" icon="rocket">
-    Start with a 150-call account grant. Enough to evaluate enforcement search, entity resolution, and filing lookups for a single matter.
+  <Card title="Preserve source context" icon="clipboard-check">
+    Keep returned accession numbers, filing URLs, section keys, request IDs, and trace metadata with the memo or diligence packet.
   </Card>
-  <Card title="Pay As You Go" icon="credit-card" href="/plans-and-pricing">
-    Self-serve API access with usage-based metering. Scale from one matter to firm-wide compliance monitoring without procurement friction.
+  <Card title="Use generated prompts" icon="terminal" href="/agents/prompt-library/law-firm">
+    Start from the law-firm prompt library for disclosure dossiers, deal diligence, restatement scans, and litigation binders.
   </Card>
 </CardGroup>
 

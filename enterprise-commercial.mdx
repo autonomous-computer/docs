@@ -5,38 +5,42 @@ description: "Compare SEC API plans from sandbox to commercial and understand re
 
 ## Plans
 
-- `sandbox_grant`
-  - evaluation and low-volume testing
-- `payg`
-  - default self-serve paid path with per-unit pricing
-- `personal`
-  - self-serve API, CLI, and MCP workflows
-- `team`
-  - higher-throughput shared usage
-- `commercial`
-  - custom commercial handling and higher-volume deployment
+- `sandbox_grant`: one-time evaluation grant for low-volume testing
+- `payg`: self-serve metered usage with prepaid credits
+- `personal`: self-serve subscription for one seat, repeated API/CLI/MCP usage, and discounted meter rates
+- `team`: self-serve subscription for shared organization usage, five included seats, and ten included API keys
+- `commercial`: contract plan for redistribution rights, higher-volume commitments, an SLA, Bulk Factor Export, custom factor models, priority support, and twenty-five included API keys
 
 ## Redistribution posture
 
-- SEC API is sold as a provenance-rich derived-data and workflow product.
-- Raw SEC rehosting or unrestricted redistribution is not the default product posture.
-- Commercial discussions are where redistribution rights, dedicated infrastructure, and custom support terms belong.
+SEC API separates public SEC source records from SecAPI's indexing, normalization, extraction, factor, entity-resolution, and enrichment layers. Self-serve plans are for evaluation and internal use. They do not allow you to operate a public mirror, replay layer, substitute dataset, standalone data feed, bulk export, or resale service built from SEC API outputs.
+
+Commercial is the plan family for external-facing product use. Use a commercial agreement before redistributing SEC API-derived output, embedding it in a customer-facing product, white-labeling it, reselling it, or using Bulk Factor Export. Do not use normalized or enriched SEC API outputs to train, fine-tune, or improve AI or machine-learning models without written permission.
 
 ## Commercial boundaries
 
-- compare workflows, artifacts, webhooks, and streams are paid features
-- usage enforcement is visible through `SECAPI-Plan-Key`, `SECAPI-Meter-Class`, and `SECAPI-Billing-Status`
-- billing incidents should always include a `Request-Id` and the current `/v1/billing` snapshot
+- The runtime exposes the effective plan and billing state through `GET /v1/billing`, `GET /v1/billing/rates`, `GET /v1/limits`, and response headers.
+- Billable responses can include billing and metering headers such as `SECAPI-Meter-Class`, `SECAPI-Plan-Key`, `SECAPI-Billing-State`, `SECAPI-Billing-Status`, `SECAPI-Free-Grant-Remaining`, `SECAPI-Token-Count`, and `SECAPI-Estimated-Cost`.
+- Pay As You Go uses prepaid credits. Credit top-ups, auto-top-up, refunds, saved payment methods, and billing portal sessions are billing-control actions.
+- Personal, Team, and Commercial use plan pricing and budget gates rather than the PAYG credit wallet.
+- Commercial starts from the public contract floor in the pricing catalog, then final scope, rights, and billing terms are set in the commercial agreement.
 
-## WorkOS and SSO posture
+## Auth and billing permissions
 
-- API keys are the primary machine-auth method for all plans
-- WorkOS powers dashboard login and enterprise SSO
-- hosted MCP uses `x-api-key` for server-to-server access and exposes WorkOS discovery metadata where clients need it
-- contact the SEC API team to coordinate enterprise SSO requirements
+- Use the `x-api-key` header for REST, SDK, CLI, and server-to-server MCP traffic. Do not send SEC API keys as `Authorization: Bearer`.
+- Dashboard billing changes use a WorkOS browser-session bearer token, not an API key.
+- Billing mutations require `billing:manage`, `admin:operator`, or `*`. This covers checkout, billing portal creation, PAYG activation, starter-grant reset, credit top-ups, refunds, auto-top-up configuration, saved payment methods, and budget updates.
+- Paid billing and payment setup require acceptance of the current Terms of Service and Privacy Policy.
+- `GET /v1/billing`, `GET /v1/limits`, and `POST /v1/billing/quote` are safe preflight calls for an authenticated organization. Agents should call them before repeated or expensive workflows.
 
-## Escalation path
+## Choosing Commercial
 
-- admin and platform incidents: use the support bundle flow
-- billing and entitlement issues: use the Stripe billing runbook
-- enterprise/commercial questions: reference the current plan catalog and account posture docs
+Choose Commercial when your workflow crosses any of these boundaries:
+
+- customers, partners, or public users see SEC API-derived output
+- your product redistributes, embeds, white-labels, or resells SEC API-derived data
+- you need Bulk Factor Export, custom factor models, a contracted SLA, or priority support
+- your expected usage needs a negotiated rate card or committed-volume terms
+- your legal, procurement, or security process requires a signed agreement
+
+For internal research, private tools, notebooks, and agent workflows that do not redistribute output, start with Pay As You Go, Personal, or Team and use `GET /v1/billing` plus `POST /v1/billing/quote` to size usage before scaling.
