@@ -3,24 +3,6 @@
   var marketingOrigin = "https://secapi.ai";
 
   var pages = {
-    "/overview": {
-      type: "TechArticle",
-      title: "SEC API overview",
-      description: "Understand SEC API's filing, company, ownership, and AI-agent data surfaces before choosing REST, an SDK, the CLI, or hosted MCP.",
-      breadcrumb: ["Overview"],
-    },
-    "/getting-started": {
-      type: "TechArticle",
-      title: "Get started with SEC API",
-      description: "Make a first authenticated SEC API request, inspect the response, and choose the next implementation path for REST, SDKs, CLI, or MCP.",
-      breadcrumb: ["Getting started"],
-    },
-    "/api-overview": {
-      type: "TechArticle",
-      title: "SEC API reference overview",
-      description: "Choose the SEC API family for filing search, sections, statements, ownership, events, or agent workflows and understand the shared request conventions.",
-      breadcrumb: ["API reference overview"],
-    },
     "/plans-and-pricing": {
       type: "WebPage",
       title: "Plans and pricing",
