@@ -117,6 +117,24 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 The pack is public-data only: no internal research systems, TIKR data, private analyst notes, recommendations, or investment advice are included. Until the endpoint is available in your environment, assemble the same public evidence from the detail, filings, and export endpoints.
 
+## Monitor a situation
+
+Create durable Situation monitors through the authenticated Monitors API. A watch is a monitor with `searchMode: "situation"`; it uses the same retry, delivery ledger, webhook, stream, and billing controls as the rest of the delivery platform.
+
+- **Broad watches** filter by type, subtype, status, ticker, or sector. They begin at database time by default, so creating a watch does not replay the historical archive. Their `monitor.match` events contain a lifecycle snapshot and `situationId`; fetch situation detail when you need the filing timeline.
+- **Exact watches** use `filters.situationIds`. Their deliveries additionally include filing-level provenance, including the source accession and source URL for new timeline events.
+- Configure an organization webhook endpoint or stream subscription for `monitor.match`. Do not use the legacy per-monitor `webhookUrl` field for new integrations.
+
+```bash
+curl -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"name":"Acquisition watch","query":"situations.watch","searchMode":"situation","filters":{"types":["merger","tender_offer"],"tickers":["AAPL","MSFT"]}}' \
+  "https://api.secapi.ai/v1/monitors"
+```
+
+Actual webhook, stream, and email deliveries use their respective delivery meters (`webhook_delivery`, `stream_event`, and `email_delivery`). Monitor creation is a control-plane action; inspect your plan and delivery allowances through the billing and limits endpoints.
+
 ## Endpoints
 
 | Endpoint | Description |
@@ -134,6 +152,7 @@ The pack is public-data only: no internal research systems, TIKR data, private a
 | `GET /v1/situations/{situation_id}/summary` | Compact summary: markdown, deal terms, latest event |
 | `GET /v1/situations/{situation_id}/export` | Source-cited Markdown Copy-for-LLM brief |
 | `GET /v1/situations/{situation_id}/underwriting-pack` | Source-cited paid heavy extract for underwriting workflows |
+| `POST /v1/monitors` | Create a typed `searchMode: "situation"` Special Situations watch |
 
 ## SDK and CLI
 
@@ -147,6 +166,7 @@ secapi situations by-form --form "SC 13D"
 secapi situations get --situation-id sit_abc123
 secapi situations filings --situation-id sit_abc123
 secapi situations summary --situation-id sit_abc123
+secapi situations watch --tickers AAPL,MSFT --types merger,tender_offer
 ```
 
 The JavaScript SDK exposes the same surface under `client.situations`:
@@ -159,9 +179,15 @@ await client.situations.byForm("SC 13D")
 await client.situations.get("sit_abc123")
 await client.situations.filings("sit_abc123")
 await client.situations.summary("sit_abc123")
+await client.createMonitor({
+  name: "Acquisition watch",
+  query: "situations.watch",
+  searchMode: "situation",
+  filters: { types: ["merger", "tender_offer"], tickers: ["AAPL", "MSFT"] },
+})
 ```
 
-MCP clients can use `situations.issues` to browse the archive and `situations.issue` to retrieve one frozen issue. Both are authenticated paid tools using the `situations_lookup` meter class.
+MCP clients can use `situations.issues` to browse the archive and `situations.issue` to retrieve one frozen issue. Both are authenticated paid tools using the `situations_lookup` meter class. Monitor creation is intentionally a mutating API/CLI workflow today; configure an agent with explicit mutation authority before creating watches.
 
 ## Product boundary
 
