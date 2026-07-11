@@ -1,0 +1,72 @@
+---
+title: "GET /v1/situations/{situation_id}/underwriting-pack"
+description: "Retrieve a deterministic, source-cited underwriting pack with canonical detail, filing timeline, and Copy-for-LLM markdown"
+---
+
+Retrieve a deterministic, source-cited underwriting pack with canonical detail, filing timeline, and Copy-for-LLM markdown
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/situations/sit_example_123/underwriting-pack"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "situation_underwriting_pack",
+  "id": "sit_example_123",
+  "generatedAt": "2026-07-11T12:00:00.000Z",
+  "research": {
+    "headline": "Acme Corp enters a definitive merger agreement",
+    "businessProfile": "Acme Corp develops industrial automation software.",
+    "narrative": "The issuer disclosed a definitive cash merger agreement."
+  },
+  "situation": {
+    "object": "situation",
+    "id": "sit_example_123",
+    "type": "merger",
+    "status": "pending",
+    "headline": "Acme Corp enters a definitive merger agreement",
+    "sourceAccessions": ["0001193125-26-000001"],
+    "events": [
+      {
+        "object": "situation_event",
+        "accessionNumber": "0001193125-26-000001",
+        "formType": "8-K",
+        "documentUrl": "https://www.sec.gov/Archives/edgar/data/1234567/000119312526000001/doc.htm"
+      }
+    ]
+  },
+  "markdown": "# Acme Corp\n\n## Filing timeline\n- 8-K (0001193125-26-000001)"
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/situations/{situation_id}/underwriting-pack to retrieve a deterministic, source-cited underwriting pack with canonical detail, filing timeline, and Copy-for-LLM markdown. Preserve the top-level `object`, `id`, `generatedAt`, `research`, `situation`, and `markdown` fields, plus `requestId` and `traceparent` when returned. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

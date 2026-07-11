@@ -106,6 +106,17 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 For machine-readable timeline and field-level work, retrieve the detail or filings resource instead.
 
+## Underwriting pack
+
+When an underwriting workflow needs one deterministic evidence bundle, use the underwriting pack endpoint. It returns public canonical situation detail, the SEC filing timeline, source citations, and Copy-for-LLM markdown as one authenticated paid heavy extract. It has no query options; the only input is the `situation_id`.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/sit_abc123/underwriting-pack"
+```
+
+The pack is public-data only: no internal research systems, TIKR data, private analyst notes, recommendations, or investment advice are included. Until the endpoint is available in your environment, assemble the same public evidence from the detail, filings, and export endpoints.
+
 ## Endpoints
 
 | Endpoint | Description |
@@ -122,6 +133,7 @@ For machine-readable timeline and field-level work, retrieve the detail or filin
 | `GET /v1/situations/{situation_id}/filings` | Paginated per-filing timeline |
 | `GET /v1/situations/{situation_id}/summary` | Compact summary: markdown, deal terms, latest event |
 | `GET /v1/situations/{situation_id}/export` | Source-cited Markdown Copy-for-LLM brief |
+| `GET /v1/situations/{situation_id}/underwriting-pack` | Source-cited paid heavy extract for underwriting workflows |
 
 ## SDK and CLI
 

@@ -24201,6 +24201,60 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/situations/{situation_id}/underwriting-pack": {
+      "get": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "Retrieve a deterministic, source-cited underwriting pack with canonical detail, filing timeline, and Copy-for-LLM markdown",
+        "description": "Paid heavy-extract read. The pack reuses the canonical Special Situations detail and SEC filing timeline; it does not include internal-only enrichment or generated investment advice.",
+        "parameters": [
+          {
+            "name": "situation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituationUnderwritingPack"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/situations/{situation_id}/export": {
       "get": {
         "tags": [
@@ -35954,6 +36008,64 @@
       "SituationStripped": {},
       "SituationStrippedList": {},
       "SituationSummary": {},
+      "SituationUnderwritingPack": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "generatedAt",
+          "research",
+          "situation",
+          "markdown"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "situation_underwriting_pack"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "research": {
+            "type": "object",
+            "required": [
+              "headline",
+              "businessProfile",
+              "narrative"
+            ],
+            "properties": {
+              "headline": {
+                "type": "string"
+              },
+              "businessProfile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "narrative": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "situation": {
+            "$ref": "#/components/schemas/SituationDetail"
+          },
+          "markdown": {
+            "type": "string",
+            "description": "Source-cited Markdown Copy-for-LLM brief generated from the canonical situation detail."
+          }
+        }
+      },
       "DilutionCoverage": {},
       "DilutionScore": {},
       "DilutionScoreEnhanced": {},
