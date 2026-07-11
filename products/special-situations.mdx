@@ -5,6 +5,10 @@ description: "Track durable special situations — M&A, tender offers, going-pri
 
 Track durable special situations across their full lifecycle. Mergers, tender offers, going-private transactions, spin-offs, activist campaigns, restructuring, and bankruptcy — each with lifecycle status, deal terms, a market snapshot, and a per-filing timeline assembled from the underlying EDGAR record.
 
+<Note>
+The public [Situations database](https://secapi.ai/situations) is a free research and discovery surface. REST, SDK, CLI, and MCP access use an org-scoped API key and are billable according to the response meter. The website is not an unauthenticated substitute for the paid API archive, exports, monitoring, or agent workflows.
+</Note>
+
 ## Why use this
 
 A special situation is not a single filing — it is a durable, evolving object that accretes filings over weeks or months. The SEC API Special Situations surface stitches the triggering and follow-on filings into one situation with a stable `situation_id`, a lifecycle status, and a timeline, so agents and applications never have to reassemble a deal from raw EDGAR events.
@@ -85,6 +89,57 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/situations/sit_abc123/underwriting-pack"
 ```
 
+## Weekly archive
+
+The weekly archive is an immutable, numbered record. Use it when a workflow needs to cite what the digest contained at publication time, rather than the current state of a live situation. The list response is intentionally compact; fetch a single issue for its markdown, member snapshots, and source-event citations.
+
+```bash
+# Browse the immutable archive
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/issues?limit=12"
+
+# Retrieve one issue by number or stable slug
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/issues/42"
+```
+
+Do not use an archive issue as a live deal screen. Start from the archived `situationId` or source event to retrieve current detail when freshness matters.
+
+## Access, meters, and plan limits
+
+Special Situations is an external customer product. Each authenticated response includes the authoritative meter and entitlement context in the response headers. Check `GET /v1/limits` before a high-volume workflow and preserve `Request-Id`, `SECAPI-Meter-Class`, `SECAPI-Plan-Key`, and `SECAPI-Billing-State` in your logs.
+
+| Workflow | Meter class | What it unlocks |
+| --- | --- | --- |
+| Discover, read, calendar, stats, performance, and immutable issues | `situations_lookup` | Searchable situation data and archive reads |
+| Live feed and RSS | `situations_feed_read` | High-volume reverse-chronological event reads |
+| Copy-for-LLM Markdown | `situations_export` | A source-cited brief for one live situation |
+| Underwriting pack | `situations_underwriting_pack` | Canonical detail, narrative, timeline, and agent-ready Markdown in one response |
+| Create, update, or inspect a watch | `monitor_management` | The Special Situations monitor control plane |
+| Direct-email watch delivery | `email_delivery` | Successful delivery to a watch's explicit email recipient |
+| Organization-level watch delivery | `situations_webhook_delivery` | Successful webhook or stream fanout for a watch |
+
+Meter availability and limits are plan-specific. The current rate card is returned by `GET /v1/billing/rates`; do not infer a price from a historical example or from payload size.
+
+## Monitor a situation
+
+`situations watch` creates a durable monitor rather than a one-off polling loop. Deliver either to a direct email address or to an already configured organization-level webhook or stream destination. Exact situation watches carry filing provenance; broader type or ticker watches carry lifecycle snapshots.
+
+```bash
+# First configure a signed organization webhook or stream destination.
+secapi situations watch \
+  --tickers AAPL,MSFT \
+  --types merger,tender_offer \
+  --use-org-webhooks
+
+# Or monitor one known situation by email.
+secapi situations watch \
+  --situation-ids sit_abc123 \
+  --email you@example.com
+```
+
+The command is a mutation. Use `--dry-run` to inspect the monitor request before it creates anything. See [Webhook and Stream Workflows](/webhook-stream-workflows) for signature verification, replay, delivery history, and destination setup.
+
 ## Endpoints
 
 | Endpoint | Description |
@@ -98,7 +153,10 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 | `GET /v1/situations/{situation_id}` | One situation with its full per-filing timeline |
 | `GET /v1/situations/{situation_id}/filings` | Paginated per-filing timeline |
 | `GET /v1/situations/{situation_id}/summary` | Compact summary: markdown, deal terms, latest event |
+| `GET /v1/situations/{situation_id}/export` | Source-cited Markdown Copy-for-LLM brief |
 | `GET /v1/situations/{situation_id}/underwriting-pack` | Source-cited agent-ready underwriting bundle with canonical detail and markdown |
+| `GET /v1/situations/issues` | Immutable weekly archive summaries |
+| `GET /v1/situations/issues/{issue}` | One immutable weekly issue by number or slug |
 
 ## SDK and CLI
 
@@ -110,9 +168,10 @@ secapi situations by-form --form "SC 13D"
 secapi situations get --situation-id sit_abc123
 secapi situations filings --situation-id sit_abc123
 secapi situations summary --situation-id sit_abc123
+secapi situations export --situation-id sit_abc123
 ```
 
-The JavaScript SDK exposes the same surface under `client.situations`:
+The JavaScript SDK exposes the shipped live-read surface under `client.situations`:
 
 ```js
 await client.situations.list({ types: "merger", limit: 10 })
@@ -121,6 +180,8 @@ await client.situations.get("sit_abc123")
 await client.situations.filings("sit_abc123")
 await client.situations.summary("sit_abc123")
 ```
+
+For a complete agent workflow, including how to distinguish discovery, live detail, immutable archive, and a source-cited export, see [Special Situations Workflows](/special-situations-workflows).
 
 ## Related
 
