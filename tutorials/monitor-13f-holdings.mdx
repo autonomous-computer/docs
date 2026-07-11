@@ -3,7 +3,9 @@ title: "Monitor Institutional Holdings Changes"
 description: "Track 13F institutional holdings changes quarter over quarter using the SEC API. Includes curl, Python, and JavaScript examples."
 ---
 
-Institutional investors managing over $100M must disclose their equity holdings quarterly via SEC Form 13F. This tutorial shows how to retrieve those holdings and compare them across quarters to detect position changes.
+Institutional investment managers that meet the Form 13F reporting threshold disclose qualifying holdings after each quarter. This tutorial shows how to retrieve one manager's report, compare the latest two parsable reports, and keep enough filing context to describe a position change accurately.
+
+13F data is delayed and incomplete by design. It is useful for research, but it is not a live portfolio or a complete picture of a manager's exposures.
 
 ## Prerequisites
 
@@ -25,11 +27,9 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 ### Python
 
 ```python
-import os
-
 from secapi_client import SecApiClient
 
-client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
+client = SecApiClient(api_key="your-api-key")
 
 holdings = client.latest_13f(cik="0001067983", limit=20)
 
@@ -60,18 +60,11 @@ for (const holding of holdings.holdings) {
 }
 ```
 
-### Expected output
-
-```
-APPLE INC: 84,248,000 (400,000,000 shares)
-BANK OF AMER CORP: 41,071,000 (1,032,852,006 shares)
-AMERICAN EXPRESS CO: 38,367,000 (151,610,700 shares)
-COCA COLA CO: 25,440,000 (400,000,000 shares)
-```
+The report also includes `managerName`, `reportDate`, `filingDate`, `accessionNumber`, and `provenance`. Keep those fields with each holding; they establish which disclosed report you are comparing.
 
 ## Step 2 — Compare holdings across quarters
 
-The `/v1/owners/13f/compare` endpoint shows what changed between two filing periods. This surfaces new positions, closed positions, and share count changes.
+The `/v1/owners/13f/compare` endpoint compares the latest two **parsable** reports available for one manager. It surfaces new positions, closed positions, and share-count changes, but it does not accept two arbitrary reporting-period selectors.
 
 ### curl
 
@@ -112,32 +105,11 @@ for (const change of diff.rows) {
 }
 ```
 
-### Expected output
-
-```json
-{
-  "rows": [
-    {
-      "issuer": "APPLE INC",
-      "previousShares": 400000000,
-      "currentShares": 300000000,
-      "deltaShares": -100000000,
-      "status": "changed"
-    },
-    {
-      "issuer": "SIRIUS XM HOLDINGS INC",
-      "previousShares": 0,
-      "currentShares": 108752027,
-      "deltaShares": 108752027,
-      "status": "added"
-    }
-  ]
-}
-```
+The response identifies `currentFilingDate` and `previousFilingDate` and gives each row a status (`added`, `removed`, `changed`, or `unchanged`). Verify both dates and the returned source provenance before calling a result a specific quarter-over-quarter change. List the manager's filings and retrieve the selected reports when you need both accession numbers.
 
 ## Step 3 — Build a quarterly monitoring workflow
 
-Combine the two endpoints to build a script that runs after each 13F filing deadline (45 days after quarter end) and flags material changes.
+Combine the comparison endpoint with a filing list to build a review script. Run it on a cadence that fits your process, then use the filing dates in the response to determine whether a manager has published a new report.
 
 ### Python
 
@@ -172,5 +144,6 @@ for manager in MANAGERS:
 - **Set up webhooks**: Use the [Filing Monitor tutorial](/tutorials/build-filing-monitor) to get notified when new 13F filings are published.
 - **Cross-reference with insider trades**: Combine 13F data with [insider trading patterns](/tutorials/analyze-insider-trading) for a complete ownership picture.
 - **Track sector exposure**: Aggregate holdings by sector to monitor allocation shifts.
+- **Choose a specific report**: Use `GET /v1/owners/13f/filings` before requesting `reportDate=YYYY-MM-DD` when your work requires a named period rather than the latest report.
 
 See the [Ownership Workflows](/ownership-workflows) guide for additional patterns.

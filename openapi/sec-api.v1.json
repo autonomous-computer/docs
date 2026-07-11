@@ -20084,6 +20084,62 @@
     "/v1/owners/13f": {
       "get": {
         "summary": "Return the latest normalized 13F ownership report for a manager CIK, with optional quarter-specific selection",
+        "parameters": [
+          {
+            "name": "cik",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Institutional manager CIK."
+          },
+          {
+            "name": "reportDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional quarter-end report date (YYYY-MM-DD)."
+          },
+          {
+            "name": "filingDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional SEC filing date (YYYY-MM-DD)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 50
+            },
+            "description": "Maximum holdings to return from the selected report."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "agent"
+              ]
+            },
+            "description": "Response shape. Use agent for a compact, citation-preserving payload."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -20126,6 +20182,49 @@
     "/v1/owners/institutional/investor": {
       "get": {
         "summary": "Return an investor-centric institutional ownership graph for a manager CIK, including ranked holdings and quarter-over-quarter changes",
+        "parameters": [
+          {
+            "name": "cik",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Institutional manager CIK."
+          },
+          {
+            "name": "reportDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional quarter-end report date (YYYY-MM-DD)."
+          },
+          {
+            "name": "filingDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional SEC filing date (YYYY-MM-DD)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 50
+            },
+            "description": "Maximum holdings to return."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -20168,6 +20267,54 @@
     "/v1/owners/institutional/extract": {
       "get": {
         "summary": "Return a quarter-specific historical institutional ownership extract for a manager CIK over the SEC-native 13F family",
+        "parameters": [
+          {
+            "name": "cik",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Institutional manager CIK."
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900
+            },
+            "description": "Report year."
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            "description": "Calendar quarter of the report."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 50
+            },
+            "description": "Maximum holdings to return."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -20210,6 +20357,71 @@
     "/v1/owners/institutional/ticker": {
       "get": {
         "summary": "Return a ticker-centric institutional holder graph for the latest materialized 13F cohort, ranked by disclosed position value",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Provide ticker or CIK."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Provide ticker or CIK."
+          },
+          {
+            "name": "reportDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional quarter-end report date (YYYY-MM-DD)."
+          },
+          {
+            "name": "filingDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional SEC filing date (YYYY-MM-DD)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            },
+            "description": "Maximum institutional holders to return."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "agent"
+              ]
+            },
+            "description": "Response shape. Use agent for a compact holder ranking with filing identifiers."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -20252,6 +20464,39 @@
     "/v1/owners/13f/filings": {
       "get": {
         "summary": "List recent 13F filings, including quarter-end report dates, for a manager CIK",
+        "parameters": [
+          {
+            "name": "cik",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Institutional manager CIK."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Optional inclusive filing-acceptance timestamp for incremental polling."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 8
+            },
+            "description": "Maximum filing records to return."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",

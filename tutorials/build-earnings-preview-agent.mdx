@@ -98,14 +98,14 @@ async function fetchFactorDecomposition(ticker) {
 }
 
 /**
- * Fetch recent insider transactions — Form 4 filings showing buys,
- * sells, and option exercises by officers and directors.
+ * Fetch recent Form 4 transaction rows for the report. The transaction code
+ * and filing link remain available for a reviewer to interpret the activity.
  */
 async function fetchInsiderActivity(ticker) {
   const insiders = await client.insiders({
     ticker,
+    forms: "4",
     limit: 20,
-    sort: "filed_at:desc",
   });
   return insiders;
 }
@@ -251,29 +251,25 @@ function generateReport(ticker, intel, preview, factors, insiders, earnings) {
     lines.push("| Date | Name | Title | Type | Shares | Price |");
     lines.push("|------|------|-------|------|--------|-------|");
     for (const txn of insiders.data.slice(0, 15)) {
-      const date = txn.filed_at || txn.transaction_date || "N/A";
-      const name = txn.reporting_owner || txn.insider_name || "Unknown";
-      const title = txn.title || "";
-      const type = txn.transaction_type || txn.type || "N/A";
-      const shares = txn.shares ? txn.shares.toLocaleString() : "N/A";
-      const price = txn.price ? `$${txn.price.toFixed(2)}` : "N/A";
+      const date = txn.transactionDate || txn.filingDate || "N/A";
+      const name = txn.ownerName || "Unknown";
+      const title = txn.ownerTitle || "";
+      const type = txn.transactionCode || txn.transactionDirection || "N/A";
+      const shares = txn.transactionShares?.toLocaleString() ?? "N/A";
+      const price = txn.transactionPrice == null ? "N/A" : `$${txn.transactionPrice.toFixed(2)}`;
       lines.push(`| ${date} | ${name} | ${title} | ${type} | ${shares} | ${price} |`);
     }
     lines.push("");
 
-    // Insider sentiment summary
+    // Reported Form 4 code counts. These are not an investment signal.
     const buys = insiders.data.filter(
-      (t) =>
-        t.transaction_type === "P" ||
-        t.transaction_type === "Purchase"
+      (t) => t.transactionCode === "P"
     ).length;
     const sells = insiders.data.filter(
-      (t) =>
-        t.transaction_type === "S" ||
-        t.transaction_type === "Sale"
+      (t) => t.transactionCode === "S"
     ).length;
     lines.push(
-      `**Insider sentiment (last 20 transactions):** ${buys} buys, ${sells} sells`
+      `**Reported Form 4 code counts (last 20 rows):** P=${buys}, S=${sells}`
     );
     lines.push("");
   } else {

@@ -1,7 +1,9 @@
 ---
 title: "Ownership Workflows"
-description: "Retrieve 13F institutional ownership reports through the SEC API using REST and SDK calls, with quarter-specific filtering support."
+description: "Retrieve a manager's 13F filings and holdings, compare the latest parsable reports, and inspect issuer-level institutional holders."
 ---
+
+Start with the disclosure you need to inspect. A manager CIK and an issuer ticker answer different questions: use the manager endpoints to inspect a disclosed portfolio and the issuer endpoint to find institutional holders of one security.
 
 ## Latest 13F ownership report
 
@@ -14,6 +16,13 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 For quarter-specific retrieval, add `reportDate=YYYY-MM-DD`, for example
 `/v1/owners/13f?cik=0001067983&reportDate=2024-12-31`.
+
+When the reporting period matters, list the manager's filings first and select a `reportDate` from the returned record rather than guessing the date:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "$SECAPI_BASE_URL/v1/owners/13f/filings?cik=0001067983&limit=8"
+```
 
 ### SDK
 
@@ -29,6 +38,8 @@ secapi owners 13f --cik 0001067983 --limit 10
 ```
 
 ## Compare the latest two 13F reports
+
+This endpoint compares the latest two parsable reports it can retrieve for the manager. It does not accept two arbitrary periods. Preserve `currentFilingDate`, `previousFilingDate`, and the returned source provenance; list the manager's filings and retrieve the selected reports separately when you need both accession numbers.
 
 ### API
 
@@ -71,6 +82,15 @@ const extract = await client.institutionalOwnershipExtract({
   limit: 25,
 })
 ```
+
+## Institutional holders of one issuer
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "$SECAPI_BASE_URL/v1/owners/institutional/ticker?ticker=AAPL&limit=25"
+```
+
+The holder response is based on a materialized 13F cohort. Read `reportDate`, `filingDate`, and `accessionNumber` before comparing it with a different cohort or treating it as current ownership.
 
 ## Recent insider trades
 

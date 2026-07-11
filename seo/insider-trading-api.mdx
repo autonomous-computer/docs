@@ -1,113 +1,82 @@
 ---
-title: "Insider Trading Data API — SEC Form 4 Transactions"
-description: "Access structured insider trading data from SEC Forms 3, 4, and 5 via API. Track executive buys and sells, filter by transaction type, and detect patterns. Get started free at secapi.ai/signup."
+title: "Insider Trading Data API: SEC Forms 3, 4, and 5"
+description: "Query normalized insider-transaction records from SEC Forms 3, 4, and 5 by issuer, owner, Form 4 code, filing date, and source filing."
 ---
 
-Corporate insiders — officers, directors, and beneficial owners of more than 10% of a company's stock — must report their transactions to the SEC within two business days. SEC API parses Forms 3, 4, and 5 and exposes structured transaction data through a REST API.
+Use the insider-trading API to review transactions disclosed by officers, directors, and 10% owners. It returns normalized transaction rows from Forms 3, 4, and 5, together with the SEC accession number and filing URL needed to review the source.
+
+An insider filing is evidence, not an investment conclusion. A sale can reflect taxes, diversification, or scheduled activity; a code alone does not explain the surrounding facts.
 
 <CardGroup cols={3}>
-  <Card title="Evaluate this workflow" icon="clipboard-check" href="/evaluate/insider-trading-api">
-    Test Form 4 filtering, transaction semantics, and citation shape.
+  <Card title="Try the endpoint" icon="terminal-square" href="/api-reference/insiders">
+    Inspect parameters, response formats, and agent mode.
   </Card>
-  <Card title="Insider monitor workflow" icon="workflow" href="https://secapi.ai/workflows/insider-trading-monitor">
-    See the buyer-facing agent workflow.
+  <Card title="Build an analysis" icon="graduation-cap" href="/tutorials/analyze-insider-trading">
+    Work through a complete Form 4 filtering example.
   </Card>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Create an account and run live insider queries.
+  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">
+    Run the requests against your own watchlist.
   </Card>
 </CardGroup>
 
-## What you get
-
-- **Transaction details**: Insider name, title, transaction type, shares, price, and value
-- **Filtering**: By ticker, insider name, transaction type (purchase/sale), and date range
-- **Historical data**: Form 4 transactions going back to 2004
-- **Real-time updates**: New filings indexed within minutes
-
-## Quick start
-
-Get recent insider transactions for a company:
+## Get recent Form 4 transactions
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=AAPL&limit=5"
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
 ```
+
+The list envelope contains `data`, `hasMore`, `nextCursor`, `requestId`, and `traceparent`. Each transaction row can include:
 
 ```json
 {
-  "data": [
-    {
-      "transaction_date": "2024-12-10",
-      "insider_name": "Tim Cook",
-      "insider_title": "Chief Executive Officer",
-      "transaction_type": "sale",
-      "shares": 200000,
-      "price": 248.50,
-      "value": 49700000,
-      "shares_held_after": 3278651
-    }
-  ]
+  "ownerName": "Example reporting owner",
+  "ownerTitle": "Chief Executive Officer",
+  "form": "4",
+  "filingDate": "2026-07-01",
+  "transactionDate": "2026-06-30",
+  "transactionCode": "P",
+  "transactionDirection": "acquired",
+  "securityTitle": "Common Stock",
+  "transactionShares": 1000,
+  "transactionPrice": 25.5,
+  "transactionValue": 25500,
+  "sharesOwnedFollowing": 51000,
+  "accessionNumber": "0000000000-00-000000",
+  "provenance": {
+    "filingUrl": "https://www.sec.gov/Archives/..."
+  }
 }
 ```
 
-Filter for insider purchases only:
+The values above illustrate the response shape only. The source filing remains the authority for a transaction's terms, footnotes, and context.
+
+## Filter the records you need
+
+To retrieve Form 4 transactions reported with code `P`, pass `forms=4` and `transaction_code=P`:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=JPM&transaction_type=purchase&limit=10"
+  "https://api.secapi.ai/v1/insiders?ticker=JPM&forms=4&transaction_code=P&limit=10"
 ```
 
-## Use cases
+| Parameter | Use it for | Example |
+| --- | --- | --- |
+| `ticker` or `cik` | Scope to an issuer | `ticker=AAPL` |
+| `forms` | Limit the filing family | `forms=4` |
+| `owner_name` or `owner_cik` | Focus on a reporting owner | `owner_name=Jamie%20Dimon` |
+| `security_title` | Separate common stock from another security | `security_title=Common%20Stock` |
+| `transaction_code` | Select a Form 4 transaction code | `transaction_code=P` |
+| `date_from` and `date_to` | Bound the filing-date window | `date_from=2026-01-01` |
+| `limit` and `cursor` | Page through a result set | `limit=25&cursor=25` |
 
-### Insider buying signals
+## What to preserve in an investor workflow
 
-Insider purchases are widely studied as a bullish signal. Insiders sell for many reasons (diversification, taxes, liquidity), but they typically buy for only one: they think the stock is undervalued.
+1. **The code and direction.** Keep both `transactionCode` and `transactionDirection`; they answer different questions.
+2. **Dates.** `transactionDate` can differ from `filingDate`. Form 4 is generally due within two business days, but the filing date is the date this API query is filtering.
+3. **The filing evidence.** Store `accessionNumber` and `provenance.filingUrl` with any alert or research note.
+4. **Nulls and missing context.** Price, value, title, and post-transaction ownership are filing-derived and may be absent. Do not silently replace an unavailable field with an estimate.
 
-### Cluster buying detection
+## Where this fits
 
-When multiple insiders at the same company or across a sector start buying simultaneously, it can indicate strong conviction. Scan groups of tickers for coordinated activity.
-
-### Compliance monitoring
-
-Track insider activity across your portfolio for regulatory compliance and conflict-of-interest checks.
-
-### Executive compensation analysis
-
-Combine insider transaction data with [compensation data](/seo/executive-compensation-api) to understand total executive ownership and trading behavior.
-
-## API endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/insiders` | List insider transactions with filtering |
-
-### Filter parameters
-
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `ticker` | Company ticker | `AAPL` |
-| `transaction_type` | `purchase` or `sale` | `purchase` |
-| `insider_name` | Filter by insider name | `Jamie Dimon` |
-| `date_from` / `date_to` | Date range | `2024-01-01` |
-| `limit` | Results per page | `20` |
-
-## Why SEC API for insider trading data
-
-| Feature | SEC API | Raw EDGAR | OpenInsider | SECForm4 |
-|---------|-----------|-----------|-------------|----------|
-| Structured JSON API | Yes | No (XML) | No (HTML scrape) | Partial |
-| Real-time indexing | Minutes | Real-time | Hours | Hours |
-| Historical depth | 2004+ | 2004+ | 2004+ | 2013+ |
-| SDK support | Python + JS | No | No | No |
-| Webhook alerts | Yes | No | No | No |
-| Filtering by transaction type | Yes | Manual | Limited | Limited |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="/getting-started">
-  Start tracking insider transactions in under 60 seconds.
-</Card>
-
-- [Analyze Insider Trading Tutorial](/tutorials/analyze-insider-trading)
-- [API Reference](/api-reference/insiders)
-- [Full documentation](/api-overview)
+Use this endpoint for a portfolio monitor, a compliance review, or a research queue. Pair it with the [Form 4 glossary](https://secapi.ai/glossary/form-4) for regulatory context, the [ownership product guide](/products/ownership) for 13F and 13D/13G workflows, and the [insider-trading monitor workflow](https://secapi.ai/workflows/insider-trading-monitor) for a buyer-facing implementation path.
