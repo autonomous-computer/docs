@@ -9,81 +9,20 @@ Typical delivery latency is about half of the 15-minute sweep interval. Worst-ca
 
 ## Prerequisites
 
-- An SEC API key in `SECAPI_API_KEY`
+- A signed-in SEC API dashboard session to configure the monitor and webhook endpoint
+- An SEC API key in `SECAPI_API_KEY` for the read-only preview and audit calls below
 - A publicly reachable HTTPS URL for webhook delivery
 - Python 3.9+ if you want to run the sample handler
 
-## Step 1 - Create a signed webhook endpoint
+## Step 1 - Register a signed webhook endpoint
 
-Create one org-level webhook endpoint and subscribe it to `monitor.match`.
+Open the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), add your public HTTPS destination, and subscribe it to `monitor.match`. Save the signing secret when it is shown. Endpoint creation and secret rotation are human-authenticated organization actions; an API key cannot perform them.
 
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://your-app.example.com/webhooks/secapi",
-    "description": "Filing monitor matches",
-    "subscribedEventTypes": ["monitor.match"],
-    "livemode": false
-  }'
-```
-
-The response includes the signing secret only when the endpoint is created or rotated:
-
-```json
-{
-  "object": "webhook_endpoint",
-  "id": "wh_2ZK8Q1W9F4M6P7R3",
-  "destinationUrl": "https://your-app.example.com/webhooks/secapi",
-  "subscribedEventTypes": ["monitor.match"],
-  "status": "active",
-  "signingSecret": "whsec_..."
-}
-```
-
-Store `signingSecret` in your secret manager. SEC API sends webhook deliveries with `x-secapi-signature: t=<unix_seconds>,v1=<hex_hmac>` and `x-secapi-signature-timestamp`. Verify the signature against the exact raw request body before parsing JSON.
+SEC API sends webhook deliveries with `x-secapi-signature: t=<unix_seconds>,v1=<hex_hmac>` and `x-secapi-signature-timestamp`. Verify the signature against the exact raw request body before parsing JSON.
 
 ## Step 2 - Create a filing monitor
 
-Create a monitor for the query, forms, and tickers you care about. For webhook delivery, do not put a URL on the monitor. The monitor match is emitted as a `monitor.match` event and delivered through the org-level endpoint from Step 1.
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/monitors" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Mega-cap 8-K monitor",
-    "query": "material agreement OR results of operations OR departure of directors",
-    "filters": {
-      "forms": ["8-K", "8-K/A"],
-      "tickers": ["AAPL", "MSFT", "AMZN", "GOOGL", "META"]
-    }
-  }'
-```
-
-The response includes the saved query, filters, delivery type, and cursor state:
-
-```json
-{
-  "object": "monitor",
-  "id": "mon_9a1b2c3d",
-  "name": "Mega-cap 8-K monitor",
-  "query": "material agreement OR results of operations OR departure of directors",
-  "filters": {
-    "forms": ["8-K", "8-K/A"],
-    "tickers": ["AAPL", "MSFT", "AMZN", "GOOGL", "META"]
-  },
-  "searchMode": "keyword",
-  "delivery": {
-    "type": "webhook",
-    "config": {},
-    "status": "active"
-  },
-  "isActive": true,
-  "lastCheckedAt": null
-}
-```
+Create a monitor in the dashboard for the query, forms, and tickers you care about. For webhook delivery, do not put a URL on the monitor: a matching filing is emitted as `monitor.match` and delivered through the organization endpoint from Step 1. For this tutorial, use the name `Mega-cap 8-K monitor`, the query `material agreement OR results of operations OR departure of directors`, forms `8-K` and `8-K/A`, and the tickers `AAPL`, `MSFT`, `AMZN`, `GOOGL`, and `META`.
 
 ## Step 3 - Preview matches
 
@@ -221,30 +160,11 @@ pip install flask
 SECAPI_WEBHOOK_SIGNING_SECRET="whsec_..." python handler.py
 ```
 
-Use a tunnel such as ngrok or your hosting provider to expose `https://.../webhooks/secapi`, then update the webhook endpoint if needed:
-
-```bash
-curl -X PATCH "https://api.secapi.ai/v1/webhook_endpoints/wh_2ZK8Q1W9F4M6P7R3" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://your-ngrok-url.ngrok.app/webhooks/secapi"
-  }'
-```
+Use a tunnel such as ngrok or your hosting provider to expose `https://.../webhooks/secapi`, then update the endpoint destination in the dashboard if it changes.
 
 ## Step 5 - Send a signed test event
 
-Use the webhook test route to validate connectivity and signature verification. Tests emit `webhook.test`, not `monitor.match`, so your handler should verify the signature and then ignore the event type.
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/wh_2ZK8Q1W9F4M6P7R3/test" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "eventType": "webhook.test",
-    "data": { "source": "filing-monitor-tutorial" }
-  }'
-```
+Use the dashboard's test-delivery action to validate connectivity and signature verification. Tests emit `webhook.test`, not `monitor.match`, so your handler should verify the signature and then ignore the event type.
 
 ## Step 6 - Inspect delivery history
 
@@ -273,10 +193,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors/mon_9a1b2c3d"
 
-# Deactivate a monitor
-curl -X DELETE \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/mon_9a1b2c3d"
+# Pause or delete a monitor in the signed-in dashboard.
 ```
 
 ## Delivery limitations

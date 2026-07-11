@@ -24,44 +24,7 @@ Get SEC filing alerts delivered to your application when a saved monitor finds n
 
 ## Quick start
 
-Create a webhook endpoint for monitor match events:
-
-```bash
-curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://yourapp.com/webhooks/sec",
-    "description": "10-K and 10-Q monitor alerts",
-    "subscribedEventTypes": ["monitor.match"]
-  }' \
-  "https://api.secapi.ai/v1/webhook_endpoints"
-```
-
-```json
-{
-  "object": "webhook_endpoint",
-  "id": "wh_abc123",
-  "status": "pending_verification",
-  "subscribedEventTypes": ["monitor.match"]
-}
-```
-
-Create a monitor for 10-K and 10-Q filings. Email delivery is optional; webhook delivery comes from the org-level endpoint subscription above.
-
-```bash
-curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "10-K and 10-Q filings",
-    "query": "annual report OR quarterly report",
-    "filters": { "forms": ["10-K", "10-Q"] },
-    "delivery": {
-      "type": "email",
-      "config": { "to": "alerts@example.com" }
-    }
-  }' \
-  "https://api.secapi.ai/v1/monitors"
-```
+In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), register a public HTTPS endpoint subscribed to `monitor.match`, then create the 10-K and 10-Q monitor that should feed it. You can choose email delivery there as well. These organization settings require a WorkOS browser session; API keys cannot create or change them.
 
 Get the latest filings via polling (REST fallback):
 

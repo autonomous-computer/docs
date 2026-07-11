@@ -1,171 +1,42 @@
 ---
 title: "SEC Data Automation with Zapier"
-description: "Create a Zapier workflow that receives SEC API monitor.match webhooks and logs monitor matches to Google Sheets."
+description: "Send signed SEC filing-monitor events to Zapier and turn matching filings into rows, messages, or review tasks."
 ---
 
-Zapier can catch signed SEC API monitor events, log each match to a spreadsheet, and notify your team without a custom worker.
+Use Zapier to route SEC filing matches into an existing operating workflow. The reliable boundary is simple: SEC API delivers a signed `monitor.match` event; Zapier stores or routes the normalized filing fields; the next human or system can follow the source filing.
 
-<Warning>
-Zapier Catch Hook does not give this tutorial a safe raw-body HMAC verification step. Treat the direct-hook setup as a development or low-risk internal alert path, not a production compliance control. For production, receive SEC API deliveries through a small verification service and forward only verified events to Zapier. [Build a Filing Monitor](/tutorials/build-filing-monitor) includes a verification example.
-</Warning>
+## Set up the connection
 
-## Prerequisites
+1. In Zapier, create a Zap with **Webhooks by Zapier: Catch Hook** and copy the HTTPS hook URL.
+2. In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), add that URL as an organization endpoint and subscribe it to `monitor.match`.
+3. Create the monitor in the same dashboard. A useful first monitor has a focused query, form filter, and a small ticker list.
 
-- An SEC API key available as `SECAPI_API_KEY`
-- A Zapier account with **Webhooks by Zapier**
-- A Google Sheet for the alert log
-- A Slack workspace if you want notifications
+Webhook and monitor configuration are human-authenticated organization actions. They require the dashboard's WorkOS session; an API key cannot create, edit, test, or delete them.
 
-## What you will build
+## Map a filing match
 
-```
-SEC API monitor
-        |
-        v
-monitor.match webhook
-        |
-        v
-Zapier Catch Hook -> Google Sheets row -> Slack message
-```
+Use these fields in a Zapier action:
 
-SEC API monitor webhooks are delivered through org-level webhook endpoints. The endpoint subscribes to `monitor.match`; the monitor itself stores the search with `name`, `query`, and optional `filters`.
+| Field | Use it for |
+| --- | --- |
+| `data.monitor.name` | Alert and routing label |
+| `data.matches[].ticker` | Company filter or destination key |
+| `data.matches[].form` | Form-specific logic |
+| `data.matches[].filingDate` | Deadline or recency logic |
+| `data.matches[].htmlUrl` | Link to the source filing |
 
-## Step 1 --- Create the Zapier catch hook
+Use the dashboard's test-delivery action to teach Zapier the payload. It sends `webhook.test`; real filing alerts send `monitor.match` on the scheduled monitor sweep.
 
-1. In Zapier, create a new Zap.
-2. Select **Webhooks by Zapier** as the trigger app.
-3. Choose **Catch Hook**.
-4. Copy the hook URL:
-
-```text
-https://hooks.zapier.com/hooks/catch/123456/abcdef/
-```
-
-Leave the trigger test screen open. Zapier needs a sample delivery before it can expose fields for later steps.
-
-## Step 2 --- Create the SEC API webhook endpoint
-
-Register the Zapier hook URL with SEC API. Use `destinationUrl` and subscribe to `monitor.match`.
+## Validate a configured monitor
 
 ```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://hooks.zapier.com/hooks/catch/123456/abcdef/",
-    "description": "Zapier monitor match log",
-    "subscribedEventTypes": ["monitor.match"],
-    "livemode": false
-  }'
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
 ```
 
-Save the returned webhook endpoint `id` as `WEBHOOK_ID`.
-
-## Step 3 --- Create the insider filing monitor
-
-This monitor tracks Form 4 filings for a watchlist. The runnable monitor body requires `name` and `query`; form and ticker constraints live under `filters`.
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/monitors" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Insider Form 4 watchlist",
-    "query": "insider transaction beneficial ownership",
-    "filters": {
-      "forms": ["4", "4/A"],
-      "tickers": ["AAPL", "MSFT", "NVDA", "GOOGL", "META", "AMZN", "TSLA", "JPM", "GS"]
-    }
-  }'
-```
-
-The monitor stores the saved search. The webhook endpoint stores the delivery URL and event subscription.
-
-## Step 4 --- Teach Zapier the payload shape
-
-Use SEC API's test endpoint to deliver a signed test event to Zapier:
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/$WEBHOOK_ID/test" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": {
-      "monitor": {
-        "id": "mon_test",
-        "name": "Insider Form 4 watchlist",
-        "query": "insider transaction beneficial ownership"
-      },
-      "matchCount": 1,
-      "matches": [
-        {
-          "id": "0000320193-26-000002",
-          "ticker": "AAPL",
-          "form": "4",
-          "filingDate": "2026-01-15",
-          "companyName": "Apple Inc.",
-          "htmlUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000002/0000320193-26-000002-index.htm"
-        }
-      ]
-    }
-  }'
-```
-
-Zapier will see this as a `webhook.test` event because `/test` is a delivery plumbing check. Real monitor dispatches use `monitor.match`. In both cases, use fields under `data.matches[]` for the filing row.
-
-## Step 5 --- Prepare the Google Sheet
-
-Create a sheet named **SEC Monitor Matches** with these headers:
-
-| Date | Ticker | Company | Form | Monitor | Filing URL | Event Type |
-|---|---|---|---|---|---|---|
-
-## Step 6 --- Loop over every match
-
-Add **Looping by Zapier > Create Loop From Line Items** before the Google Sheets action. Choose `data.matches` as the line-item array. The actions after this step run once per match, so a batched monitor delivery does not silently discard every entry after the first.
-
-## Step 7 --- Add the Google Sheets action
-
-1. Add a **Google Sheets > Create Spreadsheet Row** action.
-2. Choose the **SEC Monitor Matches** spreadsheet.
-3. Map the fields from the Looping step's current match:
-
-| Sheet column | Zapier field |
-|---|---|
-| Date | The Looping step's `filingDate` value |
-| Ticker | The Looping step's `ticker` value |
-| Company | The Looping step's `companyName` value |
-| Form | The Looping step's `form` value |
-| Monitor | `data__monitor__name` |
-| Filing URL | The Looping step's `htmlUrl` value |
-| Event Type | `type` |
-
-Zapier field labels can vary slightly based on its parser. Select the Looping step's current-match fields rather than a fixed `data.matches[0]` field.
-
-## Step 8 --- Add a Slack notification
-
-Add **Slack > Send Channel Message** and set the message text to:
-
-```text
-SEC API monitor match: {{data__monitor__name}}
-{{looping_step__companyName}} ({{looping_step__ticker}}) filed {{looping_step__form}}
-Date: {{looping_step__filingDate}}
-URL: {{looping_step__htmlUrl}}
-```
-
-Use the Looping step's field picker to insert the current-match values above, then publish the Zap after the Google Sheets and Slack test actions succeed.
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| Zapier does not detect test data | Keep the trigger test screen open, then call `/v1/webhook_endpoints/{webhook_id}/test` again. |
-| Event type is `webhook.test` | Expected for SEC API's test endpoint. Production monitor dispatches use `monitor.match`. |
-| Endpoint creation fails | Use `destinationUrl` with a public HTTPS hook URL. |
-| No production rows appear | Check that your webhook endpoint is active and subscribed to `monitor.match`; use `GET /v1/monitors/{monitor_id}/matches` to verify the saved search. |
+The API key is intentionally limited to these data reads. Keep the source URL with the Zapier row or task so reviewers can inspect the filing that caused the alert.
 
 ## Read next
 
-- [Monitor alerts](/monitors)
-- [Webhook endpoint reference](/api-reference/webhooks/post-v1-webhook-endpoints)
-- [Analyze insider trading](/tutorials/analyze-insider-trading)
+- [Monitor SEC filing events](/monitors)
+- [Build a filing monitor](/tutorials/build-filing-monitor)

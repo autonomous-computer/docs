@@ -1,163 +1,50 @@
 ---
-title: "Monitors"
-description: "Create saved searches that alert you when new SEC filings match your query, for events like 8-Ks, 13F changes, and insider transactions."
+title: "Monitor SEC Filing Events"
+description: "Create saved SEC filing searches, review matches with an API key, and deliver scheduled alerts to email or signed webhooks."
 ---
 
-Monitors are saved searches that trigger delivery when new SEC filings match the query. Use monitors for inbox-grade alerting on portfolio events: 8-K material events, 13F holdings changes, insider transactions, AAERs, auditor changes, and any keyword search the filing search supports.
+Monitors are saved searches that alert your organization when a new SEC filing matches a query. Use them for material 8-Ks, 13F holdings changes, insider activity, auditor changes, and filing-language alerts.
 
-## Lifecycle
+## Set up a monitor
 
-1. Create a monitor with `POST /v1/monitors`. Provide `name`, `query`, and optionally `filters` (e.g., `{ ticker, form, date_from, date_to }`) plus an email delivery destination.
-2. Inspect recent matches on demand with `GET /v1/monitors/{monitor_id}/matches`.
-3. List your org's monitors with `GET /v1/monitors`.
-4. Deactivate a monitor with `DELETE /v1/monitors/{monitor_id}` (idempotent; sets `is_active=false`).
-5. Replace the delivery destination on an existing monitor with `POST /v1/monitors/{monitor_id}/delivery`.
+Create, edit, pause, and delete monitors from the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks). These are organization control-plane actions: they require a WorkOS browser session and do not accept an API key. The same boundary applies to webhook endpoint setup, secret rotation, test deliveries, and stream-subscription changes.
 
-## Delivery types
+For each monitor, choose a clear name, keyword query, optional company/form/date filters, and either an email destination or an organization webhook endpoint subscribed to `monitor.match`.
 
-A monitor row has one typed delivery destination in v1: email. For webhooks, subscribe an org-level webhook endpoint to `monitor.match`; the monitor dispatch emits that event independently of the email destination.
+## Read monitor data with an API key
 
-### Webhook
-
-Use org-level webhook endpoints for monitor-match webhooks. First create a signed webhook endpoint subscribed to `monitor.match`, then create one or more monitors. Every monitor dispatch emits a `monitor.match` event to matching org-level webhook endpoints, regardless of whether that monitor also sends email.
+After setup, these read operations accept `x-api-key` and are suitable for agents, scheduled checks, and audit reports:
 
 ```bash
-curl -X POST https://api.secapi.ai/v1/webhook_endpoints \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://your-app.example.com/hooks/secapi",
-    "description": "Filing monitor alerts",
-    "subscribedEventTypes": ["monitor.match"]
-  }'
+# List active monitors for your organization.
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors"
+
+# Preview the filings currently matched by one monitor.
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/mon_123/matches?limit=10"
 ```
+
+`GET /v1/monitors/{monitor_id}/matches` runs the saved search on demand. It is useful for validating a query and investigating an alert, but it does not trigger delivery.
+
+## Delivery choices
 
 ### Email
 
-Email delivery uses our email provider for transactional sends. Each match-batch produces a single email containing the rendered HTML + plaintext alongside an RFC 8058-compliant `List-Unsubscribe` header for one-click client integrations. The `delivery` object in the request body is a discriminated union; future channels (Slack, etc.) extend the `type` field.
+Choose email when the alert belongs in an inbox. Each match batch produces one transactional email with HTML and plaintext content plus a one-click unsubscribe path. A destination can be `active`, `unsubscribed`, `bounced`, `complaint_suppressed`, or `suppressed`; non-active destinations do not receive new alerts.
 
-```bash
-curl -X POST https://api.secapi.ai/v1/monitors \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Goodwill impairments",
-    "query": "goodwill impairment",
-    "filters": { "form": "8-K" },
-    "delivery": {
-      "type": "email",
-      "config": { "to": "alerts@your-firm.com" }
-    }
-  }'
-```
+### Webhook
 
-The response includes a `delivery` block describing the destination:
+Use an organization webhook endpoint when a service should receive signed `monitor.match` events. In the dashboard, add a public HTTPS destination and subscribe it to `monitor.match`; then create the monitors that should feed it. Save the signing secret when the dashboard shows it, and verify the exact raw request body before parsing JSON. See [Build a Filing Monitor](/tutorials/build-filing-monitor) for a complete handler.
 
-```json
-{
-  "object": "monitor",
-  "id": "mon_...",
-  "delivery": {
-    "type": "email",
-    "config": { "to": "alerts@your-firm.com" },
-    "status": "active"
-  },
-  ...
-}
-```
+## Timing, retries, and limits
 
-`delivery.status` starts as `active`, can become `unsubscribed` through the one-click email flow, and can become `bounced`, `complaint_suppressed`, or `suppressed` when signed email-provider feedback reports hard-bounce, spam-complaint, or provider-suppression events. When a non-active state is present, the email channel will not fire.
+SEC API checks active monitors on a 15-minute cadence. Typical filing-to-alert latency is about half a sweep; worst-case latency is one full sweep plus delivery time. Each dispatch emits `monitor.match` to subscribed organization webhook endpoints.
 
-## Email behavior
-
-### Sender address
-
-Emails ship from the configured sender address on the API service (for example, `alerts@secapi.ai`). Monitor requests cannot override the sender per destination; custom sender domains require a platform-side verified-domain rollout.
-
-### Unsubscribe
-
-Every email includes a signed unsubscribe link in both the body and the `List-Unsubscribe` header. The token is HMAC-SHA256-bound to the monitor and the recipient address (hashed, not raw), with a 365-day expiry and a fresh nonce per email so two clicks from the same recipient produce different valid tokens.
-
-The unsubscribe endpoint is **GET-render / POST-mutate** per RFC 8058:
-
-- `GET /v1/delivery/unsubscribe?token=...` renders a confirmation page. **Does not mutate state.** This is intentional: Outlook Safe Links, Apple Mail Privacy Protection, and Gmail's URL classifier all fire GETs on every inbox link to render previews and scan for malware. A GET-mutates design would silently unsubscribe 5–15% of recipients on first deploy.
-- `POST /v1/delivery/unsubscribe` flips `delivery.status` to `unsubscribed`. Idempotent — re-clicking the same link returns the same confirmation.
-- Modern mail clients honoring `List-Unsubscribe-Post: List-Unsubscribe=One-Click` will hit POST directly without rendering the confirmation page; the response in that case is `204 No Content`.
-
-To re-enable email delivery on an unsubscribed monitor, call `POST /v1/monitors/{monitor_id}/delivery` with a fresh destination (status resets to `active`).
-
-### Provider feedback
-
-SEC API processes signed provider feedback from the email provider before surfacing bounce, complaint, and suppression states in monitor delivery status. This provider ingress is an internally managed control-plane route, not a customer API workflow; customer integrations should use the monitor delivery state, suppression state, and audit trail below.
-
-Hard bounces, spam complaints, and provider suppression events are stored in the suppression list by hashed recipient and provider event id. Suppression checks are org + recipient-wide, so a hard bounce or complaint from one monitor blocks future monitor emails to the same address in the same org. Duplicate webhook deliveries are idempotent. Delayed provider feedback updates a monitor's `delivery.status` only when the monitor still points at the same recipient, and terminal negative feedback is not downgraded by later `sent` or `delivered` events.
-
-### Retry semantics
-
-The dispatch cron (see §Dispatch behavior below) handles retries on transient failure. A failed send writes a row to the delivery-attempts log with `dispatch_status='retry_pending'` and a `next_attempt_at` timestamp; the next sweep tick claims rows whose `next_attempt_at` has passed and re-attempts the send.
-
-State machine:
-
-| State | Meaning |
-| --- | --- |
-| `sent` | The email provider returned 2xx; recipient should have received the email. |
-| `failed` | Adapter wrote the row but the dispatcher hasn't yet flipped it to a retry/permanent state (rare transient state). |
-| `retry_pending` | Send failed transiently; the row is queued for re-attempt at `next_attempt_at`. |
-| `sending` | A retry-drainer has claimed this row and is currently calling the email provider. Re-claimed back to `retry_pending` if it sits >10 min (mid-flight crash recovery). |
-| `permanent_failed` | Three total attempts all failed; no further attempts. Error monitoring surfaces these. |
-| `rate_limited` | The send was blocked by the per-monitor hourly cap or per-org daily cap (see §Rate limits below). The daily summary picks these up. |
-| `sent_dryrun` | QA-tooling-only: the send was simulated; no email-provider call was made. |
-
-Backoff schedule: attempt 1 fails → wait 30s → attempt 2; attempt 2 fails → wait 5min → attempt 3. If attempt 3 fails the row is `permanent_failed` (no further retries).
-
-Stable `Idempotency-Key = sha256(monitor_id + match_ids_sorted)` is set on every email-provider POST, and a unique partial index `(monitor_id, idempotency_key)` on the delivery-attempts log enforces duplicate-safety at the database layer too.
-
-### Audit trail
-
-Every send attempt — success or failure — is persisted to the delivery-attempts log with the recipient hashed (not raw), a redacted preview (`a***@example.com`), the request id, the email-provider message id (on success), the HTTP status, and the latency. This enables support cases ("did my customer get the alert?") without exposing recipient PII in internal logs.
-
-## Dispatch behavior
-
-SEC API dispatches monitor emails on a **15-minute cadence**. At each tick the sweep:
-
-1. Reclaims any `'sending'` rows that have been stuck for >10 min (mid-flight crash recovery).
-2. Drains any `retry_pending` rows whose `next_attempt_at` has passed (transient-`'sending'` short-txn pattern: claim → COMMIT lock → call the email provider → COMMIT terminal state).
-3. Iterates active monitors in `last_checked_at asc nulls first` order, runs each saved search, and fans out new matches via the email channel. The cursor (`last_checked_at`) is bumped only when at least one destination returned `sent`, `deduped`, or `rate_limited` — so a totally-failed dispatch does not silently drop matches.
-
-The dispatch also emits a `monitor.match` SEC API event for every dispatch, so org-level webhook subscribers (configured via `POST /v1/webhook_endpoints` with `monitor.match` in `subscribed_event_types`) receive a signal regardless of email delivery outcome.
-
-Typical latency from filing publish to email arrival is approximately 7.5 minutes (half the 15-min tick interval). Worst-case latency is one full tick plus dispatch/provider time. Sub-2-second alerting is planned for a future release.
-
-## Rate limits
-
-To prevent runaway alert storms when a customer's monitor suddenly matches thousands of filings, two windows are enforced:
-
-| Window | Default |
-| --- | --- |
-| **Per-monitor, per-hour** | 100 sends |
-| **Per-org, per-day** | 1,000 sends |
-
-When a send is blocked by either window, the row is persisted with `dispatch_status='rate_limited'` and **no email-provider call is made**. The matches are not lost — the [daily summary](#daily-summary) picks them up. The bucket counts every dispatch intent (sent + rate_limited + retry_pending + sending + permanent_failed) — bouncing addresses cannot game the bucket by failing intentionally.
-
-Rate-limit math runs primarily through a sliding-window rate limiter (the same limiter that backs HTTP middleware). In production, rate-limiter failures fail closed so monitor email dispatch cannot become an unbounded fanout path; blocked rows are persisted as rate-limited and no email-provider call is made. Outside production, SEC API falls back to a Postgres count query against the delivery-attempts log; if that fallback is also unhealthy, the non-production dispatcher fails open with a logged warning to keep local/staging workflows available.
-
-## Daily summary
-
-For each org that hits the rate limit on any monitor in a 24-hour window, SEC API sends **one** rolled-up summary email per (org, recipient) at **23:55 UTC**. The summary lists every monitor that hit the cap with the total match count for the day; the body is plain text + HTML, both Outlook-safe.
-
-The summary is idempotent per (org, recipient, UTC date) — re-running the daily-summary asset on the same UTC date is a no-op.
-
-Customers who'd like to disable the summary entirely can unsubscribe via the `List-Unsubscribe` header on any monitor email, which flips `delivery.status` to `unsubscribed` (the dispatcher then skips that monitor entirely until the customer re-enables via `POST /v1/monitors/{monitor_id}/delivery`).
-
-## Limits
-
-- **Search modes**: only `keyword` is supported in monitor execution at this time. Semantic search support will land in a future release.
-- **One destination per monitor**: v1 supports a single delivery destination per monitor row. Use multiple monitors to fan out to multiple channels for now.
-- **Billing**: customer-configured monitor email is billed through the `email_notifications` meter. Operational lifecycle, billing, auth, and account emails are not customer notification units.
-- **Legacy `webhookUrl`**: the deprecated `monitor.webhookUrl` column is preserved for backward compatibility but no longer carries a live delivery path. New monitors should use `delivery.type='email'` (above) or subscribe an org-level `webhook_endpoint` to the `monitor.match` event type.
+Transient email failures are retried automatically. To avoid alert storms, the default limits are 100 sends per monitor per hour and 1,000 sends per organization per day. Narrow a query or split distinct alert jobs into separate monitors when those limits are not a good fit.
 
 ## Related
 
+- [Build a filing monitor](/tutorials/build-filing-monitor)
 - [Webhook and stream workflows](/webhook-stream-workflows)
-- [SEC API events](/webhook-sla#event-types) — full event-type reference
-- [Build a filing monitor (tutorial)](/tutorials/build-filing-monitor)
+- [Webhook delivery and event types](/webhook-sla)

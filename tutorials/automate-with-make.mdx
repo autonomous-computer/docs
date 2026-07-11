@@ -1,189 +1,35 @@
 ---
 title: "Automate SEC Alerts with Make"
-description: "Build a Make scenario that receives SEC API monitor.match webhook events and sends compliance email alerts."
+description: "Receive signed SEC filing-monitor events in Make, iterate through matched filings, and route evidence-rich alerts to your team."
 ---
 
-Make can turn SEC API monitor matches into compliance emails, digest records, or downstream workflow branches with no custom hosting.
+Make is useful when one SEC filing match should fan out to several operational systems. SEC API delivers one signed `monitor.match` event; Make's Iterator turns `data.matches[]` into one bundle per filing.
 
-<Warning>
-Make Custom Webhooks do not provide the raw-body HMAC verification required for a production compliance control in this direct setup. Use this path for development or low-risk internal alerts. For a production path, verify `x-secapi-signature` in a small receiving service and forward only verified events into Make. [Build a Filing Monitor](/tutorials/build-filing-monitor) shows the verification step.
-</Warning>
+## Configure the source
 
-## Prerequisites
+1. Create a **Custom webhook** in Make and copy its production HTTPS URL.
+2. In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), add that URL as an organization webhook endpoint and subscribe it to `monitor.match`.
+3. Create the saved monitor in the same dashboard with a narrow query and appropriate form/ticker filters.
 
-- An SEC API key available as `SECAPI_API_KEY`
-- A Make account
-- An email, Gmail, Outlook, or SendGrid module configured in Make
+Endpoint and monitor changes require a WorkOS browser session. Do not place an API key in Make to create, update, test, or delete them; those requests return `human_auth_required`.
 
-## What you will build
+## Build the scenario
 
-```
-SEC API monitor
-        |
-        v
-monitor.match webhook
-        |
-        v
-Make Custom Webhook -> Iterator -> Set variables -> Send email
-                                  |
-                                  v
-                            Data Store digest
-```
+1. Put **Webhooks > Custom webhook** first.
+2. Add **Tools > Iterator** with array `data.matches`.
+3. Map `ticker`, `form`, `filingDate`, and `htmlUrl` into Slack, email, Sheets, or a review queue.
+4. Include the monitor name and source URL in the outgoing message. The source filing is the evidence; the automation is only the routing layer.
 
-SEC API sends monitor webhook deliveries through org-level webhook endpoints. Subscribe the endpoint to `monitor.match`; create monitors separately with `name`, `query`, and optional `filters`.
+Use the dashboard's test-delivery action while Make is listening. The test event is `webhook.test`; production alerts are `monitor.match` and arrive on the scheduled monitor sweep.
 
-## Step 1 --- Create a Make custom webhook
-
-1. Create a new Make scenario.
-2. Add **Webhooks > Custom webhook** as the first module.
-3. Name it `SEC API Monitor Matches`.
-4. Copy the generated URL:
-
-```text
-https://hook.make.com/abc123def456
-```
-
-Click **Run once** when you are ready for Make to learn the incoming data structure.
-
-## Step 2 --- Create the SEC API webhook endpoint
-
-Register the Make URL as an SEC API webhook endpoint. The supported request body uses `destinationUrl` and `subscribedEventTypes`.
+## Preview a monitor
 
 ```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://hook.make.com/abc123def456",
-    "description": "Make compliance monitor alerts",
-    "subscribedEventTypes": ["monitor.match"],
-    "livemode": false
-  }'
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
 ```
-
-Save the returned webhook endpoint `id` as `WEBHOOK_ID`.
-
-## Step 3 --- Create an enforcement-focused monitor
-
-Use a keyword monitor for enforcement language. Monitors require `name` and `query`; `filters` can narrow forms or tickers when relevant.
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/monitors" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Enforcement language monitor",
-    "query": "SEC enforcement investigation subpoena settlement cease and desist fraud accounting violations",
-    "filters": {
-      "forms": ["8-K", "10-K", "10-Q"]
-    }
-  }'
-```
-
-Webhook endpoints subscribe at the organization event level; monitors store saved searches.
-
-## Step 4 --- Send a signed test event to Make
-
-Make's **Run once** mode waits for a delivery so it can infer fields. Use SEC API's test endpoint:
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/$WEBHOOK_ID/test" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": {
-      "monitor": {
-        "id": "mon_test",
-        "name": "Enforcement language monitor",
-        "query": "SEC enforcement investigation subpoena settlement cease and desist fraud accounting violations"
-      },
-      "matchCount": 1,
-      "matches": [
-        {
-          "id": "0000789019-26-000010",
-          "ticker": "MSFT",
-          "form": "10-Q",
-          "filingDate": "2026-01-15",
-          "companyName": "Microsoft Corporation",
-          "htmlUrl": "https://www.sec.gov/Archives/edgar/data/789019/000078901926000010/0000789019-26-000010-index.htm"
-        }
-      ]
-    }
-  }'
-```
-
-The test endpoint always emits `webhook.test`. It validates Make delivery and signature plumbing. Production monitor dispatch emits `monitor.match` with monitor and match data under `data`.
-
-## Step 5 --- Iterate through every match
-
-Add **Tools > Iterator** immediately after the Custom Webhook. Set its array to `data.matches`. Every following module now runs once per match, which preserves all filings in a batched `monitor.match` delivery.
-
-## Step 6 --- Format the email
-
-Add **Tools > Set variable** after the Iterator module.
-
-| Variable name | Value |
-|---|---|
-| `alert_subject` | `SEC API monitor match: {{1.data.monitor.name}}` |
-| `alert_body` | Use the template below |
-
-```text
-SEC API Monitor Match
-
-Monitor: {{1.data.monitor.name}}
-Matches: {{1.data.matchCount}}
-
-Company: {{Iterator.companyName}}
-Ticker: {{Iterator.ticker}}
-Form: {{Iterator.form}}
-Filed: {{Iterator.filingDate}}
-
-Filing URL:
-{{Iterator.htmlUrl}}
-
-Event type: {{1.type}}
-```
-
-Use the Iterator module's field picker rather than manually typing an array index. The Iterator receives one `data.matches[]` entry at a time.
-
-## Step 7 --- Send the email
-
-Add **Email > Send an Email** or your preferred email module.
-
-| Field | Value |
-|---|---|
-| To | `compliance-team@yourcompany.com` |
-| Subject | `{{3.alert_subject}}` from the Set variable module |
-| Content | `{{3.alert_body}}` from the Set variable module |
-
-Run the scenario once with the test event, then turn it on.
-
-## Step 8 --- Add a daily digest store
-
-For a digest, add a **Data Store > Add/Replace a Record** module in parallel with the email module.
-
-| Data Store field | Value |
-|---|---|
-| `id` | The Iterator's `id` |
-| `company_name` | The Iterator's `companyName` |
-| `ticker` | The Iterator's `ticker` |
-| `form` | The Iterator's `form` |
-| `filing_date` | The Iterator's `filingDate` |
-| `filing_url` | The Iterator's `htmlUrl` |
-
-Then create a scheduled scenario that searches the store, aggregates records into an email, sends the digest, and clears processed rows.
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| Make does not infer fields | Click **Run once**, then call `/v1/webhook_endpoints/{webhook_id}/test` again. |
-| Event type is `webhook.test` | Expected for the test endpoint. Production monitor alerts use `monitor.match`. |
-| Endpoint creation fails | Use a public HTTPS `destinationUrl`; private or local URLs are rejected. |
-| Production monitor does not trigger | Verify the monitor with `GET /v1/monitors/{monitor_id}/matches` and confirm the webhook endpoint is subscribed to `monitor.match`. |
 
 ## Read next
 
-- [Monitor alerts](/monitors)
-- [Webhook endpoint reference](/api-reference/webhooks/post-v1-webhook-endpoints)
-- [Search enforcement actions](/tutorials/search-enforcement-actions)
+- [Monitor SEC filing events](/monitors)
+- [Build a filing monitor](/tutorials/build-filing-monitor)

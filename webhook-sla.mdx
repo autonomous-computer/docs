@@ -1,88 +1,35 @@
 ---
-title: "Webhook Delivery"
-description: "Signed webhook payloads, delivery audit, replay, and the event catalog"
+title: "Webhook Delivery and Event Types"
+description: "Understand signed SEC API webhook deliveries, inspect delivery history, and configure organization endpoints safely."
 ---
 
-Webhook delivery is an at-least-once delivery surface for customer events. Each delivery is signed, logged, and replayable when the original payload is still retained. We do not promise global ordering; customers should de-dupe with the stable event id.
+SEC API sends signed delivery events to organization webhook endpoints. Use an endpoint for monitor matches, delivery notifications, or another event listed by the public event catalog.
 
-## Delivery contract
+## Configure endpoints safely
 
-| Metric | Target |
-|---|---|
-| **Contract** | At-least-once delivery |
-| **Ordering** | Best effort within one endpoint or subscription |
-| **Replay** | Manual replay for retained delivery attempts |
-| **Billing** | Successful customer-visible webhook and stream delivery units use `delivery_events` |
-| **Payload signing** | HMAC-SHA256 on every delivery |
+Create endpoints, rotate secrets, send test deliveries, replay failures, and change subscriptions in the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks). These are human-authenticated organization actions. API keys deliberately cannot mutate them.
 
-## Retry Policy
+Save the signing secret when the dashboard shows it. Verify every incoming request against the exact raw body and `x-secapi-signature` before parsing JSON. Never log the secret or the unverified payload as trusted data.
 
-SEC API records every delivery attempt and exposes manual replay. Automatic retry and endpoint auto-pause are rollout-gated operational features; docs will list exact windows and attempt counts only after the retry worker is enabled in production.
+## Inspect with an API key
 
-## Signed Payloads
-
-Every webhook delivery includes `x-secapi-signature: t=<unix_seconds>,v1=<hex_hmac>` and `x-secapi-signature-timestamp`. Verify the signature against the exact raw request body before parsing JSON:
-
-```typescript
-import { createHmac, timingSafeEqual } from "crypto"
-
-function verifyWebhookSignature(rawBody: Buffer, signatureHeader: string, secret: string): boolean {
-  const parts = new Map(signatureHeader.split(",").map((part) => part.split("=", 2) as [string, string]))
-  const timestamp = parts.get("t")
-  const provided = parts.get("v1")
-  if (!timestamp || !provided) return false
-
-  const expected = createHmac("sha256", secret)
-    .update(`${timestamp}.${rawBody.toString("utf8")}`)
-    .digest("hex")
-  return provided.length === expected.length
-    && timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
-}
-```
-
-## Event Types
-
-Use the event catalog endpoint rather than copying a static list:
+Read delivery history and the public event catalog with `x-api-key`:
 
 ```bash
-curl "https://api.secapi.ai/v1/event_types?status=public_emitting" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID/deliveries?limit=10"
+
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/event_types?status=public_emitting"
 ```
 
-Only `public_emitting` entries are public product surface. Reserved event types, including filing and dilution producers, are excluded from public launch claims until their producers are enabled.
+Use the response status, attempt count, timestamps, event type, and request ID to debug a destination. The API key is for evidence and inspection; return to the dashboard for any configuration change.
 
-## Delivery Audit
+## Monitor events
 
-Every delivery attempt is logged and queryable:
+`monitor.match` is the event emitted when a saved filing monitor finds new matches. Monitor dispatch is scheduled, so a webhook is a prompt to inspect source-backed filing data, not a claim of instant EDGAR delivery.
 
-```bash
-# List recent deliveries
-curl "https://api.secapi.ai/v1/webhook_endpoints/{id}/deliveries?limit=10" \
-  -H "x-api-key: $SECAPI_API_KEY"
+## Read next
 
-# Replay a failed delivery
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/{id}/deliveries/{delivery_id}/replay" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-## Monitoring
-
-Track webhook health by listing recent deliveries:
-
-```bash
-curl "https://api.secapi.ai/v1/webhook_endpoints/{id}/deliveries?limit=10" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-Use delivery status, attempt counts, response codes, and timestamps to spot failing destinations.
-
-## Secret Rotation
-
-Rotate your webhook signing secret without downtime:
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/{id}/rotate_secret" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-The previous secret is invalidated immediately and the new secret is returned once in the response. Update the receiving service before the next delivery arrives.
+- [Monitor SEC filing events](/monitors)
+- [Build a filing monitor](/tutorials/build-filing-monitor)

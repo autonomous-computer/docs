@@ -1,172 +1,17 @@
 ---
 title: "Build a Compliance Screening Agent"
-description: "Build a compliance screening agent that routes monitor.match webhook events for filing-based signals and polls SEC event endpoints for non-monitor data."
+description: "Route signed SEC filing-monitor events into a review agent that preserves the issuer, filing, evidence, and decision boundary."
 ---
 
-Compliance teams often need two alerting paths:
+This guide builds a small screening service: SEC API sends a signed filing-monitor event, the service extracts the filing facts that matter, and a reviewer receives an evidence-linked queue item. It does not make a legal or investment decision.
 
-- Filing-based signals, such as 8-K restatements, auditor changes, officer changes, and risk-factor language, can be watched with saved monitors. Matching monitor batches emit the public `monitor.match` Delivery event.
-- Non-monitor datasets, such as SEC enforcement actions, should be checked through their REST endpoints unless a public-emitting Delivery event exists for that dataset.
+## Configure the monitor first
 
-This tutorial builds a small compliance screening agent around those contracts. It does not rely on custom webhook event names like `enforcement.new` or `restatement.new`; those are not public Delivery events. Use `GET /v1/event_types?status=public_emitting` as the source of truth for webhook event names.
+In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), create an organization webhook endpoint subscribed to `monitor.match`, then create the saved monitor for your client, portfolio, or counterparty set. These configuration actions require a WorkOS browser session. An API key cannot create monitors or webhooks.
 
-## What you will build
+Use a narrow monitor name, keyword query, form filter, and ticker list. Save the dashboard-provided signing secret as `SECAPI_WEBHOOK_SIGNING_SECRET`.
 
-- One org-level webhook endpoint subscribed to `monitor.match`
-- Filing monitors for compliance-relevant form/query combinations
-- A signed webhook handler that classifies monitor matches and routes Slack alerts
-- A polling fallback for enforcement and other REST-only event surfaces
-
-Monitor delivery runs on a 15-minute sweep. Typical latency is about 7.5 minutes; worst-case latency is one full sweep plus dispatch/provider time. Use polling for workflows that need an explicit schedule or for datasets that are not emitted as Delivery events.
-
-## Prerequisites
-
-- An SEC API key in `SECAPI_API_KEY`
-- Python 3.9+
-- A publicly accessible HTTPS endpoint for webhook delivery
-- A Slack incoming webhook URL, or replace the Slack function with your ticketing/email system
-
-## Step 1 - Create the project
-
-```bash
-mkdir -p compliance-screening-agent
-cd compliance-screening-agent
-python -m venv .venv
-source .venv/bin/activate
-pip install flask requests gunicorn
-```
-
-Create `config.json`:
-
-```json
-{
-  "clients": [
-    {
-      "name": "Portfolio A",
-      "tickers": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
-      "alert_email": "compliance-team-a@example.com"
-    },
-    {
-      "name": "Portfolio B",
-      "tickers": ["JPM", "GS", "MS", "BAC", "WFC"],
-      "alert_email": "compliance-team-b@example.com"
-    }
-  ],
-  "severity_rules": {
-    "restatement": "critical",
-    "auditor_change": "high",
-    "officer_change": "medium",
-    "risk_factor": "medium",
-    "enforcement": "critical"
-  },
-  "slack_webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-}
-```
-
-## Step 2 - Create the webhook endpoint
-
-Register a signed org-level endpoint subscribed to `monitor.match`.
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://your-app.example.com/webhooks/secapi/compliance",
-    "description": "Compliance screening monitor matches",
-    "subscribedEventTypes": ["monitor.match"],
-    "livemode": false
-  }'
-```
-
-Save the returned `id` and `signingSecret`. You will use `id` for test deliveries and `signingSecret` in the handler.
-
-## Step 3 - Create compliance monitors
-
-Create one or more monitors for each filing signal. The example below creates monitors for each client portfolio using the public monitor contract: `name`, `query`, and `filters`.
-
-Create `create_monitors.py`:
-
-```python
-import json
-import os
-
-import requests
-
-API_BASE = "https://api.secapi.ai"
-HEADERS = {
-    "x-api-key": os.environ["SECAPI_API_KEY"],
-    "content-type": "application/json",
-}
-
-SIGNALS = [
-    {
-        "key": "restatement",
-        "label": "Restatement / non-reliance",
-        "query": "\"Item 4.02\" OR restatement OR \"non-reliance\"",
-        "forms": ["8-K", "8-K/A", "10-K/A", "10-Q/A"]
-    },
-    {
-        "key": "auditor_change",
-        "label": "Auditor change",
-        "query": "\"Item 4.01\" OR auditor OR accountant",
-        "forms": ["8-K", "8-K/A"]
-    },
-    {
-        "key": "officer_change",
-        "label": "Officer or director change",
-        "query": "\"Item 5.02\" OR resignation OR appointment OR departure",
-        "forms": ["8-K", "8-K/A"]
-    },
-    {
-        "key": "risk_factor",
-        "label": "Risk factor language",
-        "query": "\"material weakness\" OR \"going concern\" OR investigation",
-        "forms": ["10-K", "10-Q", "10-K/A", "10-Q/A"]
-    }
-]
-
-
-with open("config.json") as f:
-    config = json.load(f)
-
-for client in config["clients"]:
-    for signal in SIGNALS:
-        body = {
-            "name": f"{client['name']} - {signal['label']}",
-            "query": signal["query"],
-            "filters": {
-                "forms": signal["forms"],
-                "tickers": client["tickers"]
-            }
-        }
-        response = requests.post(
-            f"{API_BASE}/v1/monitors",
-            headers=HEADERS,
-            json=body,
-            timeout=30,
-        )
-        response.raise_for_status()
-        monitor = response.json()
-        print(f"{signal['key']} {client['name']}: {monitor['id']}")
-```
-
-Run it:
-
-```bash
-SECAPI_API_KEY="your-api-key" python create_monitors.py
-```
-
-If you want to preview a monitor before waiting for the sweep:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
-```
-
-## Step 4 - Build the webhook handler
-
-Create `handler.py`. This handler verifies the SEC API signature, accepts `monitor.match`, classifies the match from the monitor name/query and filing form, and sends a Slack alert.
+## Run the receiver
 
 ```python
 import hashlib
@@ -174,300 +19,48 @@ import hmac
 import json
 import os
 import time
-from datetime import datetime, timezone
 
-import requests
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
+SECRET = os.environ["SECAPI_WEBHOOK_SIGNING_SECRET"]
 
-SIGNING_SECRET = os.environ["SECAPI_WEBHOOK_SIGNING_SECRET"]
-MAX_SKEW_SECONDS = 300
-
-with open("config.json") as f:
-    CONFIG = json.load(f)
-
-TICKER_TO_CLIENT = {}
-for client in CONFIG["clients"]:
-    for ticker in client["tickers"]:
-        TICKER_TO_CLIENT[ticker.upper()] = client
-
-
-def parse_signature(header: str) -> tuple[str, str]:
-    parts = {}
-    for item in header.split(","):
-        if "=" in item:
-            key, value = item.split("=", 1)
-            parts[key] = value
-    return parts.get("t", ""), parts.get("v1", "")
-
-
-def verify_signature(raw_body: bytes, header: str) -> bool:
-    timestamp, provided = parse_signature(header)
-    if not timestamp or not provided:
+def valid(raw: bytes, header: str) -> bool:
+    fields = dict(part.split("=", 1) for part in header.split(",") if "=" in part)
+    timestamp, signature = fields.get("t", ""), fields.get("v1", "")
+    if not timestamp or not signature or abs(time.time() - int(timestamp)) > 300:
         return False
-    try:
-        signed_at = int(timestamp)
-    except ValueError:
-        return False
-    if abs(int(time.time()) - signed_at) > MAX_SKEW_SECONDS:
-        return False
-
-    expected = hmac.new(
-        SIGNING_SECRET.encode("utf-8"),
-        f"{timestamp}.".encode("utf-8") + raw_body,
-        hashlib.sha256,
-    ).hexdigest()
-    return hmac.compare_digest(provided, expected)
-
-
-def infer_signal(monitor: dict, match: dict) -> str:
-    text = " ".join(
-        str(value).lower()
-        for value in [
-            monitor.get("name", ""),
-            monitor.get("query", ""),
-            match.get("form", ""),
-        ]
-    )
-    if "4.02" in text or "restatement" in text or "non-reliance" in text:
-        return "restatement"
-    if "4.01" in text or "auditor" in text or "accountant" in text:
-        return "auditor_change"
-    if "5.02" in text or "officer" in text or "director" in text:
-        return "officer_change"
-    if "risk" in text or "material weakness" in text or "going concern" in text:
-        return "risk_factor"
-    return "filing_match"
-
-
-def classify_severity(signal: str) -> str:
-    return CONFIG["severity_rules"].get(signal, "medium")
-
-
-def send_slack_alert(alert: dict) -> None:
-    text = (
-        f"[{alert['severity'].upper()}] {alert['signal']} - "
-        f"{alert['company']} ({alert['ticker']})\n"
-        f"Monitor: {alert['monitor_name']}\n"
-        f"Form: {alert['form']} | Filed: {alert['filing_date']}\n"
-        f"{alert['url']}"
-    )
-    response = requests.post(
-        CONFIG["slack_webhook_url"],
-        json={"text": text},
-        timeout=10,
-    )
-    response.raise_for_status()
-
+    expected = hmac.new(SECRET.encode(), f"{timestamp}.".encode() + raw, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 @app.post("/webhooks/secapi/compliance")
-def handle_compliance_webhook():
-    raw_body = request.get_data()
-    signature = request.headers.get("x-secapi-signature", "")
-    if not verify_signature(raw_body, signature):
+def receive():
+    raw = request.get_data()
+    if not valid(raw, request.headers.get("x-secapi-signature", "")):
         return jsonify({"error": "invalid_signature"}), 401
-
-    event = json.loads(raw_body)
+    event = json.loads(raw)
     if event.get("type") != "monitor.match":
-        return jsonify({"status": "ignored", "type": event.get("type")}), 200
-
-    data = event.get("data", {})
-    monitor = data.get("monitor", {})
-    processed = 0
-
-    for match in data.get("matches", []):
-        ticker = str(match.get("ticker") or "").upper()
-        client = TICKER_TO_CLIENT.get(ticker)
-        if not client:
-            continue
-
-        signal = infer_signal(monitor, match)
-        severity = classify_severity(signal)
-        alert = {
-            "signal": signal,
-            "severity": severity,
-            "ticker": ticker,
-            "company": match.get("companyName") or ticker,
-            "form": match.get("form") or "filing",
-            "filing_date": match.get("filingDate") or "unknown",
-            "url": match.get("htmlUrl") or match.get("id") or "",
-            "monitor_id": monitor.get("id"),
-            "monitor_name": monitor.get("name", "SEC API monitor"),
-            "client": client["name"],
-            "event_id": event.get("id"),
-            "received_at": datetime.now(timezone.utc).isoformat(),
-        }
-        send_slack_alert(alert)
-        with open("audit_log.jsonl", "a") as f:
-            f.write(json.dumps(alert) + "\n")
-        processed += 1
-
-    return jsonify({"status": "processed", "matches": processed}), 200
-
-
-@app.get("/health")
-def health():
-    return jsonify({"status": "ok"})
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+        return jsonify({"status": "ignored"}), 200
+    for match in event.get("data", {}).get("matches", []):
+        print({"ticker": match.get("ticker"), "form": match.get("form"), "filedAt": match.get("filingDate"), "sourceUrl": match.get("htmlUrl")})
+    return jsonify({"received": True}), 200
 ```
 
-Run locally:
+Run it with `pip install flask` and `SECAPI_WEBHOOK_SIGNING_SECRET=whsec_... flask --app receiver run`. Expose the receiver at the HTTPS destination configured in the dashboard.
+
+## Add evidence, then review
+
+For a configured monitor, use an API key to inspect current matches before or after delivery:
 
 ```bash
-SECAPI_WEBHOOK_SIGNING_SECRET="whsec_..." python handler.py
-```
-
-Expose it with ngrok or your hosting provider, then patch the webhook endpoint if the URL changed:
-
-```bash
-curl -X PATCH "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://your-ngrok-url.ngrok.app/webhooks/secapi/compliance"
-  }'
-```
-
-## Step 5 - Test webhook connectivity
-
-Webhook endpoint tests emit `webhook.test`, not `monitor.match`. That is intentional: it verifies HTTPS reachability and signature verification without pretending a monitor matched.
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID/test" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "eventType": "webhook.test",
-    "data": { "source": "compliance-screening-agent" }
-  }'
-```
-
-The handler should return an ignored status for the `webhook.test` event after signature verification:
-
-```json
-{
-  "status": "ignored",
-  "type": "webhook.test"
-}
-```
-
-## Step 6 - Poll REST-only event surfaces
-
-SEC enforcement actions and some other event datasets are exposed through REST endpoints. Poll them on your own schedule until they are listed as public-emitting Delivery events.
-
-Create `poller.py`:
-
-```python
-import json
-import os
-from datetime import date, timedelta
-
-import requests
-
-API_BASE = "https://api.secapi.ai"
-HEADERS = {"x-api-key": os.environ["SECAPI_API_KEY"]}
-
-with open("config.json") as f:
-    CONFIG = json.load(f)
-
-
-def load_state() -> dict:
-    try:
-        with open("poller_state.json") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {"date_from": (date.today() - timedelta(days=1)).isoformat()}
-
-
-def save_state(state: dict) -> None:
-    with open("poller_state.json", "w") as f:
-        json.dump(state, f, indent=2)
-
-
-def get_json(path: str, params: dict) -> list[dict]:
-    response = requests.get(
-        f"{API_BASE}{path}",
-        headers=HEADERS,
-        params=params,
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json().get("data", [])
-
-
-def poll_enforcement(date_from: str) -> list[dict]:
-    actions = get_json(
-        "/v1/events/enforcement",
-        {"date_from": date_from, "limit": 100},
-    )
-    for action in actions:
-        action["_signal"] = "enforcement"
-    return actions
-
-
-def run() -> None:
-    state = load_state()
-    date_from = state["date_from"]
-    actions = poll_enforcement(date_from)
-
-    print(f"Found {len(actions)} enforcement action(s) since {date_from}")
-    for action in actions:
-        print(
-            f"[ENFORCEMENT] {action.get('publishedAt') or action.get('date')}: "
-            f"{action.get('title') or action.get('respondentName') or 'Untitled'}"
-        )
-
-    state["date_from"] = date.today().isoformat()
-    save_state(state)
-
-
-if __name__ == "__main__":
-    run()
-```
-
-Schedule it with cron, a job runner, or your workflow orchestrator:
-
-```bash
-0 8,12,16,20 * * 1-5 cd /path/to/compliance-screening-agent && .venv/bin/python poller.py >> /var/log/compliance-poller.log 2>&1
-```
-
-## Step 7 - Inspect delivery and monitor state
-
-Use these checks during rollout:
-
-```bash
-# Confirm public Delivery event names
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/event_types?status=public_emitting"
-
-# List recent monitor.match events
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/delivery/events?type=monitor.match&limit=25"
-
-# Inspect webhook attempts
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID/deliveries?limit=25"
-
-# Preview one monitor
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=25"
 ```
 
-## Production notes
+Carry the issuer, form, filing date, source URL, monitor name, and SEC API request ID into every downstream record. An LLM can classify or summarize the filing, but the source filing and the human review decision should remain visible.
 
-- Keep the raw request body intact until after signature verification.
-- Return a 2xx response only after you have durably accepted or intentionally ignored the event.
-- Keep your own idempotency key, such as the SEC API `event.id`, when forwarding to Slack, queues, or case-management systems.
-- Use the Delivery event catalog, not guessed event names, when subscribing webhook endpoints.
-- For filing-derived signals, `monitor.match` tells you that a saved monitor matched. Your handler should still classify and enrich the match for your policy workflow.
+## Read next
 
-## Next steps
-
-- Store accepted alerts in a database keyed by `event.id` and match `id`.
-- Add queue-based Slack/ticket delivery so webhook acknowledgements stay fast.
-- Use `/v1/intelligence/query` or filing section endpoints to enrich the matched filing after receiving `monitor.match`.
-- Expand the polling script for `/v1/events/restatements`, `/v1/events/auditor-changes`, or `/v1/events/officer-changes` if your workflow needs those REST surfaces outside monitor delivery.
+- [Monitor SEC filing events](/monitors)
+- [Build a filing monitor](/tutorials/build-filing-monitor)
+- [Search enforcement actions](/tutorials/search-enforcement-actions)

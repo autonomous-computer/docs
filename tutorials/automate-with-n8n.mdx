@@ -1,184 +1,50 @@
 ---
-title: "Automate SEC Monitoring with n8n"
-description: "Build an n8n workflow that receives SEC API monitor.match webhook events and posts filing alerts to Slack."
+title: "Automate SEC Alerts with n8n"
+description: "Send signed SEC filing-monitor events to n8n, turn each match into an item, and route the result to Slack or another n8n action."
 ---
 
-n8n can receive signed SEC API monitor alerts, reshape the payload, and post a useful message to Slack without running your own delivery service.
+Use n8n when a filing match should start a visible automation rather than a polling job. SEC API sends signed `monitor.match` events to one organization webhook endpoint; n8n turns the event's `matches` array into the downstream actions you choose.
 
-<Warning>
-This direct-webhook path is suitable for development and low-risk internal alerts only. Before using it for production or compliance decisions, route deliveries through a handler that verifies the `x-secapi-signature` HMAC against the raw request body. See [Build a Filing Monitor](/tutorials/build-filing-monitor) for a verification pattern.
-</Warning>
+## Before you start
 
-## Prerequisites
+- Build an n8n workflow with a production Webhook trigger.
+- In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), register that public HTTPS URL, subscribe it to `monitor.match`, and create the monitor that should feed it.
+- Save the signing secret from the dashboard. Endpoint and monitor setup require a WorkOS browser session, not an API key.
 
-- An SEC API key available as `SECAPI_API_KEY`
-- An n8n workflow with a public HTTPS webhook URL
-- A Slack credential or incoming webhook configured in n8n
+## Build the workflow
 
-## What you will build
-
-```
-SEC API monitor
-        |
-        v
-monitor.match event
-        |
-        v
-n8n Webhook trigger -> Code node -> Slack message
-```
-
-SEC API sends monitor webhook deliveries through org-level webhook endpoints. Create the webhook endpoint once, subscribe it to `monitor.match`, then create one or more monitors with `name`, `query`, and optional `filters`.
-
-## Step 1 --- Create the n8n webhook trigger
-
-1. Create a new n8n workflow.
-2. Add a **Webhook** trigger.
-3. Set **HTTP Method** to `POST`.
-4. Set **Path** to `secapi-monitor-matches`.
-5. Use the **Test URL** only while n8n is listening for a test event.
-
-The n8n test URL looks like this:
-
-```text
-https://your-n8n.example.com/webhook-test/secapi-monitor-matches
-```
-
-After the workflow is active, switch SEC API to the production URL:
-
-```text
-https://your-n8n.example.com/webhook/secapi-monitor-matches
-```
-
-## Step 2 --- Create the SEC API webhook endpoint
-
-Register the production n8n URL as an SEC API webhook endpoint. The public contract uses `destinationUrl` and `subscribedEventTypes`; monitor webhooks should subscribe to `monitor.match`.
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destinationUrl": "https://your-n8n.example.com/webhook/secapi-monitor-matches",
-    "description": "n8n monitor match alerts",
-    "subscribedEventTypes": ["monitor.match"],
-    "livemode": false
-  }'
-```
-
-Save the returned `id` and `signingSecret`. You can rotate the secret later, but SEC API only returns the secret when you create or rotate the endpoint.
-
-## Step 3 --- Create the filing monitor
-
-Create a keyword monitor for 8-K filings from your watchlist. Monitors require `name` and `query`; `filters.forms` and `filters.tickers` narrow the saved search.
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/monitors" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "n8n 8-K watchlist",
-    "query": "material definitive agreement results of operations departure director officer",
-    "filters": {
-      "forms": ["8-K", "8-K/A"],
-      "tickers": ["AAPL", "MSFT", "NVDA", "TSLA", "AMZN"]
-    }
-  }'
-```
-
-The monitor is independent of the webhook endpoint. SEC API emits `monitor.match` events to every active org-level webhook endpoint subscribed to that event type.
-
-## Step 4 --- Send a test event
-
-There are two test modes:
-
-- **n8n test URL**: only works while the Webhook trigger is listening. You can send any JSON directly to n8n to teach it the schema.
-- **SEC API endpoint test**: `POST /v1/webhook_endpoints/{webhook_id}/test` sends a signed `webhook.test` event to your registered `destinationUrl`. It validates delivery and signature plumbing, but it is not a real `monitor.match` event.
-
-While your n8n workflow is active, run:
-
-```bash
-curl -X POST "https://api.secapi.ai/v1/webhook_endpoints/$WEBHOOK_ID/test" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": {
-      "monitor": {
-        "id": "mon_test",
-        "name": "n8n 8-K watchlist",
-        "query": "material definitive agreement results of operations departure director officer"
-      },
-      "matchCount": 1,
-      "matches": [
-        {
-          "id": "0000320193-26-000001",
-          "ticker": "AAPL",
-          "form": "8-K",
-          "filingDate": "2026-01-15",
-          "companyName": "Apple Inc.",
-          "htmlUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/0000320193-26-000001-index.htm"
-        }
-      ]
-    }
-  }'
-```
-
-In n8n, the event type for this delivery will be `webhook.test`. Production monitor deliveries use `monitor.match` and carry the same `data.monitor`, `data.matchCount`, and `data.matches` shape.
-
-## Step 5 --- Split every match into its own n8n item
-
-Add a **Code** node after the Webhook trigger and paste:
+1. Add a **Webhook** trigger and copy its production URL.
+2. Add a **Code** node after it. Return one item per filing match:
 
 ```javascript
-const event = $input.first().json.body ?? $input.first().json;
-const data = event.data ?? {};
-const monitor = data.monitor ?? {};
+const event = $json;
+if (event.type !== "monitor.match") return [];
 
-return (data.matches ?? []).map((match) => ({
-    json: {
-      eventType: event.type,
-      monitorName: monitor.name ?? "SEC API monitor",
-      matchCount: data.matchCount ?? (data.matches ?? []).length,
-      ticker: match.ticker ?? "N/A",
-      company: match.companyName ?? "Unknown company",
-      form: match.form ?? "N/A",
-      filingDate: match.filingDate ?? "N/A",
-      filingUrl: match.htmlUrl ?? "",
-    },
-  }));
+return (event.data?.matches ?? []).map((match) => ({
+  json: {
+    monitor: event.data?.monitor?.name,
+    ticker: match.ticker,
+    form: match.form,
+    filedAt: match.filingDate,
+    sourceUrl: match.htmlUrl,
+  },
+}));
 ```
 
-The Code node emits one n8n item per `data.matches[]` entry, so the Slack node below posts once for every filing in a batched `monitor.match` delivery.
+3. Connect Slack, email, a database, or your research queue. Use `sourceUrl` as the evidence link rather than asking the next step to reconstruct the filing.
 
-## Step 6 --- Post to Slack
+## Test and operate
 
-Add a **Slack** node after the Code node.
+Use the dashboard's test-delivery action while the n8n workflow is active. It sends a signed `webhook.test` event; production matches use `monitor.match`. To inspect what a configured monitor matches without waiting for a sweep, use your API key:
 
-1. Choose **Message > Send a Message**.
-2. Select your alert channel.
-3. Set **Message Text** to:
-
-```text
-SEC API monitor match: {{$json.monitorName}}
-Matches: {{$json.matchCount}}
-Company: {{$json.company}} ({{$json.ticker}})
-Form: {{$json.form}}
-Filed: {{$json.filingDate}}
-URL: {{$json.filingUrl}}
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
 ```
 
-Activate the workflow and keep the production n8n URL in your SEC API webhook endpoint.
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| n8n does not receive SEC API tests | Make sure the workflow is active and the endpoint uses the production `/webhook/` URL, not `/webhook-test/`. |
-| SEC API rejects the webhook endpoint | `destinationUrl` must be a public HTTPS URL. Localhost and private network URLs are rejected. |
-| Test payload says `webhook.test` | That is expected from `/v1/webhook_endpoints/{webhook_id}/test`; production monitor dispatch uses `monitor.match`. |
-| No production alerts arrive | Confirm the webhook endpoint is active and subscribed to `monitor.match`, then check the monitor with `GET /v1/monitors/{monitor_id}/matches`. |
+Monitor dispatch runs on a 15-minute cadence. A webhook is a notification, not a substitute for investor judgment: keep the form, issuer, filing date, and source URL with every downstream alert.
 
 ## Read next
 
-- [Monitor alerts](/monitors)
-- [Webhook endpoint reference](/api-reference/webhooks/post-v1-webhook-endpoints)
-- [Test a webhook endpoint](/api-reference/webhooks/post-v1-webhook-endpoints-webhook-id-test)
+- [Monitor SEC filing events](/monitors)
+- [Build a filing monitor](/tutorials/build-filing-monitor)

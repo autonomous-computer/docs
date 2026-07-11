@@ -12,10 +12,10 @@ These examples hit the live production API. Calls count against your usage quota
 ## Setup
 
 ```bash
-export SECAPI_API_KEY="<your-api-key>"
+export SECAPI_API_KEY="your-key-here"
 ```
 
-Don't have a key? [Create an account](https://secapi.ai/signup).
+Don't have a key? Create an account at secapi.ai/signup.
 
 ## Entity Resolution
 
@@ -39,10 +39,7 @@ console.log(entity.name, entity.exchange, entity.sicCode)
   </Tab>
   <Tab title="Python">
 ```python
-import os
-
 import requests
-
 r = requests.get("https://api.secapi.ai/v1/entities/resolve",
     params={"ticker": "AAPL"},
     headers={"x-api-key": os.environ["SECAPI_API_KEY"]})
@@ -205,14 +202,10 @@ curl "https://api.secapi.ai/v1/forms/d/0001288257-18-000026" \
 
 Set up automated alerts for new matches:
 
-```bash
-# Create a monitor
-curl -X POST "https://api.secapi.ai/v1/monitors" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "AAPL 8-K Watch", "query": "AAPL", "filters": {"form": "8-K"}, "searchMode": "keyword"}'
+Create the saved monitor from the signed-in [dashboard](https://secapi.ai/app/webhooks). Monitor creation is a human-authenticated organization action, so an API key will return `human_auth_required`.
 
-# Check matches
+```bash
+# Check matches after the monitor is configured.
 curl "https://api.secapi.ai/v1/monitors/{monitorId}/matches" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
