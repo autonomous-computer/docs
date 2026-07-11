@@ -1,0 +1,85 @@
+---
+title: "GET /v1/situations/issues/{issue}"
+description: "Retrieve one immutable weekly Special Situations Digest issue by number or slug"
+---
+
+Retrieve a frozen Special Situations Digest edition. The issue contains the publication metadata, Markdown digest, source IDs, and the exact SEC-derived situation snapshots included at publication time. Later lifecycle changes do not rewrite this record.
+
+<Info>
+Meter class: `situations_lookup`. This endpoint is authenticated and subject to the account's current API plan and limits.
+</Info>
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/situations/issues/22"
+```
+</RequestExample>
+
+The `{issue}` path segment accepts either a positive issue number or a slug such as `special-situations-digest-22-2026-07-05`.
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "situation_weekly_issue",
+  "id": "sissue_example",
+  "issueNumber": 22,
+  "slug": "special-situations-digest-22-2026-07-05",
+  "periodStart": "2026-06-29",
+  "periodEnd": "2026-07-05",
+  "title": "Special Situations Digest #22",
+  "summaryMd": null,
+  "markdown": "# SEC API Special Situations - Weekly Digest (2026-07-05)",
+  "sourceSituationIds": ["sit_example"],
+  "sourceEventIds": ["sevt_example"],
+  "publishedAt": "2026-07-05T23:59:59.999Z",
+  "situations": [
+    {
+      "id": "sit_example",
+      "type": "merger",
+      "subtype": "definitive",
+      "status": "announced",
+      "ticker": "EXMP",
+      "cik": "0000000001",
+      "entityName": "Example Corp",
+      "headline": "Example Corp enters definitive merger agreement",
+      "summaryMd": "Example Corp entered a definitive merger agreement.",
+      "businessProfile": "Example Corp develops illustrative products.",
+      "terms": {
+        "counterparty": null,
+        "counterpartyTicker": null,
+        "stakePct": null,
+        "dealValueUsd": null,
+        "pricePerShare": null,
+        "considerationType": null,
+        "premiumPct": null
+      },
+      "keyDates": {
+        "announced": "2026-07-01",
+        "record": null,
+        "vote": null,
+        "expiry": null,
+        "expectedClose": null,
+        "completed": null,
+        "terminated": null
+      },
+      "sourceAccessions": ["0000000001-26-000001"],
+      "eventCount": 1,
+      "latestEventAt": "2026-07-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/situations/issues/{issue} to retrieve a frozen weekly Special Situations Digest issue by number or slug. Quote only fields present in the response, keep source situation and event IDs with any research handoff, and distinguish the archived snapshot from a current situation detail lookup.
+</Prompt>

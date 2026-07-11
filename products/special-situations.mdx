@@ -54,6 +54,24 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 Filter further with `statuses`, `tickers`, and `enrich`. Common triggering forms include `SC 13D` (activist stake), `SC TO-T` (third-party tender offer), `425` (merger communications), and `DEFM14A` (merger proxy).
 
+## Weekly issue archive
+
+The free [Situations issue archive](https://secapi.ai/situations/issues) is an organic discovery surface: each numbered edition is a frozen public snapshot of the SEC-derived situations published for that week. It is designed for research, sharing, and search discovery, with reasonable anonymous limits.
+
+Use the authenticated archive API when an application or agent needs the complete paid archive, higher limits, and durable machine-readable issue snapshots. An issue never mutates after publication, even when a source situation later advances, closes, or is corrected.
+
+```bash
+# Browse numbered editions
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/issues?limit=12"
+
+# Retrieve one frozen edition by issue number or slug
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/issues/22"
+```
+
+Archive reads use the `situations_lookup` meter class. The standard API plan and account limits determine availability; inspect your current allowance through the billing and limits endpoints rather than relying on a hard-coded quota in documentation.
+
 ## The filing timeline
 
 Each situation carries an ordered, oldest-first timeline of the filings that built it. Fetch it inline with the situation, or page it as a standalone sub-resource:
@@ -93,6 +111,8 @@ For machine-readable timeline and field-level work, retrieve the detail or filin
 | Endpoint | Description |
 |----------|-------------|
 | `GET /v1/situations` | List situations; filter by `types`, `statuses`, `tickers`, `forms`, `enrich` |
+| `GET /v1/situations/issues` | List immutable numbered weekly archive issues |
+| `GET /v1/situations/issues/{issue}` | Retrieve a frozen archive issue by number or slug |
 | `GET /v1/situations/feed` | Reverse-chronological feed of situation events |
 | `GET /v1/situations/calendar` | Upcoming key dates (record, vote, expiry, expected close) |
 | `GET /v1/situations/stats` | Counts by type, status, sector, and market-cap bucket |
@@ -109,6 +129,8 @@ The `secapi` CLI mirrors the plane:
 
 ```bash
 secapi situations list --types merger --limit 10
+secapi situations issues --limit 12
+secapi situations issue --issue 22
 secapi situations by-form --form "SC 13D"
 secapi situations get --situation-id sit_abc123
 secapi situations filings --situation-id sit_abc123
@@ -119,15 +141,19 @@ The JavaScript SDK exposes the same surface under `client.situations`:
 
 ```js
 await client.situations.list({ types: "merger", limit: 10 })
+await client.situations.issues({ limit: 12 })
+await client.situations.issue("22")
 await client.situations.byForm("SC 13D")
 await client.situations.get("sit_abc123")
 await client.situations.filings("sit_abc123")
 await client.situations.summary("sit_abc123")
 ```
 
+MCP clients can use `situations.issues` to browse the archive and `situations.issue` to retrieve one frozen issue. Both are authenticated paid tools using the `situations_lookup` meter class.
+
 ## Product boundary
 
-This documentation describes the customer-facing Special Situations plane only. TIKR-style fundamentals, estimates, valuation, screener, and symbol-breadth data are proprietary omni-apps infrastructure and are not a public SEC API, SDK, CLI, MCP, pricing, or marketing product.
+This documentation describes the customer-facing Special Situations plane only. Internal research systems outside this product are not part of the public API, SDK, CLI, MCP, pricing, or marketing surface.
 
 ## Related
 

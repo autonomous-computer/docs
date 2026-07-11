@@ -1,0 +1,62 @@
+---
+title: "GET /v1/situations/issues"
+description: "List immutable numbered weekly Special Situations Digest issues"
+---
+
+List the authenticated, paid archive of immutable weekly Special Situations Digest editions. Each result describes one numbered publication; retrieve the detail endpoint when an agent needs the frozen member snapshots and Markdown digest.
+
+<Info>
+Meter class: `situations_lookup`. This endpoint is authenticated and subject to the account's current API plan and limits.
+</Info>
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/situations/issues?limit=12"
+```
+</RequestExample>
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `limit` | integer | Number of issues to return, from 1 through 100. |
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "situation_weekly_issue",
+      "id": "sissue_example",
+      "issueNumber": 22,
+      "slug": "special-situations-digest-22-2026-07-05",
+      "periodStart": "2026-06-29",
+      "periodEnd": "2026-07-05",
+      "title": "Special Situations Digest #22",
+      "summaryMd": null,
+      "markdown": "# SEC API Special Situations - Weekly Digest (2026-07-05)",
+      "sourceSituationIds": ["sit_example"],
+      "sourceEventIds": ["sevt_example"],
+      "situations": [],
+      "publishedAt": "2026-07-05T23:59:59.999Z"
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null
+}
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/situations/issues to find the most relevant immutable weekly Special Situations Digest editions. Preserve each issue number, slug, period boundaries, and `publishedAt`; fetch a selected issue by number or slug before citing its contents. Treat the archive as filing-derived research evidence, not investment advice.
+</Prompt>
