@@ -1,53 +1,53 @@
 ---
-title: "API Overview"
-description: "Learn how the SEC API works — authentication, compact payloads, visible provenance, and a consistent surface across REST, SDKs, CLI, and hosted MCP."
+title: "Choose an SEC API interface"
+description: "Use REST to learn the filing contract, an SDK or CLI to build a workflow, and hosted MCP when an agent should use the same source-backed data."
 ---
 
 <Info>
-The API is built for real investor work. It keeps the contract compact, the source trail visible, partial-state behavior explicit, and the surface consistent across REST, SDKs, CLI, and hosted MCP.
+SEC API gives you the same filing, statements, ownership, and search primitives through several interfaces. Start with REST when you need to inspect a response. Use an SDK or CLI when you are building a repeatable workflow. Use hosted MCP when an MCP-aware agent should call the data layer directly.
 </Info>
 
 ## Authentication
 
 API keys are the primary machine-auth method for all plans. Use the `x-api-key` header on every REST request; the same credential works across SDK, CLI, and server-to-server MCP clients. See [Auth, Billing, and First Utility](/auth-and-pricing) for the full model. WorkOS powers dashboard login and remains the enterprise SSO boundary as organization-level access expands.
 
-## What the API is optimized for
+## Pick the smallest useful interface
 
 <CardGroup cols={2}>
-  <Card title="Investor workflows" icon="line-chart" href="/first-request-flows">
-    The API is optimized for repeated issuer, filing, section, statements, ownership, governance, fund, and signal workflows.
+  <Card title="REST" icon="braces" href="/getting-started">
+    The shortest way to inspect authentication, identifiers, a filing response, and its source record.
   </Card>
-  <Card title="Compact payloads" icon="shrink" href="/api-reference">
-    The payloads stay useful for applications and agents without turning into raw filing dumps.
+  <Card title="SDKs and CLI" icon="terminal-square" href="/libraries-and-sdks">
+    Use typed clients or a terminal workflow when the request is becoming part of your application or research process.
   </Card>
-  <Card title="Visible provenance" icon="badge-info" href="/freshness-and-trust">
-    Provenance, freshness, and trace references stay explicit instead of being pushed into side channels.
+  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
+    Give an MCP-aware agent access to the same SEC API tools after you have verified a normal request.
   </Card>
-  <Card title="Stable interfaces" icon="cable" href="/libraries-and-sdks">
-    REST, SDKs, CLI, and hosted MCP follow the same contract model.
+  <Card title="API reference" icon="book-open" href="/api-reference">
+    Use the reference when you know the endpoint and need the precise parameters, limits, and response shape.
   </Card>
 </CardGroup>
 
 ## Core design rules
 
 <Steps>
-  <Step title="Version requests">
-    Use `secapi-version` so production behavior does not shift underneath you.
+  <Step title="Identify the source record">
+    Keep the issuer identifier, filing accession number, filing date, and source URL with any conclusion drawn from a filing.
   </Step>
-  <Step title="Correlate requests">
-    Keep `Request-Id` in logs and downstream artifacts.
+  <Step title="Correlate the request">
+    Keep `Request-Id` in logs and support requests. It identifies the API call without exposing your key.
   </Step>
-  <Step title="Use cursor pagination">
-    List endpoints paginate with cursors instead of offset math.
+  <Step title="Use the documented response shape">
+    Start with the default response when you need the surrounding context. Use `view=agent` only when the endpoint documents an agent projection.
   </Step>
-  <Step title="Keep metadata with the payload">
-    Provenance, freshness, materialization, and trace references belong with the data.
+  <Step title="Handle partial state deliberately">
+    A documented `degraded` or `unavailable` state is information about the response, not a value to smooth over in downstream code.
   </Step>
-  <Step title="Prefer structured contracts">
-    SEC API favors useful structured workflows over raw passthroughs.
+  <Step title="Page when the endpoint pages">
+    List endpoints that expose `nextCursor` and `hasMore` use cursor pagination. Do not assume every list-shaped response does.
   </Step>
-  <Step title="Respect explicit partial states">
-    Treat values like `supported`, `degraded`, `unavailable`, and rights-scoped coverage flags as part of the contract, not edge-case trivia.
+  <Step title="Pin production clients">
+    Send a documented `secapi-version` when you are ready to pin a production integration to a dated contract.
   </Step>
 </Steps>
 
