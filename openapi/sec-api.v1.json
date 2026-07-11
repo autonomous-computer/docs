@@ -23348,6 +23348,115 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/situations/issues": {
+      "get": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "List immutable, numbered weekly Special Situations Digest issues",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituationWeeklyIssueList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.issues",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/situations/issues/{issue}": {
+      "get": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "Retrieve one immutable weekly Special Situations Digest issue by number or slug",
+        "parameters": [
+          {
+            "name": "issue",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituationWeeklyIssue"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.issue",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/situations/feed": {
       "get": {
         "tags": [
@@ -23908,6 +24017,60 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SituationSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/situations/{situation_id}/underwriting-pack": {
+      "get": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "Retrieve a deterministic, source-cited underwriting pack with canonical detail, filing timeline, and Copy-for-LLM markdown",
+        "description": "Paid heavy-extract read. The pack reuses the canonical Special Situations detail and SEC filing timeline; it does not include internal-only enrichment or generated investment advice.",
+        "parameters": [
+          {
+            "name": "situation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituationUnderwritingPack"
                 }
               }
             }
@@ -35294,9 +35457,356 @@
       "SituationCalendarEntryList": {},
       "SituationStats": {},
       "SituationPerformance": {},
+      "SituationWeeklyIssue": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "issueNumber",
+          "slug",
+          "periodStart",
+          "periodEnd",
+          "title",
+          "summaryMd",
+          "markdown",
+          "sourceSituationIds",
+          "sourceEventIds",
+          "sourceEvents",
+          "publishedAt",
+          "situations"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "situation_weekly_issue"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "issueNumber": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "slug": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summaryMd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "markdown": {
+            "type": "string"
+          },
+          "sourceSituationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceEventIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceEvents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "object",
+                "id",
+                "createdAt",
+                "livemode",
+                "situationId",
+                "occurredAt",
+                "accessionNumber",
+                "formType",
+                "eightKItems",
+                "category",
+                "title",
+                "summaryMd",
+                "statusBefore",
+                "statusAfter",
+                "documentUrl"
+              ],
+              "properties": {
+                "object": {
+                  "type": "string",
+                  "enum": [
+                    "situation_event"
+                  ]
+                },
+                "id": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "livemode": {
+                  "type": "boolean"
+                },
+                "situationId": {
+                  "type": "string"
+                },
+                "occurredAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "accessionNumber": {
+                  "type": "string"
+                },
+                "formType": {
+                  "type": "string"
+                },
+                "eightKItems": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "category": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "summaryMd": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "statusBefore": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "statusAfter": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "documentUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri"
+                }
+              }
+            }
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "situations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "type",
+                "subtype",
+                "status",
+                "ticker",
+                "cik",
+                "entityName",
+                "headline",
+                "summaryMd",
+                "businessProfile",
+                "terms",
+                "keyDates",
+                "sourceAccessions",
+                "eventCount",
+                "latestEventAt"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "subtype": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "ticker": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "cik": {
+                  "type": "string"
+                },
+                "entityName": {
+                  "type": "string"
+                },
+                "headline": {
+                  "type": "string"
+                },
+                "summaryMd": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "businessProfile": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "terms": {
+                  "type": "object"
+                },
+                "keyDates": {
+                  "type": "object"
+                },
+                "sourceAccessions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "eventCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "latestEventAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SituationWeeklyIssueList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SituationWeeklyIssue"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "SituationStripped": {},
       "SituationStrippedList": {},
       "SituationSummary": {},
+      "SituationUnderwritingPack": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "generatedAt",
+          "research",
+          "situation",
+          "markdown"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "situation_underwriting_pack"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "research": {
+            "type": "object",
+            "required": [
+              "headline",
+              "businessProfile",
+              "narrative"
+            ],
+            "properties": {
+              "headline": {
+                "type": "string"
+              },
+              "businessProfile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "narrative": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "situation": {
+            "$ref": "#/components/schemas/SituationDetail"
+          },
+          "markdown": {
+            "type": "string",
+            "description": "Source-cited Markdown Copy-for-LLM brief generated from the canonical situation detail."
+          }
+        }
+      },
       "DilutionCoverage": {},
       "DilutionScore": {},
       "DilutionScoreEnhanced": {},
