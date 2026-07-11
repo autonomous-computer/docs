@@ -1,0 +1,108 @@
+---
+title: "Special Situations Workflows"
+description: "Build cited special-situations discovery, monitoring, archive, and underwriting workflows with the SEC API."
+---
+
+Use Special Situations as a durable SEC-derived research layer: discover a live population, open the cited event trail behind a candidate, preserve a fixed weekly archive when reproducibility matters, and monitor only the set that actually warrants attention.
+
+<Info>
+This is a paid public API product. The free [Situations database](https://secapi.ai/situations) is useful for discovery and organic research; API keys unlock programmatic search, exports, archive reads, and monitoring under your organization plan.
+</Info>
+
+## Choose the right object
+
+| Need | Start with | Why |
+| --- | --- | --- |
+| Scan live candidates | `GET /v1/situations` | A current, filterable roster of durable situations |
+| Explain a current candidate | `GET /v1/situations/{situation_id}` | Current terms, narrative, market context, and filing timeline |
+| Cite a concise agent brief | `GET /v1/situations/{situation_id}/export` | Source-cited Markdown designed for downstream models |
+| Build a single research packet | `GET /v1/situations/{situation_id}/underwriting-pack` | Canonical detail, narrative, timeline, and Copy-for-LLM Markdown together |
+| Reproduce a past digest | `GET /v1/situations/issues/{issue}` | Immutable publication-time snapshot, not live data |
+| React to a material update | `secapi situations watch` | Durable delivery with an explicit destination and provenance |
+
+## 1. Discover, then narrow
+
+Use the lean projection for a broad roster. It lowers transport and parsing cost; it does not lower the meter for the request.
+
+```bash
+secapi situations list \
+  --types merger,tender_offer \
+  --statuses announced,pending \
+  --enrich false \
+  --limit 100
+```
+
+When the investigation begins with a filing type rather than a company, let the server expand the EDGAR form to the situations it can trigger:
+
+```bash
+secapi situations by-form --form "SC 13D" --limit 25
+secapi situations calendar --date-types vote,expected_close --days 30
+```
+
+## 2. Build a source-cited research packet
+
+Retrieve current detail before asking an agent to interpret a situation. Keep the `situationId`, accession numbers, source URLs, event dates, `requestId`, and `traceparent` with the resulting memo. An export is a factual brief, not investment advice and not a substitute for source-filing review.
+
+```bash
+secapi situations get --situation-id sit_abc123
+secapi situations export --situation-id sit_abc123 > situation-brief.md
+```
+
+<Prompt>
+Read the cited SEC API Special Situations payload and its Copy-for-LLM export. Separate filing-supported facts from inference. Preserve every accession number, source URL, event date, requestId, and traceparent. State which facts are current live detail versus historical archive data. Do not invent consideration, timing, premium, counterparty, or completion facts when the field is absent.
+</Prompt>
+
+## 3. Use immutable issues for reproducibility
+
+Issue data answers a historical question: what did the digest publish then? Live detail answers a current question: what does the situation look like now? Keep those two facts separate in stored research.
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/issues?limit=12"
+
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/issues/42"
+```
+
+The issue number or slug, publication timestamp, `sourceSituationIds`, `sourceEventIds`, and source-event snapshots are the reproducibility anchors. Fetch the referenced `situationId` separately before describing live terms or current status.
+
+## 4. Monitor after you have a thesis
+
+Create a monitor only after narrowing the universe. A direct email monitor is appropriate for a person; organization fanout is appropriate only after signed webhook or stream delivery has been configured and tested.
+
+```bash
+secapi situations watch \
+  --situation-ids sit_abc123 \
+  --use-org-webhooks \
+  --name "ACME vote and close monitoring"
+```
+
+Creating, reading, or changing a watch reports the `monitor_management` control-plane meter. A successful direct-email delivery reports `email_delivery`; successful organization-level webhook or stream fanout reports `situations_webhook_delivery`. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
+
+## MCP and reusable Skills
+
+The hosted MCP surface currently exposes `situations.list`, `situations.get`,
+`situations.feed`, `situations.calendar`, `situations.stats`,
+`situations.performance`, `situations.export`, and `situations.watch`. Tool
+calls use the same organization key, entitlement checks, meter classes, and
+source-citation expectations as REST. Install the server with the
+[MCP setup guide](/mcp-install), then let an agent use the discovery tools
+before issuing a durable watch.
+
+The bundled `track-special-situations` Skill is the CLI-oriented counterpart:
+it guides an agent from a broad roster to live detail, a cited export, and an
+intentional monitor. It does not expose the internal Omni Apps market or
+fundamentals layer.
+
+## Cost and entitlement posture
+
+Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`. For every request, log the response meter and billing headers rather than hard-coding a plan assumption. The important Special Situations meter classes are `situations_lookup`, `situations_feed_read`, `situations_export`, `situations_underwriting_pack`, `monitor_management`, `email_delivery`, and `situations_webhook_delivery`.
+
+The TIKR-style fundamentals, estimates, valuation, and broad international symbol dataset used by Omni Apps are internal-only infrastructure. They are not part of this public Special Situations API, documentation, SDK, CLI, MCP, or pricing promise.
+
+## Read next
+
+- [Special Situations API](/products/special-situations)
+- [Situations endpoint reference](/api-reference/situations)
+- [Webhook and Stream Workflows](/webhook-stream-workflows)
+- [Auth, billing, and first utility](/auth-and-pricing)
