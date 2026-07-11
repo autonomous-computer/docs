@@ -1,82 +1,51 @@
 ---
 title: "Coverage and Historical Depth"
-description: "Understand the SEC API coverage posture, including searchable history depth, completeness guarantees, and partial or gated semantics."
+description: "See the public SEC API coverage floor, the difference between searchable history and completeness, and the boundaries of derived SEC data."
 ---
 
-<Note>
-**Dilution wedge — now live in all 4 SDKs and CLI (April 2026).** Eleven row types (events, warrants, convertibles, ROFR, lockups, cash position, corporate actions, Nasdaq compliance, ratings, reverse splits, share-float history) plus a coverage rollup and a per-issuer score, exposed via 14 REST endpoints (`/v1/dilution/*`), 14 MCP tools, and first-class methods in the TypeScript, Python, Go, and Rust SDKs (and `secapi dilution *` subcommands). Thirteen of the 14 routes honor `?view=agent`; coverage is already compact. See [Dilution endpoints](/api-reference/dilution).
-</Note>
+Coverage is not one number. A filing may be searchable while its text, extracted sections, XBRL facts, or a specialized workflow is unavailable or partial. This page states the public boundary so you can design a workflow around what is actually returned.
 
-This page summarizes the current public coverage posture without overstating what SEC API has not yet shipped. The right mental model is:
+## Public filing and section history
 
-- a broad public workflow surface built around SEC and adjacent market utilities
-- a 9-year searchable history floor for filings and section workflows
-- stronger completed-year completeness guarantees for the most recent two full years of filings and section workflows
-- a 30-year cold-storage policy target that remains intentionally deferred from the hot path
-- explicit partial and gated semantics where a surface is not fully generalized yet
+The checked-in history-quality contract defines:
 
-## XBRL facts coverage
+| Commitment | Scope |
+| --- | --- |
+| Searchable floor | 9 public years for filing and section workflows |
+| Completed-year guarantee | The two most recent completed years have release-blocking completeness checks for the required filing forms |
+| Inventory target | 20 years of inventory coverage, which is not the same as a public completeness promise |
+| Current year | An availability floor, not a completed-year completeness guarantee |
 
-- 95M+ pre-parsed XBRL facts stored in PostgreSQL across 9,600+ SEC-registered companies
-- all SEC XBRL taxonomies covered: us-gaap, ifrs-full, dei
-- daily automated sync via our scheduled data pipeline at 07:00 UTC refreshes the full universe
-- DB-first query architecture: facts and statement endpoints query our database first, falling back to SEC EDGAR only when data is missing
+Filing manifests are distinct from rendered filings, extracted sections, and XBRL facts. Use [Freshness, Coverage, and Source Evidence](/freshness-and-trust) when your workflow needs a current or derived artifact rather than a filing record.
 
-## Current snapshot
+## What the API covers
 
-- filing and section history validations currently pass across the 9-year searchable floor
-- the release gate separately enforces stronger per-form completeness floors for the last two completed years instead of pretending all 9 searchable years carry the same density guarantee
-- historical coverage is proven through checked-in validation artifacts, not a generic “full archive is always hot” claim
-- current v3 public workflow coverage includes:
-  - entities and canonical resolution
-  - filings, latest filing retrieval, and section extraction across 10-K / 10-Q / 8-K / DEF 14A plus offering forms (S-1, S-3, 424B*, FWP, 20-F)
-  - normalized statements, facts, segmented revenues (with geographic depth detection and hierarchy filtering), share float, and common equity derivation with preferred stock deduction
-  - ownership, insiders, historical institutional extract, and compensation
-  - SEC-native M&A events, SEC-furnished earnings materials, enforcement events, and board composition
-  - market calendar, rights-scoped indices, and SEC API Volatility Score
-  - market data: snapshots, historical bars, corporate actions, reference, estimates, and search
-  - factor intelligence: endpoint coverage for catalog, returns, correlations, intraday snapshots, dashboard, and regime performance; callers should inspect freshness and materialization metadata, and long-history factor claims should be made only per proved factor
-  - macro intelligence: indicators, releases, calendar, forecasts, high-signal packs (12 countries including 24 daily US FRED series), and regime classification
-  - investment intelligence: security, company, earnings preview, portfolio, watchlist, semantic query, and footnote analysis
-  - portfolio strategies: factor decomposition, stress testing, optimization, factor rotation, and regime screening
+| Need | Current public surface | Boundary to keep in mind |
+| --- | --- | --- |
+| Find a filing | Filing search, latest filing, and accession lookup | A manifest does not promise every derived representation is ready. |
+| Read a filing or named section | Render and section endpoints for documented forms and section keys | Availability varies by filing format, extraction support, and freshness class. |
+| Analyze financial facts | XBRL facts and normalized statements | A database-first path can use an explicit SEC fallback; field availability varies by issuer disclosure. |
+| Ownership and insiders | 13F, 13D/13G, and insider workflow families | Verify issuer/date/form coverage for the workflow you are building. |
+| Offerings, events, and earnings materials | Documented specialized endpoints | These are scoped derived workflows, not a promise to normalize every exhibit or filing family. |
 
-## Measurement coverage
+## Rights and partial surfaces
 
-- the freshness dashboard tracks current measured forms for launch-critical SEC workflows
-- the history inventory tracks the searchable filings plus sections floor separately from freshness
-- the benchmark suite tracks repeated investor-agent workloads separately from freshness so speed claims do not blur into freshness claims
+- `XNYS` and `XNAS` have configured holiday coverage. Other documented markets can be `weekend_only` or `tentative`; read their `coverage`, `confidence`, and status fields.
+- Public index-constituent access is rights-scoped. Do not assume an internal mapping audit means every index roster is publishable.
+- Some advanced surfaces, including sentiment and selected data rights, are intentionally gated. A route, catalog entry, or internal inventory is not itself a public availability claim.
 
-## Partial or intentionally scoped surfaces
+## What we do not claim
 
-- market calendar:
-  `XNYS` and `XNAS` are holiday-configured; other covered exchanges remain `weekend_only`
-- index constituents:
-  `NDX` is public; `SPX`, `DJIA`, and `RUT` remain rights-scoped for public export even though private mapping coverage is strong
-- offerings:
-  public filing records are live; section-level extraction (Prospectus Summary, Risk Factors, Use of Proceeds, Capitalization, Dilution, Description of Securities, Underwriting, Selling Stockholders, Plan of Distribution, Principal Stockholders, Management, Executive Compensation, Related-Party Transactions, 424B pricing supplements, FWP term sheets, 20-F items) is now live for S-1 / S-3 / 424B* / FWP / 20-F with a dedicated catalog and exhibit parsing for EX-4, EX-5, and EX-10 (warrant, legality, and material-contract exhibits). Richer LLM-extracted dilution payload (warrant terms, lockup schedules, rights of first refusal) remains deferred to the dilution wedge workstreams that build on top of this extractor.
-- sentiment:
-  intentionally gated; not public
-- traceability:
-  filing-derived document-plus-page support is live, HTML-first exact region anchors now ship for supported segmented revenue facts and supported section excerpts, and the shared trace surface now also covers SEC enforcement source records; broader PDF/cell parity and richer non-filing families remain deferred
-- analytics:
-  a narrow tenant-safe query surface is live across filings, sections, segmented revenues, SEC enforcement actions, and quarter-specific institutional ownership extracts; raw SQL and broader warehouse-style coverage remain deferred
+- A universal real-time lag across SEC filing, text, section, statement, and semantic-retrieval classes.
+- Equal-density or completeness guarantees for every year outside the documented 9-year searchable floor and two completed-year checks.
+- A public normalized parser for every EDGAR exhibit, filing family, or historical document format.
+- Current corpus counts without a dated retained production artifact.
 
-## Historical depth posture
+## Design a resilient workflow
 
-- searchable hot posture today:
-  9-year filings and sections floor
-- cold posture target:
-  30-year archive
-- non-goal for v3:
-  full 30-year hot normalization
+1. Start with an issuer, form, date, or accession and retrieve the source record.
+2. Check the response for the specific derived surface you need rather than assuming it follows the filing manifest.
+3. Preserve the source URL, accession, and request ID.
+4. Handle documented unavailable or degraded outcomes in code instead of silently substituting an unrelated data source.
 
-The repo still keeps warm and cold tiering as an explicit backlog item rather than pretending that policy targets are already the same thing as current production implementation.
-
-## Source artifacts
-
-- history inventory
-- history-quality contract
-- history-quality results
-- external-reference validation
-- freshness dashboard
-- the v3 evidence matrix
+Read next: [Filing Types and Exhibits](/filing-types-and-exhibits), [Freshness, Coverage, and Source Evidence](/freshness-and-trust), [Methodology Registry](/methodology-registry), and [API Reference](/api-reference).

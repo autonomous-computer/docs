@@ -1,117 +1,57 @@
 ---
-title: "Freshness and trust"
-description: "Understand how SEC API delivers source-backed answers, explicit freshness signals, and stable contracts you can rely on in production."
+title: "Freshness, Coverage, and Source Evidence"
+description: "Understand what SEC API can show about a source record, its availability, and derived data before you rely on it in research or production."
 ---
 
-<Info>
-Trust is not a slogan here. It is the combination of source-backed answers, explicit freshness, stable contracts, and enough metadata to keep the trail intact after the data leaves the API.
-</Info>
+Use this page to decide what a response can support. SEC API separates three questions that are often blurred together: when the SEC published a source, when SEC API could return it, and when a derived representation such as a section, statement, or semantic-search result became available.
 
-The current checked-in trust artifacts support strong scoped claims around benchmark performance, provenance-first contracts, filing-page traceability, and a 9-year searchable filing/section floor. They do not support minute-level freshness, universal real-time coverage, or a claim that years 10-20 carry the same hot-path density guarantee. Freshness is still an explicitly measured posture, not a hand-waved marketing claim.
+Do not treat an available filing manifest as proof that every derived surface is current. Keep the filing accession, source URL, request ID, and any returned freshness or degradation metadata with a downstream conclusion.
 
-Factor workflows have additional market-calendar and model-materialization semantics. See [Factor Provenance](/factor-provenance) and [Factor Freshness](/factor-freshness) for the factor-specific trust contract.
+## Read freshness by data class
 
-## Measurement policy
-
-<Steps>
-  <Step title="Source publish time">
-    Use the upstream SEC publish timestamp, such as `acceptanceDateTime`, as the source-side clock.
-  </Step>
-  <Step title="API availability">
-    Measure the first successful SEC API resolution of the workflow being benchmarked.
-  </Step>
-  <Step title="Normalized availability">
-    Track when the rendered or normalized artifact is ready, not just when a raw fetch succeeds.
-  </Step>
-</Steps>
-
-## Freshness classes
-
-Freshness claims are scoped to a specific customer-visible class. A filing can be discovered before its rendered text is ready, and a rendered filing can be searchable before its XBRL statements or semantic vectors are refreshed.
-
-| Class | What it means | Primary evidence |
+| Data class | What availability means | What to preserve |
 | --- | --- | --- |
-| Raw SEC discovery | SEC API has observed the filing or source record from SEC feeds or SEC endpoints. | source-ingest records, filing provenance `acceptedAt`, hot-lane/RSS telemetry |
-| Metadata availability | The filing appears in SEC API filing search/latest responses with CIK, ticker, form, date, accession, and source URL. | the filing manifest store, `/v1/filings`, `/v1/filings/latest` |
-| Filing HTML/text availability | The filing body can be rendered or read from persisted storage without waiting on a live SEC fetch. | rendered filing routes, manifest render-depth, storage/read smoke |
-| Section extraction availability | Standard 10-K/10-Q/8-K/DEF 14A item sections are available with item labels and citations. | the section-snippet store, section manifests, section routes |
-| XBRL/statement availability | Facts and normalized statements are available from the DB-first XBRL store or, when missing, from the explicit SEC companyfacts fallback. | the XBRL facts store, statement/facts provenance |
-| Semantic vector availability | Section content has been embedded with finance-tuned embeddings and is present in the vector-search section namespace for semantic/hybrid search. | vector index stats, vector spot checks, bounded reindex artifact |
+| Filing metadata | The filing record can be found by issuer, form, date, or accession. | `accessionNumber`, `filingDate`, `filingUrl`, `requestId` |
+| Filing text | A filing body can be rendered or read from the available source/storage path. | accession, source URL, render state when present |
+| Extracted sections | A supported filing section can be returned with its filing identity and citation fields. | accession, section key, source URL, citation span when present |
+| Facts and statements | A normalized value is available from the documented database path or SEC fallback. | provenance, period, accession/source fields, materialization metadata when present |
+| Semantic search | A section is available to the configured retrieval path. | query, mode, accession, source URL, citation fields, degraded state |
 
-## Claim mapping
+## Freshness is measured, not assumed
 
-| Public wording | Freshness class | Launch posture |
-| --- | --- | --- |
-| "Latest filings" and filing search | Metadata availability | Supported for core forms; measured by freshness telemetry and live filing hot-path benchmarks. |
-| "Filing text" or "rendered filing" | Filing HTML/text availability | Supported when storage-backed or successfully rendered; stale/missing derived text should surface as degraded rather than blocking unrelated metadata reads. |
-| "Section/item extraction" | Section extraction availability | Supported for standard item keys on core forms; freshness is separate from raw filing discovery. |
-| "Normalized statements" and "XBRL-to-JSON" | XBRL/statement availability | Supported through DB-first XBRL facts with explicit fallback/source metadata. |
-| "Semantic search" and "AI retrieval" | Semantic vector availability | Supported when vector providers are configured and the vector index is current; keyword fallback must disclose `partial_vector_search`. |
-| "Real-time" or "webhook freshness" | Raw SEC discovery plus delivery evidence | Do not generalize this claim across all classes without delivery retry evidence and measured lag for the specific event stream. |
+The latest checked-in freshness dashboard was generated on **2026-03-24** and records a `ready` dashboard state for its measured forms and workflows. It is evidence about that dated run, not a standing promise of minute-level or universal real-time availability. Re-run or refresh the telemetry before publishing a newer lag claim.
 
-## Freshness status semantics
+The public history contract is separate from freshness: it sets a 9-year searchable filing and section floor, while only the two most recent completed years are release-blocking completeness guarantees. Inventory coverage beyond that floor is not an equal-density production guarantee. See [Coverage and Historical Depth](/coverage-and-depth).
 
-SEC API freshness metadata uses four status values:
+## Response states
 
-| Status | Meaning |
+Where a route exposes freshness status, the documented values are:
+
+| Status | What it means for the route |
 | --- | --- |
-| `fresh` | The source-to-visible lag is inside the class threshold for the workflow. Many filing-derived paths currently use a 24-hour fresh threshold unless a stricter class-specific SLO is published. |
-| `degraded` | The artifact is usable but outside the fresh threshold on routes that expose a degraded band. Not every runtime path currently emits this intermediate state. |
-| `stale` | The artifact is outside the freshness threshold for the route and should not be treated as current. Some filing metadata paths move directly from `fresh` to `stale`. |
-| `unknown` | SEC API does not yet have enough source-published or visibility timing to compute the class. First-response paths can return `unknown` while asynchronous visibility telemetry is being recorded. |
+| `fresh` | The route considers the artifact inside its documented freshness threshold. |
+| `degraded` | The response is usable, but a route-specific freshness or dependency condition is outside its normal posture. |
+| `stale` | The artifact should not be treated as current for that route. |
+| `unknown` | The route does not have enough timing information to classify the artifact. |
 
-Default/full SEC data responses preserve provenance, freshness, and materialization metadata where the route has those fields. Compact and `view=agent` responses may omit some envelope metadata by design to reduce token cost; they keep citation fields needed for downstream auditability.
+Not every endpoint has this field, and compact or `view=agent` projections can omit envelope metadata. Use the endpoint reference for the exact response shape; do not infer freshness from the absence of an error.
 
-## Current trust posture
+## What SEC API can prove
 
-- freshness dashboard status is currently `monitor`, with form-level telemetry and alert counts published in the checked-in artifact
-- benchmark validation passes for the current dated investor-agent suite
-- FinanceBench evaluation: 18/25 (72%) on the PatronusAI FinanceBench canary-25 agent subset as of 2026-04-25 (best stable harness configuration; see the FinanceBench evaluation page)
-- FIGI-aware company-resolution inputs are live, while canonical-store completeness proof is tracked separately from the public claim set
-- page-level filing traceability is live for filing-derived datapoints, with HTML-first exact fact-region anchors now available on supported segmented revenue traces
-- non-filing trace hydration now extends to SEC enforcement source records, market price snapshots, and analyst estimate datapoints through the same `/v1/traces` surface
-- sentiment remains intentionally gated and is not part of the public 3.0 surface
+- **Source lineage:** filing, accession, and source URLs are available on documented filing and search paths.
+- **Derived-data posture:** routes can expose provenance, materialization, or degradation metadata where the contract includes it.
+- **Request correlation:** SEC API app responses include `Request-Id` and `traceparent`; supplied correlation IDs are for tracing, not billing idempotency.
+- **Coverage boundary:** source-backed filing workflows and derived surfaces have different availability conditions. A section, XBRL fact, or vector result should be evaluated in its own class.
 
-## What makes a response trustworthy
+## XBRL facts and statements
 
-<CardGroup cols={2}>
-  <Card title="Provenance" icon="badge-info">
-    If SEC API gives you a structured answer, it should also tell you which filing or source object it came from.
-  </Card>
-  <Card title="Freshness" icon="clock-3">
-    If SEC API gives you a current answer, it should also tell you when the source was published and when SEC API last refreshed it.
-  </Card>
-  <Card title="Materialization" icon="layers-2">
-    If a parser or normalization pass shaped the output, the version should be visible.
-  </Card>
-  <Card title="Failure posture" icon="shield-alert">
-    If a workflow is stale or degraded, the response should say so instead of pretending nothing is wrong.
-  </Card>
-</CardGroup>
+Facts and statement workflows use a database-first SEC data path with a documented SEC company-facts fallback when data is unavailable in the primary store. We publish exact corpus counts only when they are tied to a dated retained count artifact; do not infer a current count or full-universe completeness from this architecture.
 
-## Current health posture
+## Use this in production
 
-- freshness dashboard status: `monitor`
-- freshness claim posture: use the dashboard artifact and form-level telemetry, not generic real-time language
-- benchmark scorecard posture: `18 wins`, `0 losses`, `2 ties` on the current dated suite
-- traceability posture: filing-derived datapoints can resolve to the correct filing document and page, supported segmented revenue traces can preserve exact HTML fact ranges, SEC enforcement releases expose shared non-filing trace records, and market prices and analyst estimates carry full source-record traces with provider attribution
-- remaining advisory caveat: some freshness signals still publish warnings instead of silently disappearing from the trust story
+1. Resolve the issuer and retrieve the filing or data point you need.
+2. Store the identifiers and source fields that arrive with that response.
+3. Check route-specific freshness, provenance, and degradation fields before automating a decision.
+4. On an unexpected result, preserve `Request-Id` and use [Request Diagnostics](/request-diagnostics) before opening support.
 
-## XBRL facts architecture
-
-Financial data queries (facts and statements) use a DB-first architecture. Over 95 million pre-parsed XBRL facts across 9,600+ SEC-registered companies are stored in our own PostgreSQL database and refreshed daily via our scheduled data pipeline at 07:00 UTC.
-
-The query path:
-1. Check if the company has data in the XBRL facts store
-2. If data exists, query directly from the database (fast path)
-3. If no data exists, fall back to live SEC EDGAR fetch (slow path)
-
-Every response includes a `source` field in its provenance or completeness object: `"xbrl_facts"` for database-served responses, `"company_facts"` for SEC-served responses.
-
-## Source artifacts
-
-- freshness telemetry
-- freshness dashboard
-- external-reference validation
-- competitive benchmark scorecard
-- the v3 evidence matrix
+Read next: [Coverage and Historical Depth](/coverage-and-depth), [Methodology Registry](/methodology-registry), [API Conventions](/api-conventions), and [Troubleshooting](/troubleshooting).

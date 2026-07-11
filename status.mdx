@@ -1,35 +1,29 @@
 ---
-title: "Status"
-description: "Check the current SEC API production surface and operational status so you know what is live before you build against it."
+title: "SEC API Status and Support Signals"
+description: "Check the public API and hosted MCP endpoints, understand what a health response proves, and capture the right evidence when a request fails."
 ---
 
-## Current production surface
+Use the public status page for incidents and the health endpoints for a quick service check. A healthy endpoint does not prove that a specific issuer, derived dataset, or upstream SEC source is available; it only describes the service check that ran.
 
-- public docs: `https://docs.secapi.ai`
+## Public endpoints
+
+- Status: [status.secapi.ai](https://status.secapi.ai)
 - API: `https://api.secapi.ai`
-- hosted MCP: `https://api.secapi.ai/mcp`
-- API health: `https://api.secapi.ai/healthz`
-- API readiness: `https://api.secapi.ai/readyz`
+- Hosted MCP: `https://api.secapi.ai/mcp`
+- Health: `https://api.secapi.ai/healthz`
+- Readiness: `https://api.secapi.ai/readyz`
 
-## Expected signals
+## What to capture
 
-- every API response includes `Request-Id`
-- every API response includes `traceparent`
-- API keys are the primary authentication method for all plans; hosted MCP OAuth discovery is available through the WorkOS-backed `.well-known` endpoints. Enterprise OAuth/SSO is planned for 2026 Q3+.
-- billing, search, and event surfaces are live in production
-- launch-readiness and strict validation workflows are green for the shipped v3 surface
-- public site routes and API trust headers are part of the release posture, not afterthoughts
-- searchable filings and section history are release-gated for a 9-year public floor; deeper inventory remains provisional rather than an equal-density production guarantee
+For a customer request handled by the SEC API app, retain the response `Request-Id` and `traceparent`, the endpoint, timestamp, HTTP status, and error code. A client may supply a correlation ID for tracing, but correlation IDs are not billing idempotency keys.
 
-## How to report an incident
+For a data result, also retain the route-specific filing accession, source URL, provenance, freshness, or degradation fields that are present. See [Freshness, Coverage, and Source Evidence](/freshness-and-trust) for why these are separate from a service-health check.
 
-- include the failing endpoint
-- include the exact `Request-Id`
-- include the UTC timestamp and org id if known
-- include whether the failure was API, webhook, stream, billing, or MCP related
+## When something fails
 
-## Support workflow
+1. Check [status.secapi.ai](https://status.secapi.ai) and `GET /healthz`.
+2. Reproduce the request once with the same endpoint and safe, redacted inputs.
+3. Do not repeat quota, billing-cap, or rate-limit requests in a loop; honor `Retry-After` when present.
+4. Open a support request with the request evidence, not an API key or private payload.
 
-- first inspect `https://api.secapi.ai/healthz`
-- then include the org id and `Request-Id` in the support ticket so the SEC API team can inspect internal account and request records
-- replay webhook deliveries when downstream delivery is the only failure mode
+Read next: [Troubleshooting](/troubleshooting), [Request Diagnostics](/request-diagnostics), and [Error Code Catalog](/error-code-catalog).

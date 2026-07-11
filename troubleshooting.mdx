@@ -27,8 +27,8 @@ For the full code-by-code table, use the [Error code catalog](/error-code-catalo
 | `400` | `validation_error` | A query param, path value, or JSON body failed validation. | Compare the request to the endpoint reference and remove unknown fields before retrying. |
 | `401` | `missing_api_key` | No machine credential reached the API. | Send `x-api-key: $SECAPI_API_KEY`; do not send the API key as a bearer token. |
 | `401` | `authentication_failed` | The API key was rejected, revoked, or belongs to another org. | Create a replacement key, copy the one-time secret, rotate callers, and retry `/v1/limits`. |
-| `401` | `missing_browser_session` | A dashboard control-plane route needs a WorkOS browser session. | Sign in through [secapi.ai/login](https://secapi.ai/login); API keys cannot mutate dashboard billing, settings, or key-management state. |
-| `402` | `billing_required` | The starter grant is exhausted and the org has no active paid billing path. | Inspect `GET /v1/billing`, then activate Pay As You Go or choose a plan. |
+| `401` | `missing_browser_session` | A dashboard control-plane route needs a WorkOS browser session. | Sign in through `/login`; API keys cannot mutate dashboard billing, settings, or key-management state. |
+| `402` | `billing_required` | A route, entitlement, plan, grant, credit, or billing state does not permit the request. | Inspect `GET /v1/billing` and `GET /v1/limits`, then resolve the stated entitlement or billing condition. |
 | `402` | `billing_budget_approval_required` | The request would cross a configured approval threshold. | Ask an org billing admin to approve or adjust the budget before retrying. |
 | `402` | `billing_budget_hard_cap_exceeded` | The org reached a hard spend cap. | Stop retries and raise the cap or wait for the next billing period. |
 | `403` | `operator_scope_required` | The route requires an internal operator scope or a browser permission your principal lacks. | Use the correct principal; public API keys should not call internal operator routes. |
