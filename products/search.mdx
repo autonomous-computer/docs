@@ -1,97 +1,56 @@
 ---
-title: "Full-Text & Semantic Search API"
-description: "Search SEC filings and documents with the SEC API using keyword, semantic, or hybrid retrieval with relevance scoring."
+title: "Search SEC Filing Content"
+description: "Choose full-text, semantic, or section search for SEC filing content, then carry accession numbers, source URLs, and citation spans into the next step."
 ---
 
-Search SEC filings and documents using keyword, semantic, or hybrid retrieval. Powered by vector search with finance-tuned embeddings (ranked #1 in finance) and reciprocal rank fusion (RRF) for hybrid queries.
+SEC API has three different search jobs. Choose the one that matches how you will use the result:
 
-## Why use this
+- **Full-text search** finds both filing records and matching sections for an exact query.
+- **Semantic search** retrieves conceptually related sections when the wording may differ.
+- **Section search** searches extracted filing sections and returns citation-ready passages.
 
-Traditional filing search is keyword-only. The SEC API Search surface adds semantic retrieval so you can find filings by concept, not just exact terms. Hybrid mode fuses keyword and vector results using RRF scoring for the best of both approaches.
+Search is retrieval, not a conclusion. Read the returned passage, preserve its accession number and source URL, and let an investor or downstream policy decide what the disclosure means.
 
-- **Three retrieval modes** -- keyword, semantic, and hybrid (RRF fusion)
-- **Finance-tuned embeddings** -- ranked #1 in finance by MTEB benchmarks
-- **Vector search index** -- low-latency similarity search across the filing corpus
-- **Score transparency** -- every result includes a relevance score and the retrieval mode used
-- **Filing-scoped** -- results link directly to filing sections and source documents
-
-## Quick start
+## Full-text search: exact terms across filings and sections
 
 ```bash
-# Keyword search
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?query=revenue+recognition+policy&limit=5"
+curl "https://api.secapi.ai/v1/search/fulltext?q=revenue%20recognition%20policy&ticker=AAPL&form=10-K&limit=5" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-For product context and agent workflows, see the [Search feature page](https://secapi.ai/features/search), [semantic search glossary page](https://secapi.ai/glossary/semantic-search), and [SEC filing RAG guide](https://secapi.ai/guides/sec-filing-rag).
+The response contains both `filings` and `sections` lists. Use this when you want exact-term matches and the filing record around them.
 
-## Example: semantic search
+## Semantic search: related disclosures, not only exact words
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?query=companies+discussing+supply+chain+risks+in+asia&retrievalMode=semantic&limit=10"
+curl "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20disruption%20risk&ticker=MSFT&form=10-K&mode=hybrid&limit=5" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-## Example: hybrid search with RRF
+`mode` can be `keyword`, `semantic`, or `hybrid`; the default is `hybrid`. The response has a `sections.data` list. In the default view, each result includes retrieval metadata. `view=agent` keeps the citation fields while omitting score and retrieval-mode metadata where the endpoint documents that projection.
+
+## Section search: a cited passage for a known research question
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?query=goodwill+impairment+risk+factors&retrievalMode=hybrid&limit=10"
+curl "https://api.secapi.ai/v1/sections/search?q=going%20concern&ticker=AAPL&form=10-K&limit=5&view=agent" \
+  -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-## Response shape
+Section and semantic-search results can include `accession`, `section_key`, `source_url`, `char_start`, `char_end`, and `highlighted_snippet`. The character offsets refer to the returned section markdown, not raw SEC HTML. When offsets are unavailable, keep the accession and source URL but do not try to slice text; the response explains the degraded citation state.
 
-```json
-{
-  "results": [
-    {
-      "accessionNumber": "0000320193-23-000077",
-      "ticker": "AAPL",
-      "companyName": "Apple Inc.",
-      "form": "10-K",
-      "sectionKey": "item1a",
-      "excerpt": "The Company is subject to risks associated with...",
-      "score": 0.892,
-      "retrievalMode": "hybrid"
-    }
-  ],
-  "pagination": {
-    "total": 1240,
-    "page": 1,
-    "limit": 10
-  },
-  "meta": {
-    "queryTimeMs": 142,
-    "retrievalMode": "hybrid"
-  }
-}
-```
+## Use the result safely
 
-## Key parameters
+1. Open the `source_url` or retrieve the section by `(accession, section_key)`.
+2. Keep the accession number, filing date, and request ID beside your excerpt or model output.
+3. Treat a match as evidence to review, not proof that a company has the risk, event, or accounting treatment you searched for.
+4. Constrain repeatable work with ticker, form, date, or filing-year filters before expanding the corpus.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `query` | string | Search query (required) |
-| `retrievalMode` | string | `keyword`, `semantic`, or `hybrid` (default: keyword) |
-| `ticker` | string | Scope to a specific company |
-| `form` | string | Filter by form type |
-| `dateFrom` | string | Start date (ISO 8601) |
-| `dateTo` | string | End date (ISO 8601) |
-| `limit` | number | Results per page (max 50) |
+## Learn the exact contract
 
-## Rate limits
+- [Full-text search reference](/api-reference/search/get-v1-search-fulltext)
+- [Semantic search reference](/api-reference/search/get-v1-search-semantic)
+- [Section search reference](/api-reference/sections/get-v1-sections-search)
+- [Citation and response conventions](/api-conventions#citation-char-range-spans)
+- [Semantic-search risk-factor tutorial](/tutorials/semantic-search-risk-factors)
 
-- **Standard plan**: 60 requests/minute
-- **Pro plan**: 300 requests/minute
-- **Enterprise**: Custom limits
-
-Semantic and hybrid queries consume more compute than keyword queries. Rate limits reflect this difference.
-
-## Related
-
-- [Search feature overview](https://secapi.ai/features/search)
-- [Semantic search glossary](https://secapi.ai/glossary/semantic-search)
-- [SEC Filing RAG guide](https://secapi.ai/guides/sec-filing-rag)
-- [API Reference: Full-Text Search](/api-reference/search)
-- [Coverage and Depth](/coverage-and-depth)
-- [Getting Started](/getting-started)
+For commercial context, see the [search feature page](https://secapi.ai/features/search), [semantic-search glossary entry](https://secapi.ai/glossary/semantic-search), and [SEC filing RAG guide](https://secapi.ai/guides/sec-filing-rag).

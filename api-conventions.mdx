@@ -5,8 +5,8 @@ description: "Reference for SEC API request correlation, metering, and the cost,
 
 ## Request correlation
 
-- every response includes `Request-Id`; log it with the workflow name, response status, and customer-visible error
-- callers can provide `x-request-id` when they need deterministic smoke-test output, replayable benchmarks, or cross-service trace joins
+- every response includes `Request-Id`
+- callers can provide `x-request-id` to make local benchmarking and smoke output deterministic
 
 ## Metering
 
@@ -83,11 +83,11 @@ Because quarterly income-statement and cash-flow values are reported as filed, Q
 - `?view=agent` and `?view=compact` coexist as distinct shapes; agent is not a strict subset of compact — it ships the richer "essentials + citations" shape while compact ships a UI-friendly top-level skim
 - token-count and cost headers naturally shrink in agent mode (agents pay less for compact responses). No client changes are required — header values reflect the final serialized body
 - agent-mode responses preserve camelCase field names — agent mode is a projection of the default shape, not a rename. See the per-endpoint API reference for the exact agent-mode field set
-- unknown values of `?view=` fall back silently to `default`, so accidental typos never surface as a 4xx
+- endpoints that validate `view` return `400 invalid_query_parameter` for an unknown value. Treat that as a client error and use the endpoint reference to confirm which projections it supports.
 
 ### Endpoints that support `?view=agent`
 
-Agent mode is live on **15 endpoints** today. Expect 30–95% byte-size reduction depending on endpoint shape (endpoints that carry large prose summaries see the biggest wins).
+Agent mode is available on the endpoints below. The byte reduction depends on the endpoint and response shape; use the endpoint reference when you need the exact projected fields.
 
 Initial agent-mode endpoints:
 
@@ -96,6 +96,7 @@ Initial agent-mode endpoints:
 - `GET /v1/statements` — statement with rows/periods, provenance dropped
 - `GET /v1/facts` — fact point items + lifted `accessionNumber` / `filingUrl`
 - `GET /v1/sections/search` — section items + lifted `startOffset` / `endOffset`
+- `GET /v1/search/semantic` — cited section results without score or retrieval-mode metadata
 
 Expanded agent-mode endpoints:
 
