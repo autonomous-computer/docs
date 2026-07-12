@@ -1,225 +1,90 @@
 ---
-title: "Try It"
-description: "Interactive API explorer — test SEC API endpoints with your API key"
+title: "Try it"
+description: "Make a live SEC API request, inspect the issuer response, and continue to a source filing"
 ---
 
-Test any endpoint directly from the docs. Enter your API key once and explore.
+Use this page to make a small live request before you build a larger workflow. Resolve a company first, then use the returned identity to choose the filing, statement, or search request you need.
 
 <Warning>
-These examples hit the live production API. Calls count against your usage quota.
+These examples call the production API and count against your usage quota.
 </Warning>
 
-## Setup
+## Set your API key
+
+Create an account at [secapi.ai/signup](https://secapi.ai/signup), create an API key in the signed-in [dashboard](https://secapi.ai/app), and expose it only to the process making the request.
 
 ```bash
-export SECAPI_API_KEY="your-key-here"
+export SECAPI_API_KEY="secapi_..."
 ```
 
-Don't have a key? Create an account at secapi.ai/signup.
+Send the key in `x-api-key`. Do not put it in browser code, a checked-in file, or an `Authorization: Bearer` header.
 
-## Entity Resolution
+## Resolve a company
 
-Resolve any company by ticker, CIK, or name:
+This request resolves Apple and returns its canonical CIK and identity metadata. `id` is SEC API's opaque canonical identifier for the resolved issuer; only `requestId` varies by request.
 
-<Tabs>
-  <Tab title="curl">
-```bash
-curl "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
-  -H "x-api-key: $SECAPI_API_KEY"
+<CodeGroup>
+```bash cURL
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
-  </Tab>
-  <Tab title="JavaScript">
-```javascript
-const res = await fetch("https://api.secapi.ai/v1/entities/resolve?ticker=AAPL", {
-  headers: { "x-api-key": process.env.SECAPI_API_KEY }
-})
-const entity = await res.json()
-console.log(entity.name, entity.exchange, entity.sicCode)
+
+```javascript JavaScript
+const response = await fetch(
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent",
+  { headers: { "x-api-key": process.env.SECAPI_API_KEY } },
+)
+
+const entity = await response.json()
+console.log(entity.ticker, entity.cik, entity.name, entity.requestId)
 ```
-  </Tab>
-  <Tab title="Python">
-```python
+
+```python Python
+import os
+
 import requests
-r = requests.get("https://api.secapi.ai/v1/entities/resolve",
-    params={"ticker": "AAPL"},
-    headers={"x-api-key": os.environ["SECAPI_API_KEY"]})
-entity = r.json()
-print(entity["name"], entity["exchange"], entity["sicCode"])
+
+response = requests.get(
+    "https://api.secapi.ai/v1/entities/resolve",
+    params={"ticker": "AAPL", "view": "agent"},
+    headers={"x-api-key": os.environ["SECAPI_API_KEY"]},
+)
+entity = response.json()
+print(entity["ticker"], entity["cik"], entity["name"], entity["requestId"])
 ```
-  </Tab>
-  <Tab title="CLI">
-```bash
+
+```bash CLI
 secapi entities resolve --ticker AAPL
 ```
-  </Tab>
-</Tabs>
+</CodeGroup>
 
-## Filing Search
+On success, confirm that the result includes `ticker`, `cik`, `name`, and `requestId`. Keep the request ID with your logs. For the complete set of accepted identifiers and response fields, read the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve).
 
-<Tabs>
-  <Tab title="curl">
+## Retrieve a filing
+
+Once entity resolution works, retrieve the latest 10-K. The filing can change as new reports arrive, so retain the source fields from the response rather than expecting a fixed accession number.
+
 ```bash
-# Search 10-K filings for Apple
-curl "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=3" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# Full-text search across all filings
-curl "https://api.secapi.ai/v1/search/fulltext?q=revenue+recognition+policy&limit=5" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# Semantic search (AI-powered relevance)
-curl "https://api.secapi.ai/v1/search/semantic?q=what+are+the+main+risks+for+this+business&ticker=TSLA" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-  </Tab>
-  <Tab title="JavaScript">
-```javascript
-// Semantic search
-const res = await fetch(
-  "https://api.secapi.ai/v1/search/semantic?q=supply+chain+risk&ticker=AAPL",
-  { headers: { "x-api-key": process.env.SECAPI_API_KEY } }
-)
-const results = await res.json()
-results.sections.data.forEach(s => {
-  console.log(`${s.score} | ${s.retrievalMode} | ${s.title}`)
-})
-```
-  </Tab>
-</Tabs>
-
-## Financial Statements
-
-<Tabs>
-  <Tab title="curl">
-```bash
-# All statements (income, balance, cash flow)
-curl "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# Segmented revenue
-curl "https://api.secapi.ai/v1/statements/segmented-revenues?ticker=AAPL" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-  </Tab>
-</Tabs>
-
-## Ownership & Insiders
-
-<Tabs>
-  <Tab title="curl">
-```bash
-# Recent insider trades
-curl "https://api.secapi.ai/v1/insiders?ticker=NVDA&limit=10" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# 13F institutional holdings (Berkshire Hathaway)
-curl "https://api.secapi.ai/v1/owners/13f?cik=0001067983" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# Compare 13F across quarters
-curl -X POST "https://api.secapi.ai/v1/owners/13f/compare" \
+curl -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"cik":"0001067983"}'
-```
-  </Tab>
-</Tabs>
-
-## Intelligence Bundles
-
-One-call pre-computed analysis — replaces 8+ raw API calls:
-
-<Tabs>
-  <Tab title="curl">
-```bash
-# Company intelligence (one call = full briefing)
-curl "https://api.secapi.ai/v1/intelligence/company?ticker=AAPL" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# Earnings preview
-curl "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=MSFT" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-  </Tab>
-</Tabs>
-
-## Enforcement Actions
-
-<Tabs>
-  <Tab title="curl">
-```bash
-# Search enforcement actions
-curl "https://api.secapi.ai/v1/events/enforcement?limit=5" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# Filter by violation type
-curl "https://api.secapi.ai/v1/events/enforcement?violation_type=fraud&limit=5" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# AAERs (Accounting and Auditing Enforcement Releases)
-curl "https://api.secapi.ai/v1/events/enforcement?source_type=aaer&limit=5" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-  </Tab>
-</Tabs>
-
-## Filing Diff (Amendment Tracking)
-
-Compare two filing versions to see what changed:
-
-```bash
-curl "https://api.secapi.ai/v1/filings/0000320193-24-000123/diff?compareWith=0000320193-25-000079" \
-  -H "x-api-key: $SECAPI_API_KEY"
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-## Subsidiaries & Audit Fees
+Keep `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` with any result derived from the filing. The [latest filing reference](/api-reference/filings/get-v1-filings-latest) documents the available filters and response shape.
 
-```bash
-# Subsidiaries from Exhibit 21
-curl "https://api.secapi.ai/v1/companies/subsidiaries?ticker=MSFT" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# Audit fees from proxy statement
-curl "https://api.secapi.ai/v1/companies/audit-fees?ticker=MSFT" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-## Form D Structured Data
-
-Get structured offering details from Form D XML:
-
-```bash
-# List Form D filings
-curl "https://api.secapi.ai/v1/forms/d?limit=3" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# Structured extraction (offering amount, exemptions, investors)
-curl "https://api.secapi.ai/v1/forms/d/0001288257-18-000026" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-## Monitors (Saved Searches)
-
-Set up automated alerts for new matches:
-
-Create the saved monitor from the signed-in [dashboard](https://secapi.ai/app/webhooks). Monitor creation is a human-authenticated organization action, so an API key will return `human_auth_required`.
-
-```bash
-# Check matches after the monitor is configured.
-curl "https://api.secapi.ai/v1/monitors/{monitorId}/matches" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
-
-## What's Next?
+## Pick the next page
 
 <CardGroup cols={3}>
-  <Card title="Install the CLI" icon="terminal" href="/cli">
-    `npm install -g @secapi/cli`
+  <Card title="Build an application" icon="blocks" href="/libraries-and-sdks">
+    Choose an SDK for JavaScript, Python, Go, or Rust application code.
   </Card>
-  <Card title="Use with Claude" icon="bot" href="/mcp-install">
-    Connect via MCP for agent workflows
+  <Card title="Work from a terminal" icon="terminal" href="/cli">
+    Use the CLI for shell scripts and interactive investigation.
   </Card>
-  <Card title="Browse Skills" icon="book" href="/custom-skills">
-    8 pre-built SEC workflow skills
+  <Card title="Use an MCP client" icon="bot" href="/mcp-install">
+    Connect hosted MCP for source-backed research workflows.
   </Card>
 </CardGroup>
+
+Read [API conventions](/api-conventions) before adding pagination, version pinning, or retry logic. Read [Troubleshooting](/troubleshooting) when a request returns an error.
