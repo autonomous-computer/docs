@@ -44,14 +44,16 @@ For the buyer-facing pricing page and signup path, see [secapi.ai/pricing](https
 ## How metering works
 
 - `light_reads`: `$0.01` — entity resolution and lightweight metadata
-- `standard_reads`: `$0.02` — filings, facts, statements, ownership, compensation
-- `heavy_extracts`: `$0.05` — section extraction and comparison workflows
+- `standard_reads`: `$0.02` — filings, facts, statements, ownership, compensation, fund-letter reads and full-text search
+- `heavy_extracts`: `$0.05` — section extraction, comparison workflows, and fund-letter document retrieval
 - `artifact_jobs`: `$0.10` — artifact generation and export jobs
 - `delivery_events`: `$0.001` — webhook and stream delivery
 - `email_notifications`: `$0.005` — one billable recipient submitted for customer-configured monitor email notifications
 - `intelligence_queries`: `$0.08` — semantic intelligence, country reports, portfolio analysis, strategy queries
 - `market_data_reads`: `$0.03` — factor returns, macro indicators, market snapshots
-- `semantic_search`: `$0.04` — vector-based semantic search across filing content
+- `semantic_search`: `$0.04` — vector-based semantic search across filing and fund-letter content
+
+Fund-letter routes bill on the families above (`standard_reads` for list, detail, thesis, and search reads; `heavy_extracts` for document retrieval; `semantic_search` for semantic queries) and additionally carry per-plan daily quotas. The quotas are sized for research and agent workflows and act as guardrails against bulk export; the dataset is licensed for use inside your applications, not for redistribution.
 
 Email notifications are priced separately from webhook and stream delivery because the unit includes provider cost, retry infrastructure, unsubscribe handling, signed provider-feedback processing, support overhead, and margin. Personal receives a 20% meter discount (`$0.004`), Team receives 35% (`$0.00325`), and Commercial pricing must not go below `$0.0025` per submitted recipient without committed-volume approval.
 

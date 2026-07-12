@@ -24947,6 +24947,1495 @@
         "x-secapi-docs": "public",
         "x-secapi-smoke": "local"
       }
+    },
+    "/v1/fund-letters": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "List investor letters from hedge funds, partnerships, and registered funds, filterable by manager, fund, company, period, source, and distribution tier.",
+        "description": "view=compact returns the trimmed FundLetterCompactList projection (billed identically); view=agent currently equals the default view.",
+        "parameters": [
+          {
+            "name": "manager_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "mgr_-prefixed manager id."
+          },
+          {
+            "name": "fund_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "fnd_-prefixed fund id."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Letters mentioning this ticker."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Letters with at least one thesis on this CIK."
+          },
+          {
+            "name": "letter_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "hedge_fund_letter",
+                "registered_fund_letter"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fund_website",
+                "edgar",
+                "aggregator"
+              ]
+            },
+            "description": "Where the canonical source bytes came from."
+          },
+          {
+            "name": "distribution",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "public_record",
+                "fund_published",
+                "third_party"
+              ]
+            },
+            "description": "Rights tier governing what /document serves."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}Q[1-4]$"
+            },
+            "description": "Exact reporting period (YYYYQn, e.g. 2025Q1)."
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            }
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            }
+          },
+          {
+            "name": "published_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive lower bound (ISO date/datetime) on publishedAt."
+          },
+          {
+            "name": "published_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive upper bound (ISO date/datetime) on publishedAt."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only letters updated at or after this ISO date/datetime (updatedAt watermark convenience; /changes is the durable delta primitive). Requests with since are never response-cached."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "published_at_desc",
+                "published_at_asc",
+                "updated_at_desc",
+                "updated_at_asc",
+                "period_desc",
+                "period_asc"
+              ],
+              "default": "published_at_desc"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/FundLetterList"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FundLetterCompactList"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.collection",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/search": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Full-text search over letter bodies; hits carry page-anchored highlights.",
+        "description": "Metered as fund_letter_search. Results are a relevance-ranked top-N (hasMore is always false; raise limit or narrow filters to deepen recall). Every highlight anchor verifies against /document?format=markdown bytes. When the full-text engine is unavailable the response degrades to Postgres lexical search, reported via degradedState.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text query over letter bodies."
+          },
+          {
+            "name": "manager_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "mgr_-prefixed manager id."
+          },
+          {
+            "name": "fund_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "fnd_-prefixed fund id."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Letters mentioning this ticker."
+          },
+          {
+            "name": "letter_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "hedge_fund_letter",
+                "registered_fund_letter"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fund_website",
+                "edgar",
+                "aggregator"
+              ]
+            },
+            "description": "Where the canonical source bytes came from."
+          },
+          {
+            "name": "distribution",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "public_record",
+                "fund_published",
+                "third_party"
+              ]
+            },
+            "description": "Rights tier governing what /document serves."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}Q[1-4]$"
+            },
+            "description": "Exact reporting period (YYYYQn, e.g. 2025Q1)."
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            }
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            }
+          },
+          {
+            "name": "published_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive lower bound (ISO date/datetime) on publishedAt."
+          },
+          {
+            "name": "published_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive upper bound (ISO date/datetime) on publishedAt."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterSearchHitList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.search",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/semantic": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Semantic (vector) search over letter content; hits carry similarity scores, matched chunks, and page anchors.",
+        "description": "Metered as fund_letter_semantic; paid plans only. Results are a relevance-ranked top-N (hasMore is always false). third_party-distribution letters return snippet-capped chunks (their /document is not distributable). On vector-engine failure the response degrades to lexical hits (score 0), reported via degradedState.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Natural-language query."
+          },
+          {
+            "name": "top_k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          },
+          {
+            "name": "manager_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "mgr_-prefixed manager id."
+          },
+          {
+            "name": "fund_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "fnd_-prefixed fund id."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Letters mentioning this ticker."
+          },
+          {
+            "name": "letter_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "hedge_fund_letter",
+                "registered_fund_letter"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fund_website",
+                "edgar",
+                "aggregator"
+              ]
+            },
+            "description": "Where the canonical source bytes came from."
+          },
+          {
+            "name": "distribution",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "public_record",
+                "fund_published",
+                "third_party"
+              ]
+            },
+            "description": "Rights tier governing what /document serves."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}Q[1-4]$"
+            },
+            "description": "Exact reporting period (YYYYQn, e.g. 2025Q1)."
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            }
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            }
+          },
+          {
+            "name": "published_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive lower bound (ISO date/datetime) on publishedAt."
+          },
+          {
+            "name": "published_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Inclusive upper bound (ISO date/datetime) on publishedAt."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterSemanticHitList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.semantic",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/changes": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Keyset-paginated delta feed of fund-letter events (letter.published, letter.updated, letter.superseded, thesis.extracted, manager.added). Never response-cached.",
+        "description": "Metered as fund_letter_lookup. The cursor is an opaque keyset token minted by this endpoint (never an offset); malformed cursors 400 as invalid_cursor. nextCursor pins the last returned row whenever the page is non-empty, so pollers resume from it regardless of hasMore.",
+        "parameters": [
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated change types."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only events created at or after this ISO date/datetime."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Events tagged with this ticker."
+          },
+          {
+            "name": "manager_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "mgr_-prefixed manager id."
+          },
+          {
+            "name": "fund_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "fnd_-prefixed fund id."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Events tagged with this CIK."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque keyset cursor from a prior page."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterChangeList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.changes",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/managers": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "List letter-publishing managers (firms) with coverage stats: letters, funds, companies, theses, period range, and cadence.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Case-insensitive substring match on the firm name."
+          },
+          {
+            "name": "strategy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Strategy approach filter (e.g. long_short_equity)."
+          },
+          {
+            "name": "has_13f",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "Only managers with a linked 13F adviser."
+          },
+          {
+            "name": "min_letters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterManagerList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.managers",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/managers/{manager_id}": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Retrieve one manager profile. Merged manager IDs resolve forever via aliases; the response carries the canonical id plus requestedId when they differ.",
+        "parameters": [
+          {
+            "name": "manager_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^mgr_[0-9a-f]{16}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterManager"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.manager",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/managers/{manager_id}/overview": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Fund Overview: one token-efficient briefing per manager — canonical name, description, founders, website, coverage counts, and the latest letter's highlights with up to 5 headline theses.",
+        "description": "Metered as fund_letter_lookup. The manager twin of GET /v1/companies/overview: identity and latest-letter highlights only — no page markdown, no anchors, no full thesis bodies (follow links.letters / links.theses for those). latestLetter is null for a manager with no canonical letters yet. Merged manager IDs resolve forever via aliases; the response carries the canonical id plus requestedId when they differ.",
+        "parameters": [
+          {
+            "name": "manager_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^mgr_[0-9a-f]{16}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundManagerOverview"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.manager_overview",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/funds": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "List funds that publish letters, with per-fund letter counts.",
+        "parameters": [
+          {
+            "name": "manager_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Case-insensitive substring match on the fund name."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterFundList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.funds",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/funds/{fund_id}": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Retrieve one fund. Merged fund IDs resolve forever via aliases; the response carries the canonical id plus requestedId when they differ.",
+        "parameters": [
+          {
+            "name": "fund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^fnd_[0-9a-f]{16}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterFund"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.fund",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/companies": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Company coverage index: every company with at least one extracted thesis, with thesis/manager/letter counts and the latest stance.",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterCompanyCoverageList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.companies",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/theses": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Cross-cutting thesis screen: structured per-company extractions (relationship, stance, conviction, narratives, verbatim anchored quotes) across all letters.",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "manager_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fund_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "letter_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^ltr_[0-9a-f]{16}$"
+            }
+          },
+          {
+            "name": "relationship",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated relationship values (long, short, new_position, added, trimmed, sold, exited, watchlist, negative_research, issuer)."
+          },
+          {
+            "name": "stance",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bullish",
+                "bearish",
+                "mixed",
+                "neutral"
+              ]
+            }
+          },
+          {
+            "name": "conviction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "high",
+                "medium",
+                "low",
+                "unknown"
+              ]
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}Q[1-4]$"
+            },
+            "description": "Exact reporting period (YYYYQn)."
+          },
+          {
+            "name": "period_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}Q[1-4]$"
+            }
+          },
+          {
+            "name": "period_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}Q[1-4]$"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only theses updated at or after this ISO date/datetime. Requests with since are never response-cached."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterThesisList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.theses",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/{letter_id}": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Retrieve one letter with letter-level narratives, performance figures, and inline theses (capped at 25; thesisCount carries the total). Superseded/merged IDs resolve forever via aliases.",
+        "description": "Detail never inlines page markdown (that is the /document endpoint, metered separately), so view=agent and view=compact currently equal the default detail view.",
+        "parameters": [
+          {
+            "name": "letter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^ltr_[0-9a-f]{16}$"
+            }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/fund-letters/{letter_id}/document": {
+      "get": {
+        "tags": [
+          "Fund Letters"
+        ],
+        "summary": "Retrieve the original letter document (format=pdf, 302 redirect) or page-segmented markdown whose bytes verify every anchor (format=markdown).",
+        "description": "Distribution rules: public_record and fund_published letters serve the full document; third_party letters return 403 document_not_distributable with a sourceUrl hint. EDGAR-sourced letters redirect to the EDGAR primary document. `?sha=` retrieves a superseded source variant's markdown so historical anchors always verify — only when the canonical letter's distribution permits document serving.",
+        "parameters": [
+          {
+            "name": "letter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^ltr_[0-9a-f]{16}$"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "markdown"
+              ],
+              "default": "pdf"
+            }
+          },
+          {
+            "name": "sha",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "description": "Superseded source-variant sha256 (format=markdown only)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page-segmented markdown (format=markdown), byte-identical to the stored anchor substrate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundLetterDocumentMarkdown"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect to the original document: a presigned R2 URL for web-sourced PDFs, or the EDGAR primary document URL for EDGAR-sourced letters"
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "fund_letters.document",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
     }
   },
   "components": {
@@ -36177,6 +37666,20 @@
       "SituationCalendarEntryList": {},
       "SituationStats": {},
       "SituationPerformance": {},
+      "FundLetterList": {},
+      "FundLetterCompactList": {},
+      "FundLetterDetail": {},
+      "FundLetterThesisList": {},
+      "FundLetterManager": {},
+      "FundLetterManagerList": {},
+      "FundManagerOverview": {},
+      "FundLetterFund": {},
+      "FundLetterFundList": {},
+      "FundLetterCompanyCoverageList": {},
+      "FundLetterChangeList": {},
+      "FundLetterDocumentMarkdown": {},
+      "FundLetterSearchHitList": {},
+      "FundLetterSemanticHitList": {},
       "SituationWeeklyIssue": {
         "type": "object",
         "required": [

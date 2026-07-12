@@ -1,0 +1,132 @@
+---
+title: "Migrate from Fiscal.ai fund letters"
+description: "Map Fiscal.ai fund-letters endpoints, identifiers, and pagination onto SEC API, with the thesis enums kept compatible so parsing code carries over."
+---
+
+<Info>
+This guide maps the Fiscal.ai fund-letters API onto the SEC API fund-letters surface. The thesis enums are intentionally compatible, so most parsing code carries over with renames rather than re-modeling.
+</Info>
+
+## What changes when you switch
+
+<CardGroup cols={2}>
+  <Card title="Search over letter bodies" icon="file-search" href="/fund-letters">
+    Full-text and semantic search across letter text, not just year/quarter/investor navigation.
+  </Card>
+  <Card title="Verifiable provenance" icon="badge-check" href="/fund-letters">
+    Quotes carry page and character anchors that verify against the served document markdown.
+  </Card>
+  <Card title="13F cross-links" icon="users" href="/products/ownership">
+    Jump from a thesis to the manager's reported holdings and insider activity.
+  </Card>
+  <Card title="Self-serve pricing" icon="credit-card" href="/plans-and-pricing">
+    Per-call metered pricing with a starter grant; no sales conversation required for API access.
+  </Card>
+</CardGroup>
+
+## Concept mapping
+
+| Fiscal.ai concept | SEC API equivalent |
+|---|---|
+| Investor (firm, `fscl_investor_*`) | Manager (`mgr_*`) |
+| Fund (`fscl_fund_*`) | Fund (`fnd_*`) |
+| Letter (`fscl_document_*`) | Letter (`ltr_*`) |
+| Thesis (nested in letter) | Thesis (`ths_*`, inline in the letter and queryable corpus-wide) |
+| `pageNumber` / `pageSize` pagination | `cursor` / `limit` with `hasMore` and `nextCursor` |
+| `X-Api-Key` header | `x-api-key` header |
+
+## Endpoint mapping
+
+| Fiscal.ai call | SEC API call |
+|---|---|
+| `GET /v1/fund-letters?year=&quarter=&investorId=&fundId=` | `GET /v1/fund-letters?year=&quarter=&manager_id=&fund_id=` (or `period=2026Q1`) |
+| `GET /v1/fund-letters/{letterId}` | `GET /v1/fund-letters/{letter_id}` |
+| `GET /v1/fund-letters/{letterId}/pdf` | `GET /v1/fund-letters/{letter_id}/document?format=pdf` |
+| `GET /v1/fund-letters/investors` | `GET /v1/fund-letters/managers` |
+| `GET /v1/fund-letters/investors/{investorId}` | `GET /v1/fund-letters/managers/{manager_id}` |
+| `GET /v1/fund-letters/companies` | `GET /v1/fund-letters/companies` |
+| `GET /v1/company/fund-letters?companyKey=...` | `GET /v1/fund-letters/theses?ticker=` (also accepts `cik=`) |
+
+## Request translation examples
+
+### Letters for a quarter
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters?period=2026Q1&limit=25"
+```
+
+### Everything investors say about one company
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/theses?ticker=NVDA"
+```
+
+### The original document
+
+```bash
+curl -L -o letter.pdf -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/ltr_9c4e2b7a51d80f36/document?format=pdf"
+```
+
+The document endpoint returns a `302` redirect to the source document rather than proxied bytes, so pass `-L`. It also supports `format=markdown` for a page-segmented text rendering that quote anchors verify against — there is no Fiscal.ai equivalent.
+
+## Enum compatibility
+
+The thesis decision-context enums use the same values, verbatim:
+
+- `relationship`: `long`, `short`, `new_position`, `added`, `trimmed`, `sold`, `exited`, `watchlist`, `negative_research`, `issuer`
+- `stance`: `bullish`, `bearish`, `mixed`, `neutral`
+- `conviction`: `high`, `medium`, `low`, `unknown` (as expressed in the letter, not inferred)
+
+Downstream code that switches on these values needs no changes. The materiality basis values and the nullable narrative fields (`thesisSummary`, `variantPerception`, `riskSummary`, and the rest) also match in name and intent.
+
+## What has no Fiscal.ai equivalent
+
+If your integration only navigated by year, quarter, and investor, these are the additions worth adopting during the migration rather than after it:
+
+- `GET /v1/fund-letters/search` — full-text search over letter bodies
+- `GET /v1/fund-letters/semantic` — concept-level semantic retrieval
+- `GET /v1/fund-letters/changes` and the `since` filter — a durable delta feed for sync loops, instead of re-listing quarters
+- Page-anchored quote provenance — every `sourceQuote` carries `{page, charStart, charEnd, sourceSha256}` and verifies against `document?format=markdown`
+- `crossLinks` on each thesis into 13F holdings, holder history, insider activity, and company filings
+
+## What is different, honestly
+
+- **History**: SEC API coverage begins with letters published in the first quarter of 2025. Fiscal.ai covers reporting periods back to 2020. If your workflow needs pre-2025 letters, keep that portion on your existing source for now.
+- **Document access is rights-tiered**: letters only obtainable from third-party redistribution serve metadata, theses, and excerpt-length quotes with a link to the original source, rather than a hosted document. SEC-filed and fund-published letters serve in full.
+- **Vocabulary**: firms are "managers" rather than "investors", which keeps them distinct from the beneficial-ownership surfaces elsewhere in the API.
+- **Trial shape**: the SEC API starter grant is 150 calls across the whole corpus rather than a fixed trial-company universe; document and semantic routes need a paid plan.
+
+## Migration sketch
+
+```bash
+# Before (Fiscal.ai)
+curl -H "X-Api-Key: $FISCAL_API_KEY" \
+  "https://api.fiscal.ai/v1/company/fund-letters?companyKey=NVDA-US&pageNumber=1&pageSize=25"
+
+# After (SEC API)
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/theses?ticker=NVDA&limit=25"
+```
+
+Then page with the cursor instead of a page number: pass the response's `nextCursor` back as `cursor` until `hasMore` is `false`.
+
+<Prompt>
+Translate this Fiscal.ai fund-letters integration to SEC API. Rename investorId to manager_id, fundId to fund_id, and fscl_document_* letter IDs to ltr_* IDs. Replace /v1/company/fund-letters?companyKey= with /v1/fund-letters/theses?ticker=. Replace pageNumber/pageSize pagination with cursor/limit using hasMore and nextCursor. Keep the relationship, stance, and conviction enum handling unchanged — the values are identical. Move PDF retrieval to /v1/fund-letters/{letter_id}/document?format=pdf with redirect following, and add anchor verification against format=markdown where quotes feed downstream research.
+</Prompt>
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Fund letters guide" icon="mail-open" href="/fund-letters">
+    The thesis model, quote verification, and the 13F cross-check walkthrough.
+  </Card>
+  <Card title="Fund Letters product overview" icon="package" href="/products/fund-letters">
+    Endpoints, billing, and plan access.
+  </Card>
+  <Card title="Plans and pricing" icon="credit-card" href="/plans-and-pricing">
+    Compare the starter grant, Pay As You Go, and commit plans before cutover.
+  </Card>
+</CardGroup>

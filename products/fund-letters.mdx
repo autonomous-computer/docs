@@ -1,0 +1,80 @@
+---
+title: "Fund Letters API"
+description: "Hedge fund, partnership, and registered-fund letters parsed into per-company investment theses with page-anchored quotes, search, and 13F cross-links."
+---
+
+Track what great investors are saying — and cross-check it against what they actually hold. The Fund Letters surface parses investor letters from hedge funds, partnerships, and registered funds into structured per-company investment theses, each with a source quote anchored to an exact page and character range in the original document, and cross-linked into 13F ownership, insider, and filing data. Coverage updates as new letters publish.
+
+## Why use this
+
+An investor letter is primary-source thinking: what a manager bought, sold, feared, and expected, in their own words. Raw letters are scattered PDFs; this surface turns them into queryable records. Ask "what do investors think about NVDA" and get structured theses with relationship, stance, conviction, and a machine-verifiable quote — then follow the cross-links to see whether the 13F tape agrees.
+
+- **Structured theses** -- relationship, stance, conviction, materiality, time horizon, and ten narrative dimensions per company mention, with fixed enums for screening
+- **Page-anchored provenance** -- every quote carries page and character offsets plus a document checksum, so `slice(charStart, charEnd)` reproduces the quote from the served markdown exactly
+- **Full-text and semantic search** -- query the letter bodies themselves, not just letter metadata
+- **13F cross-links** -- jump from a thesis to the manager's reported holdings, holder history, insider activity, and company filings
+- **Registered-fund letters** -- shareholder letters extracted from N-CSR reports filed with the SEC, alongside fund-published hedge fund and partnership letters
+- **Delta feed** -- `since` filters plus a keyset-cursor `/changes` event feed built for agent sync loops
+
+## Quick start
+
+```bash
+# Letters discussing a company
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters?ticker=NVDA&limit=5"
+
+# Every extracted thesis on that company
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/theses?ticker=NVDA"
+```
+
+See the [fund letters guide](/fund-letters) for the thesis model, quote verification, and the 13F cross-check walkthrough.
+
+## Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/fund-letters` | List letters; filter by `ticker`, `cik`, `manager_id`, `fund_id`, `letter_type`, `source`, `distribution`, `period`, `year`, `quarter`, `published_from`/`to`, `since` |
+| `GET /v1/fund-letters/search` | Full-text search over letter bodies with page-anchored highlights |
+| `GET /v1/fund-letters/semantic` | Semantic search over letter bodies; `top_k` up to 50 |
+| `GET /v1/fund-letters/managers` | Managers with strategy profile and coverage stats; `q`, `strategy`, `has_13f`, `min_letters` |
+| `GET /v1/fund-letters/managers/{manager_id}` | One manager: profile, funds, letter feed, 13F cross-link |
+| `GET /v1/fund-letters/managers/{manager_id}/overview` | Fund Overview briefing: canonical name, description, founders, website, coverage, latest-letter highlights |
+| `GET /v1/fund-letters/funds` | Funds under covered managers |
+| `GET /v1/fund-letters/funds/{fund_id}` | One fund with its letter history |
+| `GET /v1/fund-letters/companies` | Companies with at least one thesis: thesis count, manager count, latest period and stance |
+| `GET /v1/fund-letters/theses` | Cross-cutting thesis screen by `ticker`, `cik`, `manager_id`, `fund_id`, `letter_id`, `relationship`, `stance`, `conviction`, `period`, `since` |
+| `GET /v1/fund-letters/changes` | Keyset-cursor delta feed of letter, thesis, and manager events |
+| `GET /v1/fund-letters/{letter_id}` | One letter: narratives, performance figures, inline theses, related filings |
+| `GET /v1/fund-letters/{letter_id}/document` | Original document: `format=pdf` (302 redirect) or `format=markdown` (page-segmented, anchor-verifiable) |
+
+## Response shape
+
+A letter record carries identity (`id`, `managerId`, `fundId`), classification (`letterType`, `source`, `distribution`), `period`, publication and ingestion timestamps, coverage summary (`pageCount`, `tickersMentioned`, `thesisCount`), an optional `performanceSummary`, and a `provenance` block with the source URL, document checksum, and retrieval timestamp. A thesis record carries the company, the decision context (`relationship`, `stance`, `conviction`, `materiality`), narrative summaries, `sourceQuote` with anchors, and `crossLinks`. IDs are permanent: `ltr_`, `mgr_`, `fnd_`, and `ths_` identifiers keep resolving after merges and document replacements.
+
+## Billing and plan access
+
+Fund-letters routes bill on existing meter families at the standard rates:
+
+| Routes | Meter family | PAYG rate |
+|---|---|---|
+| List, detail, theses, managers, funds, companies, changes | `standard_reads` | `$0.02` |
+| `/search` | `standard_reads` | `$0.02` |
+| `/{letter_id}/document` (both formats) | `heavy_extracts` | `$0.05` |
+| `/semantic` | `semantic_search` | `$0.04` |
+
+Plan access uses two features: `fund_letters` covers the JSON read and search surface and is included on the starter grant and every paid plan; `fund_letters_documents` covers document retrieval and is included on paid plans only. On the starter grant, list, detail, theses, and full-text search work corpus-wide within the 150 included calls; document retrieval and semantic search require a paid plan. Fund-letter meters also carry per-plan daily quotas sized for research and agent workflows — the dataset is licensed for use inside your applications, not for bulk export or redistribution (see the [redistribution posture](/enterprise-commercial)).
+
+## Limits and freshness
+
+- Corpus coverage begins with letters published in the first quarter of 2025; earlier letters are out of scope.
+- Letters that are only obtainable from third-party redistribution carry `distribution: third_party` and serve metadata, theses, and excerpt-length quotes with a link to the original source rather than the full document.
+- Scanned, image-only letters are excluded from extraction.
+- New letters are ingested as they publish; extraction is model-based, and every extracted value keeps its `extractorVersion` and a verifiable source anchor.
+
+## Read next
+
+- [Fund letters guide](/fund-letters)
+- [API Reference: Fund Letters](/api-reference/fund-letters)
+- [Migrate from Fiscal.ai](/migrate-from-fiscal-ai)
+- [Ownership API](/products/ownership)

@@ -1,0 +1,354 @@
+---
+title: "Fund letters"
+description: "Query hedge fund, partnership, and registered-fund letters as structured per-company investment theses with page-anchored, verifiable source quotes."
+---
+
+Query investor letters from hedge funds, partnerships, and registered funds as structured data: each letter is parsed into per-company investment theses with relationship, stance, conviction, and a source quote anchored to an exact page and character range in the original document. Start from a ticker, a manager, a full-text query, or the delta feed.
+
+## Quick start
+
+List the most recent letters that discuss a company:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters?ticker=NVDA&limit=5"
+```
+
+Each list item carries the letter identity, period, and coverage summary:
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "ltr_9c4e2b7a51d80f36",
+      "managerId": "mgr_5d2e8f1a3c7b9046",
+      "managerName": "Hollis Creek Capital",
+      "fundId": "fnd_7a1c4e9b2d8f5063",
+      "fundName": "Hollis Creek Partners, LP",
+      "letterType": "hedge_fund_letter",
+      "source": "fund_website",
+      "distribution": "fund_published",
+      "period": { "year": 2026, "quarter": 1, "label": "Q1 2026" },
+      "title": "Hollis Creek Partners Q1 2026 Letter",
+      "publishedAt": "2026-04-18T14:05:00Z",
+      "pageCount": 11,
+      "tickersMentioned": ["NVDA", "ASML", "V"],
+      "thesisCount": 6
+    }
+  ],
+  "hasMore": true,
+  "nextCursor": "MTA=",
+  "requestId": "req_8f2d1a6c0b3e"
+}
+```
+
+Fetch the full letter, including letter-level narratives and its inline theses:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/ltr_9c4e2b7a51d80f36"
+```
+
+The detail response adds `narratives` (market backdrop, positioning, performance commentary, outlook, firm updates), `performanceFigures`, `provenance`, and the extracted `theses[]`. Letters with more than 25 theses return the first 25 inline with a `thesisCount` and a link to `GET /v1/fund-letters/theses?letter_id=` for the rest.
+
+## The thesis model
+
+A thesis is one manager's view of one company in one letter. Its decision-context fields use fixed enums.
+
+### `relationship`
+
+What the manager did or holds, as stated in the letter.
+
+| Value | Meaning |
+|---|---|
+| `long` | Holds or discusses an existing long position |
+| `short` | Holds or discusses a short position |
+| `new_position` | Initiated a position this period |
+| `added` | Increased an existing position |
+| `trimmed` | Reduced an existing position |
+| `sold` | Sold part of a position, size of remainder unclear |
+| `exited` | Closed the position entirely |
+| `watchlist` | Following the company without a disclosed position |
+| `negative_research` | Published negative research without a stated short |
+| `issuer` | The letter's own fund or firm discussing itself |
+
+### `stance`
+
+The direction of the view expressed.
+
+| Value | Meaning |
+|---|---|
+| `bullish` | Positive on the company or position |
+| `bearish` | Negative on the company or position |
+| `mixed` | Both positive and negative arguments carry weight |
+| `neutral` | Descriptive discussion without a directional view |
+
+### `conviction`
+
+How strongly the manager expresses the view. Conviction is **as expressed in the letter's own language**, never inferred from position size or tone — the record carries `convictionBasis: "as_expressed"` to make that explicit.
+
+| Value | Meaning |
+|---|---|
+| `high` | The manager states strong conviction |
+| `medium` | Measured or qualified confidence |
+| `low` | Tentative, exploratory, or hedged language |
+| `unknown` | The letter does not express a conviction level |
+
+### `materiality.basis`
+
+Why the mention qualified as a thesis rather than a passing reference.
+
+| Value | Meaning |
+|---|---|
+| `substantive_thesis` | A developed investment argument |
+| `performance_attribution` | Discussed as a contributor or detractor |
+| `portfolio_action` | A buy, sell, add, or trim was disclosed |
+| `meaningful_position_size` | Disclosed as a significant position |
+| `valuation_discussion` | Substantive valuation analysis |
+| `catalyst_discussion` | Specific expected catalysts |
+| `risk_or_bear_case` | A developed risk or bear argument |
+| `substantive_negative_view` | A developed negative view |
+| `mistake_or_exit_review` | A post-mortem on a mistake or exit |
+
+Theses also carry nullable narrative fields (`thesisSummary`, `variantPerception`, `riskSummary`, `catalystSummary`, `valuationSummary`, `businessQualitySummary`, `managementAssessment`, `capitalAllocationSummary`, `financialExpectations`, `performanceOrActionSummary`) plus `timeHorizon` and `positionSize`. A narrative field is null when the letter does not discuss that dimension — extraction records what the manager wrote, it does not fill gaps.
+
+Screen theses across the corpus with `GET /v1/fund-letters/theses`:
+
+```bash
+# Every extracted view on NVDA where the manager added or initiated
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/theses?ticker=NVDA&relationship=new_position,added"
+```
+
+## Verify a quote against the source document
+
+Every thesis includes a `sourceQuote` with one or more anchors that locate the quote in the original document:
+
+```json
+"sourceQuote": {
+  "text": "We added to our NVIDIA position during the quarter as data center demand continued to outrun supply.",
+  "anchors": [
+    {
+      "page": 4,
+      "charStart": 812,
+      "charEnd": 912,
+      "quote": "We added to our NVIDIA position during the quarter as data center demand continued to outrun supply.",
+      "sourceSha256": "9d1f4c0e7b2a8356c4d90e12ab7f3d68a01e5b47c2f6d8091e3a5c7b2d4f6810",
+      "paginationVersion": 2
+    }
+  ]
+}
+```
+
+The anchor contract: `quote` is always the exact span copied from the stored page text, so slicing the page markdown at `[charStart, charEnd)` reproduces it byte for byte. To verify:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/ltr_9c4e2b7a51d80f36/document?format=markdown"
+```
+
+The markdown response is page-segmented:
+
+```json
+{
+  "pages": [
+    { "page": 1, "markdown": "..." },
+    { "page": 4, "markdown": "...We added to our NVIDIA position during the quarter as data center demand continued to outrun supply..." }
+  ],
+  "pageCount": 11,
+  "sourceSha256": "9d1f4c0e7b2a8356c4d90e12ab7f3d68a01e5b47c2f6d8091e3a5c7b2d4f6810",
+  "paginationVersion": 2
+}
+```
+
+Slice semantics:
+
+1. Confirm the document's `sourceSha256` and `paginationVersion` match the anchor. Offsets are only meaningful against the same document bytes and the same pagination.
+2. Find the entry in `pages[]` whose `page` equals `anchor.page`.
+3. `charStart` is inclusive and `charEnd` is exclusive, indexing characters of that page's `markdown` string. In JavaScript: `pageEntry.markdown.slice(812, 912) === anchor.quote`.
+
+This equality holds for every anchor by construction. When a letter's canonical source document is later replaced (for example, the fund's own PDF supersedes a copy retrieved elsewhere), old anchors keep verifying: pass the anchor's hash as `?sha=` to retrieve the exact document variant the anchor was computed against:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/ltr_9c4e2b7a51d80f36/document?format=markdown&sha=9d1f4c0e7b2a8356c4d90e12ab7f3d68a01e5b47c2f6d8091e3a5c7b2d4f6810"
+```
+
+Occasionally the model's originally extracted wording differed slightly from the printed text; in that case `quoteAsExtracted` preserves the model's version while `quote` remains the true span from the document. Slice verification always targets `quote`.
+
+## Deltas for agents: `since` and `/changes`
+
+Two mechanisms keep a downstream copy current.
+
+**`since`** is a convenience filter on list endpoints: `GET /v1/fund-letters?since=2026-07-01T00:00:00Z` returns records updated after that timestamp. It is good for a quick catch-up query, but it is not a durable sync primitive — a record updated twice appears once, and you can miss ordering guarantees under concurrent writes.
+
+**`GET /v1/fund-letters/changes`** is the durable delta feed. It returns an ordered event sequence with a keyset cursor:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/changes?limit=50"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "type": "thesis.extracted",
+      "letterId": "ltr_9c4e2b7a51d80f36",
+      "thesisId": "ths_2b8e5f0c7a3d9142",
+      "createdAt": "2026-07-10T09:12:44Z"
+    },
+    {
+      "type": "letter.published",
+      "letterId": "ltr_9c4e2b7a51d80f36",
+      "createdAt": "2026-07-10T09:02:11Z"
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": "eyJjcmVhdGVkQXQiOiIyMDI2LTA3LTEwVDA5OjEyOjQ0WiJ9"
+}
+```
+
+Event types: `letter.published`, `letter.updated`, `letter.superseded`, `thesis.extracted`, `manager.added`. Store `nextCursor` after each page and pass it back as `cursor` on the next poll. The cursor is keyset-based over the event sequence, so a poll loop never skips or double-counts events even while new letters are being ingested; process events idempotently on your side. `/changes` responses are never cached.
+
+`letter.superseded` matters for anchor hygiene: it fires when a letter's canonical document is replaced. Superseded letter and thesis IDs continue to resolve to their successors, and superseded document variants stay retrievable through `?sha=`.
+
+## Manager overview
+
+Start from a manager instead of a company with the Fund Overview endpoint — one token-efficient briefing per firm:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/managers/mgr_5d2e8f1a3c7b9046/overview"
+```
+
+```json
+{
+  "object": "fund_manager_overview",
+  "id": "mgr_5d2e8f1a3c7b9046",
+  "name": "Hollis Creek Capital Management, L.P.",
+  "canonicalName": "Hollis Creek",
+  "description": "Hollis Creek Capital is a concentrated small-cap value partnership founded in 2012...",
+  "founders": [{ "name": "Avery Hollis", "role": "Founder & Portfolio Manager" }],
+  "website": "https://www.holliscreek.com",
+  "strategy": { "approach": "long_biased_value", "styleTags": ["small_cap", "concentrated"] },
+  "identifiers": { "adviserCik": "0001234567", "crd": "298765" },
+  "coverage": { "lettersCount": 6, "fundsCount": 1, "firstPeriod": "2025Q1", "latestPeriod": "2026Q1" },
+  "latestLetter": {
+    "id": "ltr_9c4e2b7a51d80f36",
+    "period": "2026Q1",
+    "title": "Hollis Creek Partners Q1 2026 Letter",
+    "publishedAt": "2026-04-18T14:05:00Z",
+    "tickersMentioned": ["NVDA", "ASML", "V"],
+    "performanceSummary": { "netReturnPercent": 6.8, "benchmarkName": "Russell 2000", "benchmarkReturnPercent": 2.1 },
+    "keyTheses": [
+      { "ticker": "NVDA", "company": "NVIDIA Corporation", "relationship": "added", "stance": "bullish", "oneLine": "Datacenter demand remains supply-constrained through 2027." }
+    ]
+  },
+  "links": {
+    "self": "/v1/fund-letters/managers/mgr_5d2e8f1a3c7b9046/overview",
+    "letters": "/v1/fund-letters?manager_id=mgr_5d2e8f1a3c7b9046",
+    "theses": "/v1/fund-letters/theses?manager_id=mgr_5d2e8f1a3c7b9046",
+    "holdings13F": "/v1/owners/13f?cik=0001234567"
+  }
+}
+```
+
+Three things to know:
+
+- `canonicalName` is the name people actually say — curated for covered managers ("Oaktree Capital", "GMO"), derived by stripping legal suffixes otherwise. `name` keeps the form the letters and filings use.
+- The overview is deliberately small: `keyTheses` carries at most 5 headline theses (ticker, relationship, stance, one line each), and nothing on the payload inlines page markdown, anchors, or full thesis bodies. Follow `links.letters` and `links.theses` when you need depth.
+- `latestLetter` is `null` for a manager with no processed letters yet — the curated profile (description, founders, website) still serves.
+
+The same briefing is available over MCP as `fund_letters.manager_overview` and in the SDKs as `getFundManagerOverview(managerId)` / `get_fund_manager_overview(manager_id)`.
+
+## Cross-check a thesis against 13F holdings
+
+Theses carry `crossLinks` into the rest of the SEC API, so a claim in a letter can be checked against what the manager's adviser actually reported:
+
+```json
+"crossLinks": {
+  "holdings13F": "/v1/owners/institutional/ticker?ticker=NVDA",
+  "holderHistory": "/v1/owners/13f?cik=0001234567",
+  "insiderActivity": "/v1/insiders?ticker=NVDA",
+  "companyFilings": "/v1/filings?ticker=NVDA"
+}
+```
+
+A useful loop: read the thesis (`relationship: added`, `stance: bullish`), then follow `crossLinks.holdings13F` to confirm the adviser's reported position moved in the same direction that quarter.
+
+When a letter discusses a position without disclosing its size, some theses include an estimated size with `positionSize.basis: "estimated_from_13f_adviser"`. Read the disclosures on that basis before using the number:
+
+- The denominator is the **adviser's aggregate 13F portfolio value** (`adviserTotal13FValueUsd`, `asOfQuarter` are included), not the fund's net asset value. For a multi-fund adviser those differ materially, and estimates are suppressed entirely when the adviser clearly runs multiple funds.
+- Estimates exist only for long-family relationships. 13F reports cover long positions in 13(f) securities, so short positions can never be estimated this way.
+- Estimates are computed from share-type 13F rows only; put and call entries are excluded.
+- 13F data is filed with a delay, so the estimate reflects the most recent reported quarter, which may not be the letter's period.
+
+A stated `positionSize` with a different basis is the manager's own disclosure from the letter, with an anchor like any other extracted value.
+
+## Document access by distribution tier
+
+Every letter carries a `distribution` field that governs document access:
+
+| `distribution` | What it means | Document access |
+|---|---|---|
+| `public_record` | Filed with the SEC (registered-fund shareholder reports) | Full document: `format=pdf` redirects to the SEC-hosted primary document, `format=markdown` served in full |
+| `fund_published` | Retrieved from the fund's own website or distribution channel | Full document: `format=pdf` redirects to a time-limited download URL, `format=markdown` served in full |
+| `third_party` | Only obtainable from third-party redistribution | Metadata, extracted theses, and excerpt-length quotes only; `GET .../document` returns `403 document_not_distributable` with the original `sourceUrl` in the error hint |
+
+For `third_party` letters, follow the `sourceUrl` to the original document. Thesis extractions and structured fields remain fully available across all three tiers; the tiers only govern serving the document body.
+
+`format=pdf` returns a `302` redirect rather than bytes, so pass `-L` to curl:
+
+```bash
+curl -L -o letter.pdf -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/ltr_9c4e2b7a51d80f36/document?format=pdf"
+```
+
+## Letter types and sources
+
+Filter the corpus by what kind of letter and where it came from:
+
+- `letter_type=hedge_fund_letter` — letters from hedge funds and private partnerships, sourced from the funds' own publication channels.
+- `letter_type=registered_fund_letter` — shareholder letters extracted from N-CSR and N-CSRS reports filed with the SEC. Since mid-2024, open-end mutual funds and ETFs generally no longer include manager letters in their filed shareholder reports, so filed-report coverage concentrates in closed-end funds while open-end commentary comes from fund websites.
+- `source=fund_website | edgar | aggregator` — where the document was retrieved. `source` records retrieval; `distribution` governs document access.
+
+```bash
+# Registered-fund shareholder letters from the latest period
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters?letter_type=registered_fund_letter&period=2026Q1"
+```
+
+Period filters accept `period=YYYYQn` or separate `year` and `quarter` integers, plus `published_from` / `published_to` date bounds.
+
+## Search the letter bodies
+
+Beyond structured filters, search the full letter text lexically or semantically:
+
+```bash
+# Full-text: exact language across letter bodies
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/search?q=%22duration%20mismatch%22"
+
+# Semantic: concept-level retrieval
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/semantic?q=managers%20worried%20about%20AI%20capex%20payback&top_k=10"
+```
+
+Search hits carry `highlights[]` with a snippet and a page anchor, and semantic hits carry `{score, letter, chunkText, anchor}` — the same anchor shape as thesis quotes, so search results verify against `document?format=markdown` the same way.
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Fund Letters product overview" icon="mail-open" href="/products/fund-letters">
+    Endpoints, billing, and plan access for the fund-letters surface.
+  </Card>
+  <Card title="Ownership workflows" icon="users" href="/ownership-workflows">
+    The 13F and institutional-ownership flows behind the cross-links.
+  </Card>
+  <Card title="Migrate from Fiscal.ai" icon="arrow-right-left" href="/migrate-from-fiscal-ai">
+    Endpoint, identifier, and pagination mapping for Fiscal.ai fund-letters users.
+  </Card>
+</CardGroup>
