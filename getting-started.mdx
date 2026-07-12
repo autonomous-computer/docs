@@ -1,31 +1,23 @@
 ---
 title: "Make your first SEC API request"
-description: "Use one API key to resolve an issuer and retrieve a source-backed 10-K in minutes."
+description: "Resolve an issuer and retrieve a source-backed filing with one API key"
 ---
 
-Your first successful request should answer a real research question. In this guide, you will resolve Apple to its SEC identity, then retrieve its latest 10-K with the filing record you need to cite it later.
+Make one request that you can use in a real application: resolve an issuer, then retrieve its latest annual filing. Keep the returned accession number, filing URL, and request ID with any result you publish or pass to another system.
 
-## Before you start
+## Set your API key
 
-You need:
-
-1. An [SEC API account](https://secapi.ai/signup)
-2. An API key from the dashboard
-3. A shell with `curl`
-
-Export the key in the shell that will make the request:
+Create an account at [secapi.ai/signup](https://secapi.ai/signup), then create an API key from the signed-in dashboard before exporting it in the shell that will call the API:
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
 ```
 
-<Warning>
-Send machine API keys in the `x-api-key` header. Do not use `Authorization: Bearer`; bearer tokens are for WorkOS browser sessions, not SEC API keys.
-</Warning>
+SEC API machine credentials use `x-api-key`. Do not send an API key as `Authorization: Bearer`.
 
-## 1. Resolve the issuer
+## Resolve an issuer
 
-Resolve Apple to the identifiers SEC API uses across filings, facts, ownership records, and other datasets:
+Resolve Apple before you request a filing. The response gives you the CIK and canonical identity details that work across SEC API endpoints.
 
 ```bash
 curl -sS \
@@ -34,48 +26,25 @@ curl -sS \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
 
-`view=agent` returns the compact response shape. Use a dated `secapi-version` header in production once you have chosen a contract version to pin.
-
 ## Expected response
 
-The entity ID and request ID will differ, but a successful response has this shape:
+The exact `id` and `requestId` vary. Confirm that the response identifies Apple and includes CIK `0000320193`.
 
 ```json
 {
   "object": "entity",
-  "id": "cent_f3913349312cbf5bfd60ecdb",
   "ticker": "AAPL",
   "cik": "0000320193",
   "name": "Apple Inc.",
-  "primaryIdentifiers": [
-    {
-      "type": "ticker",
-      "value": "AAPL"
-    },
-    {
-      "type": "cik",
-      "value": "0000320193"
-    }
-  ],
-  "matchConfidence": 1,
-  "matchBasis": "ticker",
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestId": "req_..."
 }
 ```
 
-You are ready to continue when the response identifies Apple, returns CIK `0000320193`, and includes a `requestId`.
-
-## What to keep
-
-- **`id`, `ticker`, and `cik`** identify the issuer in later requests.
-- **`matchConfidence` and `matchBasis`** explain why this record matched your input.
-- **`requestId`** identifies the API call for logs, support, and debugging.
-
-The compact entity response is deliberately small. The next request is where you begin to receive filing-specific source context.
+`view=agent` is a compact projection for code or agent workflows. Use the endpoint's default response when you need the full metadata.
 
 ## 2. Retrieve a filing you can cite
 
-Ask for Apple's latest annual filing in the same compact shape:
+Request Apple's latest 10-K using the same key:
 
 ```bash
 curl -sS \
@@ -84,45 +53,27 @@ curl -sS \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-The exact accession and dates will change as Apple files. Before you use the result in a memo, model, or agent answer, retain the accession number, filing date, form, and source URL that the response supplies. Those fields identify the filing you actually read; a ticker alone does not.
+The filing changes when Apple submits a new annual report. Store the returned `accessionNumber`, `filingDate`, `form`, `filingUrl`, and `requestId` with your downstream result. They identify the specific SEC filing behind a claim.
 
-## 3. Pick the next useful action
+## Choose an integration path
 
-- Extract a section such as [Risk Factors or MD&A](/api-reference/filings/get-v1-filings-latest-sections-section-key) when you need the disclosure text behind a conclusion.
-- Pull [structured statements](/api-reference/statements) when you need filed numbers rather than narrative.
-- Use [filing search](/api-reference/filings) when you need a historical set rather than the latest filing.
-- Connect [MCP](/mcp-workflows) only after this REST request works; it uses the same machine credential.
+<CardGroup cols={2}>
+  <Card title="Use an SDK" icon="blocks" href="/libraries-and-sdks">
+    Use JavaScript, Python, Go, or Rust when the API call belongs in application code.
+  </Card>
+  <Card title="Use the CLI" icon="terminal" href="/cli">
+    Query filings and inspect responses from a terminal or shell script.
+  </Card>
+  <Card title="Connect MCP" icon="bot" href="/mcp-install">
+    Add SEC API tools to an MCP-aware client after the REST proof works.
+  </Card>
+  <Card title="Read the API reference" icon="book-open" href="/api-reference/filings/get-v1-filings-latest">
+    Inspect the exact latest-filing parameters and response shape.
+  </Card>
+</CardGroup>
 
-## If the request fails
+## When a request fails
 
-### `401 missing_api_key`
+For `401 missing_api_key`, make sure the key is set in the current shell and sent through `x-api-key`. For `401 authentication_failed`, create a replacement key in the dashboard and update the calling environment. For `402` or `429`, inspect the response before retrying; a bounded retry is appropriate for transient failures, not for a quota or billing stop.
 
-Confirm that the environment variable is set in the same shell:
-
-```bash
-test -n "$SECAPI_API_KEY" && echo "SECAPI_API_KEY is set"
-```
-
-Then confirm the request uses `x-api-key`.
-
-### `401 authentication_failed`
-
-Remove any `Authorization: Bearer` header and send the SEC API key through `x-api-key` instead.
-
-### `429` or a budget error
-
-Read the response code and limit details before retrying. An agent should stop or back off rather than repeat the same call without a bound.
-
-### The service appears unavailable
-
-Check [SEC API status](https://status.secapi.ai). Use [service health](https://api.secapi.ai/healthz) and [readiness](https://api.secapi.ai/readyz) when you are debugging an integration, not as part of every normal request.
-
-For response envelopes, versioning, errors, and request metadata, read [API conventions](/api-conventions). For a broader failure checklist, use [Troubleshooting](/troubleshooting).
-
-## Choose your next step
-
-- [Read the latest-filings reference](/api-reference/filings/get-v1-filings-latest) and preserve its accession number and SEC source URL.
-- [Use the JavaScript, Python, Go, or Rust SDK](/libraries-and-sdks).
-- [Install and use the CLI](/cli).
-- [Connect an agent through hosted MCP](/mcp-workflows).
-- [Inspect the entity-resolution contract](/api-reference/entities/get-v1-entities-resolve).
+Read [Troubleshooting](/troubleshooting) for error-specific next steps and [API conventions](/api-conventions) for versioning, pagination, and response metadata.

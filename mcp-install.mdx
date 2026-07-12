@@ -1,19 +1,39 @@
 ---
-title: "MCP Server Installation"
-description: "Connect SEC API to Claude Desktop, Claude Code, Cursor, and other MCP clients"
+title: "Install SEC API MCP"
+description: "Connect an MCP-aware client to SEC API and prove the installation with a source-backed filing workflow"
 ---
 
-SEC API provides a hosted MCP server for AI agents. Connect once, get direct access to SEC filing, statement, section, ownership, insider, and Form 144 workflows.
+Connect hosted MCP when your agent client supports streamable HTTP MCP and needs SEC filing, statement, ownership, or search tools. Start with an API key and prove one filing workflow before allowing an agent to use the tools in a broader task.
 
-## Claude Desktop
+## Get the connection details
 
-Add to your `claude_desktop_config.json`:
+The public metadata endpoint describes the deployed transport and client hints:
+
+```bash
+curl -sS https://api.secapi.ai/mcp
+```
+
+The authenticated MCP endpoint is `https://api.secapi.ai/mcp`. Send a machine API key in `x-api-key` for tool calls.
+
+```bash
+export SECAPI_API_KEY="secapi_..."
+```
+
+## Connect Claude Code
+
+```bash
+claude mcp add --transport http secapi https://api.secapi.ai/mcp \
+  --header "x-api-key: $SECAPI_API_KEY"
+```
+
+## Connect a JSON-configured client
+
+Use this shape when your MCP-aware client accepts a project or user configuration file:
 
 ```json
 {
   "mcpServers": {
     "secapi": {
-      "type": "http",
       "url": "https://api.secapi.ai/mcp",
       "headers": {
         "x-api-key": "${SECAPI_API_KEY}"
@@ -23,116 +43,20 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-On macOS, the config is at `~/Library/Application Support/Claude/claude_desktop_config.json`.
+Keep the key in the environment rather than committing it to the configuration file.
 
-## Claude Code
+## Prove the installation
 
-```bash
-export SECAPI_API_KEY="<your-secapi-key>"
-claude mcp add --transport http secapi https://api.secapi.ai/mcp \
-  --header "x-api-key: $SECAPI_API_KEY"
-```
+Ask the client to do a short, verifiable job:
 
-## Cursor
+<Prompt>
+Use SEC API MCP to resolve AAPL, retrieve the latest 10-K, extract Item 1A, and report the accession number, filing date, filing URL, and request ID with the result.
+</Prompt>
 
-Add to your `.cursor/mcp.json`:
+The agent should return the filing evidence, not only a summary. If it cannot list or call a tool, check the configured URL, `x-api-key` header, and client logs before changing the prompt.
 
-```json
-{
-  "mcpServers": {
-    "secapi": {
-      "url": "https://api.secapi.ai/mcp",
-      "headers": {
-        "x-api-key": "${env:SECAPI_API_KEY}"
-      }
-    }
-  }
-}
-```
+## Know the error boundary
 
-## Get Your API Key
+`GET /mcp` is public discovery metadata. `POST /mcp` is the authenticated JSON-RPC transport. Authentication, billing, and generic rate-limit failures can return normal HTTP error bodies before JSON-RPC dispatch. Tool errors return JSON-RPC error envelopes once a request reaches the MCP server.
 
-1. [Create an account](https://secapi.ai/signup) or use an existing SEC API key
-2. Create an API key explicitly from the dashboard or account API
-3. Set it as `SECAPI_API_KEY` in your environment
-
-## Available Tools
-
-Once connected, your agent has access to:
-
-| Tool | Description |
-|---|---|
-| `entities.resolve` | Resolve company by ticker, CIK, FIGI, ISIN, CUSIP |
-| `filings.search` | Search SEC filings with 20+ filters |
-| `filings.latest` | Get latest filing for a company |
-| `sections.search` | Search filing sections (full-text + semantic) |
-| `statements.get` | Get financial statements (income, balance, cash flow) |
-| `facts.get` | Get XBRL facts by concept |
-| `owners.get_13f` | Get a 13F manager's latest holdings |
-| `owners.institutional_holders` | Get an issuer's top institutional holders |
-| `insiders.list` | List insider trades |
-| `forms.list_144` | List Form 144 proposed sale filings |
-| `comp.list` | List executive compensation records |
-| `companies.financials` | Get normalized company financial statements |
-| `companies.ratios` | Get normalized company ratios |
-| `intelligence.footnotes` | Query filing footnotes for agent workflows |
-
-For the product overview, supported agent workflows, and setup caveats, see the [SEC API agent overview](https://secapi.ai/agents) and [SEC filings MCP server page](https://secapi.ai/agents/sec-filings-mcp-server).
-
-## Agent Recipes
-
-Use these as first-run prompts after installation:
-
-### Claude Desktop or Claude Code
-
-> Use SEC API MCP. Resolve AAPL, fetch the latest 10-K with `filings.latest`, extract Item 1A with `sections.get`, read annual income statements with `statements.get`, and return citations with accession numbers, filing dates, source URLs, freshness, and requestId.
-
-### Cursor or Codex-Style Coding Agents
-
-> Wire SEC API MCP into this repo. Then verify it by calling `entities.resolve` for NVDA, `owners.institutional_holders` for NVDA with `limit: 10`, `forms.list_144` for NVDA with `limit: 10`, and `sections.search` for NVDA risk-factor language. Keep compact citation fields intact in any generated artifact.
-
-### Generic MCP Clients
-
-Send a `tools/call` request to the streamable HTTP endpoint:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "secapi-verify",
-  "method": "tools/call",
-  "params": {
-    "name": "filings.latest",
-    "arguments": {
-      "ticker": "AAPL",
-      "form": "10-K"
-    }
-  }
-}
-```
-
-For more workflow ideas, pair this install guide with the [SEC filings MCP server page](https://secapi.ai/agents/sec-filings-mcp-server), the [SEC API for AI agents page](https://secapi.ai/agents/sec-api-for-ai-agents), and the [filing RAG guide](https://secapi.ai/guides/sec-filing-rag).
-
-## Verify Connection
-
-Ask your agent:
-
-> "Use SEC API to look up Apple's latest 10-K filing"
-
-The agent should call `filings.latest` with `ticker: AAPL, form: 10-K`.
-
-## Agent Bootstrap (Ephemeral Credentials)
-
-For automated agent workflows, use a WorkOS-authenticated sponsor bearer token to mint short-lived credentials:
-
-```bash
-# Create a bootstrap token (valid for 1 hour)
-curl -X POST https://api.secapi.ai/v1/agent/bootstrap_tokens \
-  -H "Authorization: Bearer $SECAPI_BEARER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"ttlSeconds": 3600}'
-
-# Agent uses the token to get ephemeral credentials
-curl -X POST https://api.secapi.ai/v1/agent/bootstrap \
-  -H "Content-Type: application/json" \
-  -d '{"token": "BOOTSTRAP_TOKEN"}'
-```
+For setup patterns and tool selection, read [MCP workflows](/mcp-workflows). For response codes, read [Troubleshooting](/troubleshooting).

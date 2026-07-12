@@ -1,231 +1,77 @@
 ---
 title: "SEC API CLI"
-description: "Run terminal-first SEC workflows, quick smoke checks, and an agent-readable command inventory without writing an SDK script"
+description: "Install the SEC API CLI, authenticate through your environment, and run source-backed filing workflows from a terminal"
 ---
 
-<Info>
-Use the SEC API CLI when you want terminal-first SEC workflows, quick smoke checks, or an agent-readable command inventory without writing an SDK script.
-</Info>
+Use the SEC API CLI for terminal workflows, shell scripts, and quick checks. It prints structured output so you can keep filing identifiers and request metadata in the next command or a saved artifact.
 
 ## Install
 
 ```bash
 npm install -g @secapi/cli
 secapi --version
-secapi doctor
 ```
 
-The package installs the `secapi` binary. The legacy `omni-sec` alias may appear in older examples, but new scripts should use `secapi`.
-
-## Interactive mode (REPL)
-
-Running `secapi` with no arguments in a terminal opens the interactive REPL — "the
-trading desk in your terminal." You can also launch it explicitly with `secapi chat` or `secapi tui`:
-
-```bash
-secapi          # no-arg TTY → opens the interactive REPL
-```
-
-The REPL is a persistent session over the full command surface, with:
-
-- **Slash commands** for meta/session actions: `/help`, `/login`, `/logout`,
-  <kbd>/status</kbd>, `/cost`, `/skills`, `/personas`, `/clear`, `/quit`, and more. Type
-  `/` to open the fuzzy **command palette** over every command, with auth, cost,
-  and mutation badges.
-- **Skill shortcuts** that expand a bundled workflow into a cited, cost-previewed
-  run-view — e.g. `/due-diligence AAPL`, `/track-insiders AAPL`,
-  `/factor-dashboard`, `/country-report JP`.
-- **Plan / Ask / Run modes** (cycle with <kbd>shift</kbd>+<kbd>tab</kbd>): Plan
-  previews the endpoints and estimated cost before running, Ask is read-only, Run
-  executes.
-- **Resource cards** — filings, factor tables, portfolios, financials, and search
-  results render as compact human cards in the terminal, each with a cost footer
-  (`⎿ $0.0012 · 1,240 tok · ⚡cache · maturity: ga`). A per-session cost meter
-  tracks spend.
-
-<Warning>
-The interactive UI renders **only** in a real terminal (`stdout` and `stdin` are
-TTYs). In a pipe, in CI, or with `--json`/`--output`, every command emits the
-exact same machine-readable JSON as before — the interactive layer never changes
-the scriptable contract.
-</Warning>
+New scripts should use the `secapi` command.
 
 ## Authenticate
 
-Set your API key in the environment before calling authenticated API commands:
+Set the API key in the calling environment:
 
 ```bash
-export SECAPI_API_KEY="<your-api-key>"
-```
-
-For CI and agent runners, keep secrets out of process arguments and use stdin:
-
-```bash
-printf "%s" "$SECAPI_API_KEY" | secapi health --api-key-stdin
-```
-
-Use `SECAPI_BASE_URL` only when pointing the CLI at a non-production API origin.
-For one-off local, staging, proxy, or replay checks, pass `--base-url <url>` on
-that command instead of changing your shell session:
-
-```bash
-secapi health --base-url http://127.0.0.1:8787
-```
-
-Use a no-secret profile when you switch between local, staging, and production often. Profiles live at `~/.config/secapi/profiles.json` by default and may set `baseUrl`, `apiKeyEnv`, and `bearerTokenEnv`. The file stores environment variable names, not credential values. Set `SECAPI_CONFIG_FILE` when CI or an agent runner should read profiles from a different path:
-
-```json
-{
-  "profiles": {
-    "local": {
-      "baseUrl": "http://127.0.0.1:8787",
-      "apiKeyEnv": "SECAPI_LOCAL_API_KEY"
-    }
-  }
-}
-```
-
-```bash
-export SECAPI_LOCAL_API_KEY="<your-api-key>"
-SECAPI_PROFILE=local secapi health
-secapi --profile local config show
-secapi config profiles
-```
-
-## Diagnose your setup
-
-Run `doctor` when auth, the API origin, or hosted MCP setup looks wrong:
-
-```bash
+export SECAPI_API_KEY="secapi_..."
 secapi doctor
 ```
 
-The report checks the active base URL, detected credential source, API health, authenticated account context when a credential is present, and the hosted MCP URL/config hint. It reports credential source names, never credential values.
+`doctor` reports the active API origin, credential source name, and available setup information without printing your key. Do not place credentials in shell history, process arguments, or saved command output.
 
-## Verify setup without spending an API call
+## Run a first workflow
 
-These commands are local and safe to run before authentication:
+```bash
+secapi entities resolve --ticker AAPL
+secapi filings latest --ticker AAPL --form 10-K
+secapi sections get --ticker AAPL --form 10-K --section item_1a --view agent
+```
+
+Keep the returned `requestId`, `accessionNumber`, `filingDate`, and `filingUrl` with any result you use. They identify the request and the underlying SEC filing.
+
+## Inspect before you run
+
+Use built-in help to check a command's flags and examples before issuing a request:
 
 ```bash
 secapi --help
 secapi help all
-secapi examples
-secapi config show
-secapi config profiles
 secapi filings latest --help
 secapi agent-context
 ```
 
-Unknown commands and option typos fail locally with nearest-command suggestions before any network request is made.
+`agent-context` emits a machine-readable command inventory for an agent or integration that needs to select a CLI command deliberately.
 
-`secapi --help` is a short task-oriented guide for common workflows. Use `secapi help all` or `secapi --help-all` when you need the full command inventory.
-
-Missing required flags include the command usage, a copy-pasteable example, and the exact `--help` command to inspect before the CLI sends a request.
-
-Preview high-impact mutating commands before they touch account state by adding `--dry-run`. The CLI prints the method, endpoint, and JSON body locally without reading credentials or making an API request:
+For supported account or delivery commands, `--dry-run` prints the request shape without making a network call:
 
 ```bash
-secapi api-keys create --label local-dev --scopes read:sec --dry-run
-secapi billing checkout --plan personal --dry-run
-secapi webhooks create --destination-url https://example.com/hooks/sec --event-types artifact.created --dry-run
-secapi streams create --event-types artifact.created --transport poll --dry-run
+secapi api-keys create --label development --dry-run
+secapi webhooks create \
+  --destination-url https://example.com/hooks/sec \
+  --event-types monitor.match \
+  --dry-run
 ```
 
-Supported dry-run previews: `api-keys create`, `billing budget`, `billing checkout`, `billing portal`, `webhooks create`, `webhooks rotate-secret`, `webhooks test`, `webhooks replay-delivery`, and `streams create`.
+Use the signed-in dashboard for key, billing, and delivery-resource configuration. These organization changes require a human-authenticated browser session.
 
-Boolean flags accept bare flags plus explicit `true`, `false`, `yes`, `no`, `on`, `off`, `1`, and `0` values. For example, generated scripts can force an opt-in flag off with `--include-v2=false` instead of dropping the flag and changing the command shape.
+## Use profiles for multiple environments
 
-Write structured or generated command output directly to a file with `--output <path>`:
+Profiles can store a base URL and the *name* of an environment variable that contains a key. They do not need to store secret values.
 
 ```bash
-secapi agent-context --output secapi-cli-context.json
+secapi config show
+secapi config profiles
+secapi --profile local config show
 ```
 
-Add request diagnostics without breaking stdout pipelines by passing `--request-summary`:
+Use `--base-url` for one command when you are testing an environment you control. Leave production as the default unless you mean to change it.
 
-```bash
-secapi health --request-summary
-```
+## Troubleshoot a command
 
-The command response stays on stdout. A compact JSON summary of method, path, status, request id, trace context, estimated cost, token count, cache status, maturity, and duration is written to stderr. On nonzero exits, stderr includes the formatted error before the summary JSON.
-
-Run `secapi config show` when you only need local CLI configuration. It prints
-the active base URL, source names for configured credentials, and hosted MCP URL
-without reading stdin, calling the API, or printing credential values.
-
-Run `secapi config profiles` to list configured profiles, normalized base URLs,
-credential environment variable names, and whether each referenced env var is
-currently set. It is also local-only and never prints credential values.
-
-## Install shell completions
-
-Print completion scripts for your shell and install them with that shell's normal completion loader:
-
-```bash
-mkdir -p ~/.zfunc && secapi completion zsh > ~/.zfunc/_secapi
-echo 'fpath=(~/.zfunc $fpath); autoload -Uz compinit; compinit' >> ~/.zshrc
-
-secapi completion bash > ~/.secapi-completion.bash
-echo 'source ~/.secapi-completion.bash' >> ~/.bashrc
-
-mkdir -p ~/.config/fish/completions
-secapi completion fish > ~/.config/fish/completions/secapi.fish
-```
-
-The generated scripts cover the preferred `secapi` binary and the legacy `omni-sec` alias. Completion generation is local-only and does not require authentication.
-
-## Core workflows
-
-```bash
-secapi examples
-secapi entities resolve --ticker AAPL
-secapi filings latest --ticker AAPL --form 10-K
-secapi sections get --ticker AAPL --form 10-K --section item_1a --view agent
-secapi statements get --ticker AAPL --statement all --period annual --limit 1
-secapi traces list --ids trc_1,trc_2
-```
-
-`secapi examples` prints a local starter catalog. Use the default JSON for agents and `secapi examples --json=false` for a concise human version. Portfolio and model workflow examples include reusable `holdings.json`, `benchmark.json`, and `model.json` templates so you can avoid fragile inline shell JSON.
-
-The CLI prints structured JSON for API workflows by default. Preserve `requestId`, `accessionNumber`, source URLs, freshness, provenance, and trace references in downstream artifacts, then hydrate returned trace IDs with `traces get` or `traces list`.
-
-Account-oriented commands keep JSON as the default for pipes and agents. In an interactive terminal they render compact human summaries; pass `--json=false` when you want that same summary explicitly:
-
-```bash
-secapi me --json=false
-secapi billing show --json=false
-secapi usage show --json=false
-secapi limits show --json=false
-```
-
-## Agent and MCP setup
-
-```bash
-secapi mcp install --client claude-code
-secapi mcp install --client cursor --print
-secapi init --client project --print
-```
-
-`secapi mcp install` and `secapi init` share the same client setup path. Use `--print` when you want to inspect generated config before writing it.
-
-## Command inventory for agents
-
-```bash
-secapi agent-context > secapi-cli-context.json
-```
-
-`agent-context` returns machine-readable command groups, usage strings, auth posture, mutation posture, output style, required flags, and examples. Give this to coding agents before asking them to automate SEC workflows.
-
-## Read next
-
-<CardGroup cols={3}>
-  <Card title="Libraries & SDKs" icon="blocks" href="/libraries-and-sdks">
-    Choose the right integration surface for your runtime.
-  </Card>
-  <Card title="Hosted MCP workflows" icon="bot" href="/mcp-workflows">
-    Connect SEC API directly to MCP-aware agents.
-  </Card>
-  <Card title="First request flows" icon="route" href="/first-request-flows">
-    Prove issuer, filing, section, statement, and trace workflows.
-  </Card>
-</CardGroup>
+Run `secapi doctor` first. Then preserve the command, HTTP status, error code, request ID, and trace context from a failed request. Read [Troubleshooting](/troubleshooting) for retry and billing guidance, or [MCP installation](/mcp-install) when the issue is an MCP client configuration.

@@ -1,48 +1,16 @@
 ---
 title: "JavaScript SDK"
-description: "Wire the SEC API into TypeScript services, server actions, cron jobs, and backends without hand-rolling request headers or metadata"
+description: "Use the SEC API JavaScript client in TypeScript services and server-side applications"
 ---
 
-<Info>
-The JavaScript SDK is the fastest way to wire SEC API into TypeScript services, server actions, cron jobs, and product backends without hand-rolling request headers or metadata plumbing.
-</Info>
+Use the JavaScript SDK when SEC API calls belong in a TypeScript or JavaScript service. Keep the API key on the server and preserve filing identifiers with any result your application stores or displays.
 
-## Install in three steps
-
-<Steps>
-  <Step title="Install the package">
-    Add the SDK with your package manager of choice.
-  </Step>
-  <Step title="Set the API key">
-    Export `SECAPI_API_KEY` in the runtime where the code will run.
-  </Step>
-  <Step title="Verify one real investor workflow">
-    Resolve an issuer, fetch a filing, and run one semantic investor workflow before you call the integration done.
-  </Step>
-</Steps>
+## Install and configure
 
 ```bash
 npm install @secapi/sdk-js
+export SECAPI_API_KEY="secapi_..."
 ```
-
-## When to use the SDK
-
-<CardGroup cols={2}>
-  <Card title="Application backends" icon="server" href="/api-reference/platform">
-    Use the SDK when you want the public REST contract with less boilerplate and better ergonomics in app code.
-  </Card>
-  <Card title="Enrichment jobs" icon="workflow" href="/api-reference/artifacts">
-    Good for filing enrichment, artifact generation, and scheduled data workflows.
-  </Card>
-  <Card title="Team tools" icon="app-window" href="/api-reference/entities">
-    Resolve entities, inspect freshness, and retrieve filings without building a wrapper first.
-  </Card>
-  <Card title="Agent handoff" icon="bot" href="/give-this-prompt-to-your-agent">
-    Start from a prompt and keep the metadata trail intact all the way through your coding agent.
-  </Card>
-</CardGroup>
-
-## First useful calls
 
 ```ts
 import { SecApiClient } from "@secapi/sdk-js"
@@ -50,119 +18,73 @@ import { SecApiClient } from "@secapi/sdk-js"
 const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY!,
 })
-
-const issuer = await client.resolveEntity({ ticker: "AAPL" })
-const filing = await client.agentLatestFiling({ ticker: "AAPL", form: "10-K" })
-const riskFactors = await client.agentSection({ ticker: "AAPL", form: "10-K", sectionKey: "item_1a" })
-const income = await client.agentStatement("income_statement", { ticker: "AAPL", period: "annual", limit: 3 })
-const holders = await client.agentInstitutionalHolders({ ticker: "NVDA", limit: 10 })
-const form144 = await client.agentForm144({ ticker: "NVDA", limit: 10 })
-const mcpSection = await client.callMcpTool(
-  "sections.get",
-  { ticker: "AAPL", form: "10-K", sectionKey: "item_1a", mode: "compact" },
-  { id: "aapl-item-1a" },
-)
 ```
 
-## Live example
+Do not expose `SECAPI_API_KEY` to browser code. Call the SDK from a server route, worker, background job, or other trusted runtime.
 
-Run the repo-tested agent workflow when you want the smallest production-backed
-integration check: it resolves AAPL, fetches the latest 10-K, and extracts Item
-1A in compact mode using `SECAPI_API_KEY` from the environment.
-
-```bash
-export SECAPI_API_KEY="<your-api-key>"
-bun run agent_workflow.ts
-```
-
-The same agent workflow ships as a runnable example for the JavaScript, Python,
-Go, and Rust SDKs.
-
-## Reliability defaults
-
-The JavaScript SDK retries transient failures with exponential backoff and a per-client circuit breaker.
-
-- Auto-retried by default: `GET`, `HEAD`, `OPTIONS`
-- Opt-in required: `POST`, `PUT`, `PATCH`, `DELETE`, MCP `tools/call`
-- Always retried regardless of method: `429` rate limits, with `Retry-After` honored
-
-Disable SDK retries when your application already owns retry behavior:
+## Make a first filing request
 
 ```ts
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
-  retry: false,
-  telemetry: false,
+const issuer = await client.resolveEntity({ ticker: "AAPL" })
+const filing = await client.agentLatestFiling({
+  ticker: "AAPL",
+  form: "10-K",
+})
+
+console.log({
+  ticker: issuer.ticker,
+  cik: issuer.cik,
+  accessionNumber: filing.accessionNumber,
+  filingUrl: filing.filingUrl,
+  requestId: filing.requestId,
 })
 ```
 
-Opt into mutating retries only when the operation is idempotent:
+The `agentLatestFiling` helper returns the endpoint's compact agent projection. Use the full documented method when you need fields outside that projection.
+
+## Extract the source text behind a result
 
 ```ts
-await client.createArtifact(
-  { kind: "markdown_bundle", ticker: "AAPL" },
-  { retry: { enabled: true, idempotencyKey: "artifact-aapl-markdown-bundle" } },
-)
+const riskFactors = await client.agentSection({
+  ticker: "AAPL",
+  form: "10-K",
+  sectionKey: "item_1a",
+})
 ```
 
-See [SDK reliability](/sdk-reliability) for the full retry policy and migration notes.
+Keep the filing accession, URL, and request ID alongside an extracted section or conclusion. This lets a reader trace a result back to the SEC filing that supports it.
 
-## Dilution intelligence
-
-```ts
-// Top 10 highest-dilution-risk issuers
-const ratings = await client.dilutionRatings({ overall_risk: "high", limit: 10 })
-
-// Single-ticker dilution rollup
-const score = await client.dilutionScore({ ticker: "BBBB" })
-
-// ATM offerings only (boolean filter on the events list)
-const atms = await client.dilutionEvents({ ticker: "BBBB", is_atm: true })
-
-// Coverage + freshness rollup (no agent shape — already compact)
-const coverage = await client.dilutionCoverage({ ticker: "BBBB" })
-```
-
-The full surface — `dilutionEvents`, `dilutionEventDetail`, `dilutionWarrants`, `dilutionConvertibles`, `dilutionRofr`, `dilutionLockups`, `dilutionCashPosition`, `dilutionCorporateActions`, `dilutionNasdaqCompliance`, `dilutionRatings`, `dilutionReverseSplits`, `dilutionScore`, `dilutionShareFloatHistory`, `dilutionCoverage` — mirrors the REST routes 1:1. Add `view: "agent"` to any list call (except `dilutionCoverage`) for the compact agent-mode shape.
-
-<Prompt>
-Install the JavaScript SDK for SEC API in this project. Resolve AAPL, fetch the latest 10-K in agent mode, extract Item 1A in compact mode, read annual income statements in agent mode, fetch NVDA institutional holders and Form 144 filings, and log requestId, traceparent, accessionNumber, filingDate, sourceUrl, freshness, and materialization metadata with each response.
-</Prompt>
-
-## Error handling
+## Handle errors
 
 ```ts
 import { SecApiClient, SecApiError } from "@secapi/sdk-js"
 
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
-})
-
 try {
-  await client.requestDiagnostics("missing-request-id")
+  await client.resolveEntity({ ticker: "AAPL" })
 } catch (error) {
   if (error instanceof SecApiError) {
-    console.error(error.status, error.code, error.requestId, error.message, error.body)
+    console.error({
+      status: error.status,
+      code: error.code,
+      requestId: error.requestId,
+      message: error.message,
+    })
   }
 }
 ```
 
-`SecApiError` normalizes the common SEC API and JSON-RPC error shapes. Use `error.status`, `code`, `requestId`, `message`, and `body` in structured logs so support can connect customer reports to the exact failed request.
-
-<Warning>
-Do not drop metadata on the floor. In production, keep `requestId`, `traceparent`, provenance, freshness, and materialization fields in your logs or downstream artifacts so support and audit workflows stay intact.
-</Warning>
+The SDK retries safe read requests according to its retry policy. Only opt into retries for a mutating call when your operation is idempotent. Read [SDK reliability](/sdk-reliability) and [Troubleshooting](/troubleshooting) before adding application-level retries.
 
 ## Read next
 
 <CardGroup cols={3}>
-  <Card title="API Reference" icon="square-terminal" href="/api-reference">
-    Open the exact REST calls that sit underneath the SDK methods.
+  <Card title="API reference" icon="book-open" href="/api-reference">
+    Check the REST request and response behind a client method.
   </Card>
-  <Card title="Hosted MCP workflows" icon="bot" href="/mcp-workflows">
-    Use the same SEC API workflows through SEC API-hosted MCP.
+  <Card title="Python SDK" icon="code-2" href="/python-sdk">
+    Use the equivalent client from research scripts and services.
   </Card>
-  <Card title="Give this prompt to your agent" icon="sparkles" href="/give-this-prompt-to-your-agent">
-    Copy a stronger starting prompt instead of writing one from scratch.
+  <Card title="MCP workflows" icon="bot" href="/mcp-workflows">
+    Connect SEC API tools to an MCP-aware client.
   </Card>
 </CardGroup>

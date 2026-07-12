@@ -1,218 +1,81 @@
 ---
 title: "API conventions"
-description: "Reference for SEC API request correlation, metering, and the cost, token, and quota headers that let agents budget calls natively."
+description: "Use SEC API versions, response metadata, pagination, and compact views consistently in production clients"
 ---
 
-## Request correlation
+SEC API responses carry the identifiers and delivery context you need to reproduce a result. Build your client around those fields from the first integration, rather than trying to reconstruct them from a ticker or timestamp later.
 
-- every response includes `Request-Id`
-- callers can provide `x-request-id` to make local benchmarking and smoke output deterministic
+## Send requests consistently
 
-## Metering
+Use an API key in `x-api-key`. Production clients can pin a dated API version with `secapi-version`; unpinned requests use the current published version and return the resolved version in `SECAPI-Version`.
 
-- API responses include `SECAPI-Meter-Class`
-- this is the canonical hint for billing/quota classification in logs, smoke output, and reconciliation jobs
-- hosted MCP `tools/call` usage rows also persist `mcp_tool_name`; `intelligence.query` and `signals.dilution.enhanced.get` are the current MCP tools that count toward `ai_queries`
-
-### MCP JSON-RPC quota envelope
-
-Successful quota-counted MCP tool calls include top-level `_secapi.quota` metadata with `family`, `mcpToolName`, `limit`, `used`, `remaining`, `resetAt`, and plan context. MCP quota exhaustion returns HTTP `429` with JSON-RPC error code `-32005` and `error.data.code: "ai_query_quota_exceeded"`.
-
-`-32004` means `mcp_tool_timeout` and may be retried with bounded backoff. `-32005` means quota exhaustion and should not be retried until the reset window or a plan/quota change. `-32006` means `mcp_tool_circuit_open`; treat it as temporary service protection for that tool and retry only after backoff, not as quota exhaustion.
-
-## Cost and token headers
-
-- every `/v1/*` response includes `SECAPI-Token-Count` and `SECAPI-Estimated-Cost` so agents can budget natively without re-reading the pricing page
-- `SECAPI-Token-Count` is an approximate output-token count computed with the `o200k_base` tokenizer (gpt-4o / o1 / modern-frontier encoding) as a portable proxy; consumer-model token usage may vary 10–30%
-- `SECAPI-Estimated-Cost` is a dollar string at 4-decimal precision (e.g. `$0.0042`) reflecting the plan-discounted per-call rate pre-grant-offset — emitted on every `/v1/*` 2xx regardless of token-count opt-in
-- grant and credit balance are communicated separately via `SECAPI-Free-Grant-Remaining` and `SECAPI-Budget-Used` — the final billed amount reflects grant offsets on top of the per-call estimate
-- `SECAPI-Token-Count-Estimated: true` is emitted whenever `SECAPI-Token-Count` falls back to a `ceil(bytes / 4)` approximation — either because the response body exceeded 512 KB (and was not fully tokenized to protect p95 latency) or because the response is a non-JSON billable payload (filing downloads, csv/markdown/pdf exports). Absence of this header means the count is an exact tokenizer result from the JSON body
-- counts flagged as estimated are advisory for budget planning only; do not use them for exact tokenizer-equivalence math
-- error responses (4xx, 5xx), rate-limit 429, billing-required 402, and budget-gate 402 all emit `SECAPI-Token-Count: 0` and `SECAPI-Estimated-Cost: $0.0000` — agents should treat failed requests as free
-- `SECAPI-Maturity` is present with the value `beta` on pre-GA surfaces — currently the factor endpoints (`/v1/factors/*` and `/v1/stocks/{ticker}/loadings`) and the dilution endpoints (`/v1/dilution/*`, `/v1/signals/dilution`, `/v1/signals/dilution/enhanced`) — so clients can flag those responses as beta and gate production use accordingly. The header is absent on generally-available surfaces
-
-### Requesting exact token counts
-
-Response-body tokenization is opt-in by default to keep p50 latency on hot paths low. Clients that want exact counts on every response add the request header:
-
-```
-SECAPI-Compute-Headers: token-count
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 ```
 
-Behavior matrix:
+Additive fields can appear within a pinned version. Parse fields you use and tolerate additional fields in the response.
 
-| Mode | `SECAPI-Token-Count` | `SECAPI-Token-Count-Source` | `SECAPI-Estimated-Cost` |
-|---|---|---|---|
-| Opt-in absent (default), cache miss | `0` | `opt-in-required` | rate-card |
-| Opt-in absent (default), cache hit | exact (from cached body) | omitted; `SECAPI-Cache-Hit: true` | rate-card |
-| Opt-in present, cache miss | exact (from body tokenize) | omitted | rate-card |
-| Opt-in present, cache hit | exact (from cached body) | omitted; `SECAPI-Cache-Hit: true` | rate-card |
-| Error (4xx/5xx) | `0` | (omitted) | `$0.0000` |
+## Keep response metadata
 
-Cache-served responses (a subset of cacheable `/v1/*` GETs) carry an exact token count regardless of opt-in, because the count is precomputed once at cache-write time and stored alongside the body. The `SECAPI-Cache-Hit: true` header makes that visible to clients.
+Record these values with material results:
 
-The `SECAPI-Token-Count-Source: opt-in-required` advisory header marks the cheap path: if your agent needs an exact count for cost reconciliation, re-issue the request with `SECAPI-Compute-Headers: token-count`. The official SDKs will add a helper for this header in a future minor release.
+| Value | Why it matters |
+| --- | --- |
+| `Request-Id` | Identifies one API request when you need support or debugging |
+| `traceparent` | Correlates the request with downstream trace context when present |
+| `accessionNumber` and `filingUrl` | Identify the SEC filing behind a result |
+| freshness and provenance fields | Describe the source and currentness of a derived result |
+| `SECAPI-Estimated-Cost` and `SECAPI-Token-Count` | Support per-call budgeting |
 
-Server-side tokenization policy can change without client changes. Clients should rely on the response headers instead of assuming a specific tokenization path.
+You may send `x-request-id` to associate a request with your own log or job identifier.
 
-## Response shape & pagination
+## Choose a response view
 
-- field naming is camelCase for most `/v1` JSON responses. A few endpoints intentionally expose top-level snake_case fields where that is the documented contract — notably the citation fields on `/v1/sections/search` and `/v1/search/semantic` (`section_key`, `char_start`, `highlighted_snippet`, `source_url`). Treat those documented exceptions as canonical rather than normalizing them away
-- **paginated** list endpoints use cursor pagination: the response includes `hasMore` (boolean) and `nextCursor` (string | null). To page, pass `nextCursor` back as the `cursor` query param on the next request; `hasMore: false` (and a `null` `nextCursor`) marks the end of the result set. Not every list-shaped response paginates — some intentionally return the full set as `{ object, data, requestId }` with no `hasMore`/`nextCursor` (e.g. `/v1/api_keys`, `/v1/quality/scorecards`); absence of those fields on such endpoints is expected, not an error
-- the `limit` query param defaults to a per-endpoint value (commonly 10–25) and is bounded by a per-endpoint maximum (commonly 50). Most endpoints **clamp** an out-of-range or invalid `limit` to the valid range rather than failing; a few validate it explicitly and return `400`. Send a valid integer to avoid relying on either behavior
-- every `/v1` response carries `SECAPI-Estimated-Cost` (a 4-decimal dollar string, e.g. `$0.0042`) and `SECAPI-Token-Count`, so clients can budget per-call cost from the response itself without guessing or re-reading the pricing page
+Many endpoints support `view=default`, `view=compact`, or `view=agent`.
 
-### Financial statement periods
+- `default` includes the full documented payload.
+- `compact` keeps a smaller UI-oriented projection.
+- `agent` keeps retrieval essentials and citation pointers for an agent or downstream model.
 
-- statement rows/periods carry a `periodBasis` field with one of three values:
-  - `instant` — balance-sheet point-in-time values (as-of a single date)
-  - `fiscal_year_to_date` — quarterly income-statement and cash-flow values, which are **cumulative as filed** in the 10-Q (Q2 is 6 months, Q3 is 9 months) rather than discrete single-quarter figures
-  - `discrete_period` — annual values
-- the `period` query param accepts `annual` (default) or `quarterly`; `quarter` and `q` are accepted aliases for `quarterly`
+Use the endpoint reference to confirm view support and the exact projected fields. Do not assume that `agent` and `compact` contain the same fields.
 
-<Note>
-Because quarterly income-statement and cash-flow values are reported as filed, Q2 and Q3 are year-to-date cumulative totals (`periodBasis: fiscal_year_to_date`), not standalone quarters. Subtract the prior period when you need a discrete-quarter figure.
-</Note>
-
-## Response formats
-
-- every response-shape endpoint accepts `?view=default | compact | agent`
-  - `default` (implicit): human-readable shape with full provenance, freshness, materialization, and validation metadata
-  - `compact`: trimmed subset of top-level fields — suitable for UI consumers that only need identifiers + dates
-  - `agent`: agent-optimized shape that keeps essentials and citation pointers (e.g. `filingUrl`, `accessionNumber`, offsets) and drops provenance chains, freshness metadata, and pagination context not needed for retrieval
-- `?view=agent` and `?view=compact` coexist as distinct shapes; agent is not a strict subset of compact — it ships the richer "essentials + citations" shape while compact ships a UI-friendly top-level skim
-- token-count and cost headers naturally shrink in agent mode (agents pay less for compact responses). No client changes are required — header values reflect the final serialized body
-- agent-mode responses preserve camelCase field names — agent mode is a projection of the default shape, not a rename. See the per-endpoint API reference for the exact agent-mode field set
-- endpoints that validate `view` return `400 invalid_query_parameter` for an unknown value. Treat that as a client error and use the endpoint reference to confirm which projections it supports.
-
-### Endpoints that support `?view=agent`
-
-Agent mode is available on the endpoints below. The byte reduction depends on the endpoint and response shape; use the endpoint reference when you need the exact projected fields.
-
-Initial agent-mode endpoints:
-
-- `GET /v1/filings/latest` — single filing essentials + `filingUrl`
-- `GET /v1/entities/resolve` — entity with primary identifiers + match metadata
-- `GET /v1/statements` — statement with rows/periods, provenance dropped
-- `GET /v1/facts` — fact point items + lifted `accessionNumber` / `filingUrl`
-- `GET /v1/sections/search` — section items + lifted `startOffset` / `endOffset`
-- `GET /v1/search/semantic` — cited section results without score or retrieval-mode metadata
-
-Expanded agent-mode endpoints:
-
-- `GET /v1/insiders` — insider trade items with trade essentials, ownership flags dropped
-- `GET /v1/forms/144` — Form 144 filings with citation pointers
-- `GET /v1/offerings` — offering records (S-1 / 424) with prospectus URL
-- `GET /v1/events/ma` — M&A events with deal structure + counterparty
-- `GET /v1/events/enforcement` — enforcement actions with release metadata
-- `GET /v1/events/voting-results` — voting results events with proposals array (shaped)
-- `GET /v1/compensation` — executive compensation breakdown
-- `GET /v1/owners/13f` — 13F report with nested `holdings[]` (shaped)
-- `GET /v1/funds/nport/holdings` — N-PORT holdings with nested `holdings[]` (shaped)
-- `GET /v1/companies/subsidiaries` — subsidiary list with citation envelope (API-consistency, byte-neutral)
-
-### MCP response controls (`fields` / `response_format`)
-
-Over MCP, `tools/call` accepts two `params`-level controls (siblings of `name` and `arguments`, not inside `arguments`) that shape the agent-facing **text** content only — `structuredContent` always stays canonical JSON, so typed clients and `outputSchema` validation are unaffected:
-
-- `params.fields` — a comma-separated list of dotted paths (e.g. `identity.ticker,financialSnapshot.metrics.revenue.value`) that projects the text content down to those fields. For a list result the projection runs per row in `data`; envelope keys (`object`, `requestId`, `traceparent`, and list keys `data`/`hasMore`/`nextCursor`/`degradedState`) are always retained. Paths address object fields and do not descend into nested arrays.
-- `params.response_format` — `json` (default), `table` (a compact columnar `{ object: "table", columns, rows }` envelope that lists columns once and drops repeated per-row keys), or `csv` (RFC-4180). Applies to the `data` array of list-shaped results; non-list results fall back to JSON.
-
-`fields` projects first, so a `table`'s columns equal the (flat) fields you kept. Separately, `include=` is a **REST** query param (not an MCP control) that *adds* bounded enrichments — e.g. `GET /v1/companies/overview?include=segments,footnotes,dilution,factors`. See [Token Efficiency](/token-efficiency#field-selection-and-tabular-output-mcp) for worked examples.
-
-## Citation + char-range spans
-
-Two endpoints emit machine-verifiable citations on every result row:
-
-- `GET /v1/sections/search`
-- `GET /v1/search/semantic`
-
-Each result carries the following fields top-level (additive, always-on):
-
-| Field | Type | Description |
-|---|---|---|
-| `accession` | string \| null | SEC accession number (e.g. `0000950170-24-012345`) |
-| `section_key` | string \| null | Canonical section identifier (e.g. `item_1a`, `item_7`, `risk_factors`) |
-| `char_start` | int \| null | Inclusive start offset into the section text (see reference frame below) |
-| `char_end` | int \| null | Exclusive end offset — `0 ≤ char_start < char_end ≤ len(section_text)` |
-| `highlighted_snippet` | string \| null | ±150 char window around the match, with query terms wrapped in `**…**`, sentence-boundary truncated, capped at 320 chars |
-| `source_url` | string \| null | Public SEC.gov filing URL — usable directly in the browser |
-| `ticker` | string \| null | Issuer ticker, when known |
-
-### Reference frame
-
-`char_start` and `char_end` index into the **section markdown text** (the canonical plaintext extraction stored in `section_snippets.content_md`), not the raw filing HTML. This frame is stable across reparses and meaningful without fetching the multi-MB filing HTML body.
-
-To re-fetch the original section text outside the response, request the section by `(accession, section_key)` from `GET /v1/filings/{accession_number}/sections/{section_key}`, and slice the returned `contentMd` from `char_start` to `char_end`.
-
-### Null-fallback semantics
-
-When the validator can't produce a span (no section text available for the row or offsets out of bounds), the response drops `char_start`, `char_end`, and `highlighted_snippet` to `null` but keeps `accession`, `section_key`, `source_url`, and `ticker` populated. A `_citation_degraded` field records the reason (`"no_section_text" | "offsets_invalid"`). Agents should switch on `char_start === null` rather than `"char_start" in result`.
-
-### `?view=agent` interaction
-
-Citation fields are emitted on every result row regardless of `?view=`. In agent mode (`?view=agent`), `score` and `retrievalMode` are dropped from `/v1/search/semantic` results — the citation surface is preserved.
-
-## REST vs MCP shape conventions
-
-REST and MCP serve different consumer profiles, and SEC API optimizes for each:
-
-- **REST endpoints** support `?view={default,compact,agent}`. The `agent` view is the wire-byte-optimized projection — large prose drops out, the dilution `verification` block compresses to the canonical `{ confidence, crossValidationsPassed, sourceSpanResolved, modelVersion }` summary, and the response shrinks 30–95% depending on the endpoint. Use it from SDK clients that want low-latency / low-token responses to forward to a UI or downstream agent.
-- **MCP tools** always return the full payload (verification block, full provenance chain, all citation pointers). MCP context is already an agent context — round-tripping through compact-then-fetch wastes tokens compared to surfacing full evidence on the first call. Agents reasoning over MCP decide what to surface to the user.
-
-This split is intentional: REST optimizes for the wire (network bytes); MCP optimizes for the model (in-context evidence). For dilution endpoints, the rule is concrete:
-
-- `GET /v1/dilution/events?view=agent` → returns the canonical verification summary (a stable, documented `{ confidence, crossValidationsPassed, sourceSpanResolved, modelVersion }` shape).
-- `dilution.events.list` MCP tool → returns the full row including the unmodified `verification` block. No `view` argument is accepted.
-
-### Substring-match heuristic
-
-The match span is anchored by the longest query token, falling back to the snippet's leading words and finally to a section-head citation. Multi-occurrence ambiguity is resolved by earliest occurrence. The `highlighted_snippet` window is the stable user surface; the precise `[char_start, char_end)` may move slightly as upstream rerankers improve — agents should rely on the bolded snippet for display and on the offsets only for programmatic slicing.
-
-## Versioning
-
-- production clients should send `secapi-version` and pin to a dated release
-- unpinned requests default to the current published version and responses echo the resolved version in `SECAPI-Version`
-- additive fields can ship within a pinned version without requiring a client rebuild
-- breaking behavior changes require either a new dated version or an explicit deprecation notice before removal
-- compatibility aliases are for migrations and older clients; new code should use the canonical names in the API reference
-
-Read the full compatibility promise: [API versioning and compatibility](/api-versioning).
-
-## Error model
-
-Error responses use a stable JSON shape:
-
-```json
-{
-  "object": "error",
-  "id": "err_...",
-  "code": "ownership_lookup_failed",
-  "type": "api_error",
-  "message": "Human-readable explanation",
-  "requestId": "req_...",
-  "details": {}
-}
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-Authentication middleware failures, billing, validation, and other shared-helper errors also include `traceparent`. When it is present, log both `requestId` and `traceparent` when opening support tickets or correlating retries. `requestId` is the customer-facing API identifier; `traceparent` links the response to SEC API's distributed trace and is especially useful for billing, authentication, and dashboard control-plane issues.
+## Page through lists
 
-For code-by-code next actions, see the [Error code catalog](/error-code-catalog).
+Paginated endpoints return `hasMore` and `nextCursor`. Send `nextCursor` as the next request's `cursor`; stop when `hasMore` is `false`. Endpoint-specific defaults and maximum `limit` values are documented in the API reference.
 
-## Auth conventions
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&limit=25"
+```
 
-- machine access uses `x-api-key`
-- do not send SEC API keys as `Authorization: Bearer`
-- missing API-key calls return `401 missing_api_key` with a docs URL, dashboard key-creation URL, and `WWW-Authenticate` challenge
-- browser-session-only control-plane calls return `401 missing_browser_session` with a login URL when the caller is not signed in
-- API-key-authenticated callers can read data through REST, SDK, CLI, and server-to-server MCP, but dashboard control-plane mutations require a WorkOS browser session
-- API key management, billing mutations, dashboard settings, and account deletion requests reject API-key auth and require a WorkOS browser principal with the required permissions
-- MCP protected-resource metadata is available before WorkOS is fully configured
-- OAuth authorization-server metadata returns WorkOS tenant metadata when configured and intentionally returns an explicit `503 workos_authorization_server_unavailable` until real WorkOS values are present
+Some list-shaped responses return the complete set and do not include cursor fields. Treat the endpoint's documented response as authoritative.
 
-## Launch posture
+## Handle errors and retries
 
-- public signup is disabled unless `SECAPI_AUTH_PUBLIC_SIGNUP_ENABLED` is intentionally opened server-side
-- dashboard login requires the login flag plus configured WorkOS AuthKit/client values
-- new organizations receive the starter grant and create API keys explicitly; key secrets are revealed once
-- plan, budget, quota, and billing state are server-derived and should not be inferred from frontend-only flags
+Errors include a machine-readable `code`, a message, and a request ID. Read the response before retrying:
+
+- `400`: correct the path, query, or JSON body.
+- `401`: provide a valid `x-api-key` or use the dashboard for browser-only actions.
+- `402`: resolve the stated billing or entitlement condition before retrying.
+- `429`: wait for `Retry-After`; do not fan out retries.
+- `5xx`: retry once with bounded backoff, then retain the request ID for support.
+
+For the complete error catalog, read [Troubleshooting](/troubleshooting). For SDK retry behavior, read [SDK reliability](/sdk-reliability).
+
+## Use statements carefully
+
+Statement periods carry `periodBasis`. Balance-sheet values are point-in-time; quarterly income-statement and cash-flow values can be year-to-date as filed. Check `periodBasis` before comparing a quarterly value with a discrete quarter.
+
+## REST and MCP
+
+Use REST or an SDK when your application needs a defined wire response. Use hosted MCP when an MCP-aware client needs tools as part of an agent workflow. MCP tool calls use JSON-RPC and have their own quota and error envelopes. Read [MCP installation](/mcp-install) before connecting a client.

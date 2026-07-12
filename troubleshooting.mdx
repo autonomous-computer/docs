@@ -1,90 +1,56 @@
 ---
 title: "Troubleshooting"
-description: "Find the fastest next action when a SEC API request fails, from auth and billing checks to error codes and the diagnostics to capture"
+description: "Diagnose SEC API authentication, billing, rate-limit, and request failures with the fields needed to resolve them"
 ---
 
-Use this page when a request fails and you need the fastest next action. Keep the `Request-Id` response header, `traceparent` when present, HTTP status, error `code`, and any `docsUrl` from the response body.
+When a request fails, keep the HTTP status, error `code`, `Request-Id`, `traceparent` when present, endpoint, and SDK or client version. Those details turn a vague failure into a request someone can investigate.
 
-<Info>
-SEC API uses `x-api-key` for REST, SDK, CLI, and server-to-server MCP calls. `Authorization: Bearer` is for WorkOS browser-session flows and dashboard control-plane calls.
-</Info>
-
-## First checks
+## Start with credentials and limits
 
 ```bash
-curl "https://api.secapi.ai/v1/limits" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
 ```
 
-If this fails, fix authentication or billing posture before debugging a downstream filing, factor, macro, or MCP workflow. If it succeeds, copy the returned `Request-Id` into your logs so support can compare a healthy baseline with the failed call.
+If this fails, resolve the key or account state before debugging a filing, statement, or MCP workflow. Machine API calls use `x-api-key`; dashboard configuration uses a signed-in browser session.
 
-## Error quick reference
+## Read the status and code
 
-For the full code-by-code table, use the [Error code catalog](/error-code-catalog).
+| Status | Typical meaning | Next action |
+| --- | --- | --- |
+| `400` | Invalid query, path value, or JSON body | Compare the request with the endpoint reference and remove unknown fields |
+| `401 missing_api_key` | No API key reached the API | Export the key in the calling environment and send `x-api-key` |
+| `401 authentication_failed` | The key is invalid, revoked, or belongs to a different organization | Create a replacement key in the dashboard and update the caller |
+| `401 missing_browser_session` | A dashboard action was called as a machine request | Complete the action in the signed-in dashboard |
+| `402` | Billing, plan, credit, or budget state blocks the request | Inspect billing and limits, then resolve the stated condition |
+| `429` | A rate or quota limit applies | Wait for `Retry-After`; do not fan out retries |
+| `5xx` | The request could not complete | Retry once with bounded backoff, then retain the request ID |
 
-| Status | Common code | What it usually means | What to do next |
-| --- | --- | --- | --- |
-| `400` | `validation_error` | A query param, path value, or JSON body failed validation. | Compare the request to the endpoint reference and remove unknown fields before retrying. |
-| `401` | `missing_api_key` | No machine credential reached the API. | Send `x-api-key: $SECAPI_API_KEY`; do not send the API key as a bearer token. |
-| `401` | `authentication_failed` | The API key was rejected, revoked, or belongs to another org. | Create a replacement key, copy the one-time secret, rotate callers, and retry `/v1/limits`. |
-| `401` | `missing_browser_session` | A dashboard control-plane route needs a WorkOS browser session. | Sign in through `/login`; API keys cannot mutate dashboard billing, settings, or key-management state. |
-| `402` | `billing_required` | A route, entitlement, plan, grant, credit, or billing state does not permit the request. | Inspect `GET /v1/billing` and `GET /v1/limits`, then resolve the stated entitlement or billing condition. |
-| `402` | `billing_budget_approval_required` | The request would cross a configured approval threshold. | Ask an org billing admin to approve or adjust the budget before retrying. |
-| `402` | `billing_budget_hard_cap_exceeded` | The org reached a hard spend cap. | Stop retries and raise the cap or wait for the next billing period. |
-| `403` | `operator_scope_required` | The route requires an internal operator scope or a browser permission your principal lacks. | Use the correct principal; public API keys should not call internal operator routes. |
-| `429` | `ai_query_quota_exceeded` | The monthly AI-query quota or MCP quota window is exhausted. | Read `Retry-After` and quota headers, then wait for reset or change plan/budget posture. |
-| `429` | `rate_limit_exceeded` | A per-route or per-org throughput window is full. | Back off using `Retry-After`; do not fan out retries. |
-| `5xx` | `api_error` | SEC API accepted the request but an upstream service or internal dependency failed. | Retry with bounded backoff, keep the `Request-Id`, and contact support if the retry also fails. |
+Read the [error code catalog](/error-code-catalog) for code-specific guidance.
 
-## Authentication fixes
-
-- Use `x-api-key` for REST, SDK, CLI, and hosted MCP server-to-server calls.
-- Keep the API key out of URLs, request bodies, browser local storage, logs, and screenshots.
-- Rotate suspected leaked keys from the dashboard, then verify the replacement with `GET /v1/limits`.
-- Use a WorkOS browser session for dashboard mutations such as creating keys, changing billing, updating profile/settings, or deleting an account.
-
-Read next: [Auth, Billing, and First Utility](/auth-and-pricing).
-
-## Billing and quota fixes
-
-Start with:
+## Check billing and quota state
 
 ```bash
-curl "https://api.secapi.ai/v1/billing" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/billing"
 
-curl "https://api.secapi.ai/v1/limits" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
 ```
 
-- If `billingState` is `sandbox_grant`, you are still using the starter grant.
-- If the response says `payg_pending_card`, attach a card before repeating billable workflows.
-- If the error is an approval or hard-cap error, stop automated retries and have an org billing admin update the budget.
-- If a `429` includes `Retry-After`, wait that long before the next attempt.
+Stop automated retries for a billing, budget, or quota stop. Use the dashboard to update browser-only billing settings, then retry the original request once the account state is resolved.
 
-Read next: [Plans and Pricing](/plans-and-pricing), [Pay As You Go](/pay-as-you-go), and [Agent Billing](/agent-billing).
+## Fix MCP calls
 
-## MCP fixes
+First confirm that your client uses `https://api.secapi.ai/mcp` and sends `x-api-key`. Then refresh the tool list and use the exact tool name it returns.
 
-- Re-run `tools/list` before a `tools/call` retry and use the exact tool name returned by the server.
-- Treat JSON-RPC code `-32004` (`mcp_tool_timeout`) as retryable with bounded backoff.
-- Treat JSON-RPC code `-32005` (`ai_query_quota_exceeded`) as a quota stop, not a retry signal.
-- Treat JSON-RPC code `-32006` (`mcp_tool_circuit_open`) as temporary service protection and retry only after backoff.
+- JSON-RPC `-32004` indicates a tool timeout; retry with a narrower request after backoff.
+- JSON-RPC `-32005` indicates an AI-query quota stop; wait for reset or change the account's quota posture.
+- JSON-RPC `-32006` indicates temporary tool protection; retry only after backoff.
 
-Read next: [MCP workflows](/mcp-workflows) and [API conventions](/api-conventions).
+Read [MCP installation](/mcp-install) for the connection pattern.
 
-## When to contact support
+## Contact support with a reproducible request
 
-Open a support request when the same request fails after one bounded retry, when a billing state looks wrong after checking `/v1/billing`, or when a `Request-Id` from a failed customer workflow needs investigation.
-
-Include:
-
-- `Request-Id`
-- `traceparent`
-- HTTP status
-- error `code`
-- endpoint path and method
-- SDK language and version, if applicable
-- whether `/v1/limits` succeeds with the same key
-
-Read next: [Error code catalog](/error-code-catalog), [Request Diagnostics](/request-diagnostics), and [Event Export](/event-export).
+Include the endpoint and method, request body with secrets removed, HTTP status, error code, `Request-Id`, trace context, and the outcome of `GET /v1/limits` with the same key. Do not include an API key.

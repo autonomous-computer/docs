@@ -11,19 +11,11 @@ Create endpoints, rotate secrets, send test deliveries, replay failures, and cha
 
 Save the signing secret when the dashboard shows it. Verify every incoming request against the exact raw body and `x-secapi-signature` before parsing JSON. Never log the secret or the unverified payload as trusted data.
 
-## Inspect with an API key
+## Inspect delivery history
 
-Read delivery history and the public event catalog with `x-api-key`:
+Open the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks) to inspect delivery history and the current public event catalog. Use the response status, attempt count, timestamps, event type, and request ID to debug a destination.
 
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID/deliveries?limit=10"
-
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/event_types?status=public_emitting"
-```
-
-Use the response status, attempt count, timestamps, event type, and request ID to debug a destination. The API key is for evidence and inspection; return to the dashboard for any configuration change.
+Webhook endpoint inspection belongs to the same human-authenticated organization boundary as endpoint configuration. Preserve the identifiers you need for an investigation, then return to the dashboard rather than attempting a control-plane call with an API key.
 
 ## Monitor events
 

@@ -1,34 +1,30 @@
 ---
-title: "Webhook and Stream Workflows"
-description: "Configure organization delivery in the dashboard, verify signed SEC API events, and inspect delivery history with an API key."
+title: "Webhook and stream workflows"
+description: "Configure SEC API delivery, verify signed events, and inspect delivery history from your application"
 ---
 
-Use webhooks or streams when your application should react to SEC API events. The configuration boundary is deliberate: create endpoints and subscriptions in the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), then use API keys for read-only data, evidence, and delivery inspection.
+Use webhooks when SEC API should push an event to your application. Use stream polling when your application needs cursor-controlled retrieval. Configure delivery in the signed-in dashboard; webhook and stream control-plane changes require a human-authenticated organization session.
 
-## Configure in the dashboard
+## Create a webhook endpoint
 
-The dashboard is required to create or change webhook endpoints, stream subscriptions, signing secrets, test deliveries, replays, and monitor delivery settings. Those actions require a WorkOS browser session and return `human_auth_required` when called with an API key.
+Open the [SEC API dashboard](https://secapi.ai/app/webhooks) to manage webhook endpoints, delivery subscriptions, signing secrets, test deliveries, and replay settings. Do not use an API key or an autonomous agent for these changes: the API returns `human_auth_required` so a person can review the destination and subscription.
 
-For a filing monitor, register a public HTTPS endpoint, subscribe it to `monitor.match`, save the displayed signing secret, and then create the monitor that should feed the endpoint.
+For a filing monitor, register a public HTTPS endpoint, subscribe it to the event you need, save the signing secret, then create the monitor that should deliver to it.
 
-## Verify every event
+In the dashboard, enter the HTTPS destination and select the event types. Save the signing secret where your receiver can verify raw request bodies without exposing it to clients.
 
-Verify the exact raw request body and the `x-secapi-signature` header before parsing JSON. Check the event type explicitly, preserve the source URL and request ID, and treat a delivery as a notification to review evidence rather than a final conclusion.
+## Verify every webhook
 
-## Inspect delivery data with an API key
+Verify the exact raw request body against the `x-secapi-signature` header before parsing JSON. Then check the event type, store the delivery identifier, and preserve the source URL and request ID with your downstream work.
 
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/delivery/events?type=monitor.match&limit=25"
+Treat a webhook as a notification to retrieve and evaluate evidence. Do not treat an event payload alone as an investment conclusion.
 
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID/deliveries?limit=10"
-```
+## Inspect delivery history
 
-Use `GET /v1/event_types?status=public_emitting` as the source of truth for public event names. Return to the dashboard for a configuration change, secret rotation, replay, or test delivery.
+Inspect delivery attempts, event names, secret rotation, test delivery, replay, and subscription changes in the signed-in dashboard. Preserve the delivery identifier and source filing references when you investigate a failure.
 
-## Read next
+## Choose polling when you need checkpoints
 
-- [Monitor SEC filing events](/monitors)
-- [Build a filing monitor](/tutorials/build-filing-monitor)
-- [Webhook delivery and event types](/webhook-sla)
+Stream polling gives your application control over cursors and replay. Store the cursor only after you have processed an event idempotently, and use the returned cursor rather than an event timestamp as the next checkpoint.
+
+Read [Stream polling](/stream-polling) for the endpoint and CLI flow, or [Build a filing monitor](/tutorials/build-filing-monitor) for a complete monitor example.
