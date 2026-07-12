@@ -155,10 +155,13 @@ The command is a mutation. Use `--dry-run` to inspect the monitor request before
 
 ## Endpoints
 
+The free [Situations database](https://secapi.ai/situations) is for public research and discovery. These authenticated, paid API endpoints support programmatic lookup, feeds, exports, and monitoring workflows.
+
 | Endpoint | Description |
 |----------|-------------|
 | `GET /v1/situations` | List situations; filter by `types`, `statuses`, `tickers`, `forms`, `enrich` |
 | `GET /v1/situations/feed` | Reverse-chronological feed of situation events |
+| `GET /v1/situations/feed.rss` | Paid RSS version of the situation event feed |
 | `GET /v1/situations/calendar` | Upcoming key dates (record, vote, expiry, expected close) |
 | `GET /v1/situations/stats` | Counts by type, status, sector, and market-cap bucket |
 | `GET /v1/situations/performance` | Closed-situation outcome cohorts |
@@ -171,28 +174,13 @@ The command is a mutation. Use `--dry-run` to inspect the monitor request before
 | `GET /v1/situations/issues` | Immutable weekly archive summaries |
 | `GET /v1/situations/issues/{issue}` | One immutable weekly issue by number or slug |
 
-## SDK and CLI
+## SDK, CLI, and MCP
 
-The `secapi` CLI mirrors the plane:
+The JavaScript SDK includes `situationsFeed`, `situationsFeedRss`, `situationsCalendar`, `situationsStats`, `situationsPerformance`, `situationDetail`, `listSituations`, `watchSituations`, and `situationsIssues`, along with further Special Situations methods.
 
-```bash
-secapi situations list --types merger --limit 10
-secapi situations by-form --form "SC 13D"
-secapi situations get --situation-id sit_abc123
-secapi situations filings --situation-id sit_abc123
-secapi situations summary --situation-id sit_abc123
-secapi situations export --situation-id sit_abc123
-```
+The `secapi situations` CLI supports `list`, `issues`, `issue`, `by-form`, `feed`, `calendar`, `stats`, `performance`, `get`, `filings`, `summary`, `watch`, `underwrite`, and `export`.
 
-The JavaScript SDK exposes the shipped live-read surface under `client.situations`:
-
-```js
-await client.situations.list({ types: "merger", limit: 10 })
-await client.situations.byForm("SC 13D")
-await client.situations.get("sit_abc123")
-await client.situations.filings("sit_abc123")
-await client.situations.summary("sit_abc123")
-```
+MCP exposes `situations.list`, `situations.get`, `situations.feed`, `situations.calendar`, `situations.stats`, `situations.performance`, `situations.export`, `situations.watch`, `situations.issues`, `situations.issue`, and `situations.underwrite`. All programmatic surfaces use the paid, authenticated API, except for the capped anonymous embed API; the public website remains a separate free discovery surface.
 
 For a complete agent workflow, including how to distinguish discovery, live detail, immutable archive, and a source-cited export, see [Special Situations Workflows](/special-situations-workflows).
 
