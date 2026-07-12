@@ -1,6 +1,6 @@
 ---
 title: "Evaluate SEC Filing Search API"
-description: "Evaluate SEC filing search for applications and agents: search modes, endpoints, output shape, pricing checks, and proof-of-concept steps."
+description: "Evaluate SEC filing search for applications and agents: filing manifests, text retrieval, cited sections, and proof-of-concept steps."
 ---
 
 Use this page when you are deciding whether SEC API is the right filing-search layer for a product, research workflow, or agent. If you already know the endpoint you need, go straight to the [search API reference](/api-reference/search).
@@ -23,23 +23,30 @@ Use this page when you are deciding whether SEC API is the right filing-search l
 - Historical filing manifests with `GET /v1/filings`
 - Full-text search with `/v1/search/fulltext`
 - Semantic search with `/v1/search/semantic`
-- Section retrieval with `/v1/sections` or filing-section routes
-- Metadata preservation: CIK, accession number, filing date, source URL, `requestId`, `traceparent`, freshness, and materialization fields
+- Section retrieval with `/v1/sections/search` or a filing-section path route
+- Metadata preservation: CIK, accession number, filing date, source URL, and
+  request metadata where the route supplies it
 
 ## Proof-of-concept prompt
 
 <Prompt>
-Evaluate SEC API filing search for an investor-agent workflow. Resolve AAPL, find the latest 10-K, retrieve Item 1A, run semantic search for AI regulation risk across recent 10-K filings, and return a compact table with accession number, filing date, source URL, requestId, freshness, and the exact endpoint used for each row.
+Evaluate SEC API filing search for an investor-agent workflow. Resolve AAPL,
+find the latest 10-K, retrieve Item 1A, run semantic search for AI regulation
+risk across recent 10-K filings, and return the accession, filing date, source
+URL, cited section, degraded state when present, and exact endpoint used.
 </Prompt>
 
 ## Evaluation path
 
 <Steps>
   <Step title="Start with one issuer">
-    Resolve a ticker or CIK, fetch the latest filing, and confirm the response carries enough identifiers for downstream joins.
+    Resolve a ticker or CIK, fetch the latest filing with `form=10-K`, and
+    confirm the response carries enough identifiers for downstream joins.
   </Step>
   <Step title="Search a real research question">
-    Run keyword and semantic search for the same question. Compare whether each result preserves citations and whether the snippet is short enough for your agent context window.
+    Run full-text and semantic search for the same question. Semantic and
+    section search can return cited passages; full-text has a different
+    filings-and-sections response shape.
   </Step>
   <Step title="Check pricing before fanout">
     Review [Pricing and limits](/evaluate/pricing-and-limits), then quote repeated search or extraction loops before scaling the workflow.

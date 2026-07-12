@@ -40,14 +40,18 @@ The endpoint is `GET /v1/search/semantic` and the query parameter is `q`. Choose
 }
 ```
 
-Fields not needed for agent handoff can be omitted with `view=agent` where documented. Citation fields remain available so an agent can return the accession, source URL, and excerpt boundary instead of an unsupported summary.
+`view=agent` is a purposeful agent handoff, not an arbitrary field selector:
+it drops score and retrieval-mode detail while retaining the citation fields an
+agent needs to return the accession, source URL, and excerpt boundary.
 
 ## Use the citation, then verify it
 
 1. Keep `accession`, `section_key`, and `source_url` with the result.
 2. Retrieve the cited section by accession when you need the full text.
 3. Treat `char_start` and `char_end` as offsets in section markdown, not raw filing HTML.
-4. When citation offsets are null or the response reports a degraded citation state, preserve the filing identity and inspect the source rather than slicing text programmatically.
+4. When citation offsets are null or the response reports a degraded citation
+   state, preserve the filing identity and inspect the source rather than
+   slicing text programmatically.
 
 ## When to use another search path
 

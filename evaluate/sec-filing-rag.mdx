@@ -1,61 +1,81 @@
 ---
 title: "Evaluate SEC Filing RAG"
-description: "Evaluate SEC filing retrieval-augmented generation with source-cited filings, compact sections, semantic search, and agent-ready context."
+description: "Run a bounded evaluation of filing retrieval, section citations, and agent handoff before building an SEC filing RAG system."
 ---
 
-Use this page to evaluate whether SEC API is the right retrieval layer for SEC filing RAG. The goal is not to pour entire filings into a model; it is to retrieve the right filing, section, fact, or ownership record with a source trail that survives the final answer.
+Evaluate filing RAG as a retrieval and verification problem, not a question of
+whether a model can summarize a long document. A useful test returns a passage
+the reader can locate in the filing, shows what the retrieval system could not
+establish, and keeps the final interpretation separate from the quoted source.
 
 <CardGroup cols={3}>
   <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Create an account and test a cited filing-RAG workflow.
+    Run the evaluation against live filing data.
   </Card>
   <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Explore filing and search examples before building retrieval.
+    Inspect filing and search behavior before writing code.
   </Card>
   <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Review pricing before repeated retrieval and extraction loops.
+    Review repeated search and extraction limits before fanout.
   </Card>
 </CardGroup>
 
-## What to test
-
-- Entity resolution before retrieval
-- Latest filing and historical filing search
-- Section-level context for Item 1A, Item 7, and other analyst workflows
-- Semantic search for open-ended research questions
-- Compact output mode and token/cost headers
-- Citation discipline: accession number, filing date, source URL, and request metadata
-
-## Proof-of-concept prompt
-
-<Prompt>
-Evaluate SEC API as the retrieval layer for SEC filing RAG. For TSLA, resolve the entity, retrieve the latest 10-K, extract Item 1A and Item 7, run semantic search for supply-chain and regulatory risk, and produce a cited answer that separates retrieved filing text from interpretation. Keep accession number, filing URL, requestId, freshness, and token/cost headers visible.
-</Prompt>
-
-## Evaluation path
+## A 30-minute evaluation
 
 <Steps>
-  <Step title="Keep retrieval scoped">
-    Pull sections, facts, and snippets before raw full filings. The best RAG loop is smaller, cited, and easier to verify.
+  <Step title="Choose one issuer and one question">
+    Pick a question that can be checked in a recent filing, such as a new risk
+    factor or a change in management's discussion of demand.
   </Step>
-  <Step title="Force citation structure">
-    Require every claim to carry filing identity and request metadata. Do not accept ungrounded prose as a successful RAG test.
+  <Step title="Retrieve a cited passage">
+    Use semantic or section search with an issuer and form constraint. Preserve
+    `accession`, `section_key`, `source_url`, and any available offsets or
+    highlighted snippet.
   </Step>
-  <Step title="Measure context cost">
-    Compare compact and full retrieval shapes before picking a default for agents.
+  <Step title="Test a retrieval failure">
+    Try a query with an ambiguous term. If the response reports a degraded
+    citation or vector-search state, keep the filing identity and inspect the
+    source instead of manufacturing a quote.
   </Step>
 </Steps>
 
-## Read next
+## Requests to run
+
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/search/semantic?q=supply-chain%20risk&ticker=TSLA&form=10-K&mode=hybrid&limit=5&view=agent"
+
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=TSLA&form=10-K&mode=compact&view=agent"
+```
+
+For cost observability, inspect the response headers. `SECAPI-Estimated-Cost`
+and token-count headers are headers, not JSON fields. Request exact token
+counting with `SECAPI-Compute-Headers: token-count` when the route supports it.
+
+## Prompt for an analyst or agent
+
+<Prompt>
+For TSLA, retrieve cited passages about supply-chain risk from recent 10-K
+filings. Return accession, section key, source URL, highlighted snippet, and
+any degraded retrieval state. Separate the filing evidence from your
+interpretation, and say what still requires opening the filing.
+</Prompt>
+
+## Continue
 
 <CardGroup cols={3}>
+  <Card title="Filing search evaluation" icon="search" href="/evaluate/sec-filing-search-api">
+    Test manifests, full-text, semantic search, and section retrieval.
+  </Card>
+  <Card title="Semantic search reference" icon="braces" href="/api-reference/search/get-v1-search-semantic">
+    Inspect filters, views, and degraded-state behavior.
+  </Card>
   <Card title="SEC filing RAG guide" icon="book-open" href="https://secapi.ai/guides/sec-filing-rag">
-    Buyer-facing guide for filing-aware RAG systems.
-  </Card>
-  <Card title="Semantic search tutorial" icon="search" href="/tutorials/semantic-search-risk-factors">
-    Build a risk-factor retrieval workflow.
-  </Card>
-  <Card title="Token efficiency" icon="gauge" href="/token-efficiency">
-    Understand compact responses, token counts, and agent cost controls.
+    See the buyer-facing system-design guide.
   </Card>
 </CardGroup>

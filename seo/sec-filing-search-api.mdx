@@ -16,7 +16,10 @@ curl "https://api.secapi.ai/v1/filings?ticker=NVDA&form=10-K&limit=5&sort=filing
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-For one issuer's newest filing, use `GET /v1/filings/latest`. For a known record, use the accession-number route. For a question about filing text, choose a content-search endpoint instead of treating the filing manifest as the answer.
+For one issuer's newest 10-K, use `GET /v1/filings/latest?form=10-K`.
+Without `form`, it returns the newest filing of any type. For a known record,
+use the accession-number route. For a question about filing text, choose a
+content-search endpoint instead of treating the filing manifest as the answer.
 
 ## Search the content of filings
 
@@ -25,7 +28,11 @@ curl "https://api.secapi.ai/v1/search/semantic?q=merger%20agreement&ticker=MSFT&
   -H "x-api-key: $SECAPI_API_KEY"
 ```
 
-The semantic endpoint is `GET /v1/search/semantic`; `q` is required. The response returns matching sections with citation fields that point back to the SEC source. Use `mode=keyword`, `mode=semantic`, or `mode=hybrid` according to the retrieval behavior you need.
+The semantic endpoint is `GET /v1/search/semantic`; `q` is required. It can
+return matching sections with citation fields that point back to the SEC
+source. Use `mode=keyword`, `mode=semantic`, or `mode=hybrid` according to the
+retrieval behavior you need; inspect a reported degraded state before treating
+a fallback result as a full semantic search.
 
 ## A practical research sequence
 
