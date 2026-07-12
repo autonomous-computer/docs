@@ -1,10 +1,10 @@
 ---
-title: "Auth, billing, and first utility"
-description: "Authenticate to the SEC API with org-scoped keys, set up billing, and make your first useful call across REST, SDK, CLI, and MCP"
+title: "API keys, usage, and billing"
+description: "Create an SEC API key, make a source-backed request, and understand when usage or commercial rights require a plan change."
 ---
 
 <Info>
-API keys are the primary authentication method for REST, SDK, CLI, and server-to-server MCP calls. Create an account and sign in through WorkOS to manage API keys, billing, and usage.
+Use an API key for REST, SDK, CLI, and server-to-server MCP calls. Create one in the dashboard, store it in `SECAPI_API_KEY`, and send it in the `x-api-key` header. You do not need to understand the dashboard's sign-in implementation to make your first request.
 </Info>
 
 ## Auth model
@@ -21,15 +21,11 @@ API keys are the primary authentication method for REST, SDK, CLI, and server-to
   </Card>
 </CardGroup>
 
-## Browser dashboard sessions
+## Use the dashboard for account management
 
-Dashboard login uses WorkOS to create an `HttpOnly`, `SameSite=Lax` browser-session cookie named `omni_datastream_session`. Google, GitHub, and email-based WorkOS sign-in are supported by the WorkOS tenant configuration. Public signup is controlled by the `SECAPI_AUTH_PUBLIC_SIGNUP_ENABLED` flag.
+The dashboard is where you create, reveal, rotate, and revoke keys; inspect usage; and manage billing. API keys are for machine requests. Keep them out of browser bundles and source control, and rotate them when access changes.
 
-The cookie is an AES-256-GCM sealed payload that also carries the WorkOS refresh token, so the dashboard stays signed in without re-prompting: the short-lived WorkOS access token is refreshed server-side before it expires. Sessions use a 30-day sliding idle window (re-issued on each refresh) with a 90-day absolute cap measured from first login.
-
-`GET /auth/session` returns `expiresAt` and `refreshAvailable: false` — refresh is handled server-side via the sealed cookie, not by the client. The dashboard sends users back through `/login` when the idle window lapses, the 90-day absolute cap is reached, or the underlying WorkOS token can no longer be refreshed or verified.
-
-Dashboard control-plane routes require a human WorkOS browser session with the right permissions. API-key-authenticated callers cannot create or revoke dashboard API keys, mutate billing state, update profile/settings, or submit account deletion requests.
+Browser login and enterprise SSO are documented separately for teams that need to integrate with the dashboard identity boundary. They are not part of the API authentication flow.
 
 ## Agent-native entry path
 
@@ -52,14 +48,14 @@ For suspected key theft, revoke the key, create a replacement, rotate callers, a
 ## Default onboarding motion
 
 <Steps>
-  <Step title="Create your org and API key">
-    Create an account, then create your first org-scoped API key explicitly from the dashboard or account API using a WorkOS browser session, where it is revealed exactly once.
+  <Step title="Create and store an API key">
+    Create a key in the dashboard and store it as `SECAPI_API_KEY` in the environment that will make requests. The secret is shown once.
   </Step>
   <Step title="Receive the starter grant">
-    Every new org starts with `150` included calls. The grant does not renew automatically. A qualified organization administrator can request a reset after 30 days, subject to account-risk checks; API keys are created explicitly and revealed once.
+    Every new organization starts with `150` included calls. The grant does not renew automatically.
   </Step>
   <Step title="Make one real request">
-    Resolve an issuer, fetch a filing, or run one statement workflow before you think about plan changes.
+    [Resolve an issuer and retrieve a filing](/getting-started) before you think about plan changes.
   </Step>
   <Step title="Attach billing only when the work is real">
     After the starter grant is exhausted, activate Pay As You Go or move directly to a commit plan.

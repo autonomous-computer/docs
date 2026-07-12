@@ -1,46 +1,44 @@
 ---
-title: "First Request Flows"
-description: "Get to your first clean success with the SEC API by running one real workflow end to end before widening scope."
+title: "Your first SEC API workflow"
+description: "Resolve an issuer, retrieve a filing, and keep the source record before you add an SDK, CLI, or MCP client."
 ---
 
 <Info>
-This page exists to get you to one clean success quickly. Do one real workflow, keep the request metadata, and only then widen the scope.
+Choose one investor task, complete it end to end, and keep the identifiers that let someone else reproduce it. A health check proves connectivity; an issuer and filing prove that the integration is useful.
 </Info>
 
 ## Start in three steps
 
 <Steps>
-  <Step title="Check platform posture">
-    Confirm health and readiness before you spend time debugging auth or payload shape.
-  </Step>
   <Step title="Resolve one issuer you know">
-    Start with a company such as AAPL so you can spot identifier, company-name, or match-quality mismatches immediately.
+    Start with a company such as AAPL so you can tell whether the answer looks obviously wrong.
   </Step>
-  <Step title="Pull one structured workflow">
-    Fetch a latest filing, extract a section, or pull the all-statements bundle. That is enough to prove the integration is alive.
+  <Step title="Retrieve a filing with a source trail">
+    Ask for the latest 10-K or 10-Q and retain its accession number, form, filing date, and SEC URL.
+  </Step>
+  <Step title="Add one layer only when you need it">
+    Move to statements, section extraction, an SDK, CLI, or MCP after the REST path is clear.
   </Step>
 </Steps>
 
 ## API first request
 
 ```bash
-curl "https://api.secapi.ai/healthz"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
-
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
 <Prompt>
-Verify SEC API in this environment. Check health and readiness, resolve AAPL, fetch the all-statements bundle, and return the requestId and freshness block from each successful call.
+Resolve AAPL, retrieve its latest 10-K, and return the issuer CIK plus the filing form, accession number, filing date, source URL, and request ID. Do not summarize the filing until those fields are present.
 </Prompt>
 
 ## CLI first request
 
 ```bash
-export SECAPI_API_KEY="<your-api-key>"
+export SECAPI_API_KEY="your-api-key"
 secapi entities resolve --ticker AAPL
 secapi filings latest --ticker AAPL --form 10-K
 secapi sections get --ticker AAPL --form 10-K --section item_1a
@@ -70,6 +68,10 @@ secapi sections get --ticker AAPL --form 10-K --section item_1a
     Record the literal endpoint or tool name.
   </Card>
   <Card title="Request metadata" icon="search-code">
-    Keep `Request-Id`, the expected result, and the actual result.
+    Keep `Request-Id`, the issuer CIK, accession number, and source URL alongside the expected and actual result.
   </Card>
 </CardGroup>
+
+## When to use diagnostics
+
+Use [health](https://api.secapi.ai/healthz) and [readiness](https://api.secapi.ai/readyz) endpoints when a normal authenticated request fails or you are operating a service integration. They are useful diagnostic tools, not the first thing a new developer needs to understand.
