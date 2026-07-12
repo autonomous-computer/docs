@@ -1,52 +1,64 @@
 ---
 title: "MCP workflows"
-description: "Use SEC API MCP tools to produce source-backed filing research from an MCP-aware client"
+description: "Use SEC API MCP tools for source-backed filing research with explicit inputs, evidence, and limits"
 ---
 
-Hosted MCP gives an MCP-aware client access to SEC API tools without a local wrapper. Use it for a bounded research task with explicit evidence requirements, not as a substitute for checking the source fields a result depends on.
+Use SEC API MCP for a defined research job, such as locating a filing, reading a section, or checking reported ownership. Give the client a narrow question and require the filing identifiers that support its answer.
 
-Before a repeated monitor or agent loop, review [pricing and limits](https://secapi.ai/pricing) and create an API key at [secapi.ai/signup](https://secapi.ai/signup).
+Install the server before starting: [Install SEC API MCP](/mcp-install).
 
-## Start with a filing brief
+Need an API key? [Create an SEC API account](https://secapi.ai/signup) before connecting your client.
 
-Install the server first, then give your client a task that has a clear output and evidence trail:
+## Start with one cited filing
+
+Use a prompt that names the issuer, filing type, and evidence you expect back:
 
 <Prompt>
-Use SEC API MCP to resolve NVDA, retrieve its latest 10-K, extract Item 1A, and summarize the filing. Include accessionNumber, filingDate, filingUrl, requestId, and any returned freshness or provenance fields with the summary.
+Find NVIDIA's latest 10-K and summarize Item 1A. Return the accession number, filing date, filing URL, request ID, and any source or freshness fields included in the result.
 </Prompt>
 
-This workflow typically begins with issuer resolution and latest filing retrieval, then reads a specific section. Use the exact tool names returned by your client's tool list.
+This establishes a useful boundary: the client may summarize the filing, but the response must still identify the SEC document behind the summary.
 
-## Pick tools by job
+## Find the right tool
 
-| Job | Start with |
-| --- | --- |
-| Resolve a ticker or CIK | `entities.resolve` |
-| Retrieve a current filing | `filings.latest` |
-| Search filing text | `sections.search` or `filings.search` |
-| Read a filing section | `sections.get` |
-| Read filed numbers | `statements.get` or `facts.get` |
-| Inspect institutional ownership | `owners.institutional_holders` |
+Use the server's tool catalog as the source of truth. Start with `tools.search` when you know the job but not the tool name, then use `tools.describe` before a call that needs exact arguments.
 
-The server's tool list is the current contract. Use it instead of relying on a cached client configuration or an older prompt.
+| Research job                            | Search terms to use                    |
+| --------------------------------------- | -------------------------------------- |
+| Identify an issuer from a ticker or CIK | `company identity`                     |
+| Find a filing by company, form, or date | `filing search`                        |
+| Retrieve a section such as Item 1A      | `filing section`                       |
+| Read reported financial values          | `financial statements` or `XBRL facts` |
+| Review institutional ownership          | `institutional holders`                |
 
-## Keep the evidence trail
+Tool names, inputs, and annotations can change as the server evolves. Keep discovery in the workflow rather than hard-coding a catalog from this page.
 
-Ask the agent to preserve:
+## Preserve the evidence
+
+For every filing-based answer, keep these fields when they are returned:
 
 - `accessionNumber`, `filingDate`, and `filingUrl`
-- `requestId` and `traceparent` when returned
+- `requestId` and `traceparent`
 - source URLs, citations, provenance, and freshness fields
-- pagination or truncation signals when a tool returns a list
+- pagination, truncation, or response-limit signals for list results
 
-That context lets a reader verify the filing and lets your application distinguish a current result from a partial or historical one.
+The identifiers let you trace a conclusion to a filing and diagnose a failed or partial request later.
 
-## Control tool calls
+## Bound the request
 
-Make the requested scope explicit. For example, ask for one issuer, a named form, a date range, and the fields you need. For list-shaped MCP results, use the response controls documented by the tool when you need a smaller text representation; structured content remains the canonical result.
+Specify the company, form type, date range, section, and output fields that the task needs. For a list result, set a small limit first, inspect the result, then widen the query only when needed. Use the documented response controls when you want a compact text representation; structured MCP content remains the canonical payload.
 
-Do not automatically repeat a tool call after a quota or billing failure. Treat a timeout as a bounded retry candidate, and preserve the error's request ID before investigating.
+Do not automatically replay a call after an authentication, billing, or quota response. For a timeout, narrow the request before trying again and retain the request ID from the failed response.
 
-## Debug an MCP request
+## Move from research to code
 
-If a client cannot connect, revisit [MCP installation](/mcp-install). If it connects but a call fails, capture the HTTP status or JSON-RPC error code, `error.data.code`, request ID, and trace context. Read [Troubleshooting](/troubleshooting) for the next action.
+Use MCP when the task belongs in an MCP-aware client. Use an SDK or REST when you need a stable application integration, typed client behavior, or direct control over the request and response.
+
+<CardGroup cols={2}>
+  <Card title="Libraries and SDKs" icon="blocks" href="/libraries-and-sdks">
+    Choose JavaScript, Python, Go, Rust, CLI, or REST for application and terminal workflows.
+  </Card>
+  <Card title="Troubleshooting" icon="life-buoy" href="/troubleshooting">
+    Interpret authentication, quota, timeout, and API errors.
+  </Card>
+</CardGroup>

@@ -1,79 +1,62 @@
 ---
 title: "Libraries & SDKs"
-description: "Choose the SEC API client that matches your runtime, with official SDKs for JavaScript, Python, and more to start integrating fast."
+description: "Choose an SEC API integration for your runtime and verify it with a source-backed filing request"
 ---
 
-<Info>
-Pick the surface that matches your runtime. Then prove it with one real entity lookup, one filing workflow, one structured result, and one traceable source-backed read before you call the integration done.
-</Info>
+Use an SDK when SEC API belongs in application code, the CLI for terminal work, and hosted MCP for an MCP-aware client. Whichever surface you choose, begin with a company lookup and one filing request that returns an accession number and SEC URL.
 
-## Choose your surface
+## Choose an integration
 
 <CardGroup cols={2}>
   <Card title="JavaScript SDK" icon="file-code-2" href="/javascript-sdk">
-    Best for TypeScript services, apps, scripts, and product integrations.
+    TypeScript and JavaScript services, workers, and server-side applications.
   </Card>
   <Card title="Python SDK" icon="file-code" href="/python-sdk">
-    Best for research notebooks, data workflows, and backend services.
+    Research scripts, notebooks, data jobs, and Python services.
   </Card>
   <Card title="Go SDK" icon="binary" href="/go-sdk">
-    Best for lightweight backend services and strongly typed API wrappers.
+    Go services that need a direct client around the REST API.
   </Card>
   <Card title="Rust SDK" icon="cpu" href="/rust-sdk">
-    Best for async and performance-sensitive services.
-  </Card>
-  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
-    Best for coding agents and MCP-aware runtimes that need grounded investor workflows.
+    Async Rust services that need configurable HTTP behavior.
   </Card>
   <Card title="SEC API CLI" icon="terminal" href="/cli">
-    Best when you want agent workflows from the terminal without opening a browser or wiring up an SDK.
+    Shell scripts, local investigation, and terminal-first workflows.
+  </Card>
+  <Card title="Hosted MCP" icon="bot" href="/mcp-install">
+    MCP-aware clients that need SEC API tools in a research workflow.
   </Card>
   <Card title="REST API" icon="globe" href="/api-reference">
-    Best when you want exact HTTP control or your own runtime wrapper.
+    Any runtime where you want direct HTTP and response handling.
   </Card>
 </CardGroup>
 
-## Recommended sequence
+## Verify the integration
 
-<Steps>
-  <Step title="Set the API key">
-    Export `SECAPI_API_KEY` first. Every other surface will fail in ways that look less clear if auth is not in place.
-  </Step>
-  <Step title="Verify one entity lookup">
-    Confirm the surface can resolve a company or filer you already know, ideally through the identifier type you expect to use in production.
-  </Step>
-  <Step title="Verify one filing workflow and one semantic intelligence workflow">
-    Pull a filing or statements bundle, then prove one-call market/macro/factor/intelligence output before you call the integration complete.
-  </Step>
-  <Step title="Preserve the metadata">
-    Keep `requestId`, provenance, freshness, materialization metadata, and trace references in your logs or downstream artifacts.
-  </Step>
-</Steps>
+Use the same small workflow in every runtime. It checks authentication, issuer resolution, filing retrieval, and the evidence fields you will need later.
 
-## Give this prompt to your agent
+1. Export `SECAPI_API_KEY` in the service or shell that makes the request.
+2. Resolve `AAPL` and retain the returned CIK.
+3. Retrieve the latest `10-K` for that issuer.
+4. Retrieve Item `1A`, then retain `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` with the extracted result.
 
-<Prompt>
-Install the right SEC API integration surface for this project. Prefer the native SDK if the runtime matches, otherwise use the REST API. Then verify one entity lookup, one filing workflow, one semantic investor workflow such as `intelligence.query`, and one trace lookup while preserving requestId, provenance, freshness, materialization metadata, and trace references.
-</Prompt>
+The latest filing changes over time. Assert against the response shape and the presence of source identifiers, not against one historical accession number.
 
-## SEC API CLI
+## Start with JavaScript or Python
 
-Use the dedicated CLI guide when you want terminal-first setup, safe authentication patterns, local help, MCP config installation, or the machine-readable `agent-context` inventory.
+The JavaScript and Python SDK guides include install commands and a complete first request. Both clients read `SECAPI_API_KEY` from a trusted server-side environment, so you do not need to pass the key through browser code or a notebook output.
 
-<Card title="Open the CLI guide" icon="terminal" href="/cli">
-  Install `@secapi/cli`, verify local help, run core SEC workflows, and hand agents a command inventory.
-</Card>
-
-## Read next
-
-<CardGroup cols={3}>
-  <Card title="Auth and pricing" icon="key-round" href="/auth-and-pricing">
-    The auth model, version header, and plan posture.
+<CardGroup cols={2}>
+  <Card title="Install the JavaScript SDK" icon="file-code-2" href="/javascript-sdk">
+    Install `@secapi/sdk-js`, resolve a company, and retrieve a filing section.
   </Card>
-  <Card title="MCP workflows" icon="plug-zap" href="/mcp-workflows">
-    Hosted MCP setup and agent-facing usage patterns.
-  </Card>
-  <Card title="API Reference" icon="square-terminal" href="/api-reference">
-    Exact endpoint behavior when you need wire-level precision.
+  <Card title="Install the Python SDK" icon="file-code" href="/python-sdk">
+    Install `secapi-client`, resolve a company, and retrieve a cited filing section.
   </Card>
 </CardGroup>
+
+## Use the right reliability boundary
+
+SDKs handle documented transient failures for safe reads. Your application should still set its own request deadlines, preserve request IDs, and avoid layering unbounded retries around the client. Only retry a write when your application can safely repeat it.
+
+Read [SDK reliability](/sdk-reliability) for the JavaScript and Python retry policy, or [API conventions](/api-conventions) for authentication, versioning, and response metadata.

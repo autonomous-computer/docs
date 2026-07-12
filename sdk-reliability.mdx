@@ -1,63 +1,78 @@
 ---
-title: "SDK Reliability"
-description: "How the SEC API SDKs handle transient failures with safe-by-default retries, exponential backoff, and a client-side circuit breaker."
+title: "SDK reliability"
+description: "Understand retries, backoff, retry budgets, and circuit breakers in the SEC API JavaScript and Python SDKs"
 ---
 
-<Info>
-The JavaScript and Python SDKs include safe-by-default retries, exponential backoff, and a client-side circuit breaker for transient SEC API failures.
-</Info>
+The JavaScript and Python SDKs retry transient read failures so a brief network or service interruption does not immediately fail a filing lookup. `POST`, `PUT`, `PATCH`, and `DELETE` are not retried for transient failures by default. A `429` rate-limit response is the exception: unless retries are disabled, the SDK can reissue any method after the retry delay.
 
-## Retry classification
+## Default retry policy
 
-- Auto-retried by default: `GET`, `HEAD`, `OPTIONS`
-- Opt-in required: `POST`, `PUT`, `PATCH`, `DELETE`, MCP `tools/call`
-- Always retried regardless of method: `429` rate limits, with `Retry-After` or structured retry timing honored unless retry is disabled
-- Retryable failures: network errors, `408`, `429`, `502`, `503`, `504`
-- Never retried: `400`, `401`, `403`, `404`, `422`
+| Behavior                      | Default                                                            |
+| ----------------------------- | ------------------------------------------------------------------ |
+| Automatically retried methods | `GET`, `HEAD`, `OPTIONS`                                           |
+| Retryable failures            | Network failures and HTTP `408`, `429`, `502`, `503`, `504`        |
+| Never retried                 | HTTP `400`, `401`, `403`, `404`, `422`                             |
+| `429` rate limit response     | Retried for any method unless retries are disabled                 |
+| Retry count                   | Up to 3 retries                                                    |
+| Backoff                       | Jittered exponential delay, starting at `200ms` and capped at `5s` |
+| Retry budget                  | `30s`                                                              |
+| Circuit breaker               | Opens after 5 terminal retryable failures and cools down for `60s` |
 
-Defaults are base `200ms`, max backoff `5s`, max retries `3`, and total request budget `30s`. The per-client circuit breaker opens after 5 consecutive terminal retryable failures and cools down for 60s.
+When the service sends `Retry-After`, the SDK uses it. It also reads structured retry timing from the error payload when an intermediary has removed that header.
 
-Both SDKs also fall back to structured JSON retry timing (`retryAfterSeconds`, `retry_after_seconds`, `retryAfterMs`, or `retry_after_ms`) when a proxy or browser path drops the `Retry-After` header.
+## Keep writes explicit
 
-## TypeScript
+`POST`, `PUT`, `PATCH`, and `DELETE` are not retried for transient failures by default. A `429` can still reissue any method unless you disable retries. Disable retries for an operation when replay would be unsafe or when another layer owns retry behavior.
+
+Enable a retry for a write only when your application can safely repeat it. Provide an idempotency key when the endpoint supports one, and keep the key stable for the logical operation.
 
 ```ts
-import { SecApiClient } from "@secapi/sdk-js"
+const client = new SecApiClient({
+  apiKey: process.env.SECAPI_API_KEY,
+  retry: false,
+});
 
+await client.callMcpTool(
+  "entities.resolve",
+  { ticker: "AAPL" },
+  { retry: { enabled: true } },
+);
+```
+
+MCP tool calls use `POST`. Opt in to retries only for a read-only tool or an operation that your application has made idempotent.
+
+## Configure retry ownership
+
+Disable SDK retries when another layer already owns retries and backoff. This avoids multiplying attempts during an outage.
+
+<CodeGroup>
+```ts TypeScript
 const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY,
   retry: false,
 })
-
-await client.createArtifact(
-  { kind: "audit", payload: { ticker: "AAPL" } },
-  { retry: { enabled: true, idempotencyKey: "artifact-aapl-audit-2026-05-01" } },
-)
 ```
 
-## Python
-
-```python
+```python Python
 import os
+
 from secapi_client import SecApiClient
 
 client = SecApiClient(
     api_key=os.environ["SECAPI_API_KEY"],
     retry=False,
-)
-
-client.create_artifact(
-    {"kind": "audit", "payload": {"ticker": "AAPL"}},
-    retry={"enabled": True, "idempotency_key": "artifact-aapl-audit-2026-05-01"},
+    timeout=10,
 )
 ```
 
-## MCP tools/call
+</CodeGroup>
 
-MCP tool calls are HTTP `POST`, and the SDK cannot know whether the selected tool is read-only or mutating. Non-429 retries are off by default. Opt in per call only when the tool is read-only or your caller supplies an idempotency key.
+The Python SDK uses a `30s` per-request socket timeout by default. Set a shorter timeout for latency-sensitive work, or leave it unset only when your transport layer enforces a deadline. The JavaScript SDK applies its retry budget to the request attempt sequence.
 
-## Telemetry
+## Inspect a failure
 
-The SDK emits anonymous `client_retry_attempt` events when it retries. Telemetry includes SDK language/version, method, route template, origin, retry attempt, delay, status/error class, and elapsed time. It excludes API keys, request bodies, query strings, raw headers, and email addresses.
+Both SDKs surface the HTTP status, API error code, request ID, and response payload on API failures. Log the request ID with the operation that failed. When the client circuit is open, wait for its cooldown rather than creating parallel client instances to bypass it.
 
-Set `telemetry: false` in TypeScript or `telemetry=False` in Python to opt out.
+The JavaScript SDK emits a `client_retry_attempt` event only when a telemetry capture token is configured. The Python SDK emits retry telemetry by default; set `telemetry=False` or `telemetry={"enabled": False}` to disable it.
+
+Read [Troubleshooting](/troubleshooting) for API error handling and [MCP workflows](/mcp-workflows) before retrying MCP calls.

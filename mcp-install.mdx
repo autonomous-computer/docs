@@ -1,34 +1,30 @@
 ---
 title: "Install SEC API MCP"
-description: "Connect an MCP-aware client to SEC API and prove the installation with a source-backed filing workflow"
+description: "Connect an MCP client to SEC API, authenticate with an API key, and verify a filing workflow"
 ---
 
-Connect hosted MCP when your agent client supports streamable HTTP MCP and needs SEC filing, statement, ownership, or search tools. Start with an API key and prove one filing workflow before allowing an agent to use the tools in a broader task.
+Connect an MCP client to SEC API when you want filing, company, and research tools available inside that client. Authenticate once, then confirm that the client can return a specific SEC filing before using it in a larger workflow.
 
-## Get the connection details
+## Set the API key
 
-The public metadata endpoint describes the deployed transport and client hints:
-
-```bash
-curl -sS https://api.secapi.ai/mcp
-```
-
-The authenticated MCP endpoint is `https://api.secapi.ai/mcp`. Send a machine API key in `x-api-key` for tool calls.
+Create an API key in the signed-in [dashboard](https://secapi.ai/app), then expose it only to the MCP client process:
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
 ```
 
-## Connect Claude Code
+SEC API serves MCP at `https://api.secapi.ai/mcp`. `GET /mcp` returns public connection metadata. MCP requests use JSON-RPC over an authenticated `POST /mcp` request with the key in `x-api-key`.
+
+## Add the server
+
+For Claude Code, add the hosted server with the API key header:
 
 ```bash
 claude mcp add --transport http secapi https://api.secapi.ai/mcp \
   --header "x-api-key: $SECAPI_API_KEY"
 ```
 
-## Connect a JSON-configured client
-
-Use this shape when your MCP-aware client accepts a project or user configuration file:
+For another MCP client, use its HTTP-server configuration with the same URL and header. A typical configuration looks like this:
 
 ```json
 {
@@ -43,20 +39,24 @@ Use this shape when your MCP-aware client accepts a project or user configuratio
 }
 ```
 
-Keep the key in the environment rather than committing it to the configuration file.
+Use the environment-variable syntax required by your client. Do not put an API key directly in a checked-in configuration file.
 
-## Prove the installation
+## Verify a filing workflow
 
-Ask the client to do a short, verifiable job:
+Restart or reload the client after adding the server. Then give it a bounded request that requires source fields in the answer:
 
 <Prompt>
-Use SEC API MCP to resolve AAPL, retrieve the latest 10-K, extract Item 1A, and report the accession number, filing date, filing URL, and request ID with the result.
+Resolve AAPL, retrieve its latest 10-K, and return Item 1A. Include the accession number, filing date, filing URL, and request ID from the SEC API result.
 </Prompt>
 
-The agent should return the filing evidence, not only a summary. If it cannot list or call a tool, check the configured URL, `x-api-key` header, and client logs before changing the prompt.
+A successful result identifies one filing and gives you fields to retain with any downstream analysis. Filing details change as new reports arrive, so do not compare the result to a fixed accession number.
 
-## Know the error boundary
+## Discover tools before calling them
 
-`GET /mcp` is public discovery metadata. `POST /mcp` is the authenticated JSON-RPC transport. Authentication, billing, and generic rate-limit failures can return normal HTTP error bodies before JSON-RPC dispatch. Tool errors return JSON-RPC error envelopes once a request reaches the MCP server.
+The server exposes its current tool catalog through the MCP protocol. Ask the client to list tools, or use `tools.search` to find a capability and `tools.describe` to inspect its input schema before calling it. This avoids relying on an old local catalog or a copied prompt.
 
-For setup patterns and tool selection, read [MCP workflows](/mcp-workflows). For response codes, read [Troubleshooting](/troubleshooting).
+## Troubleshoot a connection
+
+If the client cannot list tools, confirm the URL, reload the configuration, and verify that `SECAPI_API_KEY` is present in the process environment. If a tool call fails, retain the HTTP status or JSON-RPC error, `requestId`, and any trace context before retrying.
+
+Read [MCP workflows](/mcp-workflows) for task patterns and [Troubleshooting](/troubleshooting) for error-specific guidance.
