@@ -1,104 +1,75 @@
 ---
-title: "SEC Company Search API — Entity Resolution by Common Identifiers"
-description: "Search SEC-registered companies by ticker, CIK, CUSIP, FIGI, ISIN, or name. Resolve common identifiers to a best-match SEC entity profile with filing history. Get started free at secapi.ai/signup."
+title: "SEC Company Search and Company Data API"
+description: "Resolve an SEC issuer, retrieve a company overview, and move from an identifier to source-aware company financial data."
 ---
 
-Finding the right company on EDGAR means knowing its CIK. SEC API's entity resolution engine lets you search by common company identifiers — ticker symbol, CIK, CUSIP, FIGI, ISIN, or company name — and get back a best-match SEC entity profile with mapped identifiers and filing metadata.
+Most SEC-data workflows start with an issuer identity problem: someone has a
+ticker, a CIK, or a company name and needs the right entity before they can
+retrieve filings or financial data. Resolve the issuer first. Then use the
+company-data surfaces for the specific question in front of you.
 
-## Capabilities
+## Resolve the issuer
+
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
+```
+
+Keep the returned CIK, ticker, match basis, and request ID. A CIK is the most
+useful durable SEC identity when a ticker has changed or a filing workflow
+needs a precise issuer key.
+
+## Build a company briefing
+
+`GET /v1/companies/overview` accepts a ticker, symbol, or CIK. The base
+overview is intentionally light. Add only the enrichment your research needs:
+
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/companies/overview?ticker=AAPL&include=segments,footnotes,dilution,factors"
+```
+
+Segments, dilution, and factors can degrade independently when their source
+work is unavailable. Preserve the base overview and inspect each enrichment's
+status instead of treating a partial result as a complete company record.
+
+## Choose the next endpoint
+
+| Research job | Endpoint |
+| --- | --- |
+| Latest company snapshot | `GET /v1/companies/overview` |
+| Financial data for one or a small set of issuers | `GET /v1/companies/financials` |
+| A specific financial statement | `GET /v1/companies/income-statements`, `GET /v1/companies/balance-sheets`, or `GET /v1/companies/cash-flow-statements` |
+| Ratio refresh for ticker-based company sets | `GET /v1/companies/ratios` |
+| Product, geographic, or operating segments | `GET /v1/companies/segments` |
+
+For a batch, use `tickers=AAPL,MSFT,NVDA` where the endpoint supports it and
+inspect each result for a degraded state. The ratios endpoint accepts a ticker
+or ticker batch; it is not a single-CIK lookup.
+
+## Search is not diligence
+
+Entity resolution helps you find the issuer. It does not settle whether a
+company changed its reporting perimeter, presentation, or accounting policy.
+When a company-data result informs an investment or compliance conclusion,
+follow the filing URL, accession number, and relevant disclosure section.
+
+## Continue
 
 <CardGroup cols={2}>
-  <Card title="Multi-identifier lookup" icon="fingerprint">
-    Search by ticker, CIK, CUSIP, FIGI, ISIN, LEI, or company name. Identifiers resolve to the best matching SEC entity, with match details when available.
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
+    Resolve an issuer and test company-data requests against the live API.
   </Card>
-  <Card title="Fuzzy name matching" icon="magnifying-glass">
-    Handles spelling variations, abbreviations, and former names. "Alphabet" resolves to GOOGL just as well as "Google."
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
+    Inspect filing and company-data behavior before writing code.
   </Card>
-  <Card title="Full entity profile" icon="id-card">
-    Returns SIC code, state of incorporation, filing history summary, and all known identifiers for each entity.
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
+    Review plans and limits before scheduling repeated issuer coverage.
   </Card>
-  <Card title="High-throughput resolution" icon="list">
-    Resolve hundreds of identifiers in parallel for portfolio mapping and data reconciliation. Each request returns a best-match entity record. Use CIK or accession number when precision matters.
+  <Card title="Company-data reference" icon="building-2" href="/api-reference/companies">
+    Review overview, financials, ratios, and segment contracts.
   </Card>
 </CardGroup>
-
-## Quick start
-
-Resolve a ticker to its full entity profile:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=TSLA"
-```
-
-```json
-{
-  "entity": {
-    "cik": "0001318605",
-    "name": "Tesla, Inc.",
-    "ticker": "TSLA",
-    "cusip": "88160R101",
-    "figi": "BBG000N9MNX3",
-    "isin": "US88160R1014",
-    "sic": "3711",
-    "sic_description": "Motor Vehicles & Passenger Car Bodies",
-    "state_of_incorporation": "DE",
-    "filing_count": 842
-  }
-}
-```
-
-Search by company name with fuzzy matching:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities?q=berkshire+hathaway&limit=5"
-```
-
-## Use cases
-
-### Portfolio identifier mapping
-
-Map a portfolio of CUSIPs to CIKs and tickers for cross-referencing with SEC filing data. Batch resolve thousands of positions in one call.
-
-### Data reconciliation
-
-When merging datasets from different providers that use different identifiers, use entity resolution to create a best-match mapping.
-
-### Company lookup for applications
-
-Build autocomplete and search features that let users find companies by common identifiers they have on hand.
-
-### Historical entity tracking
-
-Track name changes, ticker changes, and CIK reassignments over time to maintain accurate mapping for historical analysis.
-
-## API endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/entities/resolve` | Resolve common identifiers to a best-match SEC entity |
-| `GET /v1/entities?q={query}` | Fuzzy search by company name |
-| `GET /v1/entities/edgar` | Browse the EDGAR canonical entity list |
-
-## Why SEC API for entity resolution
-
-| Feature | SEC API | Raw EDGAR | sec-api.io | OpenFIGI |
-|---------|-----------|-----------|------------|----------|
-| Ticker lookup | Yes | No (CIK only) | Yes | No |
-| CUSIP resolution | Yes | No | No | No |
-| FIGI/ISIN resolution | Yes | No | No | Yes (FIGI) |
-| Fuzzy name search | Yes | Basic | Basic | No |
-| Batch resolution | Yes | No | No | Yes |
-| Full entity profile | Yes | Partial | Partial | No |
-| Pricing | Pay-as-you-go | Free (limited) | $Varies | Free (FIGI) |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="/getting-started">
-  Start resolving entities in under 60 seconds. 150 free API calls (one-time).
-</Card>
-
-- [SEC EDGAR API](/seo/sec-edgar-api)
-- [Filing Search API](/seo/sec-filing-search-api)
-- [API Reference](/api-reference)

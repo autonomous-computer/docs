@@ -1,60 +1,98 @@
 ---
-title: "Evaluate XBRL Facts API"
-description: "Evaluate normalized XBRL facts and financial statement retrieval for models, agents, and investor analytics."
+title: "Evaluate SEC XBRL Facts and Statements"
+description: "Run a practical, source-aware evaluation of SEC API facts and statements before replacing an XBRL parsing or financial-data workflow."
 ---
-
-Use this page to decide whether SEC API can replace raw XBRL parsing or a brittle statement pipeline. For implementation details, see the [XBRL API guide](/seo/xbrl-api) and [facts API reference](/api-reference/facts).
 
 <CardGroup cols={3}>
   <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Create an account and run statement and fact requests against the live API.
+    Create an account and run this evaluation against the live API.
   </Card>
   <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Explore statement and filing examples before building a refresh job.
+    Inspect filing and company-data behavior before writing code.
   </Card>
   <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Review pricing before refreshing large issuer universes.
+    Review plans and limits before scheduling broad model refreshes.
   </Card>
 </CardGroup>
 
-## What to test
+Use this evaluation when you are deciding whether SEC API can support a real
+financial-model refresh, research agent, or company-data product. The test is
+not “did I receive JSON?” It is whether the response gives you a usable value,
+a period you understand, and a path back to the filed source.
 
-- Normalized all-statements retrieval with `GET /v1/statements/all`
-- Tag-level facts with `GET /v1/facts`
-- Period alignment across annual and quarterly filings
-- Provenance fields that connect values back to filings
-- Token and cost headers for repeated model-refresh jobs
-
-## Proof-of-concept prompt
-
-<Prompt>
-Evaluate SEC API XBRL facts for a financial-model refresh. Resolve MSFT, fetch the latest annual all-statements bundle, pull Revenues facts for the last four annual periods, and return each value with unit, period end, accession number, source filing URL, requestId, freshness, and any caveat about normalization.
-</Prompt>
-
-## Evaluation path
+## A 30-minute evaluation
 
 <Steps>
-  <Step title="Compare statements and raw facts">
-    Pull both normalized statements and a tag-level fact series for one issuer. Confirm the reconciliation trail is good enough for your analyst or agent.
+  <Step title="Choose one issuer and one question">
+    Start with an annual revenue, margin, or cash-flow question for an issuer
+    your team already understands. Record the filing you expect to reconcile.
   </Step>
-  <Step title="Exercise edge cases">
-    Test a company with segment disclosures, amended filings, or extension tags before judging the integration complete.
+  <Step title="Compare a statement and a fact series">
+    Request the annual all-statements bundle, then request the underlying tag
+    series. Compare the period, unit, and citation fields before comparing the
+    values.
   </Step>
-  <Step title="Budget the refresh loop">
-    Estimate cost for the issuer universe and cadence you actually need. Agents should inspect billing and limits before wide fanout.
+  <Step title="Test a boundary">
+    Try a quarterly period, a foreign private issuer, or a company with a
+    known segment disclosure. Capture what requires filing judgment rather
+    than treating an empty or partial response as a product verdict.
   </Step>
 </Steps>
 
-## Read next
+## Requests to run
+
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/statements/all?ticker=MSFT&period=annual&limit=1"
+
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/facts?ticker=MSFT&tag=Revenues&period=annual&limit=4"
+```
+
+For a company briefing, add a scoped enrichment request rather than assuming
+every enrichment is mandatory:
+
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/companies/overview?ticker=MSFT&include=segments,dilution"
+```
+
+## What good evidence looks like
+
+- The fact response tells you the requested tag, the resolved tag, and the
+  alias strategy.
+- The values carry a period and unit appropriate to the question.
+- You retain accession number and filing URL from provenance where supplied.
+- You know whether the response shape is compact or the default metadata-rich
+  view.
+- A batch or optional company enrichment is checked for a partial or degraded
+  result before it enters a model or agent answer.
+
+## Prompt for an analyst or agent
+
+<Prompt>
+For MSFT, retrieve the latest annual all-statements bundle and a four-period
+annual Revenues fact series. Compare the requested and resolved fact tag,
+then return the values with period, unit, accession number, filing URL, and
+request ID. Identify anything that needs the source filing or an accounting
+judgment before it is used in a model.
+</Prompt>
+
+## Decide what to build next
 
 <CardGroup cols={3}>
   <Card title="XBRL implementation guide" icon="braces" href="/seo/xbrl-api">
-    Endpoint examples and comparison notes.
+    Learn when to use statements versus tag-level facts.
   </Card>
-  <Card title="Statements and facts product page" icon="table" href="https://secapi.ai/apis/statements-and-facts">
-    Product-level overview for buyers and evaluators.
+  <Card title="Company financial statements" icon="table" href="/seo/sec-financial-statements-api">
+    Build a company-data or statement-refresh path.
   </Card>
   <Card title="Pricing and limits" icon="gauge" href="/evaluate/pricing-and-limits">
-    Plan, budget, and quota checks for repeated data pulls.
+    Size a refresh loop before wide fanout.
   </Card>
 </CardGroup>
