@@ -77,13 +77,14 @@ secapi situations watch \
   --name "ACME vote and close monitoring"
 ```
 
-Creating, reading, or changing a watch reports the `monitor_management` control-plane meter. A successful direct-email delivery reports `email_delivery`; successful organization-level webhook or stream fanout reports `situations_webhook_delivery`. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
+Creating, reading, or changing a watch reports the `monitor_management` control-plane meter. Successful organization-level webhook delivery is metered as `situations_webhook_delivery`, stream fanout delivery as `stream_event`, and direct email delivery as `email_delivery`. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
 
 ## MCP and reusable Skills
 
 The hosted MCP surface currently exposes `situations.list`, `situations.get`,
 `situations.feed`, `situations.calendar`, `situations.stats`,
-`situations.performance`, `situations.export`, and `situations.watch`. Tool
+`situations.performance`, `situations.export`, `situations.watch`,
+`situations.issues`, `situations.issue`, and `situations.underwrite`. Tool
 calls use the same organization key, entitlement checks, meter classes, and
 source-citation expectations as REST. Install the server with the
 [MCP setup guide](/mcp-install), then let an agent use the discovery tools
@@ -96,9 +97,9 @@ fundamentals layer.
 
 ## Cost and entitlement posture
 
-Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`. For every request, log the response meter and billing headers rather than hard-coding a plan assumption. The important Special Situations meter classes are `situations_lookup`, `situations_feed_read`, `situations_export`, `situations_underwriting_pack`, `monitor_management`, `email_delivery`, and `situations_webhook_delivery`.
+Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`. For every request, log the response meter and billing headers rather than hard-coding a plan assumption. The important Special Situations meter classes are `situations_lookup`, `situations_feed_read`, `situations_export`, `situations_underwriting_pack`, `monitor_management`, `email_delivery`, `situations_webhook_delivery`, and `stream_event`.
 
-The TIKR-style fundamentals, estimates, valuation, and broad international symbol dataset used by Omni Apps are internal-only infrastructure. They are not part of this public Special Situations API, documentation, SDK, CLI, MCP, or pricing promise.
+Proprietary Omni Apps fundamentals, estimates, valuation, and symbol coverage are internal-only and excluded from the public Special Situations API, documentation, SDKs, CLI, MCP, and pricing.
 
 ## Read next
 
