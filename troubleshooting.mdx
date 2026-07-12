@@ -1,35 +1,31 @@
 ---
 title: "Troubleshooting"
-description: "Diagnose SEC API authentication, billing, rate-limit, and request failures with the fields needed to resolve them"
+description: "Resolve SEC API authentication, billing, rate-limit, and request failures from the response status and error code"
 ---
 
-When a request fails, keep the HTTP status, error `code`, `Request-Id`, `traceparent` when present, endpoint, and SDK or client version. Those details turn a vague failure into a request someone can investigate.
-
-## Start with credentials and limits
+Start with the failed response, not the symptom in your application. Keep its status, error `code`, `Request-Id`, and `traceparent` when present while you work through the appropriate path below.
 
 ```bash
-curl -sS \
+curl -i -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/limits"
 ```
 
-If this fails, resolve the key or account state before debugging a filing, statement, or MCP workflow. Machine API calls use `x-api-key`; dashboard configuration uses a signed-in browser session.
+If this request fails, resolve the credential or account state before debugging a filing, statement, SDK, or MCP workflow. Machine requests use `x-api-key`; dashboard actions use a signed-in browser session.
 
-## Read the status and code
+## Read the status first
 
-| Status | Typical meaning | Next action |
+| Status | What to check | Next action |
 | --- | --- | --- |
-| `400` | Invalid query, path value, or JSON body | Compare the request with the endpoint reference and remove unknown fields |
-| `401 missing_api_key` | No API key reached the API | Export the key in the calling environment and send `x-api-key` |
-| `401 authentication_failed` | The key is invalid, revoked, or belongs to a different organization | Create a replacement key in the dashboard and update the caller |
-| `401 missing_browser_session` | A dashboard action was called as a machine request | Complete the action in the signed-in dashboard |
-| `402` | Billing, plan, credit, or budget state blocks the request | Inspect billing and limits, then resolve the stated condition |
-| `429` | A rate or quota limit applies | Wait for `Retry-After`; do not fan out retries |
-| `5xx` | The request could not complete | Retry once with bounded backoff, then retain the request ID |
+| `400` | request path, query, or JSON body | Compare the request with the endpoint reference and correct the named field or accepted value |
+| `401` | API key and authentication code | Send `x-api-key`; replace a rejected key through the dashboard if needed |
+| `402` | billing, entitlement, credit, or budget code | Read `GET /v1/billing` and `GET /v1/limits`, then resolve the stated account condition |
+| `429` | `Retry-After` and quota headers | Reduce concurrency and wait before retrying |
+| `5xx` | request ID, response body, and retry safety | Retry a safe read request with bounded backoff; retain diagnostics if it fails again |
 
-Read the [error code catalog](/error-code-catalog) for code-specific guidance.
+Read the [error code catalog](/error-code-catalog) for code-level guidance. The route's returned code is more precise than the HTTP status alone.
 
-## Check billing and quota state
+## Check billing and limits
 
 ```bash
 curl -sS -H "x-api-key: $SECAPI_API_KEY" \
@@ -39,18 +35,26 @@ curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/limits"
 ```
 
-Stop automated retries for a billing, budget, or quota stop. Use the dashboard to update browser-only billing settings, then retry the original request once the account state is resolved.
+Do not keep retrying a billing, budget, or quota stop. Resolve the account condition, then retry the original request. Limits and entitlements are specific to the authenticated organization and route.
+
+## Fix common integration mistakes
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| `missing_api_key` | The header did not reach the API | Set `x-api-key` in the server, worker, terminal, SDK, CLI, or MCP client that makes the request |
+| `authentication_failed` | The credential or token was rejected | Verify the credential type and replace or refresh it through the appropriate signed-in flow |
+| `invalid_query_parameter` or `validation_error` | A parameter or body field is unsupported | Use the endpoint's documented schema and accepted values |
+| `rate_limit_exceeded` | The route or plan window is full | Honor `Retry-After`, lower fanout, and retry after the indicated interval |
+| A partial or degraded result | A source or derived sub-workflow is not fully available | Inspect returned warnings and capability fields; preserve the usable source evidence and route the exception explicitly |
 
 ## Fix MCP calls
 
-First confirm that your client uses `https://api.secapi.ai/mcp` and sends `x-api-key`. Then refresh the tool list and use the exact tool name it returns.
+Confirm that your client connects to `https://api.secapi.ai/mcp`, sends `x-api-key` when configured for API-key authentication, and refreshes the tool list before calling a tool.
 
-- JSON-RPC `-32004` indicates a tool timeout; retry with a narrower request after backoff.
-- JSON-RPC `-32005` indicates an AI-query quota stop; wait for reset or change the account's quota posture.
-- JSON-RPC `-32006` indicates temporary tool protection; retry only after backoff.
+- JSON-RPC `-32004` means a tool exceeded its execution budget. Retry with narrower arguments or a smaller limit.
+- JSON-RPC `-32005` means an AI-query quota or MCP quota window is exhausted. Wait for reset or change the account's quota posture.
+- JSON-RPC `-32006` means tool-level protection is active. Back off before retrying.
 
-Read [MCP installation](/mcp-install) for the connection pattern.
+For a reproducible escalation, include the method or tool name, redacted request, HTTP status, error code, `Request-Id`, trace context, and the outcome of `GET /v1/limits` with the same credential. Do not include an API key.
 
-## Contact support with a reproducible request
-
-Include the endpoint and method, request body with secrets removed, HTTP status, error code, `Request-Id`, trace context, and the outcome of `GET /v1/limits` with the same key. Do not include an API key.
+Read next: [Request diagnostics](/request-diagnostics), [Error code catalog](/error-code-catalog), and [MCP installation](/mcp-install).

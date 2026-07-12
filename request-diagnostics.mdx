@@ -1,46 +1,56 @@
 ---
-title: "Request Diagnostics"
-description: "Capture the request identifiers, headers, status, and billing context SEC API support needs to debug a failed REST, SDK, CLI, or MCP request."
+title: "Request diagnostics"
+description: "Capture a minimal, secret-free request record to diagnose SEC API REST, SDK, CLI, or MCP failures"
 ---
 
-Use this checklist when a request still fails after the first troubleshooting pass. The goal is to preserve enough context for SEC API support to reproduce the problem without exposing secrets.
-
-## Capture identifiers
-
-- `Request-Id` response header
-- `traceparent` response header, when present
-- HTTP method and endpoint path
-- UTC timestamp and timezone
-- SDK, CLI, MCP client, or direct HTTP caller version
-- Organization, workspace, or environment name, but never the API key value
-
-## Capture the response
-
-- HTTP status code
-- Error `code`
-- Error `message`
-- `docsUrl`, when present
-- `Retry-After`, quota, and rate-limit headers
-- Whether the same key succeeds against `GET /v1/limits`
-
-## Capture billing and quota context
-
-Run the two baseline checks with the same API key:
+Capture the response before retrying. A status code alone rarely distinguishes an invalid request, an account limit, a transient failure, and a partial data result.
 
 ```bash
-curl "https://api.secapi.ai/v1/limits" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-curl "https://api.secapi.ai/v1/billing" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -i -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
 ```
 
-For `402` and `429` responses, include quota headers, billing state, budget state, and the approximate retry schedule your application used. Do not keep retrying quota or hard-cap errors in a loop.
+The `-i` flag prints response headers. Retain the result privately; never include the API key in a ticket, log excerpt, or screenshot.
+
+## Capture this record
+
+| Field | Why it matters |
+| --- | --- |
+| HTTP method and endpoint path | Identifies the route and operation |
+| UTC timestamp | Places the request in time without timezone ambiguity |
+| HTTP status and error `code` | Distinguishes request, authentication, billing, and availability failures |
+| Error `message`, `hint`, and `docsUrl` when returned | Preserves route-specific guidance |
+| `Request-Id` and `traceparent` when present | Correlates the request with SEC API diagnostics |
+| `Retry-After` and any quota or billing headers | Explains when and whether a retry is appropriate |
+| SDK, CLI, MCP client, or HTTP library version | Makes client-specific failures reproducible |
+
+For a request body, retain a redacted version plus the names of relevant headers. Include the response view, pagination cursor, and query parameters when they affect the result.
+
+## Check the credential context
+
+Run these requests with the same API key that made the failing request:
+
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
+
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/billing"
+```
+
+For `402` and `429` responses, include the returned billing or quota context and the retry schedule your application used. Do not retry a billing, budget, or hard-cap response in a tight loop. For `429`, honor `Retry-After` when it is returned.
+
+## Correlate requests safely
+
+You can send `x-request-id` to associate an API call with your own job or log record. SEC API returns it as the request correlation ID. It is not a billing idempotency key; do not rely on it to deduplicate work or charges.
 
 ## Redact before sharing
 
-- Redact `x-api-key`, bearer tokens, cookies, and organization secrets.
-- Redact unreleased filing text, private portfolio holdings, customer names, and proprietary prompts unless support explicitly asks for a narrowed reproduction.
-- Keep accession numbers, endpoint paths, request IDs, status codes, and error codes visible.
+- Remove `x-api-key`, bearer tokens, cookies, and other credentials.
+- Remove customer data, private holdings, unreleased text, and proprietary prompts unless a narrowed reproduction requires them.
+- Keep endpoint paths, status codes, request IDs, error codes, and the smallest useful response excerpt.
 
-Read next: [Troubleshooting](/troubleshooting), [Error code catalog](/error-code-catalog), and [Event Export](/event-export).
+Read next: [Troubleshooting](/troubleshooting), [Error code catalog](/error-code-catalog), and [API conventions](/api-conventions).

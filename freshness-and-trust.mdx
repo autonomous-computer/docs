@@ -1,57 +1,67 @@
 ---
-title: "Freshness, Coverage, and Source Evidence"
-description: "Understand what SEC API can show about a source record, its availability, and derived data before you rely on it in research or production."
+title: "Freshness and source evidence"
+description: "Evaluate the source, timing, provenance, and degradation fields behind an SEC API result before using it in a decision"
 ---
 
-Use this page to decide what a response can support. SEC API separates three questions that are often blurred together: when the SEC published a source, when SEC API could return it, and when a derived representation such as a section, statement, or semantic-search result became available.
+Use source evidence to decide what a response can support. SEC publication time, SEC API availability, and availability of a derived representation are separate facts. Preserve the identifiers returned by the endpoint that produced a material result.
 
-Do not treat an available filing manifest as proof that every derived surface is current. Keep the filing accession, source URL, request ID, and any returned freshness or degradation metadata with a downstream conclusion.
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
+```
 
-## Read freshness by data class
+## Read the response in layers
 
-| Data class | What availability means | What to preserve |
+| Layer | What it tells you | What to keep |
 | --- | --- | --- |
-| Filing metadata | The filing record can be found by issuer, form, date, or accession. | `accessionNumber`, `filingDate`, `filingUrl`, `requestId` |
-| Filing text | A filing body can be rendered or read from the available source/storage path. | accession, source URL, render state when present |
-| Extracted sections | A supported filing section can be returned with its filing identity and citation fields. | accession, section key, source URL, citation span when present |
-| Facts and statements | A normalized value is available from the documented database path or SEC fallback. | provenance, period, accession/source fields, materialization metadata when present |
-| Semantic search | A section is available to the configured retrieval path. | query, mode, accession, source URL, citation fields, degraded state |
+| Source filing | Which SEC record supports the result | accession number, filing date, and filing URL when returned |
+| Derived result | What SEC API could produce from that source | endpoint, parameters, period, units, and returned provenance or capability fields |
+| Request context | How to reproduce the API call | `Request-Id`, `traceparent` when present, UTC timestamp, and API version when pinned |
 
-## Freshness is measured, not assumed
+The exact field names and presence vary by endpoint and response view. Use the endpoint reference as the contract. In particular, do not treat an available filing manifest as evidence that every section, statement, search result, or trace is ready.
 
-The latest checked-in freshness dashboard was generated on **2026-03-24** and records a `ready` dashboard state for its measured forms and workflows. It is evidence about that dated run, not a standing promise of minute-level or universal real-time availability. Re-run or refresh the telemetry before publishing a newer lag claim.
+## Treat freshness as route-specific
 
-The public history contract is separate from freshness: it sets a 9-year searchable filing and section floor, while only the two most recent completed years are release-blocking completeness guarantees. Inventory coverage beyond that floor is not an equal-density production guarantee. See [Coverage and Historical Depth](/coverage-and-depth).
+Some routes expose fields that describe freshness, materialization, provenance, warnings, or degraded output. Read those fields only as documented for that route. A compact or agent-oriented view can omit metadata available in the default response.
 
-## Response states
+Where an endpoint returns a freshness status, the schema permits these values:
 
-Where a route exposes freshness status, the documented values are:
-
-| Status | What it means for the route |
+| Status | Meaning |
 | --- | --- |
-| `fresh` | The route considers the artifact inside its documented freshness threshold. |
-| `degraded` | The response is usable, but a route-specific freshness or dependency condition is outside its normal posture. |
-| `stale` | The artifact should not be treated as current for that route. |
-| `unknown` | The route does not have enough timing information to classify the artifact. |
+| `fresh` | The route considers the underlying source or artifact current for its own policy. |
+| `current` | A recently published immutable filing was materialized without a lag indication. |
+| `archival` | An immutable historical filing is available; age alone is not a stale signal. |
+| `stale` | The route considers the source or artifact outside its applicable freshness posture. |
+| `degraded` | The response is available with a freshness or dependency limitation. |
+| `unknown` | The route cannot classify freshness from the available timing information. |
 
-Not every endpoint has this field, and compact or `view=agent` projections can omit envelope metadata. Use the endpoint reference for the exact response shape; do not infer freshness from the absence of an error.
+Endpoints can expose only a subset of these values. Use the endpoint's response contract and returned reason fields rather than assuming every route can return every status.
 
-## What SEC API can prove
+For workflows with a currentness requirement:
 
-- **Source lineage:** filing, accession, and source URLs are available on documented filing and search paths.
-- **Derived-data posture:** routes can expose provenance, materialization, or degradation metadata where the contract includes it.
-- **Request correlation:** SEC API app responses include `Request-Id` and `traceparent`; supplied correlation IDs are for tracing, not billing idempotency.
-- **Coverage boundary:** source-backed filing workflows and derived surfaces have different availability conditions. A section, XBRL fact, or vector result should be evaluated in its own class.
+1. Define the source event you care about, such as a filing date or reporting period.
+2. Retrieve the specific filing, section, fact, or derived output required by the workflow.
+3. Compare its returned dates and route-specific status fields with your own policy.
+4. Record the source and request identifiers with any decision or downstream model output.
+5. Route missing, stale, or degraded evidence to a review path rather than presenting it as current.
 
-## XBRL facts and statements
+SEC API does not make a universal real-time, minute-level, or cross-endpoint freshness promise. A dated validation artifact is evidence for the measured routes at its recorded time, not an ongoing service-level commitment.
 
-Facts and statement workflows use a database-first SEC data path with a documented SEC company-facts fallback when data is unavailable in the primary store. We publish exact corpus counts only when they are tied to a dated retained count artifact; do not infer a current count or full-universe completeness from this architecture.
+## Facts and statements
 
-## Use this in production
+Facts and statement routes can return normalized SEC data with source and period information. Availability depends on what the issuer disclosed and on the route's documented materialization path. Do not infer a full-universe corpus count or accounting comparability from a successful lookup.
 
-1. Resolve the issuer and retrieve the filing or data point you need.
-2. Store the identifiers and source fields that arrive with that response.
-3. Check route-specific freshness, provenance, and degradation fields before automating a decision.
-4. On an unexpected result, preserve `Request-Id` and use [Request Diagnostics](/request-diagnostics) before opening support.
+Check the reporting period, units, `periodBasis` where available, and provenance before comparing values. Balance-sheet values are point-in-time; income-statement and cash-flow values can be year-to-date as filed.
 
-Read next: [Coverage and Historical Depth](/coverage-and-depth), [Methodology Registry](/methodology-registry), [API Conventions](/api-conventions), and [Troubleshooting](/troubleshooting).
+## A practical audit record
+
+For a research note, alert, investment workflow, or model decision, retain:
+
+- API endpoint, parameters, and response view
+- accession number and filing URL when returned
+- filing date, period, units, and source/provenance fields relevant to the claim
+- capability, warning, degradation, or freshness fields returned by the route
+- `Request-Id`, `traceparent` when present, and retrieval time in UTC
+
+Read next: [Coverage and historical depth](/coverage-and-depth), [Methodology registry](/methodology-registry), and [Request diagnostics](/request-diagnostics).

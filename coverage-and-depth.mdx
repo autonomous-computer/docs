@@ -1,51 +1,48 @@
 ---
-title: "Coverage and Historical Depth"
-description: "See the public SEC API coverage floor, the difference between searchable history and completeness, and the boundaries of derived SEC data."
+title: "Coverage and historical depth"
+description: "Plan filing, section, and derived-data workflows around SEC API's documented history floor and availability boundaries"
 ---
 
-Coverage is not one number. A filing may be searchable while its text, extracted sections, XBRL facts, or a specialized workflow is unavailable or partial. This page states the public boundary so you can design a workflow around what is actually returned.
+Use this page to decide whether a response is sufficient for a production workflow. A filing can be discoverable while its rendered text, extracted section, XBRL-derived value, or specialized analysis is unavailable. Treat each surface as its own capability.
 
-## Public filing and section history
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=25"
+```
 
-The checked-in history-quality contract defines:
+## The public history boundary
 
-| Commitment | Scope |
-| --- | --- |
-| Searchable floor | 9 public years for filing and section workflows |
-| Completed-year guarantee | The two most recent completed years have release-blocking completeness checks for the required filing forms |
-| Inventory target | 20 years of inventory coverage, which is not the same as a public completeness promise |
-| Current year | An availability floor, not a completed-year completeness guarantee |
+SEC API documents a nine-year searchable floor for filing and section workflows. Release-blocking completeness checks cover the two most recent completed years for the required filing forms. The current year has an availability floor, not a completed-year completeness guarantee.
 
-Filing manifests are distinct from rendered filings, extracted sections, and XBRL facts. Use [Freshness, Coverage, and Source Evidence](/freshness-and-trust) when your workflow needs a current or derived artifact rather than a filing record.
+An inventory target of 20 years does not extend the public guarantee. Older records can be useful, but their density and derived representations can vary by issuer, form, and filing format.
 
-## What the API covers
-
-| Need | Current public surface | Boundary to keep in mind |
+| Need | Start with | Check before relying on it |
 | --- | --- | --- |
-| Find a filing | Filing search, latest filing, and accession lookup | A manifest does not promise every derived representation is ready. |
-| Read a filing or named section | Render and section endpoints for documented forms and section keys | Availability varies by filing format, extraction support, and freshness class. |
-| Analyze financial facts | XBRL facts and normalized statements | A database-first path can use an explicit SEC fallback; field availability varies by issuer disclosure. |
-| Ownership and insiders | 13F, 13D/13G, and insider workflow families | Verify issuer/date/form coverage for the workflow you are building. |
-| Offerings, events, and earnings materials | Documented specialized endpoints | These are scoped derived workflows, not a promise to normalize every exhibit or filing family. |
+| Find a source filing | [Filings](/api-reference/filings/get-v1-filings) or [latest filing](/api-reference/filings/get-v1-filings-latest) | issuer identity, form, filing date, accession number, and source URL |
+| Read a filing or section | filing render or section endpoint | whether the requested filing and section key return content |
+| Use a normalized fact or statement | facts or statements endpoint | period, units, source/provenance fields, and disclosed field availability |
+| Build an event or ownership workflow | the relevant event or ownership endpoint | date range, form family, and response-level capability or warning fields |
 
-## Rights and partial surfaces
+## Availability is not equivalence
 
-- `XNYS` and `XNAS` have configured holiday coverage. Other documented markets can be `weekend_only` or `tentative`; read their `coverage`, `confidence`, and status fields.
-- Public index-constituent access is rights-scoped. Do not assume an internal mapping audit means every index roster is publishable.
-- Some advanced surfaces, including sentiment and selected data rights, are intentionally gated. A route, catalog entry, or internal inventory is not itself a public availability claim.
+Do not infer one of these properties from another:
 
-## What we do not claim
+- A filing manifest does not mean every section or derived representation is ready.
+- A source document does not mean every reported fact is normalized or comparable across issuers.
+- A result returned for one issuer, form, or year does not establish coverage for another.
+- A response without an error does not establish that it is current enough for your decision.
 
-- A universal real-time lag across SEC filing, text, section, statement, and semantic-retrieval classes.
-- Equal-density or completeness guarantees for every year outside the documented 9-year searchable floor and two completed-year checks.
-- A public normalized parser for every EDGAR exhibit, filing family, or historical document format.
-- Current corpus counts without a dated retained production artifact.
+For market calendars, read the response's `coverage`, `confidence`, and `statusNote` fields. `XNYS` and `XNAS` have configured holiday coverage; other documented markets can report weekend-only or tentative coverage. See [Methodology registry](/methodology-registry).
 
-## Design a resilient workflow
+## Build for partial results
 
-1. Start with an issuer, form, date, or accession and retrieve the source record.
-2. Check the response for the specific derived surface you need rather than assuming it follows the filing manifest.
-3. Preserve the source URL, accession, and request ID.
-4. Handle documented unavailable or degraded outcomes in code instead of silently substituting an unrelated data source.
+1. Start with the source record and preserve its accession number and source URL.
+2. Request the particular derived surface you need; do not assume it follows from filing discovery.
+3. Store response-level provenance, period, capability, warning, or degradation fields when the endpoint returns them.
+4. Make an unavailable or partial result visible to your caller instead of silently substituting unrelated data.
+5. Keep `Request-Id` with material results so you can diagnose an unexpected response.
 
-Read next: [Filing Types and Exhibits](/filing-types-and-exhibits), [Freshness, Coverage, and Source Evidence](/freshness-and-trust), [Methodology Registry](/methodology-registry), and [API Reference](/api-reference).
+SEC API does not publish a universal real-time lag, equal-density guarantee beyond the stated floor, or a promise to normalize every EDGAR exhibit and filing family.
+
+Read next: [Freshness and source evidence](/freshness-and-trust), [Methodology registry](/methodology-registry), and [API conventions](/api-conventions).

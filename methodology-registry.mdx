@@ -1,390 +1,231 @@
 ---
 title: "Methodology registry"
-description: "See how the SEC API derives its major data surfaces, what each field means, and the source posture and confidence behind every value"
+description: "Understand the source scope, derivation boundaries, and response fields for SEC API's principal derived-data surfaces"
 ---
 
-This page describes the current derivation, source posture, and capability states for the major v3 surfaces that changed the public contract.
+Use this registry to evaluate a derived result before you depend on it. SEC API exposes source-backed records and derived views, but a successful response is not a claim of universal coverage, real-time delivery, or comparability across every issuer and filing format.
 
-## Market schedule
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/market/calendar?market=XNYS"
+```
 
-### What the values mean
+For every workflow, retain the endpoint, parameters, returned source fields, period, and capability or warning fields. The endpoint reference is authoritative for response shape and accepted parameters.
 
-- `market`: exchange MIC or SEC API market code such as `XNYS` or `XNAS`
-- `sessionStatus`: the current implementation returns `open` or `closed`; the public schema reserves `early_close` for future explicit shortened-session support
-- `opensAt` and `closesAt`: local-session timestamps for open sessions
-- `holidayName`: configured exchange holiday when the day is closed for a known holiday
-- `coverage`: `configured_holidays` or `weekend_only`
-- `confidence`: `confirmed` or `tentative`
-- `statusNote`: explicit warning when SEC API only has weekend coverage and has not yet configured local holidays
+## How to read this registry
 
-### How it is derived
+| Term | Meaning |
+| --- | --- |
+| Source-backed | The result is tied to a disclosed filing, an official public source, or both |
+| Derived | SEC API normalizes, classifies, compares, or calculates from source material |
+| `capability` | `supported`, `not_disclosed`, `degraded`, or `unavailable`; a route-specific result state, not a platform-wide quality grade |
+| `statusNote` | A nullable explanation for a limited, partial, or unavailable result |
 
-- `XNYS` and `XNAS` are built from public exchange trading-hours calendars plus explicit holiday maps checked into SEC API
-- `XLON`, `XTKS`, `XHKG`, `XTAE`, and `XSAU` currently use documented public hours plus weekend closures only
-- the inventory artifacts are exported from those checked-in market definitions, not fetched from a separate sync system at read time
+## Market schedules
 
-### First-party status
+`GET /v1/market/calendar` returns the session status for a requested market and date. Treat its coverage and confidence fields as part of the answer.
 
-- first-party public-source utility, but only `XNYS` and `XNAS` are fully holiday-configured today
-- the other covered exchanges remain partial and intentionally return `weekend_only` plus `tentative` when SEC API cannot confirm holiday status
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `sessionStatus` | `open`, `closed`, `early_close` | `early_close` is reserved for an explicitly identified shortened session. |
+| `coverage` | `configured_holidays`, `weekend_only` | `configured_holidays` means the market has configured holiday coverage; `weekend_only` does not establish local holiday coverage. |
+| `confidence` | `confirmed`, `tentative` | `tentative` means SEC API cannot confirm the market-day posture from configured coverage. |
+| `statusNote` | string or `null` | Read this when coverage is limited or a calendar assumption matters. |
 
-### How it works in SEC API
+`XNYS` and `XNAS` have configured holiday coverage. Other documented markets can return `weekend_only` and `tentative`; do not use a market's regular hours as proof that it is open on a local holiday.
 
-- SEC API serves `/v1/market/calendar`
-- Client applications can rely on the `coverage`, `confidence`, and `statusNote` fields instead of assuming every market is fully holiday-aware
+Use [market calendar](/api-reference/market/get-v1-market-calendar).
 
 ## Indices and constituents
 
-### What the values mean
+`GET /v1/market/indices` and `GET /v1/market/indices/constituents` expose index inventory and any public constituent surface subject to its rights posture.
 
-- status field: `supported` or `inventory_only`
-- `rightsStatus`: `public_source_documented`, `public_source_review_required`, or `licensed_index_not_supported`
-- `legalShareability`: `public_source_table`, `public_source_review_required`, or `license_required`
-- `constituentCount`: current known roster size when SEC API has a usable source
-- `positionRank`: roster order when weights are unavailable
-- `weightBps` and `weightMethod`: explicit when published, otherwise null and `unpublished`
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `status` | `supported`, `inventory_only` | An inventory entry is not itself a public constituent export. |
+| `rightsStatus` | `public_source_documented`, `public_source_review_required`, `licensed_index_not_supported` | Describes the source-rights posture for the index or constituent record. |
+| `legalShareability` | `public_source_table`, `public_source_review_required`, `license_required` | Determines whether the source table can be published through the relevant surface. |
+| `weightMethod` | `published`, `unpublished`, or `null` | A `null` weight and `unpublished` method mean that weight was not published; do not infer it from rank. |
+| `positionRank` | positive integer | Roster order, not a portfolio weight. |
 
-### How it is derived
+`NDX` is the documented public constituent surface. `SPX`, `DJIA`, `RUT`, `UKX`, and `SX5E` can appear in the inventory with an explicit rights posture; their presence does not make their rosters publicly available.
 
-- `NDX` comes from Nasdaq's public company roster and is the only rights-safe public constituent surface today
-- `SPX`, `DJIA`, `RUT`, `UKX`, and `SX5E` are tracked in the source inventory with explicit rights posture
-- company-mapping audit artifacts currently use:
-  - Nasdaq public roster for `NDX`
-  - Wikipedia constituent tables for `SPX` and `DJIA`
-  - iShares IWM holdings as a Russell 2000 proxy corpus for mapping QA
+Use [indices](/api-reference/market/get-v1-market-indices) and [index constituents](/api-reference/market/get-v1-market-indices-constituents).
 
-### First-party status
+## Filing and statement data
 
-- `NDX` public constituent export is first-party and documented
-- `SPX`, `DJIA`, and `RUT` are not publicly exposed as constituent APIs today
-- mapping QA is intentionally decoupled from public shareability
+### Filings, sections, and traces
 
-### How it works in SEC API
+Filing discovery, rendering, section extraction, and traces begin with SEC filing records. Use the filing accession number and source URL to anchor a result. A returned filing does not imply that every section, page anchor, or trace region is available for that document.
 
-- SEC API serves `/v1/market/indices` and `/v1/market/indices/constituents`
-- a company-mapping audit is maintained continuously to keep canonical-store coverage current
-- FIGI-family lookup inputs are accepted in `/v1/entities/resolve`, and the audit surface now covers `SPX`, `NDX`, `DJIA`, and `RUT`
+`GET /v1/traces` and `GET /v1/traces/{trace_id}` resolve a trace reference into its filing or source-record evidence.
 
-## Segmented revenues
+| Field | Meaning and caveat |
+| --- | --- |
+| `kind` and `status` | Trace kind is `filing_fact`, `filing_excerpt`, `derived_metric`, or `source_record`; status is `supported`, `degraded`, or `unavailable`. |
+| `filing.accessionNumber` and `filing.filingUrl` | Identify the source filing when the trace is filing-backed. |
+| `filing.viewerUrl` and `filing.page` | SEC viewer link and resolved page when available; either can be absent. |
+| `filing.region` | Optional anchor with `supported`, `degraded`, or `unavailable` status. A supported region can be `inline_xbrl_fact` or `html_text_range`, with optional offsets, snippet, and viewer fragment. |
+| `sourceRecord` and `nodes` | Source-record provenance and disclosed or derived lineage nodes. A trace can have source-record evidence instead of a filing. |
 
-### What the values mean
+Treat a page-only trace as page-level evidence, not a claim that an exact source span was resolved.
 
-- `segmentAxis`, `segmentMember`, `segmentLabel`: XBRL dimension identity and human-readable label
-- `segmentType`: `geographic`, `product`, or `other`
-- `hierarchyDepth`: inferred depth in the segment hierarchy (1 = top-level, 2 = regional sub-segment, 3 = sub-regional)
-- `isMostGranularSibling`: whether this is a leaf-level segment suitable for analysis (filters out parent containers like "International" or "Total")
-- `capability`: `supported` or `not_disclosed`
-- `trace`: lightweight filing-derived trace reference for later hydration
+Use [filings](/api-reference/filings/get-v1-filings), [sections](/api-reference/filings/get-v1-filings-latest-sections-section-key), and [traces](/api-reference/traces/get-v1-traces) for the applicable request and response contract.
 
-### How it is derived
+### Facts, statements, and segmented revenue
 
-- SEC API scans issuer filing history, finds the XBRL instance for 10-K and 10-Q filings, and extracts segment facts from the disclosed XBRL contexts and members
-- geographic segment depth is inferred from member names: common regional acronyms (EMEA, APAC, LACC, Americas) and descriptive names (Developed Europe, Emerging Markets, Asia Pacific) are classified at depth 2; sub-regional breakdowns (Western Europe, Southeast Asia) are depth 3
-- parent containers (International, Total, All Other, Rest of World) are excluded from granular analysis via the `isMostGranularSibling` flag, while qualified names like "Developed Rest of World" are preserved as leaf segments
-- standalone geographic members at lower depths (e.g., "United States" at depth 1 alongside depth-2 sub-segments) are treated as leaves when they are not parent containers
-- traces hydrate to filing-page anchors through `/v1/traces` and `/v1/traces/{trace_id}`
+Facts and statement endpoints provide normalized values from SEC disclosures. Values retain source, period, and unit context where the route supplies it. The same accounting label can represent a different disclosure, period basis, or unit across issuers, so inspect those fields before comparing outputs.
 
-### First-party status
+Segmented-revenue data is derived from issuer XBRL dimensions and reported members. `capability` is `supported` when the requested surface can be returned and `not_disclosed` when the issuer's filing does not supply the requested disclosure. Segment labels and hierarchy are issuer disclosures, not a universal industry taxonomy.
 
-- first-party SEC-derived surface
-- page anchors are now materialized lazily during trace hydration rather than precomputed at ingest time
+Use [facts](/api-reference/facts/get-v1-facts), [statements](/api-reference/statements/get-v1-statements), [segmented revenues](/api-reference/statements/get-v1-statements-segmented-revenues), and [company financials](/api-reference/companies/get-v1-companies-financials).
 
-### How it works in SEC API
+### Common equity
 
-- SEC API serves `/v1/statements/segmented-revenues` with `segment_type`, `period`, `limit`, and `submission_file_limit` query parameters
-- SEC API revenue-segmentation flows now use SEC API-backed SEC routes instead of the prior market-data path
-- the agent harness pre-fetches geographic segments before the first LLM reasoning step and post-processes results with year-over-year comparisons when the question involves revenue change analysis
+`commonEquity` in company-financial balance-sheet records is the equity available to common shareholders. SEC API first uses disclosed `CommonStockholdersEquity`; when it must use `StockholdersEquity`, it can deduct disclosed preferred-stock values. Check the returned period and source context before using the value in book-value-per-share or cross-issuer comparisons.
 
-## Common equity derivation
-
-### What the values mean
-
-- `commonEquity`: total stockholders' equity minus preferred stock and noncontrolling interests — the equity available to common shareholders
-- used as the numerator for book value per share and related per-share calculations
-
-### How it is derived
-
-- SEC API first checks for `CommonStockholdersEquity` in the SEC filing's balance sheet statement rows (the most reliable source)
-- if not available at the statement level, it checks the supplemental XBRL fact series using `COMMON_EQUITY_CONCEPT_TAGS` (`CommonStockholdersEquity`, then `StockholdersEquity` as fallback)
-- when the supplemental value equals total equity (indicating the `StockholdersEquity` fallback was used, which includes preferred stock for banks), SEC API deducts `PreferredStockValue` to derive common equity
-- preferred stock is resolved from `PREFERRED_STOCK_CONCEPT_TAGS` (`PreferredStockValue`, `PreferredStockLiquidationPreference`, `PreferredStockCarryingAmount`)
-
-### First-party status
-
-- first-party SEC-derived calculation
-- critical for financial institutions like JPMorgan where `StockholdersEquity` includes ~$26B in preferred stock
-
-### How it works in SEC API
-
-- SEC API serves the derived `commonEquity` field in `/v1/companies/financials` balance sheet records
-- SEC API financial calculations use `commonEquity` (when available) instead of `totalEquity` for book value per share
+Use [company financials](/api-reference/companies/get-v1-companies-financials).
 
 ## M&A events
 
-### What the values mean
+`GET /v1/events/ma` returns M&A events inferred from public-company filings and relevant exhibits. It is a filing-derived event view, not a complete deal database.
 
-- `eventType`: `merger`, `acquisition`, `tender_offer`, or `divestiture`
-- status field: `announced`, `pending`, `shareholder_vote`, `completed`, or `terminated`
-- `considerationType`: `cash`, `stock`, `mixed`, or `unspecified`
-- `capability`: explicit quality state for the extracted record
+| Field | Allowed values | Caveat |
+| --- | --- | --- |
+| `eventType` | `merger`, `acquisition`, `tender_offer`, `divestiture` | Filing-derived classification. |
+| `status` | `announced`, `pending`, `shareholder_vote`, `completed`, `terminated` | Read with filing date and accession number; it is not a live transaction-status feed. |
+| `considerationType` | `cash`, `stock`, `mixed`, `unspecified` | `unspecified` does not imply no consideration. |
+| `capability` | `supported`, `not_disclosed`, `degraded`, `unavailable`, or omitted | When present, states the route's result posture. |
 
-### How it is derived
-
-- SEC API classifies 8-K, S-4, F-4, 425, M14A, and tender-offer filing text plus selected exhibits
-- the current implementation is heuristic and filing-text driven, not a fully persisted event graph yet
-
-### First-party status
-
-- first-party SEC-derived surface
-- suitable for announced public-company deal intelligence, but still needs broader corpus proof before launch copy can overstate completeness
-
-### How it works in SEC API
-
-- SEC API serves `/v1/events/ma`
-- the endpoint is available before every downstream workflow has a dedicated UI
-
-## Earnings materials
-
-### What the values mean
-
-- `sourceScope`: always `sec_furnished`
-- `coverage`: `release_only`, `prepared_remarks`, `transcript_text`, or `unusable`
-- `capability`: explicit quality state for the extracted material
-- `contentMd`: normalized markdown when usable content exists
-
-### How it is derived
-
-- SEC API scans 8-K and 8-K/A filings for Item 2.02 and related exhibits
-- the extraction classifies whether the issuer furnished only a release, prepared remarks, fuller transcript-like text, or unusable material
-
-### First-party status
-
-- first-party SEC-derived surface
-- SEC API does not yet claim full earnings-transcript coverage outside SEC-furnished materials
-
-### How it works in SEC API
-
-- SEC API serves `/v1/earnings/transcripts`
-- SEC API-backed earnings-material client paths are live, but broader transcript parity remains deferred
-
-## Enforcement actions
-
-### What the values mean
-
-- `sourceType`: `litigation_release` or `administrative_proceeding`
-- `releaseNumber`: SEC release identifier from the official feed, such as `LR-26502` or `34-104994`
-- `capability`: `supported` when SEC API can enrich a release beyond feed metadata, otherwise `degraded`
-- `documentUrl`: canonical SEC release or PDF link
-
-### How it is derived
-
-- SEC API reads the official SEC RSS feeds for litigation releases and administrative proceedings
-- litigation releases are enriched from the linked SEC detail page when available
-- administrative proceedings currently rely on SEC RSS metadata plus the published PDF link rather than PDF body extraction
-
-### First-party status
-
-- first-party SEC-derived release surface
-- this is an official SEC enforcement feed wrapper, not an EDGAR filing parser and not a third-party alert vendor dependency
-
-### How it works in SEC API
-
-- SEC API serves `/v1/events/enforcement`
-- each enforcement action now carries a shared `trace` reference, and `/v1/traces` can hydrate that reference back to the SEC release document plus any attached source-ingest lineage
-- SEC API does not currently expose a dedicated enforcement UI, but the API surface is live for alert and investigation workflows
-
-## Filing traceability
-
-### What the values mean
-
-- status field: `supported` when SEC API can materialize a filing page, otherwise `degraded`
-- `viewerUrl`: SEC inline viewer URL for the filing document
-- `page`: resolved filing page when available
-- `region`: optional HTML-first anchor metadata when SEC API can prove either the exact inline XBRL fact region or the exact rendered filing-section text range on a supported filing document
-- `nodes`: disclosed and derived lineage nodes for the traced datapoint
-
-### How it is derived
-
-- trace IDs now encode either filing-derived payload metadata or supported non-filing source-record metadata
-- SEC API resolves the filing document, inspects SEC inline XBRL HTML, matches the fact against its context and nearby text, then maps that hit to the nearest filing page footer
-- when the inline fact or supported section-excerpt match is strong enough, SEC API preserves a region-level HTML text range alongside the filing trace instead of collapsing everything to page-only metadata
-
-### First-party status
-
-- first-party SEC-derived traceability
-- current implementation is lazy hydration, not yet ingest-time precomputation
-- region support is HTML / SEC inline-viewer first and falls back explicitly to page-only or degraded when region proof is unavailable
-- non-filing trace support is currently live for SEC enforcement source documents; broader prices, analyst targets, and mixed-source derived traces remain deferred
-
-### How it works in SEC API
-
-- SEC API serves `/v1/traces` and `/v1/traces/{trace_id}`
-- SEC workflows now hydrate traces and open filing pages directly from the source filing
+Use [M&A events](/api-reference/events/get-v1-events-ma).
 
 ## Share float
 
-### What the values mean
+`GET /v1/statements/share-float` distinguishes disclosed public float from a shares-outstanding fallback.
 
-- `capability`: `supported`, `degraded`, `not_disclosed`, or `unavailable`
-- `sourceMode`: `company_facts` when SEC company facts expose public float, `shares_outstanding_proxy` when only shares outstanding are available, `not_disclosed` when the latest covered filing exists but the facts are absent, and `unavailable` when there is no recent covered filing
-- `publicFloatUsd`: disclosed public-float dollar value from SEC company facts when available
-- `sharesOutstanding`: latest disclosed shares-outstanding fact from SEC company facts
-- `xbrlData`: raw tag-to-value map for the disclosed facts used in the response
-- `facts`: normalized fact excerpts with taxonomy, tag, unit, period end, filing date, and form
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `capability` | `supported`, `not_disclosed`, `degraded`, `unavailable` | Read with `sourceMode` and `statusNote`; a returned response is not necessarily a disclosed public-float value. |
+| `sourceMode` | `company_facts`, `shares_outstanding_proxy`, `not_disclosed`, `unavailable` | `company_facts` provides disclosed public float when available. `shares_outstanding_proxy` is not true float shares. `not_disclosed` means the covered filing exists but the facts are absent; `unavailable` means no recent covered filing is available. |
+| `publicFloatUsd` | number or `null` | Disclosed public-float dollar value when available. |
+| `sharesOutstanding` | number or `null` | Latest disclosed shares-outstanding value; do not substitute it for public float. |
+| `facts` and `xbrlData` | source excerpts and tag/value map | Use the taxonomy, tag, unit, period end, filing date, and form to evaluate the value. |
 
-### How it is derived
+The route prefers `dei:EntityPublicFloat`, then can expose `dei:EntityCommonStockSharesOutstanding` or `us-gaap:CommonStockSharesOutstanding` as a clearly marked proxy. A proxy response is `degraded`.
 
-- first preference: `dei:EntityPublicFloat`
-- shares-outstanding fallback: `dei:EntityCommonStockSharesOutstanding` and `us-gaap:CommonStockSharesOutstanding`
-- current-filing posture comes from the latest covered `10-Q` or `10-K`
-- SEC API marks the response `degraded` when only shares outstanding are available because the SEC company-facts surface often does not expose true float shares directly
-
-### First-party status
-
-- first-party wrapper over SEC company facts and the latest filing substrate
-- honest degraded-state semantics are part of the contract; SEC API does not pretend shares outstanding are the same thing as true float shares
-
-### How it works in SEC API
-
-- SEC API serves `/v1/statements/share-float`
-- client applications can replace legacy float helpers with this wrapper without re-implementing fact-tag precedence
+Use [share float](/api-reference/statements/get-v1-statements-share-float).
 
 ## Board composition
 
-### What the values mean
+`GET /v1/board` derives a board roster from the latest parsable definitive proxy filing. It does not fabricate committee structure when the source table is incomplete.
 
-- `capability`: `supported`, `degraded`, or `unavailable`
-- `committeeCoverage`: `complete`, `partial`, or `none`
-- `directors[*].nominationStatus`: whether the latest proxy table presents the director as a `nominee`, `continuing`, `departing`, or `unknown`
-- `directors[*].independence`: `independent`, `non_independent`, or `unknown` based on explicit proxy markers
-- `directors[*].committees` and `chairCommittees`: canonical committee labels extracted from the latest stable proxy table shape
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `capability` | `supported`, `not_disclosed`, `degraded`, `unavailable` | `degraded` or `unavailable` can reflect the absence of a stable parsable board table. |
+| `committeeCoverage` | `complete`, `partial`, `none` | `partial` and `none` mean committee data should not be presented as a complete roster. |
+| `directors[*].nominationStatus` | `nominee`, `continuing`, `departing`, `unknown` | The status reflects the latest proxy presentation. |
+| `directors[*].independence` | `independent`, `non_independent`, `unknown` | Derived from explicit proxy markers; `unknown` is not an independence conclusion. |
+| `directors[*].committees` and `chairCommittees` | arrays | Canonical committee labels found in the source table. |
 
-### How it is derived
-
-- SEC API resolves the issuer, searches recent `DEF 14A` filings, and scans the latest parsable definitive proxy for a stable board-composition table
-- the parser prefers tables with director-roster, committee-membership, independence, and tenure signals and rejects compensation-style tables
-- the response explicitly degrades when SEC API can parse the board roster but committee coverage is incomplete in the latest stable table shape
-
-### First-party status
-
-- first-party SEC-derived surface built directly on the definitive proxy substrate
-- SEC API is intentionally conservative here: if the filing does not expose a stable board table, the response degrades or returns `unavailable` instead of fabricating governance structure
-
-### How it works in SEC API
-
-- SEC API serves `/v1/board`
-- client applications can replace legacy board helpers with this latest-proxy board roster
+Use [board composition](/api-reference/board/get-v1-board).
 
 ## N-PORT holdings
 
-### What the values mean
+`GET /v1/funds/nport/holdings` normalizes the latest parsable N-PORT holdings roster. Preserve the reported unit rather than assuming every balance is a share count.
 
-- `capability`: `supported`, `degraded`, or `unavailable`
-- `holdings[*].balance`: reported position amount from the filing
-- `holdings[*].balanceUnit`: explicit SEC filing unit such as `Shares` or `Principal amount`
-- `holdings[*].valueUsd`: reported U.S. dollar value from the filing
-- `holdings[*].pctNetAssets`: reported percentage of fund net assets for the holding
-- `assetType`, `issuerType`, `country`, and `currency`: normalized values lifted from the transformed N-PORT filing sections
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `capability` | `supported`, `not_disclosed`, `degraded`, `unavailable` | A degraded response can contain usable holdings while one or more source fields are incomplete. |
+| `holdings[*].balance` | number or `null` | Reported position amount. |
+| `holdings[*].balanceUnit` | string or `null` | SEC-reported unit, such as `Shares` or `Principal amount`. |
+| `holdings[*].valueUsd` | number or `null` | Reported U.S. dollar value. |
+| `holdings[*].pctNetAssets` | number or `null` | Reported percentage of fund net assets. |
+| `assetType`, `issuerType`, `country`, `currency` | string or `null` | Normalized fields from the filing; absence remains meaningful. |
 
-### How it is derived
-
-- SEC API resolves the fund, searches recent `NPORT-P` and `NPORT-EX` filings, and parses the latest transformed SEC filing output that yields a stable holdings roster
-- the parser extracts repeated `Item C.1` holding blocks and normalizes issuer, identifier, amount, value, asset-type, issuer-type, country, and currency fields
-- the response explicitly degrades when SEC API finds holdings but one or more rows are missing stable title or value fields in the transformed filing output
-
-### First-party status
-
-- first-party SEC-derived holdings surface over the published N-PORT filing output
-- SEC API keeps the contract honest by preserving balance units instead of pretending every reported amount is a share count
-
-### How it works in SEC API
-
-- SEC API serves `/v1/funds/nport/holdings`
-- client applications can replace legacy N-PORT holdings paths with a direct SEC API surface
+Use [N-PORT holdings](/api-reference/funds/get-v1-funds-nport-holdings).
 
 ## Historical institutional ownership extract
 
-### What the values mean
+`GET /v1/owners/institutional/extract` returns a quarter-specific 13F extract and states whether the immediately preceding parsable quarter supports comparison.
 
-- `year` and `quarter`: requested quarter reference for the historical extract
-- `reportDate`: quarter-end date used to resolve the 13F cohort
-- `comparisonCoverage`: `with_prior_quarter_delta` when SEC API can also resolve the immediately preceding parsable 13F, otherwise `current_only`
-- `statusNote`: explicit explanation when the current quarter is available but prior-quarter deltas could not be populated from the current SEC-backed search window
-- `holdings`: normalized 13F rows with issuer mapping, value, shares, `weightBps`, `positionRank`, and change fields
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `comparisonCoverage` | `with_prior_quarter_delta`, `current_only` | Only `with_prior_quarter_delta` supports the returned quarter-over-quarter change fields. |
+| `statusNote` | string or `null` | Explains why prior-quarter deltas are unavailable when the current quarter is present. |
+| `year`, `quarter`, `reportDate` | requested period and resolved quarter-end date | Use these, not retrieval time, to identify the 13F cohort. |
+| `holdings` | normalized 13F rows | Includes issuer mapping, value, shares, `weightBps`, `positionRank`, and change fields when comparison coverage permits. |
 
-### How it is derived
+`current_only` is not a zero-change result. It means SEC API could not populate prior-quarter deltas for that request.
 
-- SEC API resolves the requested manager CIK, computes the target quarter-end `reportDate`, and searches the SEC-native 13F family with elevated submissions-file depth rather than the shallow recent-only path
-- the current quarter is parsed from the matching 13F information table exhibit
-- when available, the immediately prior parsable quarter is loaded as well so `changeStatus`, `previous*`, and `delta*` fields can be computed on the normalized holdings
+Use [institutional ownership](/api-reference/owners/get-v1-owners-institutional-extract).
 
-### First-party status
+## Risk categories
 
-- first-party SEC-derived surface over the existing 13F family
-- explicit `current_only` semantics are part of the contract so SEC API does not fabricate quarter-over-quarter deltas when the prior parsable quarter is absent
+`GET /v1/filings/latest/risk-categories` provides deterministic category coverage for the latest covered Item 1A filing section. It is a filing-reading aid, not a complete issuer risk assessment.
 
-### How it works in SEC API
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `capability` | `supported`, `not_disclosed`, `degraded`, `unavailable` | Check this before treating category results as available for the requested issuer and filing. |
+| `categories[*].key` | `macroeconomic_demand`, `regulatory_legal`, `cybersecurity_privacy`, `competition_market`, `supply_chain_operations`, `international_geopolitical`, `liquidity_capital`, `technology_product` | Stable taxonomy key for a matched Item 1A theme. |
+| `categories[*].confidence` | `high`, `medium`, `low` | Deterministic confidence from the route's category signals; not a probability of loss or outcome. |
+| `signals` and `snippets` | arrays | Matched terms and Item 1A excerpts that support the category. |
+| `statusNote` | string or `null` | Explains a limited or unavailable report. |
 
-- SEC API serves `/v1/owners/institutional/extract`
-- client applications can use this as the direct SEC API replacement for historical institutional ownership extracts without depending on a third-party market-data provider
-
-## Risk-category labeling
-
-### What the values mean
-
-- `capability`: `supported`, `degraded`, or `unavailable`
-- `categoryCount`: number of stable risk categories that matched the current deterministic taxonomy
-- `categories[*].key`: normalized theme key such as `cybersecurity_privacy` or `regulatory_legal`
-- `confidence`: deterministic confidence derived from keyword density and supporting-signal breadth
-- `signals`: matched keywords that explain why the category fired
-- `snippets`: supporting Item 1A excerpts for the assigned category
-
-### How it is derived
-
-- SEC API extracts the latest covered Item 1A risk-factor section using the same section substrate that powers `/v1/filings/latest/sections/item_1a`
-- the classifier then assigns deterministic categories based on a transparent keyword taxonomy over the extracted Item 1A prose
-- the response degrades explicitly when extraction succeeds but too few stable categories match the taxonomy
-
-### First-party status
-
-- first-party SEC-derived wrapper over the Item 1A section substrate
-- this is intentionally deterministic and transparent; SEC API is not using a hidden model or undisclosed category taxonomy here
-
-### How it works in SEC API
-
-- SEC API serves `/v1/filings/latest/risk-categories`
-- client applications can now replace the prior third-party risk-category workflow with a native SEC API surface
+Use [risk categories](/api-reference/filings/get-v1-filings-latest-risk-categories).
 
 ## Volatility score
 
-### What the values mean
+`GET /v1/signals/volatility` returns a derived SEC-disclosure signal with an explicit factor breakdown and freshness posture. It is not a market-data feed, forecast, or investment recommendation.
 
-- `score`: 0-100 aggregate score
-- `band`: `low`, `moderate`, `elevated`, or `high`
-- `confidence`: `high`, `medium`, or `low`
-- `factors`: weighted factor breakdown with explanations
-- `freshness`: explicit freshness state and degradation reason
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `score` | number | Aggregate derived score; interpret it only with the factor breakdown and methodology version. |
+| `band` | `low`, `moderate`, `elevated`, `high` | Presentation band for the aggregate score. |
+| `confidence` | `high`, `medium`, `low` | Decreases when input data is missing or a fallback is used. |
+| `factors` | weighted factor array | Includes disclosure intensity, insider imbalance, risk-factor intensity, and filing recency with explanations. |
+| `degradedReasons` | array | Identifies fallback inputs or conditions that limit the signal. |
+| `freshness.status` | `fresh`, `stale`, `degraded` | `stale` or `degraded` requires the returned reason to be considered before using the score. |
 
-### How it is derived
+Use [volatility score](/api-reference/signals/get-v1-signals-volatility).
 
-- recent disclosure intensity from high-signal filings
-- insider imbalance from recent Forms 4 and 5
-- risk-factor intensity from Item 1A extraction
-- filing recency as a proxy for how current the disclosure set is
+## Earnings materials
 
-### First-party status
+`GET /v1/earnings/transcripts` is limited to SEC-furnished earnings material available through the relevant filing path; it is not a full earnings-transcript service.
 
-- first-party derived utility built from first-party SEC inputs
-- methodology versioning and degraded reasons are part of the public response
+| Field | Allowed values | Interpretation and caveat |
+| --- | --- | --- |
+| `sourceScope` | `sec_furnished` | The route is limited to SEC-furnished material. |
+| `coverage` | `release_only`, `prepared_remarks`, `transcript_text`, `unusable` | Describes the usable material found for the filing; it does not claim transcript completeness outside SEC-furnished content. |
+| `capability` | `supported`, `not_disclosed`, `degraded`, `unavailable`, or omitted | When present, read it with `coverage` and the returned source fields. |
+| `contentMd` and `exhibitUrl` | string or `null` | Normalized content and filing exhibit link when usable material is available. |
 
-### How it works in SEC API
+Use [earnings materials](/api-reference/earnings/get-v1-earnings-transcripts).
 
-- SEC API serves `/v1/signals/volatility`
-- client applications can treat it as a derived, provenance-first signal rather than a raw market feed
+## Enforcement actions
+
+`GET /v1/events/enforcement` searches official SEC litigation releases, administrative proceedings, and AAERs. It is an enforcement-release surface, not an EDGAR filing parser.
+
+| Field | Allowed values | Caveat |
+| --- | --- | --- |
+| `sourceType` | `litigation_release`, `administrative_proceeding`, `aaer` | Identifies the SEC release family. |
+| `releaseNumber` | string or `null` | SEC release identifier when available. |
+| `documentUrl` and `htmlUrl` | URL; `htmlUrl` can be `null` | Use the source document for legal or factual conclusions. |
+| `capability` | `supported`, `not_disclosed`, `degraded`, `unavailable`, or omitted | A limited enrichment result does not invalidate the source release. |
+| `trace` | trace reference or omitted | Resolves through the trace endpoints when source lineage is available. |
+
+Use [enforcement actions](/api-reference/events/get-v1-events-enforcement).
 
 ## Sentiment score
 
-### Current posture
+There is no `/v1/signals/sentiment` endpoint in the 3.0 public surface today. SEC API does not publish sentiment scoring as a public API surface; do not infer sentiment availability from adjacent filing, search, or signal workflows.
 
-- there is no `/v1/signals/sentiment` endpoint in the 3.0 public surface today
-- SEC API does not publish sentiment scoring as a public API surface. Do not infer sentiment availability from adjacent filing, search, or signal workflows.
+## Use derived outputs responsibly
+
+1. Retrieve the source-backed record before relying on a derived conclusion.
+2. Check the endpoint's documented source, period, unit, capability, and warning fields.
+3. Preserve the accession number or source URL, endpoint parameters, and request identifiers.
+4. Make unknown, partial, degraded, or unavailable states visible in your application.
+5. Do not turn a single returned result into a claim of corpus completeness or currentness.
+
+Read next: [Coverage and historical depth](/coverage-and-depth), [Freshness and source evidence](/freshness-and-trust), and [API conventions](/api-conventions).
