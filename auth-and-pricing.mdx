@@ -1,15 +1,15 @@
 ---
 title: "API keys, usage, and billing"
-description: "Set up machine authentication, inspect usage, and choose the right billing path for an SEC API integration"
+description: "Authenticate a machine request, inspect its limits and usage, and keep browser-only account actions separate"
 ---
 
-Use an API key for REST, SDK, CLI, and server-to-server MCP requests. Create and rotate keys in the [SEC API dashboard](https://secapi.ai/app), keep them in server-side environment variables, and send them in `x-api-key`.
+Use an API key for REST and for SDK, CLI, and server-to-server MCP clients configured with that key. Create and rotate keys in the signed-in [SEC API dashboard](https://secapi.ai/app), keep them in server-side environment variables, and send them in `x-api-key`.
 
 ## Use the right credential
 
 | Job | Credential | Where to do it |
 | --- | --- | --- |
-| Read SEC data from code, an SDK, the CLI, or MCP | API key in `x-api-key` | Your server, worker, terminal, or MCP client |
+| Read SEC data from code, an SDK, the CLI, or a server-to-server MCP client | API key in `x-api-key` | Your server, worker, terminal, or MCP client |
 | Create, reveal, rotate, or revoke a key | Signed-in browser session | SEC API dashboard |
 | Change billing, payment methods, or budgets | Signed-in browser session with billing access | SEC API dashboard |
 
@@ -21,13 +21,13 @@ curl -sS \
   "https://api.secapi.ai/v1/limits"
 ```
 
-Do not put an API key in a browser bundle, URL, request body, source repository, log, or screenshot. API keys are not bearer tokens; do not send them as `Authorization: Bearer`.
+Do not put an API key in a browser bundle, URL, request body, source repository, log, or screenshot. An API key belongs in `x-api-key`; it is not an `Authorization: Bearer` token.
 
-## Start with one useful request
+## Verify access and limits
 
-New organizations receive the current starter allowance. First, complete the [first request](/getting-started). Then use the dashboard to review the plan, usage, credits, and billing state before you increase automated traffic.
+Complete the [first request](/getting-started) before increasing automated traffic. Then inspect the limits returned for the key and review the dashboard before you put a workflow into production:
 
-API keys can read account context such as limits, usage, billing state, rates, and a workflow quote:
+The account endpoints expose plan and usage context for the authenticated organization:
 
 ```bash
 curl -sS -H "x-api-key: $SECAPI_API_KEY" \
@@ -37,22 +37,23 @@ curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/billing/rates"
 ```
 
-Checkout, payment-method changes, credit purchases, budget changes, and key management require the dashboard. Keep that browser-authenticated boundary separate from machine requests.
+Exact limits, rates, and entitlements depend on the authenticated organization and endpoint. Check the relevant API response and the [plans and pricing](/plans-and-pricing) page before planning sustained traffic. Checkout, payment-method changes, credit purchases, budget changes, and key management require the dashboard.
 
 ## Read response usage metadata
 
-SEC API includes request and usage metadata on API responses. Preserve the following values in application logs when a request affects a user-visible result:
+SEC API returns request and usage metadata. Preserve the following values in application logs when a request affects a user-visible result:
 
 - `Request-Id` and `traceparent` for support and correlation
 - `SECAPI-Meter-Class` for the usage category
-- `SECAPI-Estimated-Cost` and `SECAPI-Token-Count` for per-call planning
+- `SECAPI-Estimated-Cost` for per-call planning
+- `SECAPI-Token-Count` and its related source or estimate headers when your response requests or includes token-count metadata
 - `Retry-After` when the service asks a client to wait
 
 Read [API conventions](/api-conventions) for the complete header behavior and [Troubleshooting](/troubleshooting) for billing and quota errors.
 
-## Choose a plan
+## Decide what to do next
 
-Use [Plans and pricing](/plans-and-pricing) to compare the current self-serve and commercial options. Contact SEC API before redistributing data, embedding it in a product for third parties, or reselling it; those uses can require commercial rights beyond a standard development integration.
+Read [API conventions](/api-conventions) for versioning, response metadata, pagination, and `429` handling. Use [Plans and pricing](/plans-and-pricing) to compare the current self-serve and commercial options. Contact SEC API before redistributing data, embedding it in a product for third parties, or reselling it; those uses can require commercial rights beyond a standard development integration.
 
 ## Rotate a key safely
 

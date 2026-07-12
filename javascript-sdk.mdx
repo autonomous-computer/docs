@@ -1,9 +1,9 @@
 ---
 title: "JavaScript SDK"
-description: "Use the SEC API JavaScript client in TypeScript services and server-side applications"
+description: "Install the SEC API JavaScript client, make a first request, and handle a failed response"
 ---
 
-Use the JavaScript SDK when SEC API calls belong in a TypeScript or JavaScript service. Keep the API key on the server and preserve filing identifiers with any result your application stores or displays.
+Use the JavaScript SDK in a TypeScript or JavaScript service when you want a client wrapper around the REST contract. Keep the API key in a trusted server-side environment, not in browser code.
 
 ## Install and configure
 
@@ -22,7 +22,7 @@ const client = new SecApiClient({
 
 Do not expose `SECAPI_API_KEY` to browser code. Call the SDK from a server route, worker, background job, or other trusted runtime.
 
-## Make a first filing request
+## Make a first request
 
 ```ts
 const issuer = await client.resolveEntity({ ticker: "AAPL" })
@@ -40,9 +40,11 @@ console.log({
 })
 ```
 
-The `agentLatestFiling` helper returns the endpoint's compact agent projection. Use the full documented method when you need fields outside that projection.
+`resolveEntity` calls `GET /v1/entities/resolve`. `agentLatestFiling` calls the latest-filings endpoint with `view=agent`. The returned identifier and filing fields vary with the current filing, so use this output to confirm the request and preserve it with downstream work. Use `latestFiling` when you need the endpoint's default response instead.
 
-## Extract the source text behind a result
+For accepted parameters, response fields, and endpoint limits, see the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve) and [latest filing reference](/api-reference/filings/get-v1-filings-latest).
+
+## Retrieve a filing section
 
 ```ts
 const riskFactors = await client.agentSection({
@@ -52,7 +54,7 @@ const riskFactors = await client.agentSection({
 })
 ```
 
-Keep the filing accession, URL, and request ID alongside an extracted section or conclusion. This lets a reader trace a result back to the SEC filing that supports it.
+`agentSection` requests the latest matching section with `view=agent`. Preserve the returned filing identifiers and request ID with an extracted section or a conclusion built from it.
 
 ## Handle errors
 
@@ -73,7 +75,7 @@ try {
 }
 ```
 
-The SDK retries safe read requests according to its retry policy. Only opt into retries for a mutating call when your operation is idempotent. Read [SDK reliability](/sdk-reliability) and [Troubleshooting](/troubleshooting) before adding application-level retries.
+The SDK handles its documented retry behavior for safe reads. For `429`, let the client honor the service's retry timing; do not add concurrent retry loops. Only opt into retries for a mutation when your operation is idempotent. Read [SDK reliability](/sdk-reliability) and [Troubleshooting](/troubleshooting) before adding application-level retries.
 
 ## Read next
 

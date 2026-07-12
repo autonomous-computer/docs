@@ -1,9 +1,9 @@
 ---
 title: "Python SDK"
-description: "Use the SEC API Python client in research scripts, notebooks, and server-side services"
+description: "Install the SEC API Python client, make a first request, and carry the source identifiers forward"
 ---
 
-Use the Python SDK for research code, jobs, notebooks, and services that need the SEC API contract without hand-writing HTTP requests. Keep the API key outside notebooks shared with other people and outside client-side applications.
+Use the Python SDK in research code, jobs, notebooks, and services when you want a client wrapper around the REST contract. Keep the API key out of shared notebooks and client-side applications.
 
 ## Install and configure
 
@@ -13,15 +13,14 @@ export SECAPI_API_KEY="secapi_..."
 ```
 
 ```python
-import os
 from secapi_client import SecApiClient
 
-client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
+client = SecApiClient()
 ```
 
-The client uses `https://api.secapi.ai` by default. Use a different base URL only for an environment you control.
+By default, the client reads `SECAPI_API_KEY` and uses `https://api.secapi.ai`. Use a different base URL only for an environment you control.
 
-## Make a first filing request
+## Make a first request
 
 ```python
 issuer = client.resolve_entity(ticker="AAPL")
@@ -36,7 +35,7 @@ print({
 })
 ```
 
-Use `agent_latest_filing` when the compact retrieval shape is enough. Check the [latest filings reference](/api-reference/filings/get-v1-filings-latest) for the full response and supported filters.
+`resolve_entity` calls `GET /v1/entities/resolve`. `agent_latest_filing` calls the latest-filings endpoint with `view=agent`. Values such as the accession number and request ID vary, so use this output to confirm the request and preserve it with downstream work. Check the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve) and [latest filings reference](/api-reference/filings/get-v1-filings-latest) for accepted parameters, response fields, and endpoint limits.
 
 ## Retrieve a cited section
 
@@ -48,7 +47,7 @@ risk_factors = client.agent_section(
 )
 ```
 
-Keep the filing accession, filing URL, request ID, and returned freshness or provenance fields with a generated memo, table, or model input.
+The helper retrieves the latest matching section in compact mode. Keep the filing accession, filing URL, and request ID with a generated memo, table, or model input.
 
 ## Handle errors
 
@@ -66,7 +65,7 @@ except SecApiError as error:
     })
 ```
 
-The SDK retries safe read requests. Do not retry a mutation unless your caller can safely repeat it. For response codes and bounded backoff, read [Troubleshooting](/troubleshooting) and [SDK reliability](/sdk-reliability).
+The SDK's documented retry policy covers safe reads. For `429`, let the client honor the returned retry timing; do not add concurrent retry loops. Do not retry a mutation unless your caller can safely repeat it. For response codes and bounded backoff, read [Troubleshooting](/troubleshooting) and [SDK reliability](/sdk-reliability).
 
 ## Read next
 

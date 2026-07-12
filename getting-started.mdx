@@ -1,23 +1,23 @@
 ---
 title: "Make your first SEC API request"
-description: "Resolve an issuer and retrieve a source-backed filing with one API key"
+description: "Resolve a public company with one API key, verify the response, and continue to a source filing"
 ---
 
-Make one request that you can use in a real application: resolve an issuer, then retrieve its latest annual filing. Keep the returned accession number, filing URL, and request ID with any result you publish or pass to another system.
+Start with one small, read-only request: resolve a ticker into SEC API's canonical issuer identity. It proves that your key, base URL, and request format work before you build a filing or research workflow.
 
 ## Set your API key
 
-Create an account at [secapi.ai/signup](https://secapi.ai/signup), then create an API key from the signed-in dashboard before exporting it in the shell that will call the API:
+Create an account at [secapi.ai/signup](https://secapi.ai/signup), then create an API key in the signed-in [dashboard](https://secapi.ai/app). Export it in the shell that will make the request:
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
 ```
 
-SEC API machine credentials use `x-api-key`. Do not send an API key as `Authorization: Bearer`.
+For API-key authentication, send the key in `x-api-key`. An API key is not an `Authorization: Bearer` token; use the API-key header for this guide and for server-to-server requests.
 
 ## Resolve an issuer
 
-Resolve Apple before you request a filing. The response gives you the CIK and canonical identity details that work across SEC API endpoints.
+Resolve Apple before requesting a filing. The response gives you the canonical CIK and identity metadata you can carry into later API calls.
 
 ```bash
 curl -sS \
@@ -28,7 +28,7 @@ curl -sS \
 
 ## Expected response
 
-The exact `id` and `requestId` vary. Confirm that the response identifies Apple and includes CIK `0000320193`.
+The exact `id` and `requestId` vary. A successful response identifies Apple and includes CIK `0000320193`:
 
 ```json
 {
@@ -40,11 +40,11 @@ The exact `id` and `requestId` vary. Confirm that the response identifies Apple 
 }
 ```
 
-`view=agent` is a compact projection for code or agent workflows. Use the endpoint's default response when you need the full metadata.
+`view=agent` is the compact, identifier-focused projection. Use the endpoint's default response when you need its full documented metadata.
 
 ## 2. Retrieve a filing you can cite
 
-Request Apple's latest 10-K using the same key:
+Once the identity request succeeds, retrieve Apple's latest 10-K with the same key:
 
 ```bash
 curl -sS \
@@ -53,7 +53,9 @@ curl -sS \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-The filing changes when Apple submits a new annual report. Store the returned `accessionNumber`, `filingDate`, `form`, `filingUrl`, and `requestId` with your downstream result. They identify the specific SEC filing behind a claim.
+The result changes when Apple files a newer annual report. Preserve the returned `accessionNumber`, `filingDate`, `form`, `filingUrl`, and `requestId` with work derived from it. Those fields identify the specific filing behind a result.
+
+For accepted identifiers, filters, response fields, and endpoint-specific limits, use the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve) and [latest filing reference](/api-reference/filings/get-v1-filings-latest).
 
 ## Choose an integration path
 
@@ -72,8 +74,8 @@ The filing changes when Apple submits a new annual report. Store the returned `a
   </Card>
 </CardGroup>
 
-## When a request fails
+## If it does not work
 
-For `401 missing_api_key`, make sure the key is set in the current shell and sent through `x-api-key`. For `401 authentication_failed`, create a replacement key in the dashboard and update the calling environment. For `402` or `429`, inspect the response before retrying; a bounded retry is appropriate for transient failures, not for a quota or billing stop.
+For `401 missing_api_key`, check that the key is exported in the current shell and sent through `x-api-key`. For `401 authentication_failed`, verify the key in the dashboard and update the calling environment. For `402`, address the stated billing or entitlement condition. For `429`, wait for `Retry-After` before retrying rather than sending concurrent retries.
 
 Read [Troubleshooting](/troubleshooting) for error-specific next steps and [API conventions](/api-conventions) for versioning, pagination, and response metadata.

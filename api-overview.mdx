@@ -1,74 +1,63 @@
 ---
 title: "Choose an SEC API interface"
-description: "Use REST to learn the filing contract, an SDK or CLI to build a workflow, and hosted MCP when an agent should use the same source-backed data."
+description: "Start with REST, then choose an SDK, CLI, or hosted MCP for the workflow you are building"
 ---
 
 <Info>
-SEC API gives you the same filing, statements, ownership, and search primitives through several interfaces. Start with REST when you need to inspect a response. Use an SDK or CLI when you are building a repeatable workflow. Use hosted MCP when an MCP-aware agent should call the data layer directly.
+Start with REST when you need to see the exact request and response. Move to an SDK or CLI when the call belongs in a repeatable workflow. Use hosted MCP when an MCP-aware client should call SEC API tools directly.
 </Info>
 
 ## Authentication
 
-API keys are the primary machine-auth method for all plans. Use the `x-api-key` header on every REST request; the same credential works across SDK, CLI, and server-to-server MCP clients. See [Auth, Billing, and First Utility](/auth-and-pricing) for the full model. WorkOS powers dashboard login and remains the enterprise SSO boundary as organization-level access expands.
+Use an API key in `x-api-key` for REST. The SDKs and CLI read the same API-key credential from their client configuration or environment. Keep dashboard sign-in and browser-only account actions separate from machine requests. See [API keys, usage, and billing](/auth-and-pricing) for the credential boundary.
 
-## Pick the smallest useful interface
+## Pick a starting point
 
 <CardGroup cols={2}>
   <Card title="REST" icon="braces" href="/getting-started">
-    The shortest way to inspect authentication, identifiers, a filing response, and its source record.
+    The shortest path to verify authentication, inspect a response, and learn an endpoint's contract.
   </Card>
   <Card title="SDKs and CLI" icon="terminal-square" href="/libraries-and-sdks">
-    Use typed clients or a terminal workflow when the request is becoming part of your application or research process.
+    Use a typed client or terminal workflow when a request becomes part of application code or research automation.
   </Card>
   <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
-    Give an MCP-aware agent access to the same SEC API tools after you have verified a normal request.
+    Connect an MCP-aware client after verifying a normal API request and understanding the tool boundary.
   </Card>
   <Card title="API reference" icon="book-open" href="/api-reference">
-    Use the reference when you know the endpoint and need the precise parameters, limits, and response shape.
+    Check exact parameters, endpoint-specific limits, and response fields before coding against an endpoint.
   </Card>
 </CardGroup>
 
-## Core design rules
+## Build against the contract
 
 <Steps>
-  <Step title="Identify the source record">
-    Keep the issuer identifier, filing accession number, filing date, and source URL with any conclusion drawn from a filing.
+  <Step title="Prove one request first">
+    Follow the <a href="/getting-started">first request</a> before introducing an SDK, an agent, or concurrent traffic.
   </Step>
-  <Step title="Correlate the request">
-    Keep `Request-Id` in logs and support requests. It identifies the API call without exposing your key.
+  <Step title="Use the documented parameters">
+    The API reference is authoritative for accepted identifiers, filters, response views, and limits. Do not infer them from a similar endpoint.
   </Step>
-  <Step title="Use the documented response shape">
-    Start with the default response when you need the surrounding context. Use `view=agent` only when the endpoint documents an agent projection.
+  <Step title="Keep the identifiers that matter">
+    Retain `Request-Id` for support and, for filing-derived work, the issuer identifier, accession number, filing date, and filing URL.
   </Step>
-  <Step title="Handle partial state deliberately">
-    A documented `degraded` or `unavailable` state is information about the response, not a value to smooth over in downstream code.
+  <Step title="Choose a response view deliberately">
+    Start with the default response when you need context. Use `view=agent` or `view=compact` only where the endpoint documents that projection.
   </Step>
-  <Step title="Page when the endpoint pages">
-    List endpoints that expose `nextCursor` and `hasMore` use cursor pagination. Do not assume every list-shaped response does.
+  <Step title="Respect pagination and rate limits">
+    Endpoints that return `nextCursor` and `hasMore` use cursor pagination. For `429`, wait for `Retry-After`; endpoint-specific limits belong in the reference.
   </Step>
-  <Step title="Pin production clients">
-    Send a documented `secapi-version` when you are ready to pin a production integration to a dated contract.
+  <Step title="Pin a production integration">
+    Send a documented `secapi-version` when you are ready to pin to a dated contract.
   </Step>
 </Steps>
 
-## What makes the contract different
+## Response metadata
 
-- `provenance`: where the data came from
-- `freshness`: how current the data is
-- `materialization`: how the current output was produced
-- `trace`: how to get from a filing-derived value back to the source filing and page when available
+- `Request-Id` identifies one API request for logs and support.
+- Filing identifiers such as `accessionNumber` and `filingUrl` identify the source filing when present.
+- Some endpoints expose provenance, freshness, materialization, or trace fields. Their availability and shape are endpoint-specific.
 
-These fields matter because investor agents need more than a value. They need the trail behind the value.
-
-## Event delivery rules
-
-- webhook delivery uses signed `POST` requests with `x-secapi-signature`
-- delivery headers include `x-secapi-event-id`, `x-secapi-event-type`, and `x-request-id`
-- current event families include artifacts, webhooks, and stream subscriptions
-
-<Warning>
-SEC API is not trying to be a generic raw filing tunnel. It is designed around the workflows serious investors and investor agents actually repeat.
-</Warning>
+Preserve the fields your endpoint returns when they support a user-visible result.
 
 ## Read next
 
