@@ -1,68 +1,60 @@
 ---
-title: "Evaluate Filing Search"
-description: "Run a small, source-linked proof of concept for SEC filing retrieval and content search."
+title: "Evaluate SEC Filing Search API"
+description: "Test filing discovery, content search, and section retrieval with an auditable SEC source trail."
 ---
 
-<CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Create a key and run the filing-and-content proof against a known issuer.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Inspect filing, full-text, and semantic search response shapes before wiring retrieval.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Size filing lookup and content-search usage before expanding beyond the proof.
-  </Card>
-</CardGroup>
+Use this page to assess a filing-search layer for an application or research workflow. The concrete job is to locate a filing for one issuer, search it for a question, and retrieve the section the user will inspect. A result list is not a substitute for filing text.
 
-Evaluate one issuer and one research question. A useful proof of concept proves that your application can find a filing, preserve its SEC source, and retrieve the exact section it will show a user.
+## Endpoints and boundaries
 
-## Run a source-linked proof
+- `GET /v1/filings` returns a paginated filing-manifest list. It supports historical filters, sorting, and cursor pagination.
+- `GET /v1/filings/latest` returns the latest filing matching an issuer and optional form.
+- `GET /v1/search/fulltext` finds text matches; `GET /v1/search/semantic` finds section matches for semantic retrieval.
+- `GET /v1/filings/{accession_number}/sections/{section_key}` retrieves the source section.
 
-<Steps>
-  <Step title="Choose one issuer and one question">
-    Start with a known issuer, filing form, and question that needs a source-backed answer.
-  </Step>
-  <Step title="Find the filing record">
-    Retrieve the filing manifest and retain its accession number before constructing a retrieval URL.
-  </Step>
-  <Step title="Compare literal and related-language search">
-    Run full-text and hybrid semantic search, then inspect the result type and cited section before treating either as evidence.
-  </Step>
-  <Step title="Verify the cited source">
-    Open the returned filing section and keep its identity and request metadata with any conclusion.
-  </Step>
-</Steps>
+Scope issuer identity with a ticker, symbol, or CIK and avoid conflicting identifiers. `limit` is 1 through 50 and the filing cursor is a zero-based offset; do not reuse a cursor after changing filters. A missing result is a retrieval outcome, not proof an issuer did not disclose something.
+
+## Proof of concept
 
 ```bash
-# Find a recent annual report.
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+# 1. Identify a recent annual report.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&sort=filing_date_desc&limit=1"
 
-# Search filing content for a question.
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+# 2. Search filing content for a review question.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/search/fulltext?q=material%20weakness&ticker=AAPL&form=10-K&limit=10"
 
-# Search related language and inspect its cited section.
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/semantic?q=artificial%20intelligence%20regulation&ticker=AAPL&form=10-K&mode=hybrid&limit=10"
+# 3. Fetch the selected section with its actual accession number and section key.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?ticker=AAPL&form=10-K"
 ```
 
-For each result, retain accession number, form, filing date, source URL, endpoint, `requestId`, and route-specific provenance or freshness metadata.
+Replace the placeholders with result values. Test an issuer your workflow actually covers, then paginate the list if the result will feed an ingestion process.
 
-## What success looks like
+## Expected evidence
 
-- The integration scopes issuer and form explicitly, then follows the returned accession rather than guessing a filing URL.
-- It distinguishes full-text's filings-and-sections response from semantic and section search result lists.
-- It verifies an excerpt in the source filing before presenting a conclusion.
-- It handles `400`, `429`, and transient server errors as distinct operational states.
+The evaluation artifact should preserve accession number, filing URL, form, filing date, issuer identity, source section key, `requestId`, and returned provenance/freshness fields. A reviewer should be able to open the cited filing and reproduce why the application selected that section.
 
-<Prompt>
-For AAPL, find the latest 10-K, search it for "material weakness," then run hybrid semantic search for "artificial intelligence regulation." Return the accession number, form, filing date, filing URL, cited section or excerpt, request ID, and any retrieval limitation. Do not summarize a result until its filing identity is present.
-</Prompt>
+## Failure modes
 
-## Next steps
+- A bad filter, invalid limit, or conflicting issuer identifier is a request-validation failure to correct.
+- A search result without a fetched source section is retrieval assistance, not a quote.
+- Pagination changes after filters change; restart rather than mixing cursor sequences.
+- Full-text and semantic search have different dependencies and may fail independently. Handle an unavailable backend distinctly from an empty result set.
 
-- [Filing search](/products/filing-search)
-- [Filing content search](/products/search)
-- [API conventions](/api-conventions)
+Check [Pricing and limits](/evaluate/pricing-and-limits) before expanding from one issuer to a watchlist or historical corpus.
+
+## Next action
+
+Read [Filing search](/products/filing-search) for the request surface, then add a source-link assertion to your integration test.
+
+<CardGroup cols={3}>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for an issuer-specific proof.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect filing and content-search results first.</Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review watchlist or corpus usage before expansion.</Card>
+</CardGroup>
+
+<Steps><Step title="Locate the filing">Scope an issuer and form, then retain the accession.</Step><Step title="Search one question">Keep lexical and semantic retrieval separate.</Step><Step title="Open the source">Retrieve the cited section before displaying a conclusion.</Step></Steps>
+
+<Prompt>For one issuer, identify a 10-K, search a concrete question, and retrieve the selected source section. Return filing identity, section key, request ID, and returned provenance. Treat unavailable retrieval as an observable result, not a disclosure conclusion.</Prompt>

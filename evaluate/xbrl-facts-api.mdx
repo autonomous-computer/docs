@@ -1,98 +1,52 @@
 ---
-title: "Evaluate SEC XBRL Facts and Statements"
-description: "Run a practical, source-aware evaluation of SEC API facts and statements before replacing an XBRL parsing or financial-data workflow."
+title: "Evaluate XBRL Facts API"
+description: "Test normalized XBRL facts and statement bundles against a source-preserving financial-model refresh."
 ---
 
-<CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Create an account and run this evaluation against the live API.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Inspect filing and company-data behavior before writing code.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Review plans and limits before scheduling broad model refreshes.
-  </Card>
-</CardGroup>
+Use this evaluation for a financial-model refresh or research table. The concrete job is to retrieve a normalized annual statement bundle and a tag-level fact series for one issuer, then decide whether their period and filing provenance support your model.
 
-Use this evaluation when you are deciding whether SEC API can support a real
-financial-model refresh, research agent, or company-data product. The test is
-not “did I receive JSON?” It is whether the response gives you a usable value,
-a period you understand, and a path back to the filed source.
+## Endpoints and boundaries
 
-## A 30-minute evaluation
+- `GET /v1/statements/all` returns a normalized balance sheet, income statement, and cash-flow bundle. It accepts issuer identity, annual or quarterly period selection, fiscal-year filters, and `limit` up to 40.
+- `GET /v1/facts` returns normalized SEC company facts for a requested tag. The response identifies the requested and resolved tag.
 
-<Steps>
-  <Step title="Choose one issuer and one question">
-    Start with an annual revenue, margin, or cash-flow question for an issuer
-    your team already understands. Record the filing you expect to reconcile.
-  </Step>
-  <Step title="Compare a statement and a fact series">
-    Request the annual all-statements bundle, then request the underlying tag
-    series. Compare the period, unit, and citation fields before comparing the
-    values.
-  </Step>
-  <Step title="Test a boundary">
-    Try a quarterly period, a foreign private issuer, or a company with a
-    known segment disclosure. Capture what requires filing judgment rather
-    than treating an empty or partial response as a product verdict.
-  </Step>
-</Steps>
+These routes normalize SEC XBRL; they do not eliminate issuer-specific concepts, extension tags, period differences, amendments, or restatements. Do not compare annual and quarterly values as though they were interchangeable, and do not treat a missing tag as proof a metric was not disclosed.
 
-## Requests to run
+## Proof of concept
 
 ```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
+# Retrieve one normalized annual statement bundle.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/statements/all?ticker=MSFT&period=annual&limit=1"
 
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/facts?ticker=MSFT&tag=Revenues&period=annual&limit=4"
+# Retrieve up to four annual observations for a requested revenue concept.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/facts?ticker=MSFT&tag=Revenues&form=10-K&limit=4"
 ```
 
-For a company briefing, add a scoped enrichment request rather than assuming
-every enrichment is mandatory:
+Compare the reported statement line to the fact series only after aligning `form`, fiscal period, `periodEnd`, `filedAt`, and unit. Inspect `resolvedTag` before assuming the requested concept was used.
 
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/overview?ticker=MSFT&include=segments,dilution"
-```
+## Expected evidence
 
-## What good evidence looks like
+For every model input, retain requested/resolved tag, value, unit, form, fiscal labels, period end, filing date, accession number and filing URL from per-point provenance, plus the enclosing `requestId` and `traceparent`. Values are returned in raw units; apply display formatting or unit conversion only in a clearly defined model layer.
 
-- The fact response tells you the requested tag, the resolved tag, and the
-  alias strategy.
-- The values carry a period and unit appropriate to the question.
-- You retain accession number and filing URL from provenance where supplied.
-- You know whether the response shape is compact or the default metadata-rich
-  view.
-- A batch or optional company enrichment is checked for a partial or degraded
-  result before it enters a model or agent answer.
+## Failure modes
 
-## Prompt for an analyst or agent
+- `401` or `403`: check the server-side key and route entitlement.
+- Empty fact data: confirm issuer and tag, then inspect `resolvedTag`; issuers can use another valid concept or taxonomy.
+- Apparent reconciliation failure: recheck units, annual versus quarterly periods, the filing date, and whether an amendment or restatement is part of the intended model policy.
+- High-volume refreshes: cache historical observations, bound concurrency, and quote the actual cadence using [Pricing and limits](/evaluate/pricing-and-limits).
 
-<Prompt>
-For MSFT, retrieve the latest annual all-statements bundle and a four-period
-annual Revenues fact series. Compare the requested and resolved fact tag,
-then return the values with period, unit, accession number, filing URL, and
-request ID. Identify anything that needs the source filing or an accounting
-judgment before it is used in a model.
-</Prompt>
+## Next action
 
-## Decide what to build next
+Follow [Extract revenue from a 10-K](/tutorials/extract-revenue-from-10k) for a provenance-preserving implementation, then test an issuer with the edge cases your model must support.
 
 <CardGroup cols={3}>
-  <Card title="XBRL implementation guide" icon="braces" href="/seo/xbrl-api">
-    Learn when to use statements versus tag-level facts.
-  </Card>
-  <Card title="Company financial statements" icon="table" href="/seo/sec-financial-statements-api">
-    Build a company-data or statement-refresh path.
-  </Card>
-  <Card title="Pricing and limits" icon="gauge" href="/evaluate/pricing-and-limits">
-    Size a refresh loop before wide fanout.
-  </Card>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for a model-refresh proof.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect facts and statement bundles first.</Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review issuer-universe refresh usage.</Card>
 </CardGroup>
+
+<Steps><Step title="Retrieve the annual bundle">Start with an issuer and period the team can reconcile.</Step><Step title="Retrieve the fact series">Inspect requested and resolved concepts before comparing values.</Step><Step title="Exercise an edge case">Test taxonomy, amendment, or period mix that matters to the model.</Step></Steps>
+
+<Prompt>For one issuer, retrieve an annual statement bundle and revenue fact series. Return requested and resolved tags, unit, period, filing provenance, and request metadata. Identify any unit, period, taxonomy, amendment, or restatement judgment before model use.</Prompt>

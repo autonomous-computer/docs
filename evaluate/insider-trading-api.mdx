@@ -1,65 +1,53 @@
 ---
-title: "Evaluate insider trading API"
-description: "Test Form 3, 4, and 5 transaction queries, source fields, and the interpretation limits an insider-monitoring workflow must retain"
+title: "Evaluate Insider Trading API"
+description: "Test a Form 3, 4, and 5 review queue with transaction-level filing evidence."
 ---
 
+Use this evaluation for a disclosure-review queue, not a trading-signal backtest. The concrete job is to find recent Form 4 records for an issuer, distinguish the SEC transaction code from an inferred label, and make each row reviewable against its filing.
+
+## Endpoint and boundaries
+
+`GET /v1/insiders` returns normalized records derived from Forms 3, 4, and 5. It accepts issuer `ticker` or `cik`, form, filing-date, owner, security-title, and `transaction_code` filters. Results use cursor pagination; `limit` is 1 through 50.
+
+For Form 4 review, `transaction_code=P` narrows to the SEC's open-market or private purchase code and `S` narrows to sales. Keep the raw code. Option exercises, gifts, tax withholding, planned sales, and other transactions can coexist with discretionary purchases or sales.
+
+## Proof of concept
+
+```bash
+# Start with all recent Form 4 records for one issuer.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=25"
+
+# Build a separately labeled purchase review queue.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&transaction_code=P&limit=25"
+```
+
+Advance with `nextCursor` while `hasMore` is true. Run both requests so the team can inspect what the transaction-code filter excludes.
+
+## Expected evidence
+
+Persist each row's owner identity, owner relationship or title when present, security title, transaction code, transaction and filing dates, shares, price or value when present, post-transaction ownership when present, accession number, filing URL, `requestId`, and `traceparent`. The filing identity is the evidence; a normalized transaction alone is not an investment recommendation.
+
+## Failure modes
+
+- `401` or `403`: the machine key is missing, invalid, or not entitled for the route.
+- Empty data: confirm issuer, form, dates, and filter. It is not proof of no activity outside that query.
+- Duplicates or late corrections: paginate, retain a backfill window, and deduplicate by filing accession plus transaction identity in your own store.
+- Over-interpretation: route unusual records to a human filing review instead of emitting a buy or sell conclusion.
+
+Before enabling a watchlist, preflight the actual recurring call pattern with [Pricing and limits](/evaluate/pricing-and-limits).
+
+## Next action
+
+Build the review artifact with the [insider-transaction tutorial](/tutorials/analyze-insider-trading), then test the same dates against the issuer's filing history.
+
 <CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Test Form 3, 4, and 5 records before creating an alerting workflow.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Inspect issuer, owner, transaction, and evidence fields before writing alert logic.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Size recurring issuer monitoring before expanding a watchlist.
-  </Card>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for a narrow issuer review.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect Form 3, 4, and 5 records first.</Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review watchlist usage before polling.</Card>
 </CardGroup>
 
-Use this page to evaluate the insider endpoint before you publish alerts or feed its results into an investor workflow. A successful evaluation produces reviewable Form 3, 4, or 5 records with their filing evidence; it does not validate an investment signal or a claim about insider intent.
+<Steps><Step title="Start with all Form 4 records">Keep issuer, owner, filing date, and transaction date distinct.</Step><Step title="Apply one SEC code">Compare the code-filtered queue with unfiltered records.</Step><Step title="Review each filing">Do not emit an investment conclusion from a normalized row alone.</Step></Steps>
 
-## Run a narrow Form 4 query
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
-```
-
-Then test a transaction-code filter:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=JPM&forms=4&transaction_code=P&limit=25"
-```
-
-## Verify your implementation
-
-<Steps>
-  <Step title="Narrow one query">
-    Check that issuer, reporting owner, form, filing date, and transaction date are represented separately.
-  </Step>
-  <Step title="Preserve filing fields together">
-    Keep `transactionCode` and `transactionDirection` with accession number, `provenance.filingUrl`, and `requestId` in every alert.
-  </Step>
-  <Step title="Exercise pagination">
-    Follow `nextCursor` only when `hasMore` is true.
-  </Step>
-  <Step title="Keep sparse records sparse">
-    Test absent price, security-title, or ownership values without replacing filing-derived gaps with estimates.
-  </Step>
-</Steps>
-
-## Evaluation prompt
-
-<Prompt>
-Use SEC API to retrieve recent Form 4 records for one issuer. Return reporting owner, title when present, transaction and filing dates, transaction code, direction, shares and price when present, accession number, filing URL, and request ID. Do not infer motive, open-market activity, or an investment recommendation from a code without reviewing the cited filing and footnotes.
-</Prompt>
-
-## Interpretation limits
-
-A Form 4 can cover grants, exercises, tax withholding, gifts, indirect ownership, and planned activity. A transaction code is not a complete explanation of the event. A non-2xx response is a failed lookup, not evidence of no insider activity; retain request metadata for diagnosis.
-
-## Continue
-
-- [Insider trading data API](/seo/insider-trading-api)
-- [Ownership workflows](/ownership-workflows)
-- [Insiders API reference](/api-reference/insiders)
+<Prompt>For one issuer, retrieve recent Form 4 records and a separate `transaction_code=P` queue. Return raw code, owner, dates, filing identity, and request ID; identify records that need filing review rather than an inferred signal.</Prompt>

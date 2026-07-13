@@ -1,74 +1,60 @@
 ---
 title: "Evaluate 13F API"
-description: "Test manager holdings, latest-report comparison behavior, and the source fields your 13F workflow needs before integrating it"
+description: "Test manager-reported 13F holdings and quarter-over-quarter comparisons with SEC filing evidence."
 ---
 
-<CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Run selected-report and comparison checks with your own manager universe.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Inspect 13F filing and row-diff shapes before building a monitor.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Estimate recurring manager coverage before scheduling a watchlist.
-  </Card>
-</CardGroup>
+Use this evaluation for a manager-monitor or research-review job: retrieve one manager's disclosed holdings, compare the two reports the API selects, and decide whether the returned filing trail is sufficient for your workflow. A Form 13F is a delayed, manager-reported snapshot. It does not establish current holdings, intraperiod trades, or investment intent.
 
-Use this checklist to test whether the 13F API fits a manager-monitor or research workflow. The useful evaluation result is not a broad coverage claim: it is a selected manager report with source identifiers plus a separate latest-two filing-date row diff that your application can handle.
+## Endpoints and boundaries
 
-## Run two contract checks
+- `GET /v1/owners/13f` requires a reporting-manager `cik`; it returns the latest normalized report and accepts optional `reportDate`, `filingDate`, and `limit` selectors.
+- `GET /v1/owners/13f/filings` lists recent reports for that manager. Use it to inspect availability before treating a missing comparison as a data conclusion.
+- `POST /v1/owners/13f/compare` compares the latest two reports available to the route. It is not an arbitrary-quarter comparison endpoint.
 
-Retrieve a manager's selected report:
+The report date is the quarter-end snapshot; the filing date is when it reached the SEC. Keep both. Holding values are returned as `valueUsdThousands`, so convert units only deliberately.
+
+## Proof of concept
+
+Use a manager your team already follows. This example uses Berkshire Hathaway's CIK.
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
+# Inspect the source reports before making a comparison.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=20"
+
+# Retrieve the selected normalized report.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
-```
 
-Compare the latest two parsable reports:
-
-```bash
-curl -X POST \
-  -H "content-type: application/json" \
+# Compare the two latest reports available to the endpoint.
+curl --fail-with-body -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -d '{"cik":"0001067983","limit":50}' \
+  -H "content-type: application/json" \
+  --data '{"cik":"0001067983","limit":50}' \
   "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 
-For `GET /v1/owners/13f`, confirm that your application keeps the manager identity, report date, filing date, accession number, filing URL, provenance, and request ID. For `POST /v1/owners/13f/compare`, confirm the two filing dates, returned row statuses and deltas, provenance, and request ID.
+## Expected evidence
 
-The comparison response is a latest-two filing-date row diff. It does not directly provide an accession number or report date for each compared report. Use `GET /v1/owners/13f/filings` to identify available filings, then `GET /v1/owners/13f` with `reportDate` or `filingDate` to retrieve a selected report and its identifiers.
+For each selected report, retain the manager CIK, report date, filing date, accession number, filing URL, reported holdings, `requestId`, `traceparent`, and `provenance` when supplied. For the comparison, retain its two filing dates, row statuses and deltas, plus its request metadata. Pair the diff with the report-history and selected-report evidence before presenting a position as added, removed, increased, or reduced.
 
-## What to verify
+## Failure modes
 
-<Steps>
-  <Step title="Select a known manager">
-    Verify one selected report's identifiers against its source filing.
-  </Step>
-  <Step title="Choose the report before comparing">
-    List filings with `GET /v1/owners/13f/filings` before testing a specific report date.
-  </Step>
-  <Step title="Keep comparison scope explicit">
-    Confirm that the comparison returns the latest two parsable reports' filing dates and row diff, not a user-selected pair or report identifiers.
-  </Step>
-  <Step title="Test the operational boundary">
-    Label shares and value as reported 13F fields, then test an invalid CIK so an error cannot become a no-change signal.
-  </Step>
-</Steps>
+- `missing_cik` means the request needs the reporting manager's CIK, not an issuer ticker.
+- A comparison needs two available reports. Inspect the filing-history endpoint rather than treating no comparison as a manager's lack of activity.
+- Amendments, fund structure, corporate actions, and reporting conventions can change a row without representing a discretionary trade.
+- Bound repeated polling with the account's live limits and quote the workflow before a broad manager universe. See [Pricing and limits](/evaluate/pricing-and-limits).
 
-## Evaluation prompt
+## Next action
 
-<Prompt>
-Use `GET /v1/owners/13f/filings` and `GET /v1/owners/13f` to retrieve a selected manager report with its report date, filing date, accession number, and filing URL. Use `POST /v1/owners/13f/compare` only for the latest-two filing-date row diff: return its filing dates, row status, deltas, provenance, and request ID. State that the comparison is a delayed, limited disclosure and does not prove the manager's current or complete portfolio.
-</Prompt>
+Run the same PoC for a manager in your coverage set, then use the [13F monitoring tutorial](/tutorials/monitor-13f-holdings) to design an idempotent ingestion job.
 
-## Limits to keep after evaluation
+<CardGroup cols={3}>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for the selected-manager proof.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect 13F response shapes before scheduling a monitor.</Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review recurring manager-coverage costs.</Card>
+</CardGroup>
 
-Form 13F is periodic and has a defined reporting scope. It does not expose every short, derivative, cash balance, liability, non-reportable asset, or trade after the report date. A comparison row is a useful lead for filing review, not an explanation of manager intent.
+<Steps><Step title="Choose a known manager">Use a manager in your coverage set and inspect available reports first.</Step><Step title="Compare the selected evidence">Keep report identities beside the latest-two-report diff.</Step><Step title="Set a polling boundary">Quote and limit the manager universe before recurring use.</Step></Steps>
 
-## Continue
-
-- [13F API for institutional holdings](/seo/13f-data-api)
-- [13F comparison API](/seo/sec-13f-comparison-api)
-- [Ownership workflows](/ownership-workflows)
+<Prompt>For one reporting-manager CIK, retrieve filing history and a selected 13F report, then compare the two latest reports. Return report and comparison evidence separately, including provenance and request ID, and state the disclosure limits.</Prompt>

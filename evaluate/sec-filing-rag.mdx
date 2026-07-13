@@ -1,67 +1,57 @@
 ---
 title: "Evaluate SEC Filing RAG"
-description: "Build a small, source-cited filing retrieval loop before adding generated answers."
+description: "Prove a source-cited filing retrieval loop before adding answer generation."
 ---
 
-<CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Run a source-cited retrieval proof against one issuer and question.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Inspect filing-search and section-retrieval responses before adding generation.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Size retrieval and review usage before expanding an agent workflow.
-  </Card>
-</CardGroup>
+Evaluate retrieval before generation. The concrete job is to retrieve candidate filing sections for one research question, fetch the selected source section, and verify that a downstream answer can distinguish source text from interpretation.
 
-Evaluate the retrieval layer before generation. A passing test returns a passage a reader can locate in an SEC filing and makes the gap between source text and interpretation explicit.
+## Endpoints and boundaries
 
-## Minimal loop
+- `GET /v1/search/semantic` finds section matches for an open-ended query. It supports `keyword`, `semantic`, and `hybrid` modes; hybrid is the default.
+- `GET /v1/filings/{accession_number}/sections/{section_key}` retrieves the named source section for inspection or citation.
+- `GET /v1/search/fulltext` is the separate lexical retrieval path when exact terms matter.
+
+Search ranking narrows a corpus; it does not prove completeness, materiality, or a legal conclusion. Citation spans and snippets can be unavailable. Check `_citation_degraded` when present and preserve accession plus section identity.
+
+## Proof of concept
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20risk&ticker=TSLA&form=10-K&mode=hybrid&limit=5"
+# Retrieve candidate filing sections for a real research question.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/search/semantic?q=regulatory%20risk&ticker=TSLA&form=10-K&mode=hybrid&limit=5"
 
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=TSLA&form=10-K"
+# Fetch the cited source before quoting or summarizing it.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?ticker=TSLA&form=10-K"
 ```
 
-Use the latest-section route for a quick proof. When an application needs the exact search hit, call the accession-specific section route with the returned `accessionNumber`. Save `source_url`, `section_key`, and any available character range with the text you provide to a model.
+Replace `ACCESSION` and `SECTION_KEY` with values returned by the first request. Repeat with `/v1/search/fulltext` using an exact phrase, then compare the evidence rather than expecting both retrieval methods to rank identically.
 
-## Evidence boundary
+## Expected evidence
 
-Keep these distinct in your answer:
+Keep the retrieved text with accession, section key, source URL, form, filing date, available character range, `requestId`, and returned provenance/freshness metadata. Require generated output to separate:
 
-1. Retrieved filing text.
-2. Filing identity: accession number, form, filing date, and SEC URL.
-3. Your application's interpretation.
+1. The cited filing language.
+2. The filing and section identity.
+3. The application's interpretation.
 
-Do not turn a missing match into a claim about what an issuer did not disclose. A degraded citation is a reason to open the filing, not permission to invent a span.
+## Failure modes
 
-## Production checklist
+- Invalid or missing `q`, filters, or semantic mode is a request problem, not an empty search result.
+- An unavailable full-text backend or vector dependency can return `503`; surface it as unavailable retrieval rather than an invented absence of disclosure.
+- A highlighted snippet without a retrievable source section is insufficient evidence for a quote.
+- Repeated semantic retrieval has its own meter class. Check [Pricing and limits](/evaluate/pricing-and-limits) before an agent loop or corpus-wide evaluation.
 
-<Steps>
-  <Step title="Scope one issuer and question">
-    Use semantic `mode` explicitly after evaluation.
-  </Step>
-  <Step title="Retrieve and verify the source">
-    Fetch the cited section before quoting it.
-  </Step>
-  <Step title="Keep the evidence with the answer">
-    Preserve `requestId`, `traceparent`, provenance, and freshness where supplied.
-  </Step>
-  <Step title="Treat unavailable retrieval as unavailable">
-    A `503` vector-search response is not an empty result set.
-  </Step>
-</Steps>
+## Next action
 
-<Prompt>
-For TSLA, run hybrid semantic search for "supply chain risk" in 10-K filings, retrieve the cited Item 1A section, and return only claims supported by that section. Include accession number, filing date, filing URL, section key, request ID, and any missing citation detail. Separate retrieved text from your interpretation.
-</Prompt>
+Use [Filing content search](/products/search) to select the retrieval mode, then make section-level evidence a required field in the generation evaluation.
 
-## Next steps
+<CardGroup cols={3}>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for source-cited retrieval.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect semantic and section retrieval first.</Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review semantic-retrieval usage before an agent loop.</Card>
+</CardGroup>
 
-- [Semantic search](/products/search)
-- [Section search](/api-reference/sections/get-v1-sections-search)
-- [Filing retrieval](/products/filing-search)
+<Steps><Step title="Retrieve candidates">Run an explicit retrieval mode for one real question.</Step><Step title="Fetch the source">Retrieve the cited section before a quote or summary.</Step><Step title="Separate interpretation">Keep source language and generated analysis distinct.</Step></Steps>
+
+<Prompt>For one issuer and question, run semantic retrieval and fetch the selected filing section. Return accession, section key, SEC URL, request ID, and any citation-degraded signal. Separate retrieved language from interpretation and report unavailable retrieval as a failure.</Prompt>
