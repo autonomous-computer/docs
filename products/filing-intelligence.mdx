@@ -1,42 +1,46 @@
 ---
-title: "Filing Intelligence"
-description: "Use filing events, diffs, transcripts, and guidance as source-linked inputs to a filing research workflow."
+title: "Filing intelligence"
+description: "Use filing events, diffs, transcripts, and guidance as source-linked signals for an SEC filing review workflow."
 ---
 
-Filing Intelligence provides derived views over selected filing material. Use those views to find and prioritize source filings, then inspect the SEC document before relying on the result.
+Filing intelligence provides derived views over SEC filing material to help developers find and prioritize the source filing that deserves review.
 
-## Compare two reporting periods
+## What you can do
+
+- Compare two filings of the same form, with automatic latest-versus-prior pairing when no selectors are supplied.
+- Query persisted filing events, earnings transcripts, and structured guidance rows by ticker, CIK, date, and documented filters.
+- Obtain a single-issuer coverage report across the persisted filing-intelligence stores when that plane is enabled.
+- Carry each row's filing identity and source URL into a source-document retrieval step.
+
+## Endpoints
+
+| Method | Path | What it returns |
+| --- | --- | --- |
+| `GET` | [`/v1/filings/diff`](/api-reference/filings/get-v1-filings-diff) | A section-level comparison for one issuer and form. |
+| `GET` | [`/v1/filings/events`](/api-reference/filings) | Persisted filing-event rows. |
+| `GET` | [`/v1/filings/transcripts`](/api-reference/filings) | Transcript rows derived from qualifying earnings materials. |
+| `GET` | [`/v1/filings/guidance`](/api-reference/filings) | Structured guidance rows derived from earnings materials and transcripts. |
+| `GET` | [`/v1/intelligence/coverage`](/api-reference/intelligence) | An issuer coverage rollup. |
+
+## Example
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K&sections=item_1a_risk_factors,item_7_mdna"
 ```
 
-`ticker` and `form` are required. Without `from` and `to`, the route compares the latest filing with the prior filing of that form. Set `from` and `to` to an accession number or ISO date for an explicit pair. Set `include_hunks=false` when section-level changes are sufficient.
+`ticker` and `form` are required for a diff. Without `from` and `to`, the API pairs the latest filing with the prior filing of that form. Supply accession numbers or ISO dates when the comparison pair must be explicit.
 
-## Query the persisted stores
+## Boundaries to keep in view
 
-```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/events?forms=8-K,6-K&tickers=AAPL&limit=25"
-
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/transcripts?tickers=AAPL&limit=10"
-
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/guidance?tickers=AAPL&direction=raised&limit=10"
-```
-
-These endpoints support their documented filters and cursor pagination. Keep each result's filing identity and any returned source URL. Guidance results identify the source by `accessionNumber` but do not return a source URL, so use [filing retrieval](/products/filing-search) to fetch the filing record when a derived item affects a decision.
-
-## Limits to keep visible
-
-- A diff covers the selected pair; it is not a complete disclosure history.
-- Transcript and guidance output depends on covered filing material. Absence is not evidence that an issuer held no call or gave no guidance.
-- Derived events, summaries, and scores are retrieval aids, not legal, accounting, or investment conclusions.
+- Events, transcript rows, guidance rows, and diffs are derived output. They direct attention; they do not establish legal, accounting, or investment conclusions.
+- Transcript coverage is limited to qualifying earnings materials. No transcript or guidance row is not evidence that no call or guidance existed.
+- A diff describes only its selected pair, not every disclosure change by an issuer.
+- These routes can return `404` when the filing-intelligence plane is not enabled. Treat that as availability, not an empty result.
 
 ## Next steps
 
 - [Filings API reference](/api-reference/filings)
-- [Find a filing](/products/filing-search)
+- [SEC filing search](/products/filing-search)
 - [Filing types and exhibits](/filing-types-and-exhibits)

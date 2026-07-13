@@ -1,92 +1,44 @@
 ---
-title: "Entity Resolution & Mapping API"
-description: "Resolve CIK, ticker, FIGI, ISIN, CUSIP, or company name to a best-match SEC entity record with the SEC API entity graph."
+title: "Entity resolution"
+description: "Resolve a ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name before making issuer-specific SEC API requests."
 ---
 
-Resolve company identifiers -- CIK, ticker, FIGI, ISIN, CUSIP, or company name -- to a best-match SEC entity record with exchange, sector, industry, SIC code, and match details. The entity graph powers identity joins across every other SEC API surface.
+Resolve an issuer, manager, fund, or insider identifier to a canonical entity record before you join it to filings, ownership, or market-facing workflows.
 
-## Why use this
+## What you can do
 
-Financial data systems break when entity identity is ambiguous. The SEC API Entity Resolution surface maintains an entity graph of issuers, filers, managers, insiders, funds, and aliases so downstream queries do not need to rebuild identity logic on every call.
+- Resolve `ticker` or its `symbol` alias, CIK, FIGI, composite FIGI, share-class FIGI, ISIN, CUSIP, or a name query.
+- Request `view=agent` for primary identifiers and match metadata, or `view=compact` for core identity fields.
+- Search canonical entities by identifier, ticker, CIK, or name with `q` and optionally narrow by `entity_type`.
+- Search the EDGAR entity records separately when that is the dataset your application needs.
 
-- **Six identifier types** -- CIK, ticker, FIGI, ISIN, CUSIP, and company name
-- **Best-match entity resolution** -- issuers, filers, managers, insiders, funds, and aliases resolved with match details when available
-- **Structured metadata** -- exchange, sector, industry, SIC code, and entity type on every record
-- **Alias resolution** -- historical tickers, name changes, and cross-identifier mappings
-- **Batch-friendly** -- resolve multiple identifiers in a single request
+## Endpoints
 
-Company names and reused tickers can be ambiguous. For filings-sensitive work, pin requests to CIK or accession number.
+| Method | Path | What it returns |
+| --- | --- | --- |
+| `GET` | [`/v1/entities/resolve`](/api-reference/entities/get-v1-entities-resolve) | One resolved entity with match information. |
+| `GET` | [`/v1/entities`](/api-reference/entities) | A paginated canonical entity search. |
+| `GET` | [`/v1/entities/edgar`](/api-reference/entities) | A paginated EDGAR entity search. |
 
-## Quick start
-
-```bash
-# Resolve by ticker
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
-
-# Resolve by CIK
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?cik=0000320193"
-
-# Resolve by name
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?name=Apple+Inc"
-```
-
-## Example: search entities
+## Example
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities?query=tesla&limit=5"
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
 
-## Response shape
+The agent view includes `primaryIdentifiers`, `matchConfidence`, and `matchBasis`. Store the returned CIK with a downstream filing query when exact issuer identity matters.
 
-```json
-{
-  "entity": {
-    "cik": "0000320193",
-    "ticker": "AAPL",
-    "name": "Apple Inc.",
-    "figi": "BBG000B9XRY4",
-    "isin": "US0378331005",
-    "cusip": "037833100",
-    "exchange": "NASDAQ",
-    "sector": "Technology",
-    "industry": "Consumer Electronics",
-    "sicCode": "3571",
-    "sicDescription": "Electronic Computers",
-    "entityType": "issuer",
-    "aliases": [
-      { "type": "formerName", "value": "APPLE COMPUTER INC" }
-    ]
-  }
-}
-```
+## Boundaries to keep in view
 
-## Key parameters
+- At least one supported identifier is required. An empty request is a request error, not an entity search.
+- A name, ticker, or identifier match is resolution metadata, not proof of a legal or economic relationship.
+- Tickers can be ambiguous or change over time. Use CIK or an accession number for filing-specific work.
+- Entity searches use offset cursors. Keep the same query and filters while paging.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `ticker` | string | Company ticker symbol |
-| `cik` | string | SEC Central Index Key |
-| `figi` | string | OpenFIGI identifier |
-| `isin` | string | International Securities Identification Number |
-| `cusip` | string | CUSIP identifier |
-| `name` | string | Company name (fuzzy matched) |
-| `query` | string | Search query for entity listing |
-| `limit` | number | Results per page (entity search only) |
+## Next steps
 
-## Rate limits
-
-- **Standard plan**: 200 requests/minute
-- **Pro plan**: 1000 requests/minute
-- **Enterprise**: Custom limits
-
-Entity resolution is a lightweight lookup operation. Rate limits are higher than data-heavy endpoints.
-
-## Related
-
-- [API Reference: Entities](/api-reference/entities)
-- [Getting Started](/getting-started)
-- [Coverage and Depth](/coverage-and-depth)
+- [Entities API reference](/api-reference/entities)
+- [SEC filing search](/products/filing-search)
+- [API conventions](/api-conventions)

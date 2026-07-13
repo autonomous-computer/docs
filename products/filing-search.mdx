@@ -1,49 +1,46 @@
 ---
-title: "SEC Filing Search"
-description: "Find SEC filing manifests by issuer, form, date, fiscal period, accession number, or indexed text."
+title: "SEC filing search"
+description: "Find SEC filing manifests by issuer, form, date, fiscal period, accession number, or indexed text before retrieval and extraction."
 ---
 
-Use filing search to find the filing before you read or extract it. Keep the returned accession number and SEC filing URL; they are the source trail for the next request.
+Use filing search to identify the exact SEC filing your application will retrieve, extract, or cite. Save its accession number as the stable handoff between steps.
 
-## Find a recent annual report
+## What you can do
+
+- Find filing manifests by ticker, `symbol`, CIK, form, date range, fiscal period, calendar filing year, or issuer fiscal year.
+- Look up an accession number, search indexed filing-manifest text with `q`, and choose ascending or descending filing-date order.
+- Fetch a selected filing, or extract a named section from that accession.
+- Retrieve the latest filing or latest named section when historical accession selection is not required.
+
+## Endpoints
+
+| Method | Path | What it returns |
+| --- | --- | --- |
+| `GET` | [`/v1/filings`](/api-reference/filings) | A paginated filing-manifest list. |
+| `GET` | [`/v1/filings/{accession_number}`](/api-reference/filings) | One filing manifest. |
+| `GET` | [`/v1/filings/{accession_number}/sections/{section_key}`](/api-reference/filings) | A named section from that filing. |
+| `GET` | [`/v1/filings/latest`](/api-reference/filings/get-v1-filings-latest) | The latest filing matching an issuer and optional form. |
+| `GET` | [`/v1/filings/latest/sections/{section_key}`](/api-reference/filings/get-v1-filings-latest-sections-section-key) | A named section from the latest filing matching an issuer and form. |
+
+## Example
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&sort=filing_date_desc&limit=5"
 ```
 
-The response is a paginated list of filing manifests. A result identifies the filing with `accessionNumber`, `form`, `filingDate`, and a source URL. Use the accession number for an exact lookup or section retrieval.
+The list response includes the filing identity needed for later calls, including `accessionNumber`, form, filing date, and SEC filing URL. Keep `requestId` and any provenance, freshness, or materialization fields returned with the record.
 
-```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/0000320193-24-000123"
+## Boundaries to keep in view
 
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/0000320193-24-000123/sections/item_1a?ticker=AAPL&form=10-K"
-```
-
-## Filter deliberately
-
-| Need                  | Parameters                        |
-| --------------------- | --------------------------------- |
-| One issuer            | `ticker`, `symbol`, or `cik`      |
-| Filing family         | `form` or comma-separated `forms` |
-| Filing-date window    | `date_from` and `date_to`         |
-| Period or year        | `fp`, `filing_year`, or `fy`      |
-| Exact filing          | `accession_number`                |
-| Indexed manifest text | `q`                               |
-
-`sort` accepts `filing_date_desc` or `filing_date_asc`. `limit` is 1 through 50. Send `nextCursor` back as `cursor` unchanged, and do not reuse it after changing filters.
-
-## Production notes
-
-- Pass `form=10-K` when that is the filing you need. Plain [latest filing](/api-reference/filings/get-v1-filings-latest) without `form` can return any filing type.
-- A missing result is not proof that an issuer made no filing. Check the date, form, and issuer constraints before expanding the query.
-- Preserve `requestId` and route-specific provenance and freshness metadata with cached or user-visible conclusions.
-- Correct `400` requests instead of retrying them. Honor `Retry-After` on `429`; bound retries for `5xx` responses.
+- `ticker`, `symbol`, and CIK must not conflict. Resolve ambiguous input before filing-specific use.
+- `limit` is 1 through 50 and `cursor` is a zero-based offset. Do not reuse a cursor after changing filters.
+- Filing availability follows SEC source material. A missing result is a retrieval outcome, not proof that an issuer made no filing.
+- Use the source filing URL and accession number for a conclusion that needs source review; a manifest search result is not the filing text.
 
 ## Next steps
 
 - [Filings API reference](/api-reference/filings)
-- [Search filing content](/products/search)
+- [Filing content search](/products/search)
 - [Filing types and exhibits](/filing-types-and-exhibits)

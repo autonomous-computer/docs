@@ -1,47 +1,45 @@
 ---
-title: "Filing Content Search"
-description: "Search SEC filing content with full-text, semantic, or section retrieval and keep the filing citation with every result."
+title: "Filing content search"
+description: "Search SEC filing manifests and section text with full-text or semantic retrieval, then verify each result against its cited source."
 ---
 
-Use full-text search when exact words matter. Use semantic search when related wording matters. Use section search when you want a cited passage from extracted filing sections. Search finds evidence; it does not establish a conclusion.
+Use content search when you need language inside a filing or section. It narrows the corpus; the filing accession and cited section remain the source you should retrieve before quoting or deciding.
 
-## Full-text search
+## What you can do
+
+- Run full-text search across filing manifests and section content with a required `q` query.
+- Scope retrieval by ticker, CIK, form, accession number, filing date, fiscal year, or filing year.
+- Run semantic search in `keyword`, `semantic`, or `hybrid` mode; hybrid is the default.
+- Use returned accession, section key, source URL, and available character spans to retrieve the cited section.
+
+## Endpoints
+
+| Method | Path | What it returns |
+| --- | --- | --- |
+| `GET` | [`/v1/search/fulltext`](/api-reference/search/get-v1-search-fulltext) | Filing and section matches for a text query. |
+| `GET` | [`/v1/search/semantic`](/api-reference/search/get-v1-search-semantic) | Section matches with citation fields for semantic retrieval. |
+| `GET` | [`/v1/sections/search`](/api-reference/filings) | Filing-section and snippet matches with filing-scoped filters. |
+| `GET` | [`/v1/filings/{accession_number}/sections/{section_key}`](/api-reference/filings) | The source section to inspect or cite. |
+
+## Example
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?q=material%20weakness&ticker=AAPL&form=10-K&limit=10"
-```
-
-`q` is required. Full-text search returns separate `filings` and `sections` lists. Scope it with `ticker` or `cik`, `form`, `accession_number`, `date_from`, `date_to`, `filing_year`, or `fy`.
-
-## Semantic search
-
-```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20risk&ticker=AAPL&form=10-K&mode=hybrid&limit=10"
 ```
 
-`mode` is `keyword`, `semantic`, or `hybrid`; the default is `hybrid`. Semantic result rows carry filing identity and citation fields including `accession`, `section_key`, `source_url`, `ticker`, `char_start`, `char_end`, and `highlighted_snippet`.
+Semantic rows can include `accession`, `section_key`, `source_url`, `char_start`, `char_end`, and `highlighted_snippet`. Preserve those identifiers and `requestId`, then fetch the selected section before presenting text as a quote.
 
-The character fields can be `null` when no usable span can be produced. When `_citation_degraded` is present, keep the source identity and retrieve the filing section instead of manufacturing an excerpt.
+## Boundaries to keep in view
 
-## Read the source section
-
-```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/0000320193-24-000123/sections/item_1a?ticker=AAPL&form=10-K"
-```
-
-`view=agent` on semantic and section search reduces response detail but preserves the citation fields. It removes semantic `score` and `retrievalMode`; use the default response when you need those retrieval details.
-
-## Production notes
-
-- An invalid `mode` returns `400`. Full-text and semantic search require `q`.
-- Full-text and vector search have separate runtime dependencies. An unavailable backend returns an error; it is not an empty result set.
-- Preserve `requestId`, `traceparent`, and source metadata where supplied.
+- `q` is required on both routes. Invalid semantic modes are request errors.
+- Citation spans and highlighted snippets can be unavailable. Check `_citation_degraded` when it is present and retain the accession and section identity.
+- Full-text search requires its configured search backend; semantic search also requires vector-search dependencies. An unavailable backend can return `503` rather than an invented match.
+- Search ranking is retrieval assistance, not a statement that the result is complete, material, or legally dispositive.
 
 ## Next steps
 
-- [Full-text reference](/api-reference/search/get-v1-search-fulltext)
-- [Semantic reference](/api-reference/search/get-v1-search-semantic)
-- [Section search](/api-reference/sections/get-v1-sections-search)
+- [Full-text search API reference](/api-reference/search/get-v1-search-fulltext)
+- [Semantic search API reference](/api-reference/search/get-v1-search-semantic)
+- [SEC filing search](/products/filing-search)

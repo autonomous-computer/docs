@@ -1,79 +1,42 @@
 ---
-title: "SEC Enforcement Actions API"
-description: "Search SEC litigation releases, administrative proceedings, and AAERs by respondent, issuer, category, date, and disclosed penalty amount."
+title: "SEC enforcement actions"
+description: "Search official SEC enforcement releases, proceedings, and AAERs with source-linked filters for research and screening workflows."
 ---
 
-## Find the release, then read it
+Use the enforcement endpoint to find official SEC litigation releases, administrative proceedings, and Accounting and Auditing Enforcement Releases (AAERs), then carry the returned release URL into review.
 
-`GET /v1/events/enforcement` turns three SEC enforcement release feeds into one filtered list. It is useful when a research, compliance, or diligence process needs to find the relevant release quickly and keep its SEC URL with the result.
+## What you can do
 
-The endpoint is a research index, not a finding of liability. A respondent name can be ambiguous, a dollar amount can be absent or refer to only one component of relief, and an issuer mentioned in a release is not necessarily the respondent. Read the linked SEC release before using a result in an investment or compliance decision.
+- Search release titles, excerpts, release numbers, and document URLs with `query`.
+- Restrict results to an official source family with `source_type`.
+- Filter by a normalized `violation_type`, respondent text, issuer ticker or CIK, publication date, or reported penalty range.
+- Page through a stable filter set with the returned `nextCursor`.
 
-## Sources and fields
+## Endpoint
 
-The API returns records from:
+| Method | Path | What it returns |
+| --- | --- | --- |
+| `GET` | [`/v1/events/enforcement`](/api-reference/platform/get-v1-events-enforcement) | A paginated list of official SEC enforcement actions and their source references. |
 
-- SEC litigation releases (`litigation_release`)
-- SEC administrative proceedings (`administrative_proceeding`)
-- Accounting and Auditing Enforcement Releases (`aaer`)
-
-Each record includes the source type, publication date, title, release number when available, a short excerpt, the SEC document URL, and any normalized respondent, violation, and penalty fields the source supports. `violationType` is a routing label inferred from release language; it is not an SEC legal classification.
-
-## Start with a narrow question
+## Example
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?violation_type=insider_trading&date_from=2025-01-01&limit=10"
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?source_type=litigation_release&violation_type=fraud&date_from=2025-01-01&limit=25"
 ```
 
-The response is a standard list envelope. Save `requestId` when troubleshooting and use `nextCursor` only when `hasMore` is true.
+`publishedAt` is the SEC source publication date. Preserve the release URL, trace reference, provenance, freshness metadata, and `requestId` when they are returned so a reviewer can return to the underlying action.
 
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "object": "enforcement_action",
-      "sourceType": "litigation_release",
-      "publishedAt": "2026-03-18T16:00:00.000Z",
-      "releaseNumber": "LR-00000",
-      "title": "Illustrative SEC enforcement release",
-      "respondents": [
-        { "name": "Example respondent", "entityId": null, "ticker": null, "cik": null }
-      ],
-      "violationType": "insider_trading",
-      "penaltyAmount": null,
-      "documentUrl": "https://www.sec.gov/litigation/litreleases/example.htm"
-    }
-  ],
-  "hasMore": false,
-  "nextCursor": null,
-  "requestId": "req_example_123"
-}
-```
+## Boundaries to keep in view
 
-## Filters
+- `violation_type` is a normalized classifier. It is not a legal conclusion; `other` covers supported actions outside the named categories.
+- Extracted penalties are derived fields. A missing penalty is not a zero penalty.
+- Results are limited to the three documented SEC source families. A missing result is not evidence that the SEC has never acted against a person or issuer.
+- Continue pagination only with the exact `nextCursor` returned for unchanged filters.
 
-| Parameter | Use it for |
-| --- | --- |
-| `query` | Matching release titles and descriptions. |
-| `source_type` | Restricting the source to `litigation_release`, `administrative_proceeding`, or `aaer`. |
-| `violation_type` | One normalized label: `fraud`, `insider_trading`, `reporting_violation`, `market_manipulation`, `registration_violation`, `investment_adviser`, `broker_dealer`, `municipal_securities`, or `other`. |
-| `respondent`, `ticker`, `cik` | Focusing the release search on a person or issuer. Entity matches should be checked against the linked source. |
-| `penalty_min`, `penalty_max` | Narrowing on a disclosed dollar amount when one was parsed. |
-| `date_from`, `date_to` | Restricting SEC publication dates with inclusive `YYYY-MM-DD` bounds. |
-| `limit`, `cursor` | Paging through a bounded result set. `limit` is 1–50. |
+## Next steps
 
-## A practical review loop
-
-1. Filter by the person, issuer, source type, or risk question you are investigating.
-2. Read `title`, `excerpt`, `respondents`, and `violationType` as a triage layer.
-3. Open `documentUrl`; it is the evidence for the record.
-4. Preserve the release URL and `requestId` with downstream research instead of treating the normalized label as the complete story.
-
-## Related documentation
-
-- [Events API reference](/api-reference/events)
-- [Search enforcement actions tutorial](/tutorials/search-enforcement-actions)
-- [SEC Enforcement Actions API guide](/seo/sec-enforcement-api)
-- [Getting started](/getting-started)
+- [Enforcement API reference](/api-reference/platform/get-v1-events-enforcement)
+- [Entity resolution](/products/entity)
+- [API conventions](/api-conventions)

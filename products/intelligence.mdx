@@ -1,107 +1,51 @@
 ---
-title: "Intelligence Bundles API"
-description: "Get pre-composed company, security, and earnings intelligence from the SEC API in a single token-efficient call for agents."
+title: "Intelligence workflows"
+description: "Call company, security, earnings, portfolio, watchlist, and research workloads through SEC API intelligence endpoints."
 ---
 
-Get comprehensive company, security, and earnings intelligence in a single API call. Intelligence bundles aggregate data from multiple underlying endpoints into pre-composed payloads optimized for agent consumption -- 75% fewer tokens compared to assembling the same data from raw API calls.
+Intelligence endpoints return composed, traceable outputs for a defined research job, from a company or security briefing to a portfolio or filing-footnote investigation.
 
-## Why use this
+## What you can do
 
-Agents building company profiles or earnings previews typically need to hit 4-8 separate endpoints and stitch results together. Intelligence bundles do that composition server-side and return a single, token-efficient payload with the same provenance and freshness metadata.
-
-- **One-call composition** -- company, security, and earnings bundles in a single request
-- **75% fewer tokens** -- pre-composed payloads eliminate redundant metadata and reduce downstream parsing
-- **Agent-optimized** -- structured for direct consumption by LLM agents without post-processing
-- **Async query support** -- long-running intelligence queries return a job ID for polling
-- **Provenance preserved** -- source accession numbers, filing dates, and data lineage stay in the response
-
-## Quick start
-
-```bash
-# Company intelligence bundle
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/company?ticker=AAPL"
-
-# Security intelligence bundle
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/security?ticker=AAPL"
-
-# Earnings preview bundle
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=AAPL"
-```
-
-## Example: async intelligence query
-
-```bash
-# Submit a complex query
-curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"Compare AAPL and MSFT capital allocation over last 3 years"}' \
-  "https://api.secapi.ai/v1/intelligence/query"
-
-# Poll for results
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/query/job_abc123"
-```
-
-## Response shape (company bundle)
-
-```json
-{
-  "company": {
-    "ticker": "AAPL",
-    "name": "Apple Inc.",
-    "cik": "0000320193",
-    "sector": "Technology",
-    "industry": "Consumer Electronics",
-    "exchange": "NASDAQ",
-    "marketCap": 2890000000000,
-    "latestFiling": {
-      "form": "10-K",
-      "filedAt": "2023-11-03",
-      "periodOfReport": "2023-09-30"
-    },
-    "financials": {
-      "revenue": 383285000000,
-      "netIncome": 96995000000,
-      "totalAssets": 352583000000
-    },
-    "topHolders": ["Vanguard Group", "BlackRock", "Berkshire Hathaway"],
-    "recentInsiderActivity": 12
-  },
-  "meta": {
-    "bundleVersion": "2024.1",
-    "tokenCount": 847,
-    "sources": ["10-K:0000320193-23-000077", "13F:Q3-2023"]
-  }
-}
-```
+- Request company, security, and earnings-preview bundles.
+- Submit portfolio, watchlist, country-report, macro-exposure, or footnote investigation requests with their documented JSON bodies.
+- Submit an intelligence query that returns a completed result immediately or a job that can be polled.
+- Preserve traces, source references, freshness metadata, and `requestId` from the response when they are present.
 
 ## Endpoints
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/intelligence/company` | Company intelligence bundle |
-| `GET /v1/intelligence/security` | Security-level intelligence bundle |
-| `GET /v1/intelligence/earnings-preview` | Earnings preview bundle |
-| `POST /v1/intelligence/query` | Async intelligence query |
-| `GET /v1/intelligence/query/:jobId` | Poll async query result |
-| `POST /v1/intelligence/portfolio` | Portfolio-level intelligence |
-| `POST /v1/intelligence/watchlist` | Watchlist intelligence |
-| `POST /v1/intelligence/footnotes/query` | Structured footnote analysis |
-| `POST /v1/intelligence/country-report` | Country-level macro intelligence |
+| Method | Path | What it returns |
+| --- | --- | --- |
+| `GET` | [`/v1/intelligence/company`](/api-reference/intelligence) | Company context across supported data planes. |
+| `GET` | [`/v1/intelligence/security`](/api-reference/intelligence) | A security bundle with snapshot, catalysts, filings, and factor context. |
+| `GET` | [`/v1/intelligence/earnings-preview`](/api-reference/intelligence) | An earnings preview with supporting context. |
+| `POST` | [`/v1/intelligence/query`](/api-reference/intelligence) | A completed intelligence result or queued job. |
+| `GET` | [`/v1/intelligence/query/{jobId}`](/api-reference/intelligence) | A completed result or the current job state. |
+| `POST` | [`/v1/intelligence/portfolio`](/api-reference/intelligence) | Portfolio intelligence output. |
+| `POST` | [`/v1/intelligence/watchlist`](/api-reference/intelligence) | A watchlist briefing. |
+| `POST` | [`/v1/intelligence/country-report`](/api-reference/intelligence/post-v1-intelligence-country-report) | A country intelligence bundle with macro history and forward view. |
+| `POST` | [`/v1/intelligence/macro-exposure`](/api-reference/intelligence/post-v1-intelligence-macro-exposure) | Revenue-weighted macro sensitivities for a portfolio. |
+| `POST` | [`/v1/intelligence/footnotes/query`](/api-reference/intelligence) | A filing-footnote investigation result or collection. |
 
-## Rate limits
+## Example
 
-- **Standard plan**: 30 requests/minute
-- **Pro plan**: 150 requests/minute
-- **Enterprise**: Custom limits
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/company?ticker=AAPL"
+```
 
-Intelligence bundles are more compute-intensive than single-endpoint calls. Rate limits are set accordingly.
+For `POST /v1/intelligence/query`, a `200` is a completed result and a `202` is a queued job. Poll the returned job ID until the request reaches a final result.
 
-## Related
+## Boundaries to keep in view
 
-- [API Reference: Intelligence](/api-reference/intelligence)
-- [Token Efficiency](/token-efficiency)
-- [Investment Intelligence](/investment-intelligence)
+- A bundle is a composed research output, not a substitute for reviewing its supporting filings, traces, or source references.
+- A queued job can remain in progress, fail, or be absent. Handle `202`, `502`, and `404` explicitly rather than treating them as a completed answer.
+- Output coverage depends on the supporting data planes and request body. Do not infer an unavailable signal from an omitted field.
+- Use the endpoint-specific API reference for POST request-body fields; this page intentionally does not duplicate their schemas.
+
+## Next steps
+
+- [Intelligence API reference](/api-reference/intelligence)
+- [Filing intelligence](/products/filing-intelligence)
+- [API conventions](/api-conventions)

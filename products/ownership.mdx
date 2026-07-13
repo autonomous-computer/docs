@@ -1,64 +1,52 @@
 ---
-title: "Institutional ownership and insider trading API"
-description: "Build source-cited ownership research with 13F, Form 3/4/5, and Schedule 13D/13G filing records"
+title: "Ownership disclosures"
+description: "Query SEC-derived 13F, 13D/13G, Forms 3/4/5, compensation, and board disclosures through focused REST endpoints."
 ---
 
-SEC API gives an application or research workflow structured records for three different ownership questions: a manager's reported 13F holdings, an insider's reported transaction, and a beneficial owner's 13D or 13G disclosure. Each record is filing-derived, so your output can retain the accession number and source URL needed to inspect the original disclosure.
+Use ownership endpoints to move from an issuer or manager identifier to the SEC disclosure family that supports a holdings, insider, beneficial-ownership, compensation, or board review.
 
-## Choose the right disclosure
+## What you can do
 
-| Question | Route | What the result establishes |
+- Retrieve the latest normalized 13F report for a manager CIK or a quarter-specific institutional ownership extract.
+- View institutional holdings by manager or holders by ticker, and compare the latest two 13F reports for a manager.
+- Search beneficial-ownership reports across the 13D and 13G form families.
+- Search normalized Forms 3, 4, and 5 records with issuer, owner, security-title, transaction-code, and date filters.
+- Retrieve compensation records derived from the latest DEF 14A and board records.
+
+## Endpoints
+
+| Method | Path | What it returns |
 | --- | --- | --- |
-| What did this manager report at a quarter end? | `GET /v1/owners/13f` | A selected, normalized 13F report |
-| What changed between a manager's latest reports? | `POST /v1/owners/13f/compare` | A comparison of the latest two parsable reports |
-| Which managers reported this issuer? | `GET /v1/owners/institutional/ticker` | A holder ranking for a reported 13F cohort |
-| What insider transactions were reported? | `GET /v1/insiders` | Normalized records from Forms 3, 4, and 5 |
-| Which beneficial-ownership reports were filed? | `GET /v1/owners/13d-13g` | 13D/13G-family disclosure records |
+| `GET` | [`/v1/owners/13f`](/api-reference/owners) | The latest normalized 13F report for a manager CIK. |
+| `GET` | [`/v1/owners/13f/filings`](/api-reference/owners) | Recent 13F filings and quarter-end report dates for a manager CIK. |
+| `GET` | [`/v1/owners/institutional/ticker`](/api-reference/owners) | A ticker-centric institutional holder graph. |
+| `GET` | [`/v1/owners/institutional/investor`](/api-reference/owners/get-v1-owners-institutional-investor) | A manager's ranked holdings and quarter-over-quarter changes. |
+| `GET` | [`/v1/owners/institutional/extract`](/api-reference/owners/get-v1-owners-institutional-extract) | A quarter-specific institutional ownership extract for a manager. |
+| `POST` | [`/v1/owners/13f/compare`](/api-reference/owners) | A comparison of the latest two 13F reports for a manager. |
+| `GET` | [`/v1/owners/13d-13g`](/api-reference/owners) | Beneficial-ownership reports in the 13D/13G families. |
+| `GET` | [`/v1/insiders`](/api-reference/insiders) | Normalized Forms 3, 4, and 5 records. |
+| `GET` | [`/v1/compensation`](/api-reference/compensation) | Compensation records derived from the latest DEF 14A. |
+| `GET` | [`/v1/board`](/api-reference/board) | Board records. |
 
-## First useful result
-
-Retrieve recent Form 4 records for an issuer:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
-```
-
-Retrieve a manager's latest reported 13F holdings:
+## Example
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&transaction_code=P&limit=25"
 ```
 
-Both results are disclosure records, not conclusions. Store `accessionNumber`, the filing URL in `provenance`, relevant dates, and `requestId` before grouping, scoring, or alerting on the data.
+Keep the form, filing date, filer or owner identity, accession, source URL, and response `requestId` with any downstream alert or report.
 
-## Build a defensible ownership record
+## Boundaries to keep in view
 
-1. Query a narrow issuer, manager, or owner scope first.
-2. Retain the source fields with the normalized record.
-3. Use the report date and filing date as separate values.
-4. Read the cited filing when a footnote, amendment, security class, or transaction term could change the conclusion.
-
-For example, get a beneficial-ownership queue for one issuer:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13d-13g?ticker=AAPL&forms=SC%2013D,SC%2013G&limit=25"
-```
-
-Use `forms` only for the SEC form families you intend to evaluate. A later amendment may supersede important facts from an earlier filing, so preserve the filing form and amendment status in the research record.
-
-## Limits to keep in the product
-
-- A 13F is delayed and limited to its reporting scope. It is not a manager's live, complete portfolio.
-- A Form 4 code does not, by itself, establish motive or open-market activity. Read the filing and its footnotes when that distinction matters.
-- A 13D or 13G is a dated beneficial-ownership disclosure, not a fully diluted cap table or an exhaustive view of a holder's exposure.
-- The holder route reflects its returned reporting cohort. Do not combine it with another period without labeling the dates.
+- 13F reports are manager disclosures for their reporting period; they are not a real-time ownership ledger.
+- Insider records are derived from Forms 3, 4, and 5. Transaction interpretation requires the underlying filing and its context.
+- Beneficial ownership is limited to the 13D and 13G families, while compensation is derived from the latest DEF 14A.
+- A missing row is not proof of no position, transaction, beneficial owner, compensation arrangement, or board role.
 
 ## Next steps
 
-- [Ownership workflows](/ownership-workflows)
-- [13F comparison API](/seo/sec-13f-comparison-api)
-- [Insider trading API](/seo/insider-trading-api)
 - [Ownership API reference](/api-reference/owners)
+- [Insiders API reference](/api-reference/insiders)
+- [Track institutional ownership](/ownership-workflows)
