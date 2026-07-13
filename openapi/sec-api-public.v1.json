@@ -2981,7 +2981,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EmbedSituationDetail"
+                  "$ref": "#/components/schemas/PublicSituationDetail"
                 }
               }
             }
@@ -3033,6 +3033,343 @@
         },
         "security": [],
         "x-secapi-route-id": "embed.widget_script",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/embed/situations": {
+      "get": {
+        "tags": [
+          "Embed"
+        ],
+        "summary": "Public capped Special Situations list for logged-out experiences",
+        "description": "Anonymous, recent-only public projection. Includes SEC filing accessions and safe public citation provenance while keeping provider keys, extraction trace ids, model versions, confidence/cross-validation telemetry, prompts, and raw provenance metadata out of the response.",
+        "parameters": [
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated situation_type values. At most 25 values are honored."
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated lifecycle statuses. At most 25 values are honored."
+          },
+          {
+            "name": "tickers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated tickers. At most 25 values are honored."
+          },
+          {
+            "name": "sectors",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated sectors. At most 25 values are honored."
+          },
+          {
+            "name": "market_cap",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated market-cap buckets (nano|micro|small|mid|large|mega). At most 25 values are honored."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Public page cursor in {windowStart}:{offset} form."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSituationList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.situations_collection",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/embed/situations/feed": {
+      "get": {
+        "tags": [
+          "Embed"
+        ],
+        "summary": "Public capped Special Situations event feed with safe filing provenance",
+        "description": "Anonymous recent event feed for embedded/public UI surfaces. Event provenance includes SEC accession, SEC filing URL when public-safe, and citation span coordinates when available.",
+        "parameters": [
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated situation_type values. At most 25 values are honored."
+          },
+          {
+            "name": "categories",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated filing_event_category values. At most 25 values are honored."
+          },
+          {
+            "name": "tickers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated tickers. At most 25 values are honored."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Public page cursor in {windowStart}:{offset} form."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSituationFeedItemList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.situations_member",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/embed/situations/feed.rss": {
+      "get": {
+        "tags": [
+          "Embed"
+        ],
+        "summary": "Public RSS feed of recent Special Situations events",
+        "parameters": [
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated situation_type values. At most 25 values are honored."
+          },
+          {
+            "name": "categories",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated filing_event_category values. At most 25 values are honored."
+          },
+          {
+            "name": "tickers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated tickers. At most 25 values are honored."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RSS XML feed of public situation events",
+            "content": {
+              "application/rss+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.situations_member",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/embed/situations/stats": {
+      "get": {
+        "tags": [
+          "Embed"
+        ],
+        "summary": "Public recent-window Special Situations counts by type/status/sector/market cap",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituationStats"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.situations_member",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/embed/situations/{situation_id}/export": {
+      "get": {
+        "tags": [
+          "Embed"
+        ],
+        "summary": "Public Markdown Copy-for-LLM brief for one recent Special Situation",
+        "parameters": [
+          {
+            "name": "situation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Markdown situation brief",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.situations_member",
         "x-secapi-access": "public",
         "x-secapi-kind": "api",
         "x-secapi-docs": "public",
@@ -37047,7 +37384,12 @@
       "DilutionShareFloatHistoryList": {},
       "SituationList": {},
       "SituationDetail": {},
-      "EmbedSituationDetail": {
+      "SituationEventList": {},
+      "SituationFeedItemList": {},
+      "SituationCalendarEntryList": {},
+      "SituationStats": {},
+      "SituationPerformance": {},
+      "PublicSituation": {
         "type": "object",
         "required": [
           "object",
@@ -37063,8 +37405,6 @@
           "cik",
           "entityName",
           "headline",
-          "summaryMd",
-          "businessProfile",
           "terms",
           "keyDates",
           "market",
@@ -37072,18 +37412,15 @@
           "eventCount",
           "latestEventAt",
           "verification",
-          "events"
+          "publicProvenance"
         ],
         "properties": {
           "object": {
             "type": "string",
-            "enum": [
-              "situation"
-            ]
+            "const": "situation"
           },
           "id": {
-            "type": "string",
-            "pattern": "^sit_[a-f0-9]{20}$"
+            "type": "string"
           },
           "createdAt": {
             "type": "string"
@@ -37184,15 +37521,214 @@
           },
           "terms": {
             "type": "object",
-            "additionalProperties": true
+            "properties": {
+              "counterparty": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "counterpartyTicker": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "stakePct": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "dealValueUsd": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "pricePerShare": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "considerationType": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "premiumPct": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
           },
           "keyDates": {
             "type": "object",
-            "additionalProperties": true
+            "required": [
+              "announced"
+            ],
+            "properties": {
+              "announced": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "record": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "vote": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expiry": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expectedClose": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "completed": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "terminated": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
           },
           "market": {
             "type": "object",
-            "additionalProperties": true
+            "properties": {
+              "price": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "marketCapUsd": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "marketCapBucket": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "enterpriseValueUsd": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "asOf": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
           },
           "sourceAccessions": {
             "type": "array",
@@ -37226,188 +37762,67 @@
             ],
             "properties": {
               "sourceSpan": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "null"
               },
               "extractionTraceId": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "null"
               },
               "confidence": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "null"
               },
               "crossValidations": {
                 "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
+                "maxItems": 0,
+                "items": {}
               },
               "modelVersion": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "null"
               },
               "verifiedAt": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "null"
               }
             },
             "additionalProperties": false
           },
-          "events": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "object",
-                "id",
-                "createdAt",
-                "livemode",
-                "situationId",
-                "occurredAt",
-                "accessionNumber",
-                "formType",
-                "eightKItems",
-                "category",
-                "title",
-                "summaryMd",
-                "statusBefore",
-                "statusAfter",
-                "documentUrl",
-                "verification"
-              ],
-              "properties": {
-                "object": {
-                  "type": "string",
-                  "enum": [
-                    "situation_event"
-                  ]
-                },
-                "id": {
-                  "type": "string"
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "livemode": {
-                  "type": "boolean"
-                },
-                "situationId": {
-                  "type": "string",
-                  "pattern": "^sit_[a-f0-9]{20}$"
-                },
-                "occurredAt": {
-                  "type": "string"
-                },
-                "accessionNumber": {
-                  "type": "string"
-                },
-                "formType": {
-                  "type": "string"
-                },
-                "eightKItems": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "category": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "title": {
-                  "type": "string"
-                },
-                "summaryMd": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "statusBefore": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "statusAfter": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "documentUrl": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "format": "uri"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "verification": {
+          "publicProvenance": {
+            "type": "object",
+            "required": [
+              "source",
+              "sourceFilings",
+              "citations"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "const": "sec.gov"
+              },
+              "sourceFilings": {
+                "type": "array",
+                "items": {
                   "type": "object",
                   "required": [
-                    "sourceSpan",
-                    "extractionTraceId",
-                    "confidence",
-                    "crossValidations",
-                    "modelVersion",
-                    "verifiedAt"
+                    "accessionNumber",
+                    "filingUrl",
+                    "formType",
+                    "filedAt",
+                    "title"
                   ],
                   "properties": {
-                    "sourceSpan": {
+                    "accessionNumber": {
+                      "type": "string"
+                    },
+                    "filingUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "format": "uri"
+                    },
+                    "formType": {
                       "anyOf": [
                         {
                           "type": "string"
@@ -37417,7 +37832,7 @@
                         }
                       ]
                     },
-                    "extractionTraceId": {
+                    "filedAt": {
                       "anyOf": [
                         {
                           "type": "string"
@@ -37427,34 +37842,7 @@
                         }
                       ]
                     },
-                    "confidence": {
-                      "anyOf": [
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "crossValidations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": true
-                      }
-                    },
-                    "modelVersion": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "verifiedAt": {
+                    "title": {
                       "anyOf": [
                         {
                           "type": "string"
@@ -37468,17 +37856,1071 @@
                   "additionalProperties": false
                 }
               },
-              "additionalProperties": false
+              "citations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "claimPath",
+                    "claim",
+                    "accessionNumber",
+                    "filingUrl",
+                    "sourceSpan"
+                  ],
+                  "properties": {
+                    "claimPath": {
+                      "type": "string"
+                    },
+                    "claim": {
+                      "type": "string"
+                    },
+                    "accessionNumber": {
+                      "type": "string"
+                    },
+                    "filingUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "format": "uri"
+                    },
+                    "sourceSpan": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSituationDetail": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "updatedAt",
+          "livemode",
+          "type",
+          "subtype",
+          "status",
+          "statusUpdatedAt",
+          "ticker",
+          "cik",
+          "entityName",
+          "headline",
+          "terms",
+          "keyDates",
+          "market",
+          "sourceAccessions",
+          "eventCount",
+          "latestEventAt",
+          "verification",
+          "publicProvenance",
+          "events"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "situation"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "statusUpdatedAt": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cik": {
+            "type": "string"
+          },
+          "entityName": {
+            "type": "string"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "headline": {
+            "type": "string"
+          },
+          "summaryMd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "businessProfile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms": {
+            "type": "object",
+            "properties": {
+              "counterparty": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "counterpartyTicker": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "stakePct": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "dealValueUsd": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "pricePerShare": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "considerationType": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "premiumPct": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "keyDates": {
+            "type": "object",
+            "required": [
+              "announced"
+            ],
+            "properties": {
+              "announced": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "record": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "vote": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expiry": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expectedClose": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "completed": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "terminated": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "market": {
+            "type": "object",
+            "properties": {
+              "price": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "marketCapUsd": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "marketCapBucket": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "enterpriseValueUsd": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "asOf": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "sourceAccessions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "eventCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "latestEventAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verification": {
+            "type": "object",
+            "required": [
+              "sourceSpan",
+              "extractionTraceId",
+              "confidence",
+              "crossValidations",
+              "modelVersion",
+              "verifiedAt"
+            ],
+            "properties": {
+              "sourceSpan": {
+                "type": "null"
+              },
+              "extractionTraceId": {
+                "type": "null"
+              },
+              "confidence": {
+                "type": "null"
+              },
+              "crossValidations": {
+                "type": "array",
+                "maxItems": 0,
+                "items": {}
+              },
+              "modelVersion": {
+                "type": "null"
+              },
+              "verifiedAt": {
+                "type": "null"
+              }
+            },
+            "additionalProperties": false
+          },
+          "publicProvenance": {
+            "type": "object",
+            "required": [
+              "source",
+              "sourceFilings",
+              "citations"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "const": "sec.gov"
+              },
+              "sourceFilings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "accessionNumber",
+                    "filingUrl",
+                    "formType",
+                    "filedAt",
+                    "title"
+                  ],
+                  "properties": {
+                    "accessionNumber": {
+                      "type": "string"
+                    },
+                    "filingUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "format": "uri"
+                    },
+                    "formType": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "filedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "title": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "citations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "claimPath",
+                    "claim",
+                    "accessionNumber",
+                    "filingUrl",
+                    "sourceSpan"
+                  ],
+                  "properties": {
+                    "claimPath": {
+                      "type": "string"
+                    },
+                    "claim": {
+                      "type": "string"
+                    },
+                    "accessionNumber": {
+                      "type": "string"
+                    },
+                    "filingUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "format": "uri"
+                    },
+                    "sourceSpan": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSituationEvent"
             }
           }
         },
         "additionalProperties": false
       },
-      "SituationEventList": {},
-      "SituationFeedItemList": {},
-      "SituationCalendarEntryList": {},
-      "SituationStats": {},
-      "SituationPerformance": {},
+      "PublicSituationEvent": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "situationId",
+          "occurredAt",
+          "accessionNumber",
+          "formType",
+          "eightKItems",
+          "category",
+          "title",
+          "statusBefore",
+          "statusAfter",
+          "documentUrl",
+          "verification",
+          "publicProvenance"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "situation_event"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "situationId": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "accessionNumber": {
+            "type": "string"
+          },
+          "formType": {
+            "type": "string"
+          },
+          "eightKItems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "summaryMd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "statusBefore": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "statusAfter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "documentUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "uri"
+          },
+          "verification": {
+            "type": "object",
+            "required": [
+              "sourceSpan",
+              "extractionTraceId",
+              "confidence",
+              "crossValidations",
+              "modelVersion",
+              "verifiedAt"
+            ],
+            "properties": {
+              "sourceSpan": {
+                "type": "null"
+              },
+              "extractionTraceId": {
+                "type": "null"
+              },
+              "confidence": {
+                "type": "null"
+              },
+              "crossValidations": {
+                "type": "array",
+                "maxItems": 0,
+                "items": {}
+              },
+              "modelVersion": {
+                "type": "null"
+              },
+              "verifiedAt": {
+                "type": "null"
+              }
+            },
+            "additionalProperties": false
+          },
+          "publicProvenance": {
+            "type": "object",
+            "required": [
+              "source",
+              "sourceFilings",
+              "citations"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "const": "sec.gov"
+              },
+              "sourceFilings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "accessionNumber",
+                    "filingUrl",
+                    "formType",
+                    "filedAt",
+                    "title"
+                  ],
+                  "properties": {
+                    "accessionNumber": {
+                      "type": "string"
+                    },
+                    "filingUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "format": "uri"
+                    },
+                    "formType": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "filedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "title": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "citations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "claimPath",
+                    "claim",
+                    "accessionNumber",
+                    "filingUrl",
+                    "sourceSpan"
+                  ],
+                  "properties": {
+                    "claimPath": {
+                      "type": "string"
+                    },
+                    "claim": {
+                      "type": "string"
+                    },
+                    "accessionNumber": {
+                      "type": "string"
+                    },
+                    "filingUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "format": "uri"
+                    },
+                    "sourceSpan": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSituationList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor",
+          "generatedAt"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSituation"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSituationFeedItem": {
+        "type": "object",
+        "required": [
+          "object",
+          "event",
+          "situation"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "situation_feed_item"
+          },
+          "event": {
+            "$ref": "#/components/schemas/PublicSituationEvent"
+          },
+          "situation": {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "subtype",
+              "status",
+              "ticker",
+              "entityName",
+              "headline",
+              "market"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "subtype": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "type": "string"
+              },
+              "ticker": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "entityName": {
+                "type": "string"
+              },
+              "headline": {
+                "type": "string"
+              },
+              "summaryMd": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "businessProfile": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "market": {
+                "type": "object",
+                "properties": {
+                  "price": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "marketCapUsd": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "marketCapBucket": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "enterpriseValueUsd": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "asOf": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSituationFeedItemList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor",
+          "generatedAt"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSituationFeedItem"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "FundLetterList": {},
       "FundLetterCompactList": {},
       "FundLetterDetail": {},

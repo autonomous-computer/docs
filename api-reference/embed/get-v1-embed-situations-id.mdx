@@ -1,36 +1,24 @@
 ---
-title: "GET /v1/embed/situations/:id"
-description: "Public redacted situation detail for embeddable discovery surfaces"
+title: "GET /v1/embed/situations/{id}"
+description: "Return public detail and events for a recent SEC-derived situation"
 ---
 
-Public, anonymous detail for a recent situation and its filing-event timeline. No API key is required.
-
-<Info>
-The response is a public projection. Provider-owned keys and verification internals are not exposed.
-</Info>
-
-## Path parameters
-
-- `id` - Canonical situation ID in the form `sit_` followed by 20 lowercase hexadecimal characters.
+Return public detail and its event timeline for one recent SEC-derived situation; no API key is required.
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl "https://api.secapi.ai/v1/embed/situations/sit_0123456789abcdef0123"
+curl "https://api.secapi.ai/v1/embed/situations/sit_example"
 ```
 </RequestExample>
 
-## Response fields
+## Public provenance
 
-The top-level object is a `situation`. It includes identity and status, issuer fields, `headline`, optional `summaryMd` and `businessProfile`, structured `terms`, `keyDates`, and `market` data, plus `sourceAccessions`, `eventCount`, and `latestEventAt`.
+When present, `publicProvenance` identifies source filing accessions and may include public SEC document links or citation spans. It never includes internal telemetry, storage keys, extraction traces, model metadata, or confidence signals.
 
-`events` contains public filing events, including occurrence time, SEC accession number, form type, optional 8-K items and category, title, optional summary, status transition, and optional `documentUrl`.
+## Response and failures
 
-The `verification` object is retained for schema compatibility, but source-span, extraction-trace, confidence, cross-validation, model-version, and verification-time fields are redacted on this public surface.
+Returns a JSON situation object with public events. Event records may include an `accessionNumber` and public SEC `documentUrl`.
 
-## Failure posture
-
-- Treat non-2xx responses as contract-aware errors.
-- Preserve `requestId` and `traceparent` from error responses in logs.
-- Use `sourceAccessions`, event accession numbers, and `documentUrl` when present as public source references; do not infer unreturned verification details.
+A missing identifier returns `400`; an unknown, non-public, or no-longer-recent situation returns `404`; unexpected failures return `500`.
