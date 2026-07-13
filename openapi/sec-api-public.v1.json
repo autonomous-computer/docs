@@ -25215,6 +25215,306 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/situations/watchlists": {
+      "get": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "List situation-scoped watchlist monitors for the current organization",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Numeric monitor offset from a previous page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.watchlists.collection.read",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "post": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "Create a situation-scoped watchlist monitor",
+        "responses": {
+          "201": {
+            "description": "Situation-scoped watchlist monitor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "id",
+                    "orgId",
+                    "name",
+                    "query",
+                    "filters",
+                    "searchMode",
+                    "webhookUrl",
+                    "delivery",
+                    "isActive",
+                    "lastCheckedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "enum": [
+                        "monitor"
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "orgId": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "query": {
+                      "type": "string"
+                    },
+                    "filters": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "searchMode": {
+                      "type": "string",
+                      "enum": [
+                        "situation"
+                      ]
+                    },
+                    "webhookUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "delivery": {
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "config",
+                        "status"
+                      ],
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "webhook",
+                            "email"
+                          ]
+                        },
+                        "config": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "lastCheckedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.watchlists.collection.manage",
+        "x-secapi-access": "bearer_org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/situations/watchlists/{monitor_id}": {
+      "get": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "Retrieve a situation-scoped watchlist monitor by id",
+        "parameters": [
+          {
+            "name": "monitor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.watchlists.member.read",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      },
+      "delete": {
+        "tags": [
+          "Special Situations"
+        ],
+        "summary": "Deactivate a situation-scoped watchlist monitor",
+        "parameters": [
+          {
+            "name": "monitor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deactivated situation-scoped watchlist monitor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "situations.watchlists.member.manage",
+        "x-secapi-access": "bearer_org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/situations/issues": {
       "get": {
         "tags": [
