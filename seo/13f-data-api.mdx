@@ -1,62 +1,52 @@
 ---
-title: "13F API for institutional holdings"
-description: "Retrieve a manager's reported 13F holdings, select a filed period, and preserve the evidence needed to interpret a delayed disclosure"
+title: "13F Data API for Institutional Holdings"
+description: "Retrieve an investment manager's filed Form 13F holdings, select a reported period, and retain the disclosure dates and accession evidence needed to interpret it."
 ---
 
-Call the 13F routes when you need a normalized report for an institutional manager rather than a live portfolio estimate. Start with a manager CIK, then retain the report date, filing date, accession number, and filing URL in the result you show a user or pass to an agent.
+Form 13F is a periodic disclosure from an institutional investment manager. This API provides a normalized view of a filed report; it is not a current portfolio, a complete exposure ledger, or a transaction tape.
 
-## Get the latest reported holdings
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
-```
-
-The selected report includes the manager, filing and report dates, the accession number, holdings, and provenance. `limit` is capped at 50. To return the compact, citation-preserving shape for an agent, add `view=agent`.
-
-## Select a reported period
-
-First list the manager's available 13F filings:
+## Retrieve a manager's reported holdings
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=8"
-```
-
-Then select a report with a returned date:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f?cik=0001067983&reportDate=2024-12-31&limit=20"
 ```
 
-`reportDate` is the quarter-end report date; `filingDate` is when the SEC received the filing. Do not substitute one for the other in a screen, report, or alert.
+`cik` is required. `reportDate` selects the quarter-end report date; `filingDate` can select by SEC filing date; `limit` is capped at 50. The response identifies the manager, selected report, reported holdings, filing date, report date, accession number, and filing URL. `view=agent` gives a compact citation-preserving result for an agent workflow.
 
-## Compare latest available reports
-
-Use the comparison route to obtain a row-level change list for the latest two parsable reports:
+List the actual available reports before making a historical comparison:
 
 ```bash
-curl -X POST \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=8"
+```
+
+## Identify changes between the latest reports
+
+```bash
+curl --fail-with-body -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -d '{"cik":"0001067983","limit":50}' \
   "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 
-This endpoint does not compare user-selected periods. Its `added`, `removed`, and `changed` rows identify differences in the two selected disclosures; they do not establish when a manager traded, why it changed the position, or what it owns now.
+The comparison chooses the latest two parsable reports. Its `added`, `removed`, and `changed` rows are a review queue for those disclosures, not evidence of trade dates, manager intent, or current ownership. It does not select arbitrary two quarters.
 
-## Build with disclosure limits
+## Implementation paths
 
-- Form 13F is a periodic disclosure, not a real-time position feed.
-- It has its own reporting scope and does not show a manager's complete exposure, including every short, derivative, cash, liability, or non-reportable asset.
-- Reported value is not a current market value.
-- An amendment, manager identity change, or security-class detail can change the reading of a row. Use the accession number and filing URL to inspect the filing.
+In `@secapi/sdk-js`, use `client.list13FFilings`, `client.latest13F`, and `client.compare13F`. Hosted MCP provides `owners.get_13f`, `owners.compare_13f`, and `owners.institutional_holders` for issuer-centric reported holders. Give a manager CIK to the first two; use a ticker or issuer CIK for the holder query.
 
-For issuer-centric reported holders, use `GET /v1/owners/institutional/ticker` and label the returned cohort's dates.
+## Interpret 13F evidence carefully
+
+- `reportDate` is the reporting period end; `filingDate` is when the SEC received the report. Show both.
+- Form 13F has statutory reporting limits and does not show every short, derivative, cash, liability, non-reportable asset, or full economic exposure.
+- Reported value is historical disclosure data, not current market value.
+- Amendments, manager identity changes, security classes, and options can change a row’s interpretation. Link the accession number and filing URL in any investor-facing output.
 
 ## Continue
 
+- [Create an API key and inspect a reported manager](https://secapi.ai/signup)
 - [13F comparison API](/seo/sec-13f-comparison-api)
-- [Evaluate 13F API](/evaluate/13f-api)
 - [Ownership workflows](/ownership-workflows)
+- [Owners API reference](/api-reference/owners)

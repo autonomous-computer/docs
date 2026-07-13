@@ -1,56 +1,52 @@
 ---
 title: "SEC Filing Search API"
-description: "Find an SEC filing by issuer, form, date, fiscal period, or accession number, then retrieve its content with a stable source record."
+description: "Find SEC filing manifests by issuer, form, date, fiscal period, text, or accession number and carry the resulting filing evidence into retrieval."
 ---
 
-Find the filing record first. The result provides the form, filing date, accession number, and SEC URL you need for exact retrieval and review.
+Filing search answers “which filing?” before another endpoint answers “what did it say?” Use it to construct a reviewable universe, then carry the selected accession number into filing or section retrieval.
 
-<CardGroup cols={3}>
-  <Card title="Evaluate filing search" icon="clipboard-check" href="/evaluate/sec-filing-search-api">
-    Test one filing-and-content retrieval workflow before automating it.
-  </Card>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Run the issuer and accession examples against the live API.
-  </Card>
-  <Card title="Review pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Check usage before scaling historical filing retrieval.
-  </Card>
-</CardGroup>
-
-## Search an issuer's filing history
+## Search a bounded filing universe
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings?ticker=NVDA&form=10-K&limit=5&sort=filing_date_desc"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=NVDA&forms=10-K,10-Q&date_from=2024-01-01&date_to=2025-12-31&limit=25&sort=filing_date_desc"
 ```
 
-For one issuer's newest annual report, use `GET /v1/filings/latest?ticker=NVDA&form=10-K`. Without `form`, latest filing means the newest filing of any type. For a known filing, use the accession-number route. For a question about content, use a content-search route rather than treating the manifest as the answer.
+Inputs include `ticker` or `cik`; `form` or `forms`; `date_from` and `date_to` in `YYYY-MM-DD`; `filing_year` or `fy`; `fp`; optional text `q`; `accession_number`; `limit`; and `cursor`. The list response contains records plus `hasMore` and `nextCursor`. Persist the manifest’s `accessionNumber`, `filingDate`, form, filer identity, and filing URL before selecting an item.
 
-## Continue with the filing you found
+Use the accession route when the document is already known:
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/0001045810-24-000029"
-
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/0001045810-24-000029/sections/item_1a?ticker=NVDA&form=10-K"
 ```
 
-Keep `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` with any excerpt or report. Preserve route-specific provenance and freshness metadata when supplied.
+## Follow search with the right retrieval
 
-## Choose the right route
+| Need after discovery | Route |
+| --- | --- |
+| Latest filing for one issuer and form | `GET /v1/filings/latest` |
+| Named content such as Item 1A | `GET /v1/filings/{accessionNumber}/sections/{sectionKey}` |
+| Exact word search in content | `GET /v1/search/fulltext` |
+| Related concepts in normalized sections | `GET /v1/search/semantic` |
+| Textual changes across two same-form filings | `GET /v1/filings/diff` |
 
-| Need                            | Endpoint                                                                                       |
-| ------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Filter filing records           | [`GET /v1/filings`](/api-reference/filings/get-v1-filings)                                     |
-| Find one issuer's newest filing | [`GET /v1/filings/latest`](/api-reference/filings/get-v1-filings-latest)                       |
-| Read a known filing             | [`GET /v1/filings/{accession_number}`](/api-reference/filings/get-v1-filings-accession-number) |
-| Search exact text               | [`GET /v1/search/fulltext`](/api-reference/search/get-v1-search-fulltext)                      |
-| Search related concepts         | [`GET /v1/search/semantic`](/api-reference/search/get-v1-search-semantic)                      |
-| Search cited passages           | [`GET /v1/sections/search`](/api-reference/sections/get-v1-sections-search)                    |
+The manifest is metadata about a document, not an answer to a disclosure question. Search content or retrieve the cited section when the research question is about language, risk, or accounting policy.
 
-## Next steps
+## SDK and MCP implementation
 
-- [Filing search guide](/products/filing-search)
-- [Filing content search](/products/search)
+The JavaScript SDK offers `client.searchFilings(params)`, `client.paginateFilings(params)`, `client.latestFiling(params)`, and `client.filingByAccession(accessionNumber, params)`. In hosted MCP, use `filings.search` for the bounded manifest query and `sections.get` for the follow-up content. `filings.search` accepts issuer, form, text query, and limit; use REST or an SDK when you need the full filter or cursor surface.
+
+## Practical limits
+
+- A form-only latest search can use a current daily-index path and may be terminal (`hasMore: false`); do not invent a page two.
+- `filingDate` is when the SEC received the filing. It is not necessarily the report period, fiscal year, market event time, or availability time for every derived surface.
+- A no-result list is not evidence that the issuer never filed; check identifier, form family, date bounds, and the [coverage boundary](/coverage-and-depth).
+- Keep returned `requestId`, source URL, and accession number with a search result so a later reviewer can reproduce the selection.
+
+## Continue
+
+- [Create an API key and run the filing search](https://secapi.ai/signup)
+- [SEC EDGAR API](/seo/sec-edgar-api)
 - [Filing types and exhibits](/filing-types-and-exhibits)
+- [Filing API reference](/api-reference/filings)

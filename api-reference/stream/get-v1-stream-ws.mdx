@@ -18,7 +18,7 @@ Audience: application and coding agent.
 
 <RequestExample>
 ```bash
-npx wscat -c "wss://api.secapi.ai/v1/stream/ws?ticket=$SECAPI_STREAM_TICKET" \
+npx wscat -c "wss://api.secapi.ai/v1/stream/ws?stream_id=$SECAPI_STREAM_ID&ticket=$SECAPI_STREAM_TICKET" \
   -H "secapi-version: 2026-03-19"
 
 # Mint the short-lived ticket first:
@@ -28,11 +28,16 @@ curl -X POST \
   -H "content-type: application/json" \
   -d '{}' \
   "https://api.secapi.ai/v1/stream/tickets"
+
+# Or authenticate the upgrade with an API key instead of a ticket:
+npx wscat -c "wss://api.secapi.ai/v1/stream/ws?stream_id=$SECAPI_STREAM_ID" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19"
 ```
 </RequestExample>
 
 <Info>
-Mint the short-lived `$SECAPI_STREAM_TICKET` first with `POST /v1/stream/tickets` so you do not expose a long-lived API key in a browser-visible WebSocket URL.
+Create and activate a WebSocket stream subscription first, then pass its `$SECAPI_STREAM_ID` and authenticate with either a short-lived `$SECAPI_STREAM_TICKET` minted with `POST /v1/stream/tickets` or an `x-api-key` upgrade header. Add an optional `cursor` to replay delivery records after that cursor. A ticket keeps a long-lived API key out of the browser-visible WebSocket URL.
 </Info>
 
 ## Example response

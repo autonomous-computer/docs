@@ -1,143 +1,61 @@
 ---
-title: "SEC EDGAR API — Structured Filing Data for Developers and AI Agents"
-description: "Use SEC API as a production SEC EDGAR API for filing search, sections, XBRL facts, ownership, and AI agents. Evaluate source URLs, accession numbers, freshness metadata, and compact JSON."
+title: "SEC EDGAR API — Structured Filing Data for Developers and Investors"
+description: "Search EDGAR filing manifests, retrieve a cited filing or section, and keep the SEC evidence needed for a production research workflow."
 ---
 
-Use this page when you need a production SEC EDGAR API instead of a raw filing-download script. SEC API indexes EDGAR filings and exposes them through REST, SDKs, CLI, and hosted MCP with normalized schemas, cursor pagination, request IDs, source URLs, accession numbers, and freshness metadata.
+SEC EDGAR is the primary record. This API is useful when an application needs to move from an issuer identifier to a filing, a filed section, or an XBRL-backed result without treating raw archive documents as its application contract.
 
-<CardGroup cols={3}>
-  <Card title="Evaluate filing search" icon="clipboard-check" href="/evaluate/sec-filing-search-api">
-    Test issuer resolution, filing lookup, source trails, and the first useful EDGAR workflow.
-  </Card>
-  <Card title="Open the API reference" icon="square-terminal" href="/api-reference/filings">
-    Inspect exact endpoints, parameters, response fields, and examples.
-  </Card>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup?utm_source=docs&utm_medium=sec_edgar_api&utm_campaign=docs_to_signup">
-    Create an account and run a source-cited EDGAR request.
-  </Card>
-</CardGroup>
+## A practical EDGAR workflow
 
-## What SEC API adds on top of raw EDGAR
-
-<CardGroup cols={2}>
-  <Card title="No SGML/HTML parsing" icon="code">
-    EDGAR is the official source. SEC API adds parsed filing manifests, normalized identifiers, section access, compact response shapes, and JSON contracts so your code does not start with SGML, HTML, and XBRL cleanup.
-  </Card>
-  <Card title="Source trail included" icon="link">
-    Filing-derived responses preserve the fields an audit trail needs: CIK, form, accession number, filing date, source URL, request ID, freshness, and materialization metadata where the endpoint returns it.
-  </Card>
-  <Card title="Agent-sized payloads" icon="braces">
-    Use filing search, section retrieval, statements, facts, and semantic search to give an agent the narrow evidence it needs instead of dropping a full filing into context.
-  </Card>
-  <Card title="One contract across tools" icon="workflow">
-    Run the same workflow from REST, SDKs, CLI, or hosted MCP. That matters when a human prototype becomes an automated monitor or coding-agent task.
-  </Card>
-</CardGroup>
-
-## What you can build
-
-- **Financial research platforms** — Pull income statements, balance sheets, and cash flows for any public company
-- **Compliance monitoring** — Watch for new filings, enforcement actions, and insider transactions in real time
-- **Investment analytics** — Track institutional holdings, executive compensation, and ownership changes
-- **AI agents** — Feed structured SEC data to LLMs via REST or hosted MCP
-
-## What to verify in an EDGAR API evaluation
-
-A serious evaluation should not stop at "can I get a filing?" Pick one real issuer and one investor workflow, then verify:
-
-- the issuer was resolved by ticker, CIK, or company name
-- the filing response preserved form type, accession number, filing date, and source URL
-- the payload was narrow enough for an agent to use without ingesting the full raw filing
-- the response included request metadata your logs can preserve
-- the same workflow can be repeated through REST, SDKs, CLI, or MCP
-- pricing and limits are acceptable for your expected fanout
-
-## Quick start
-
-Get Apple's latest 10-K filing in one request:
+Start with an issuer and filing family. The filing manifest is the handoff point: it identifies the form, filing date, accession number, and SEC filing URL that should accompany every later extraction.
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
+curl --fail-with-body \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/filings?ticker=NVDA&form=10-K&limit=5&sort=filing_date_desc"
 ```
 
-```json
-{
-  "accession_number": "0000320193-24-000081",
-  "form": "10-K",
-  "filed_at": "2024-11-01",
-  "company_name": "Apple Inc",
-  "cik": "0000320193"
-}
-```
+Expect a paginated list of filing manifests. Keep `accessionNumber`, `form`, `filingDate`, `filingUrl`, `requestId`, and any returned `provenance`, `freshness`, and `materialization` fields. Follow `nextCursor` only while `hasMore` is true.
 
-Pull structured financial statements:
+For the actual disclosure, request a named section from the filing you selected:
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/0001045810-24-000029/sections/item_1a?ticker=NVDA&form=10-K"
 ```
 
-## Common endpoint families
+The expected outcome is a source-linked section, not a conclusion about the issuer. Use the accession number and SEC URL to review surrounding context, tables, exhibits, and amendments.
 
-| Data type | Endpoint | Coverage |
-|-----------|----------|----------|
-| Filings | `/v1/filings` | All SEC form types since 1993 |
-| Financial statements | `/v1/statements` | Income, balance sheet, cash flow |
-| XBRL facts | `/v1/facts` | All XBRL-tagged concepts |
-| Ownership (13F) | `/v1/owners/13f` | Institutional holdings quarterly |
-| Insider transactions | `/v1/insiders` | Form 3, 4, 5 transactions |
-| Enforcement actions | `/v1/events/enforcement` | SEC administrative proceedings |
-| Executive compensation | `/v1/compensation` | Proxy statement (DEF 14A) data |
-| Full-text search | `/v1/search` | Keyword and semantic search |
-| Subsidiaries | `/v1/companies/subsidiaries` | Exhibit 21 data |
-| Entity resolution | `/v1/entities/resolve` | Ticker, CIK, CUSIP, FIGI, ISIN |
+## Choose the surface by question
 
-## Choosing between raw EDGAR and an API layer
+| Question | REST path | Result to preserve |
+| --- | --- | --- |
+| Which filings exist for an issuer? | `GET /v1/filings` | manifest, pagination, filing evidence |
+| What is the newest filing of a form? | `GET /v1/filings/latest` | selected filing and its source URL |
+| What does a known filing say? | `GET /v1/filings/{accessionNumber}` or `GET /v1/filings/{accessionNumber}/sections/{sectionKey}` | accession plus cited content |
+| What filed value supports a model input? | `GET /v1/facts` or `/v1/statements` | period, unit, tag, provenance |
+| Which disclosure passages are related? | `GET /v1/search/semantic` | section citation and retrieval context |
 
-Raw EDGAR is the right source of record when you want the official filing and you are prepared to own parsing, caching, identifier mapping, retries, and source normalization. SEC API is the right layer when you want those concerns handled behind a production contract and you need an agent or application to consume compact, source-cited JSON.
+`/v1/filings/latest` without `form` means the newest filing of any type. Pin `form=10-K`, `10-Q`, or another family when that distinction matters.
 
-Use the buyer-facing comparison pages when you are comparing commercial vendors:
+## Implementation paths
 
-<CardGroup cols={3}>
-  <Card title="Best SEC API for AI agents" icon="bot" href="https://secapi.ai/compare/best-sec-api-for-ai-agents">
-    Compare API, MCP, docs, and workflow-readiness criteria for agentic SEC data products.
-  </Card>
-  <Card title="sec-api.io alternative" icon="git-compare" href="https://secapi.ai/compare/sec-api-io-alternative">
-    Plan a fair migration proof from sec-api.io-style workflows to SEC API.
-  </Card>
-  <Card title="Raw EDGAR vs SEC API" icon="database" href="https://secapi.ai/compare/sec-edgar-api-vs-secapi">
-    Decide when raw SEC.gov/data.sec.gov is enough and when a production API layer is justified.
-  </Card>
-</CardGroup>
+In TypeScript, `@secapi/sdk-js` provides `client.searchFilings`, `client.latestFiling`, `client.filingByAccession`, `client.latestSection`, `client.facts`, and `client.statements`. The hosted MCP server exposes corresponding focused tools including `entities.resolve`, `filings.search`, `filings.latest`, `sections.get`, `facts.get`, and `statements.get`.
 
-## Agent prompt
+Ask an MCP client to resolve the issuer first, then request the filing or section needed for the question. Keep its returned citation fields in the agent’s final answer; MCP is not a substitute for opening the filing when wording or accounting treatment matters.
 
-<Prompt>
-Evaluate SEC API as a production EDGAR API. Resolve one issuer, fetch its latest 10-K, retrieve Item 1A in a compact shape, pull the latest annual statements bundle, and return a table with endpoint, accession number, filing date, source URL, requestId, freshness, payload size, and any caveat that would matter before production use.
-</Prompt>
+## Coverage and evidence limits
 
-## SDKs and integrations
+- EDGAR availability is not a promise that every historic exhibit, section, or derived field is normalized and ready.
+- A filing manifest establishes that a filing was found; it does not establish that every parsed surface is complete or current enough for your use.
+- `view=agent` and compact views intentionally omit parts of the default metadata envelope. Use the default response when you need the full provenance and freshness context.
+- Retain `Request-Id` and `traceparent` for failed or surprising responses. Treat non-2xx responses as errors, not empty results.
 
-- **Python**: `pip install secapi-client`
-- **JavaScript/TypeScript**: `npm install @secapi/sdk-js`
-- **Rust**: `cargo add sec-api-sdk-rust`
-- **Go**: `go get github.com/secapi-ai/secapi-go`
-- **MCP**: Hosted MCP server for Claude, ChatGPT, and other AI agents
+## Continue
 
-## Pricing
-
-Start with 150 free API calls. Pay-as-you-go pricing scales by metered API family, and committed plans are available when your filing, statements, search, or agent workload is steady.
-
-<Card title="Get your API key" icon="key" href="https://secapi.ai/signup?utm_source=docs&utm_medium=sec_edgar_api_bottom&utm_campaign=docs_to_signup">
-  Create an account and start making source-cited EDGAR requests.
-</Card>
-
-## Resources
-
-- [Getting Started Guide](/getting-started)
-- [API Reference](/api-reference)
-- [Pricing and limits](/evaluate/pricing-and-limits)
-- [Python SDK](/python-sdk)
-- [JavaScript SDK](/javascript-sdk)
-- [Tutorials](/tutorials/extract-revenue-from-10k)
+- [Create an API key and test an EDGAR workflow](https://secapi.ai/signup)
+- [Filing search API](/seo/sec-filing-search-api)
+- [SEC financial statements API](/seo/sec-financial-statements-api)
+- [Freshness and source evidence](/freshness-and-trust)
+- [Filing reference](/api-reference/filings)

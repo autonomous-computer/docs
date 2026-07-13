@@ -1,50 +1,45 @@
 ---
-title: "Insider trading data API"
-description: "Query normalized Form 3, 4, and 5 records by issuer or reporting owner while retaining the filing evidence needed for review"
+title: "Insider Trading Data API"
+description: "Query normalized SEC Forms 3, 4, and 5 by issuer or reporting owner and retain the filing details required to review a reported transaction."
 ---
 
-Use `GET /v1/insiders` to create a source-cited queue of reported insider transactions. The route returns normalized records from Forms 3, 4, and 5; it does not determine an insider's motive, whether a transaction was discretionary, or an investment conclusion.
+Use the Insider Trading API to make a source-cited review queue from ownership filings. It reports what a Form 3, 4, or 5 says; it does not determine motive, legality, plan status, or an investment outcome.
 
-## Get recent Form 4 records
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
-```
-
-Each row can include the reporting owner, role, form, filing date, transaction date, transaction code, direction, security title, shares, price, post-transaction ownership, accession number, and filing URL. Filing-derived values can be absent, so preserve null or missing values rather than filling them with estimates.
-
-## Narrow the review queue
-
-Filter Form 4 records by a reported transaction code:
+## Build a reported-purchase queue
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=JPM&forms=4&transaction_code=P&limit=25"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=JPM&forms=4&transaction_code=P&date_from=2025-01-01&limit=25"
 ```
 
-| Parameter | Purpose |
+Inputs can select an issuer (`ticker` or `cik`), form family, reporting owner (`owner_name` or `owner_cik`), disclosed `security_title`, `transaction_code`, and a filing-date range. Page through `cursor` only while `hasMore` is true.
+
+The useful row includes the reporting owner and role, form, transaction and filing dates, code and direction, title, shares, price, post-transaction ownership, accession number, filing URL, and request metadata. Preserve nulls: a missing filed field is not a zero or an estimate.
+
+## What the response can and cannot answer
+
+| Question | What to use |
 | --- | --- |
-| `ticker` or `cik` | Select the issuer |
-| `forms` | Select filing families such as `4` |
-| `owner_name` or `owner_cik` | Select a reporting owner |
-| `security_title` | Limit results to a disclosed security title |
-| `transaction_code` | Select a Form 4 transaction code |
-| `date_from` and `date_to` | Bound the filing-date window |
-| `limit` and `cursor` | Page through results |
+| Which reported Form 4 purchase records meet a filter? | `GET /v1/insiders` |
+| What does the filing say about one record? | accession number and `filingUrl` |
+| Is activity connected to a 10b5-1 plan, withholding, exercise, gift, or footnote? | inspect the original filing |
 
-## Keep the fields that make a result reviewable
+Keep `transactionDate` distinct from `filingDate`. A code such as `P` is a filing-code filter, not a sufficient investor-facing label for the economic purpose of a transaction.
 
-Keep `transactionCode` and `transactionDirection` together. Keep `transactionDate` separate from `filingDate`. Store the `accessionNumber`, `provenance.filingUrl`, and `requestId` with any alert or table row.
+## SDK and MCP implementation
 
-A code such as `P` does not prove open-market activity, and a sale can reflect tax withholding, an exercise, a gift, a plan, or another filing-specific fact. Read the source filing and footnotes before assigning motive or labeling activity in an investor-facing product.
+Use `client.insiders({ ticker, forms: "4", transaction_code: "P", limit: 25 })` in the JavaScript SDK. Hosted MCP exposes `insiders.list` for a compact issuer-based queue. REST is the path for owner, code, title, date-range, and cursor controls that are not in the MCP tool schema.
 
-## Handle pagination and failures
+## Review limits
 
-The list response supplies `hasMore` and `nextCursor`; use the returned cursor to continue. A non-2xx response is a failed lookup, not an empty transaction set. Retain `requestId` and `traceparent` for support or diagnostics.
+- Forms 3, 4, and 5 have different reporting purposes and timing. A list is not a complete real-time ownership ledger.
+- Filing-derived values can be absent, amended, or explained by a footnote. Do not fill or classify them without the filing.
+- Preserve `requestId`, `traceparent`, accession number, and source URL on alerts so a later reviewer can investigate the exact result.
+- A non-2xx response is a failed query, not proof that no insider transactions exist.
 
 ## Continue
 
-- [Evaluate insider trading API](/evaluate/insider-trading-api)
+- [Create an API key and build an insider review queue](https://secapi.ai/signup)
 - [Ownership workflows](/ownership-workflows)
 - [Insiders API reference](/api-reference/insiders)
+- [Freshness and source evidence](/freshness-and-trust)

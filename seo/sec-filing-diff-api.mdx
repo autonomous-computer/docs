@@ -1,36 +1,51 @@
 ---
 title: "SEC Filing Diff API"
-description: "Compare the latest and prior filing of the same form, or name an explicit pair, then review the source filings behind each change."
+description: "Compare two same-form SEC filings by automatic prior-period pairing or explicit selectors, then review the cited filings behind each section-level change."
 ---
 
-Use filing diff to triage what changed between two filings of the same form. It is a comparison aid, not a determination that a change is material or an amendment is a restatement.
+Filing diff is a triage tool for textual change. It helps a researcher decide where to read, but it does not determine materiality, a restatement, legal significance, or an issuer’s motive.
 
-## Compare annual filings
+## Compare a company’s 10-K risk and MD&A sections
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K&sections=item_1a_risk_factors,item_7_mdna"
 ```
 
-`ticker` and `form` are required. When `from` and `to` are absent, the API pairs the latest filing with the prior filing of the same form. To control the comparison, pass an accession number or ISO date for each selector:
+`ticker` and `form` are required. When `from` and `to` are omitted, the API selects the latest filing and its prior same-form filing. Use explicit accession numbers or ISO dates when the comparison pair must be controlled:
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K&from=2023-10-01&to=2024-10-01&include_hunks=false"
 ```
 
-## What to review
+Use `sections` to keep the comparison targeted. `include_hunks=false` requests section-level change information without word-level redline hunks. The report identifies its paired filings and changes; retain both accession numbers, forms, and source URLs with any review output.
 
-The report identifies the paired filings and returns section changes. `include_hunks=false` removes word-level redline hunks when you only need per-section change information. Preserve both accession numbers, then fetch each filing record to obtain its SEC URL before opening a filing that affects a decision.
+## What to inspect in the response
 
-## Limits
+| Field or output | How to use it |
+| --- | --- |
+| paired filing identifiers | confirm the API compared the intended documents |
+| section change type or badge | prioritize reading, not a conclusion |
+| word-level hunks | locate wording to verify in both source filings |
+| request and source metadata | reproduce and audit the comparison |
 
-- The route compares two filings of one form. It does not find every amendment or build a complete amendment chain.
-- A textual difference is not proof of materiality, an accounting restatement, or a legal conclusion.
-- The route does not accept the retired `accession_a` and `accession_b` parameters. Use `ticker`, `form`, `from`, and `to`.
+Follow each accession with `GET /v1/filings/{accessionNumber}` or a named-section request before publishing a summary. A word change can be boilerplate, a filing-format artifact, an amendment, or a substantive disclosure; the diff cannot resolve that distinction alone.
 
-## Next steps
+## REST and SDK implementation
 
-- [Find the source filing](/seo/sec-filing-search-api)
-- [Extract a known section](/seo/sec-10k-section-extraction-api)
-- [Filing Intelligence](/products/filing-intelligence)
+Call `GET /v1/filings/diff` directly or use `client.filingDiff({ ticker, form, from, to, sections, include_hunks })` in `@secapi/sdk-js`. The hosted MCP tool list currently covers filing search and section retrieval, not this filing-diff report; use REST or the SDK, then provide the selected source sections to an agent for bounded analysis.
+
+## Limits that should stay visible
+
+- Comparisons are between two filings of one form; they do not discover every amendment or produce a complete amendment chain.
+- The route does not accept retired `accession_a` and `accession_b` parameters. Use `ticker`, `form`, `from`, and `to`.
+- Differences in parsed text are not proof of materiality, accounting error, or legal conclusion.
+- A response can be unavailable for a pair or section; do not treat that as evidence that the filings are identical.
+
+## Continue
+
+- [Create an API key and compare a filing pair](https://secapi.ai/signup)
+- [Filing search API](/seo/sec-filing-search-api)
+- [Filing intelligence](/products/filing-intelligence)
+- [Filing diff reference](/api-reference/filings/get-v1-filings-diff)

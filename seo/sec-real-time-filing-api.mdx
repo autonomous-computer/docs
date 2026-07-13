@@ -1,83 +1,57 @@
 ---
-title: "SEC Filing Monitor API — Webhook Alerts and Polling"
-description: "Monitor SEC filings with webhook alerts, email notifications, and REST polling. Filter by form type, ticker, and query. Get started at secapi.ai/signup."
+title: "SEC Real-Time Filing API: Monitors, Webhooks, and Streams"
+description: "Deliver matching SEC filing events to a signed webhook, poll with durable cursors, or connect a ticketed WebSocket stream while retaining the filing source for review."
 ---
 
-Get SEC filing alerts delivered to your application when a saved monitor finds new matching filings. SEC API supports signed webhook delivery for `monitor.match` events, customer-configured email notifications, and REST polling for latest filings.
+Real-time filing delivery tells a worker that new matching filing work is available. It does not itself validate the filing, guarantee an investor conclusion, or replace retrieving the cited filing record.
 
-## Capabilities
+## Pick a delivery model
 
-<CardGroup cols={2}>
-  <Card title="Monitor alerts" icon="bell">
-    Create monitors for forms, tickers, and keyword queries. Matching filings emit `monitor.match` delivery events.
-  </Card>
-  <Card title="Webhook callbacks" icon="plug">
-    Register an endpoint subscribed to `monitor.match` and SEC API will POST signed delivery payloads with retry handling.
-  </Card>
-  <Card title="Email notifications" icon="mail">
-    Send monitor matches to verified recipients with unsubscribe, bounce, complaint, and billing-pause state handled by SEC API.
-  </Card>
-  <Card title="Structured payloads" icon="code">
-    Every event includes parsed metadata: accession number, form type, filer CIK, company name, filed date, and direct document URLs.
-  </Card>
-</CardGroup>
+| Need | Mechanism | Operational responsibility |
+| --- | --- | --- |
+| Push a matching saved-monitor event to a public service | dashboard-configured webhook | verify signature, deduplicate, queue work |
+| Process events with explicit checkpoints | stream-subscription polling | commit cursor only after durable processing |
+| Maintain a live connection without exposing an API key in a URL | subscription-backed, ticketed WebSocket | mint short-lived ticket and reconnect deliberately |
+| Simple periodic check | `GET /v1/filings/latest` | choose form and own polling cadence |
 
-## Quick start
+Create saved monitors, webhook endpoints, subscription changes, secret rotation, tests, and replay policy in the signed-in [dashboard](https://secapi.ai/app/webhooks). Those organization changes are human-authenticated; an API key is not the setup credential.
 
-In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), register a public HTTPS endpoint subscribed to `monitor.match`, then create the 10-K and 10-Q monitor that should feed it. You can choose email delivery there as well. These organization settings require a WorkOS browser session; API keys cannot create or change them.
-
-Get the latest filings via polling (REST fallback):
+## Poll safely with a cursor
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?form=10-K&limit=5"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/stream_subscriptions/str_123/events?limit=25"
 ```
 
-## Use cases
+The expected response is an ordered `data` batch with `nextCursor`, `replayCursor`, `requestId`, and `traceparent`. Store each event id in the same durable transaction that creates downstream work. Advance the checkpoint only after that write succeeds. Cursor order is recorded event order, not an SEC filing timestamp.
 
-### Earnings release monitoring
+## Use a ticketed WebSocket
 
-Detect 8-K filings with Item 2.02 (Results of Operations) as monitor matches are swept. Trigger downstream analysis pipelines or alert internal teams from a signed webhook.
+```bash
+curl --fail-with-body -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{}' "https://api.secapi.ai/v1/stream/tickets"
 
-### Compliance surveillance
+npx wscat -c "wss://api.secapi.ai/v1/stream/ws?stream_id=$SECAPI_STREAM_ID&ticket=$SECAPI_STREAM_TICKET"
+```
 
-Financial institutions can monitor filings from counterparties, portfolio companies, and regulated entities without polling EDGAR directly.
+The `stream_id` must identify an active WebSocket stream subscription. Mint a short-lived ticket before connecting so a long-lived API key does not enter a browser-visible WebSocket URL. The JavaScript SDK exposes a filing-stream WebSocket helper that requires this subscription-backed stream ID; use the REST ticket contract when you need to control token handoff yourself.
 
-### AI-powered filing analysis
+## Process a monitor webhook as evidence delivery
 
-Pipe monitor match events into LLM workflows to generate summaries, risk assessments, or structured extractions when relevant filings arrive.
+For `monitor.match`, verify `x-secapi-signature` against the exact raw body before parsing JSON; reject stale timestamps, deduplicate delivery/event IDs, queue work, and return a quick `2xx`. Retain the monitor ID, event ID, request ID, accession number, and filing URL. Then retrieve the filing or named section before summarizing it.
 
-## API endpoints
+## Timing and failure boundaries
 
-| Endpoint | Description |
-|----------|-------------|
-| `POST /v1/monitors` | Create a saved filing monitor |
-| `GET /v1/monitors` | List saved monitors |
-| `GET /v1/monitors/:monitor_id/matches` | Preview recent monitor matches |
-| `POST /v1/webhook_endpoints` | Register a webhook endpoint for delivery events |
-| `GET /v1/webhook_endpoints` | List active webhooks |
-| `POST /v1/webhook_endpoints/:webhook_id/test` | Send a signed test event |
-| `POST /v1/webhook_endpoints/:webhook_id/rotate_secret` | Rotate the HMAC signing secret |
-| `GET /v1/webhook_endpoints/:webhook_id/deliveries` | Inspect delivery history |
-| `GET /v1/filings/latest` | Poll latest filings (REST fallback) |
+- Delivery is not a universal SEC freshness guarantee. Inspect returned filing identifiers and source timestamps for the event you received.
+- Webhooks can be retried and event batches can be replayed. Consumers must be idempotent.
+- Do not advance a cursor after a partial failure or derive a checkpoint from an array position, wall-clock time, or accession number.
+- A latest-filings poll without `form` means the latest filing of any type; pin a form family for a 10-K, 8-K, or other focused workflow.
 
-## Why SEC API for filing monitors
+## Continue
 
-| Feature | SEC API | Raw EDGAR | sec-api.io | Quiver Quant |
-|---------|-----------|-----------|------------|--------------|
-| Saved filing monitors | Yes | No | Limited | Limited |
-| Webhook with HMAC signing | Yes | No | Yes | No |
-| Email notification lifecycle | Yes | No | Limited | Limited |
-| Form type filtering | Yes | No | Yes | Limited |
-| Structured JSON payloads | Yes | No (raw index) | Yes | Partial |
-| Python + JS SDKs | Yes | No | No | No |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="/getting-started">
-  Start monitoring SEC filings with 150 included API calls (one-time).
-</Card>
-
-- [Filing Search API](/seo/sec-filing-search-api)
-- [API Reference](/api-reference)
-- [Python SDK](/python-sdk)
+- [Create an API key and test a filing delivery workflow](https://secapi.ai/signup)
+- [Webhook and stream workflows](/webhook-stream-workflows)
+- [Stream polling](/stream-polling)
+- [Stream API reference](/api-reference/stream)

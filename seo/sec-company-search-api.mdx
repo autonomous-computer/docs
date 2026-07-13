@@ -1,75 +1,55 @@
 ---
 title: "SEC Company Search and Company Data API"
-description: "Resolve an SEC issuer, retrieve a company overview, and move from an identifier to source-aware company financial data."
+description: "Resolve an SEC issuer from an identifier or name, record match confidence, and move into source-aware filings and company financial data."
 ---
 
-Most SEC-data workflows start with an issuer identity problem: someone has a
-ticker, a CIK, or a company name and needs the right entity before they can
-retrieve filings or financial data. Resolve the issuer first. Then use the
-company-data surfaces for the specific question in front of you.
+Company search is an identity step, not diligence. Resolve the issuer before joining filings, statements, ownership, or an investor screen, especially where a ticker change, multiple share classes, or similar names could produce the wrong entity.
 
-## Resolve the issuer
+## Resolve a known identifier or company name
 
 ```bash
-curl -sS \
+curl --fail-with-body \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
 ```
 
-Keep the returned CIK, ticker, match basis, and request ID. A CIK is the most
-useful durable SEC identity when a ticker has changed or a filing workflow
-needs a precise issuer key.
+`/v1/entities/resolve` accepts `ticker` or `symbol`, CIK, FIGI-family identifiers, ISIN, CUSIP, or `name`/`query`/`q`. A successful response identifies the entity and can include its canonical CIK, primary identifiers, `matchBasis`, and `matchConfidence`. Preserve those match fields and `requestId`; use the CIK when a later SEC workflow needs a durable issuer key.
 
-## Build a company briefing
-
-`GET /v1/companies/overview` accepts a ticker, symbol, or CIK. The base
-overview is intentionally light. Add only the enrichment your research needs:
+For discovery rather than a best-match lookup:
 
 ```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/overview?ticker=AAPL&include=segments,footnotes,dilution,factors"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/entities?q=apple&entity_type=issuer&limit=10"
 ```
 
-Segments, dilution, and factors can degrade independently when their source
-work is unavailable. Preserve the base overview and inspect each enrichment's
-status instead of treating a partial result as a complete company record.
+`GET /v1/entities` searches canonical issuers, managers, insiders, and funds with `q`, `entity_type`, `limit`, and `cursor`. The EDGAR-specific list surface is `GET /v1/entities/edgar`.
 
-## Choose the next endpoint
+## Move from identity to the requested data
 
-| Research job | Endpoint |
-| --- | --- |
-| Latest company snapshot | `GET /v1/companies/overview` |
-| Financial data for one or a small set of issuers | `GET /v1/companies/financials` |
-| A specific financial statement | `GET /v1/companies/income-statements`, `GET /v1/companies/balance-sheets`, or `GET /v1/companies/cash-flow-statements` |
-| Ratio refresh for ticker-based company sets | `GET /v1/companies/ratios` |
-| Product, geographic, or operating segments | `GET /v1/companies/segments` |
+| Question | Next API call | Evidence to retain |
+| --- | --- | --- |
+| What is the latest filing? | `GET /v1/filings/latest?ticker=...&form=...` | accession, filing date, SEC URL |
+| What are the core statements? | `GET /v1/companies/financials` or `/v1/statements` | period, unit, provenance, status |
+| What is the company overview? | `GET /v1/companies/overview` | base record plus enrichment state |
+| Which filings mention a topic? | `GET /v1/filings` or a content-search route | selected filing and citation |
 
-For a batch, use `tickers=AAPL,MSFT,NVDA` where the endpoint supports it and
-inspect each result for a degraded state. The ratios endpoint accepts a ticker
-or ticker batch; it is not a single-CIK lookup.
+`/v1/companies/overview` accepts a ticker, symbol, or CIK. Its optional REST enrichments such as `segments`, `footnotes`, `dilution`, and `factors` can degrade independently; retain the base result and expose the enrichment state instead of treating a partial response as a complete briefing.
 
-## Search is not diligence
+## SDK and MCP paths
 
-Entity resolution helps you find the issuer. It does not settle whether a
-company changed its reporting perimeter, presentation, or accounting policy.
-When a company-data result informs an investment or compliance conclusion,
-follow the filing URL, accession number, and relevant disclosure section.
+The JavaScript SDK exposes `client.resolveEntity`, `client.companyOverview`, `client.companyFinancials`, and `client.companySearch`. Hosted MCP offers `entities.resolve`, `companies.overview`, and `companies.financials`; the latter accepts one issuer or a supported ticker batch and returns per-entity status. Use REST or the SDK for the full canonical entity search and its cursor controls.
+
+## Identity and coverage caveats
+
+- A high-confidence match does not settle corporate actions, reporting perimeter, historical ticker changes, or a security-to-issuer relationship in every use case.
+- Do not use name search alone as authorization to silently substitute an issuer. Present the match basis when an ambiguous name feeds an investor-facing result.
+- Company financial data remains filing-backed and period-specific. Follow its accession number and filing URL when it supports a material decision.
+- A failed lookup is not a negative claim about a company; retain the request ID and correct the identifier or query.
 
 ## Continue
 
-<CardGroup cols={2}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Resolve an issuer and test company-data requests against the live API.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Inspect filing and company-data behavior before writing code.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Review plans and limits before scheduling repeated issuer coverage.
-  </Card>
-  <Card title="Company-data reference" icon="building-2" href="/api-reference/companies">
-    Review overview, financials, ratios, and segment contracts.
-  </Card>
-</CardGroup>
+- [Create an API key and resolve an issuer](https://secapi.ai/signup)
+- [SEC EDGAR API](/seo/sec-edgar-api)
+- [Company API reference](/api-reference/companies)
+- [Entities API reference](/api-reference/entities)

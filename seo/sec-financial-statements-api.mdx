@@ -1,98 +1,55 @@
 ---
 title: "SEC Financial Statements API"
-description: "Retrieve annual or quarterly SEC financial statements with a clear filing trail for models, screens, and agent research."
+description: "Retrieve filed annual or quarterly normalized statements with reporting-period, unit, and filing evidence for models, screens, and research workflows."
 ---
 
-Use the Financial Statements API when the job is to retrieve a filed income
-statement, balance sheet, or cash-flow statement without turning a filing into
-an XML parsing project. Start with one issuer, one period, and one statement;
-then preserve the source and request metadata that let another person inspect
-the result.
+Use this API when a workflow needs a filed income statement, balance sheet, or cash-flow statement in a normalized shape. The returned rows are useful only alongside the periods, units, and filing context that identify what is being compared.
 
-## Choose the response you need
-
-| Job | Request |
-| --- | --- |
-| One normalized statement | `GET /v1/statements?statement=income_statement` |
-| Income statement, balance sheet, and cash flow together | `GET /v1/statements/all` |
-| A compact company-facing series | `GET /v1/companies/income-statements`, `GET /v1/companies/balance-sheets`, or `GET /v1/companies/cash-flow-statements` |
-| A company snapshot across several financial surfaces | `GET /v1/companies/financials` |
-
-All statement routes accept an issuer identifier such as `ticker` or `cik`.
-Use `period=annual` or `period=quarterly`; use `fy`, `fy_from`, and `fy_to`
-when the filing periods matter more than a default latest result.
-
-## Retrieve one annual statement
-
-This example asks for Apple's annual income statement in the compact agent
-shape. Add `secapi-version` once you have selected the contract version your
-application will hold to.
+## Retrieve one statement for a defined period
 
 ```bash
-curl -sS \
+curl --fail-with-body \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements?statement=income_statement&ticker=AAPL&period=annual&limit=1&view=agent"
+  "https://api.secapi.ai/v1/statements?ticker=AAPL&statement=income_statement&period=annual&fy=2025&limit=1"
 ```
 
-The useful result is not just a number. Keep the period, statement identity,
-form, and filed date with the result. The default response can also include
-provenance, freshness, materialization, validation, `requestId`, and
-`traceparent`; compact and agent views intentionally return less envelope data.
+Supply one issuer identifier and choose a `statement` such as `income_statement`, `balance_sheet`, or `cash_flow`. Use `period=annual` or `quarterly`, and `fy`, `fy_from`, or `fy_to` for the fiscal slice. Expect statement rows with period metadata, tag, taxonomy, label, unit, values, provenance, completeness, freshness, materialization, `requestId`, and `traceparent` in the default view.
 
-## Retrieve the three statements together
-
-Use the all-statements bundle when a model or agent needs the filing-period
-relationship across the three core statements:
+For all three core statements from the same requested slice:
 
 ```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&fy=2025&limit=1"
 ```
 
-Do not assume that a normalized line item settles an accounting question by
-itself. Use the filing source and the relevant note when policy, segment,
-currency, or presentation choices affect the conclusion.
+The bundle contains separate statements. Align observations by each returned reporting period; do not assume each statement has the same line items or count of observations.
 
-## Company-data surfaces
+## Choose the appropriate contract
 
-`/v1/companies/overview` is the right starting point for a company briefing.
-It accepts a ticker, symbol, or CIK and can request optional `segments`,
-`footnotes`, `dilution`, and `factors` enrichments:
+| Job | Route | Expected output |
+| --- | --- | --- |
+| One normalized statement | `GET /v1/statements` | row/value view with period and provenance |
+| Three core statements | `GET /v1/statements/all` | statement bundle with per-statement context |
+| A concept requiring tag-level control | `GET /v1/facts` | rawer XBRL observations by tag/unit/form |
+| Portfolio-style company financials | `GET /v1/companies/financials` | per-entity financial response; inspect status per entity |
 
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/overview?ticker=AAPL&include=segments,dilution"
-```
+US-GAAP 10-K/10-Q filers are resolved in the standard path. Where applicable, the statement routes support IFRS foreign private issuers through `ifrs-full` 20-F/6-K coverage. That does not make accounting policies or issuer-specific presentations automatically comparable.
 
-Those enrichments are not a reason to discard the base company result. They
-can degrade independently when an underlying extraction is unavailable. For a
-small multi-company refresh, use `tickers=AAPL,MSFT,NVDA` with
-`/v1/companies/financials` and inspect each row's status before treating a
-batch as complete.
+## SDK and MCP paths
 
-## What requires judgment
+The JavaScript SDK provides `client.statements`, `client.allStatements`, and `client.companyFinancials`. Hosted MCP offers `statements.get` for a focused statement and `companies.financials` for one company or a supported batch. In both cases, ask for the reporting period and citation fields rather than only a numeric summary.
 
-- Annual and quarterly periods are not interchangeable. State which one your
-  model uses and why.
-- A company may use an extension concept or a presentation that needs a
-  tag-level fact or filing note to interpret.
-- A partial company batch is evidence of a partial batch, not a zero or a
-  missing value to silently fill.
+## Modeling caveats
+
+- Balance-sheet values are point in time; income-statement and cash-flow values can be duration or year-to-date. Read `periodBasis`, start/end dates, unit, form, and fiscal year before combining them.
+- A missing normalized row is not zero. It can reflect a presentation, taxonomy, coverage, or extraction limitation.
+- `view=agent` intentionally removes metadata envelopes. Use the default response for evidence storage and audit work.
+- The filing and relevant notes remain primary evidence for accounting policy, segment disclosures, unusual periods, and nonstandard labels.
 
 ## Continue
 
-<CardGroup cols={3}>
-  <Card title="Inspect XBRL facts" icon="braces" href="/seo/xbrl-api">
-    Retrieve a concept series and its filing provenance.
-  </Card>
-  <Card title="Evaluate facts and statements" icon="clipboard-check" href="/evaluate/xbrl-facts-api">
-    Run a bounded proof of concept before a wide refresh.
-  </Card>
-  <Card title="Statement reference" icon="table" href="/api-reference/statements">
-    See the complete request and response contract.
-  </Card>
-</CardGroup>
+- [Create an API key and test a statement request](https://secapi.ai/signup)
+- [XBRL API](/seo/xbrl-api)
+- [Statements reference](/api-reference/statements)
+- [Coverage and depth](/coverage-and-depth)

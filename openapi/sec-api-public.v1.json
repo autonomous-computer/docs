@@ -4829,39 +4829,43 @@
     "/v1/stream/ws": {
       "get": {
         "summary": "Upgrade to a WebSocket connection for delivery event streaming",
-        "description": "Upgrades the HTTP connection to a WebSocket. Clients must supply a short-lived signed `ticket` query parameter minted from `POST /v1/stream/tickets`. Connections are capped by plan but are not separately billable in v1. Delivered events use the same delivery-event billing family as stream polling and are idempotent per subscription and event. The current filing producer emits `filing.published` frames with optional form/ticker filtering and cursor-based replay.",
+        "description": "Upgrades an active WebSocket stream subscription to a WebSocket connection. Clients must supply that subscription's `stream_id` and authenticate with either a short-lived signed `ticket` minted from `POST /v1/stream/tickets` or the `x-api-key` header. Connections are capped by plan but are not separately billable in v1. Delivered events use the same delivery-event billing family as stream polling and are idempotent per subscription and event.",
         "parameters": [
+          {
+            "name": "stream_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of an active stream subscription configured for WebSocket delivery."
+          },
           {
             "name": "ticket",
             "in": "query",
+            "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Short-lived signed stream ticket minted from `POST /v1/stream/tickets`."
+            "description": "Short-lived signed stream ticket minted from `POST /v1/stream/tickets`. Provide this or the `x-api-key` header."
           },
           {
-            "name": "forms",
-            "in": "query",
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated form types to filter (e.g. '10-K,8-K'). Case-insensitive."
-          },
-          {
-            "name": "tickers",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Comma-separated tickers to filter (e.g. 'AAPL,MSFT'). Case-insensitive."
+            "description": "API key for the WebSocket upgrade. Provide this or a short-lived `ticket` query parameter."
           },
           {
             "name": "cursor",
             "in": "query",
+            "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Resume from a previous event cursor (e.g. 'sevt_...'). Events after this cursor are replayed on connect."
+            "description": "Resume delivery after a previously observed stream cursor. Events after this cursor are replayed on connect."
           }
         ],
         "responses": {
@@ -4869,7 +4873,7 @@
             "description": "WebSocket upgrade successful. Server sends JSON frames such as connected, filing.published, pong, filters_updated, and rate_limited."
           },
           "401": {
-            "description": "Missing or invalid stream ticket"
+            "description": "Missing or invalid stream ticket or API key"
           },
           "429": {
             "description": "Per-organization connection limit exceeded"

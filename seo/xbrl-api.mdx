@@ -1,78 +1,47 @@
 ---
 title: "XBRL API for SEC Filings"
-description: "Retrieve normalized SEC XBRL facts and statements with the filing context needed to inspect and cite the result."
+description: "Retrieve filing-backed XBRL observations by issuer, concept, taxonomy, unit, form, and fiscal period, then preserve the fields needed to judge comparability."
 ---
 
-XBRL is the structured layer inside many SEC filings. The useful question is
-rarely “can I parse XBRL?” It is usually “which filed value supports this
-model, screen, or research conclusion, and how do I get back to the filing?”
+Use the XBRL API when the model needs a concept-level, filed observation rather than a presentation-oriented statement. A useful response identifies both the number and the reporting context that makes the number comparable.
 
-SEC API gives you two complementary paths: normalized statements for a familiar
-financial view, and tag-level facts when the accounting concept itself matters.
-
-## Start with the right path
-
-| Need | Start here |
-| --- | --- |
-| A filed income statement, balance sheet, or cash-flow statement | `GET /v1/statements` |
-| The three core statements for one reporting period | `GET /v1/statements/all` |
-| A time series for a concept such as revenue or assets | `GET /v1/facts` |
-| A company snapshot with optional segment or dilution context | `GET /v1/companies/overview` |
-
-## Retrieve a statement bundle
+## Retrieve a concept series
 
 ```bash
-curl -sS \
+curl --fail-with-body \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/all?ticker=MSFT&period=annual&limit=1"
+  "https://api.secapi.ai/v1/facts?ticker=MSFT&tag=Revenues&form=10-K&period=annual&fy_from=2022&fy_to=2025&limit=8"
 ```
 
-Use `period=annual` or `period=quarterly`, then narrow the request with `fy`,
-`fy_from`, or `fy_to` when the comparison requires specific fiscal years.
+Supply one issuer identifier (`ticker`, `symbol`, or `cik`). `tag` selects a concept such as `Revenues` or `NetIncomeLoss`; `taxonomy`, `unit`, `form`, `period`, `fy`, `fy_from`, and `fy_to` narrow the observations. Store each returned fact point with its value, `periodStart`, `periodEnd`, `frame`, unit, tag, taxonomy, form, fiscal metadata, accession number, filing URL, and `requestedTag`, `resolvedTag`, `aliasStrategy`, and `completeness` fields where returned.
 
-## Retrieve a fact series
+With no taxonomy or form pinned, the route starts with US-GAAP 10-K/10-Q coverage and can fall back to `ifrs-full` 20-F/6-K coverage for a foreign private issuer when the US-GAAP lookup is empty. Pin those filters when the research process requires a specific taxonomy or filing family.
 
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/facts?ticker=MSFT&tag=Revenues&period=annual&limit=4"
-```
+## Facts versus statements
 
-Check `requestedTag`, `resolvedTag`, and `aliasStrategy` before treating a
-series as a direct match. A fact can include its unit, period, form,
-accession number, and filing URL through provenance. Preserve those fields
-with the value when an analyst or agent will make a conclusion from it.
+| Use case | Starting route | Output |
+| --- | --- | --- |
+| Revenue, capex, EPS, or another named concept | `GET /v1/facts` | time series of filed fact observations |
+| A normalized income statement, balance sheet, or cash flow | `GET /v1/statements` | rows arranged as a statement |
+| The three core statements for one period | `GET /v1/statements/all` | independently sourced statement bundle |
 
-## Taxonomy and foreign issuers
+Use the fact route when taxonomy and unit selection are material. Use statements when the consumer needs a conventional financial presentation. Neither route replaces the notes when a policy choice, extension tag, segment, or nonstandard period affects interpretation.
 
-Facts default to the US-GAAP path. When neither taxonomy nor form is pinned
-and the US-GAAP lookup is empty, the API can fall back to `ifrs-full` for
-foreign private issuers. Pinning a taxonomy or form is deliberate: it prevents
-that fallback and makes the query narrower. Use an explicit constraint when
-your research process requires one.
+## SDK and MCP paths
 
-## Limitations worth keeping visible
+JavaScript uses `client.facts({ ticker, tag, period, fy_from, fy_to })`; the hosted MCP tool is `facts.get` with the same issuer, taxonomy/tag, unit, form, and period concepts. `facts.get` supports historical fiscal-year targeting. Ask the agent to report missing or incompatible fields rather than coerce them to zero.
 
-- A missing concept is not evidence that a company did not disclose the
-  underlying economic item. It can be a tag, taxonomy, or presentation issue.
-- Agent views are intentionally compact. Request the default view when your
-  system needs full provenance, freshness, materialization, or validation
-  envelopes.
-- Statements help with comparison; the filing and its notes still resolve
-  policy choices, nonstandard labels, and unusual periods.
+## Caveats for model builders
+
+- An absent tag is not proof that the issuer did not disclose the economic item; the concept may be extension-tagged, differently presented, or outside the selected filters.
+- Do not compare point-in-time balance-sheet facts with duration-based income or cash-flow facts without inspecting their start/end dates, frame, and units. `periodBasis` applies to normalized statement rows, not fact points.
+- `view=agent` is compact and drops metadata envelopes. Use the default response for audit storage.
+- The filing URL and accession number are primary evidence. Retrieval metadata describes the API result; it does not elevate a normalized value above the filed document.
 
 ## Continue
 
-<CardGroup cols={3}>
-  <Card title="Evaluate the workflow" icon="clipboard-check" href="/evaluate/xbrl-facts-api">
-    Test a bounded model-refresh use case with source checks.
-  </Card>
-  <Card title="Facts reference" icon="list-tree" href="/api-reference/facts">
-    Review fact filters, response fields, and failure behavior.
-  </Card>
-  <Card title="Statements reference" icon="table" href="/api-reference/statements">
-    Review statement selection and bundle behavior.
-  </Card>
-</CardGroup>
+- [Create an API key and test a filed fact](https://secapi.ai/signup)
+- [SEC financial statements API](/seo/sec-financial-statements-api)
+- [Facts reference](/api-reference/facts)
+- [Statements reference](/api-reference/statements)
