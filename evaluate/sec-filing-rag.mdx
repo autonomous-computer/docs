@@ -1,81 +1,41 @@
 ---
 title: "Evaluate SEC Filing RAG"
-description: "Run a bounded evaluation of filing retrieval, section citations, and agent handoff before building an SEC filing RAG system."
+description: "Build a small, source-cited filing retrieval loop before adding generated answers."
 ---
 
-Evaluate filing RAG as a retrieval and verification problem, not a question of
-whether a model can summarize a long document. A useful test returns a passage
-the reader can locate in the filing, shows what the retrieval system could not
-establish, and keeps the final interpretation separate from the quoted source.
+Evaluate the retrieval layer before generation. A passing test returns a passage a reader can locate in an SEC filing and makes the gap between source text and interpretation explicit.
 
-<CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Run the evaluation against live filing data.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Inspect filing and search behavior before writing code.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Review repeated search and extraction limits before fanout.
-  </Card>
-</CardGroup>
-
-## A 30-minute evaluation
-
-<Steps>
-  <Step title="Choose one issuer and one question">
-    Pick a question that can be checked in a recent filing, such as a new risk
-    factor or a change in management's discussion of demand.
-  </Step>
-  <Step title="Retrieve a cited passage">
-    Use semantic or section search with an issuer and form constraint. Preserve
-    `accession`, `section_key`, `source_url`, and any available offsets or
-    highlighted snippet.
-  </Step>
-  <Step title="Test a retrieval failure">
-    Try a query with an ambiguous term. If the response reports a degraded
-    citation or vector-search state, keep the filing identity and inspect the
-    source instead of manufacturing a quote.
-  </Step>
-</Steps>
-
-## Requests to run
+## Minimal loop
 
 ```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/search/semantic?q=supply-chain%20risk&ticker=TSLA&form=10-K&mode=hybrid&limit=5&view=agent"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20risk&ticker=TSLA&form=10-K&mode=hybrid&limit=5"
 
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=TSLA&form=10-K&mode=compact&view=agent"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/ACCESSION/sections/item_1a?ticker=TSLA&form=10-K"
 ```
 
-For cost observability, inspect the response headers. `SECAPI-Estimated-Cost`
-and token-count headers are headers, not JSON fields. Request exact token
-counting with `SECAPI-Compute-Headers: token-count` when the route supports it.
+Replace `ACCESSION` with the search result's `accession`. Save `source_url`, `section_key`, and any available character range with the text you provide to a model.
 
-## Prompt for an analyst or agent
+## Evidence boundary
 
-<Prompt>
-For TSLA, retrieve cited passages about supply-chain risk from recent 10-K
-filings. Return accession, section key, source URL, highlighted snippet, and
-any degraded retrieval state. Separate the filing evidence from your
-interpretation, and say what still requires opening the filing.
-</Prompt>
+Keep these distinct in your answer:
 
-## Continue
+1. Retrieved filing text.
+2. Filing identity: accession number, form, filing date, and SEC URL.
+3. Your application's interpretation.
 
-<CardGroup cols={3}>
-  <Card title="Filing search evaluation" icon="search" href="/evaluate/sec-filing-search-api">
-    Test manifests, full-text, semantic search, and section retrieval.
-  </Card>
-  <Card title="Semantic search reference" icon="braces" href="/api-reference/search/get-v1-search-semantic">
-    Inspect filters, views, and degraded-state behavior.
-  </Card>
-  <Card title="SEC filing RAG guide" icon="book-open" href="https://secapi.ai/guides/sec-filing-rag">
-    See the buyer-facing system-design guide.
-  </Card>
-</CardGroup>
+Do not turn a missing match into a claim about what an issuer did not disclose. A degraded citation is a reason to open the filing, not permission to invent a span.
+
+## Production checklist
+
+- Use semantic `mode` explicitly after evaluation.
+- Fetch the cited section before quoting it.
+- Preserve `requestId`, `traceparent`, provenance, and freshness where supplied.
+- Treat a `503` vector-search failure as unavailable retrieval, not an empty result set.
+
+## Next steps
+
+- [Semantic search](/products/search)
+- [Section search](/api-reference/sections/get-v1-sections-search)
+- [Filing retrieval](/products/filing-search)

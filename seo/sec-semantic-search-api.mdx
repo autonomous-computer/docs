@@ -1,20 +1,18 @@
 ---
 title: "SEC Semantic Search API"
-description: "Search SEC filing sections by concept, keep the cited passage and SEC source URL, and use the result as evidence for further review."
+description: "Search SEC filing sections by concept, keep the citation fields, and verify the returned passage in the source filing."
 ---
 
-Semantic search helps when a company may describe the idea you care about without using your exact words. Ask for a concept, constrain the issuer or form when you can, and review the filing passage that comes back.
+Semantic search finds related disclosure language when exact words may vary. It is retrieval, not an opinion engine: a match is a reason to inspect a cited SEC filing, not proof of a risk, accounting treatment, or investment conclusion.
 
-It is a retrieval tool, not an opinion engine. A relevant result is a reason to inspect the cited filing, not proof of a risk, accounting treatment, or investment conclusion.
-
-## Search for a disclosure by concept
+## Search by concept
 
 ```bash
-curl "https://api.secapi.ai/v1/search/semantic?q=artificial%20intelligence%20regulatory%20risk&ticker=GOOGL&form=10-K&mode=hybrid&limit=5" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/search/semantic?q=artificial%20intelligence%20regulatory%20risk&ticker=GOOGL&form=10-K&mode=hybrid&limit=5"
 ```
 
-The endpoint is `GET /v1/search/semantic` and the query parameter is `q`. Choose `mode=keyword`, `mode=semantic`, or `mode=hybrid`; the default is `hybrid`.
+`q` is required. `mode` accepts `keyword`, `semantic`, or `hybrid`; it defaults to `hybrid`.
 
 ```json
 {
@@ -27,36 +25,31 @@ The endpoint is `GET /v1/search/semantic` and the query parameter is `q`. Choose
       {
         "accession": "0001652044-25-000014",
         "section_key": "item_1a",
-        "ticker": "GOOGL",
         "source_url": "https://www.sec.gov/Archives/...",
-        "highlighted_snippet": "...regulation of artificial intelligence...",
+        "ticker": "GOOGL",
         "char_start": 120,
-        "char_end": 260
+        "char_end": 260,
+        "highlighted_snippet": "..."
       }
     ],
     "count": 1,
     "degradedState": null
-  }
+  },
+  "requestId": "req_example"
 }
 ```
 
-`view=agent` is a purposeful agent handoff, not an arbitrary field selector:
-it drops score and retrieval-mode detail while retaining the citation fields an
-agent needs to return the accession, source URL, and excerpt boundary.
-
-## Use the citation, then verify it
+## Verify the citation
 
 1. Keep `accession`, `section_key`, and `source_url` with the result.
-2. Retrieve the cited section by accession when you need the full text.
-3. Treat `char_start` and `char_end` as offsets in section markdown, not raw filing HTML.
-4. When citation offsets are null or the response reports a degraded citation
-   state, preserve the filing identity and inspect the source rather than
-   slicing text programmatically.
+2. Retrieve the cited section when you need full context.
+3. Treat `char_start` and `char_end` as offsets in section markdown, never raw SEC HTML.
+4. If offsets are null or the response reports citation degradation, inspect the source rather than slicing text programmatically.
 
-## When to use another search path
+`view=agent` retains citation fields but removes `score` and `retrievalMode`. Use the default view if your application needs retrieval detail.
 
-- Use [full-text search](/seo/sec-full-text-search-api) for an exact phrase or a combined filing-and-section result.
-- Use [section search](/api-reference/sections/get-v1-sections-search) for a cited passage with issuer, form, and filing filters.
-- Use [filing search](/products/filing-search) when the question is which filings exist rather than what they say.
+## Next steps
 
-See the [semantic search reference](/api-reference/search/get-v1-search-semantic), [search guide](/products/search), [semantic-search glossary entry](https://secapi.ai/glossary/semantic-search), and [SEC filing RAG guide](https://secapi.ai/guides/sec-filing-rag).
+- [Full-text search](/seo/sec-full-text-search-api)
+- [Section search](/api-reference/sections/get-v1-sections-search)
+- [Semantic API reference](/api-reference/search/get-v1-search-semantic)

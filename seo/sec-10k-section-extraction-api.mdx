@@ -1,66 +1,38 @@
 ---
 title: "10-K Section Extraction API"
-description: "Retrieve a named section from a known SEC filing or the latest matching filing, with a compact option for review and agent use."
+description: "Retrieve a named section from a known SEC filing or the latest matching 10-K, with a source trail for review."
 ---
 
-Use section extraction when you know the disclosure you need: risk factors,
-MD&A, business description, or another named section. It is not a substitute
-for reading the filing. It is a way to get to the relevant disclosure without
-making HTML parsing part of every research loop.
+Use section extraction when you know the disclosure you need. It takes HTML parsing out of the normal research loop; it does not replace reading the filing when tables, definitions, or qualifications matter.
 
-## Choose a stable filing or the latest matching one
-
-For a reproducible analysis, use the accession number from a filing search:
+## Use an accession for a repeatable result
 
 ```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/0000320193-24-000123/sections/item_1a?mode=compact&view=agent"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/0000320193-24-000123/sections/item_1a?ticker=AAPL&form=10-K&mode=compact&view=agent"
 ```
 
-For a monitoring loop, ask for the named section on the latest 10-K instead:
+For a monitor that should follow the current annual filing instead, use the latest-section route:
 
 ```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact&view=agent"
 ```
 
-The latest-section route defaults to `form=10-K`; keep `form` explicit in a
-monitor so the expected filing type is clear. This differs from plain
-`GET /v1/filings/latest`, where omitting `form` means the latest filing of any
-type.
+The latest-section route defaults to `form=10-K`, but make the form explicit for a production monitor. This differs from plain `GET /v1/filings/latest`, where no `form` means the latest filing of any type.
 
-## What to retain with the text
+## Keep the source with the text
 
-Keep the accession number, section key, form, filing date, and SEC source URL
-with an extracted passage. `mode=full` or `mode=compact` controls the section
-body; `view=agent` is for a smaller handoff while preserving the fields needed
-to identify the source. Do not infer that every response preserves tables,
-contains every historical filing, or can be batched: those are separate
-coverage and implementation questions.
+Store the accession number, section key, form, filing date, SEC filing URL, and request ID with an extracted passage. `mode=compact` is a smaller section body; `mode=full` provides the full response. `view=agent` is a route-defined projection, not a generic field selector.
 
-## A practical review sequence
+## Common failures
 
-1. Find the filing with [`GET /v1/filings`](/api-reference/filings/get-v1-filings)
-   when the filing is not already known.
-2. Retrieve the section by accession for a stable comparison, or use the
-   latest-section route for a current monitor.
-3. Open the SEC source before relying on a sentence whose meaning depends on a
-   table, definition, cross-reference, or surrounding qualification.
+- A `404` can mean the accession, section key, or optional filing hints do not resolve to an extractable section. Find the filing first, then use its exact accession.
+- A section result does not guarantee that surrounding tables or cross-references are represented in the passage. Open the SEC source before relying on such context.
+- Do not infer that every form has every item key. Use the filing family and the specific extracted response as the evidence.
 
-## Build the right next step
+## Next steps
 
-<CardGroup cols={3}>
-  <Card title="Search cited sections" icon="search" href="/api-reference/sections/get-v1-sections-search">
-    Start with a question when the section key is not known.
-  </Card>
-  <Card title="Compare risk-factor change" icon="git-compare" href="/tutorials/semantic-search-risk-factors">
-    Use retrieval to triage the filings that deserve a real comparison.
-  </Card>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Run a source-linked extraction against the live API.
-  </Card>
-</CardGroup>
+- [Find filings](/seo/sec-filing-search-api)
+- [Search cited sections](/api-reference/sections/get-v1-sections-search)
+- [Filings API reference](/api-reference/filings)

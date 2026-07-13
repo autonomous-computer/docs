@@ -1,38 +1,42 @@
 ---
 title: "SEC Full-Text Search API"
-description: "Search exact terms across SEC filing records and extracted sections, then inspect the returned filing and source-linked passages."
+description: "Search exact terms across SEC filing records and extracted sections, then inspect the source filing before using a result."
 ---
 
-Full-text search is the direct path when the wording matters: a policy name, accounting term, contract clause, or disclosure phrase. It returns both matching filing records and matching sections, so you can decide whether to open the filing or work from a cited passage.
+Use full-text search when a phrase, policy name, or contract term matters. It searches both filing records and extracted sections, so the response has two lists to review.
 
-## Search an issuer's 10-K filings
+## Search filing content
 
 ```bash
-curl "https://api.secapi.ai/v1/search/fulltext?q=material%20weakness&ticker=AAPL&form=10-K&limit=5" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/search/fulltext?q=material%20weakness&ticker=AAPL&form=10-K&limit=5"
 ```
 
-`q` is required. You can constrain the search with a ticker or CIK, form, accession number, filing year, or `date_from` and `date_to`.
+`q` is required. Constrain the query with a ticker or CIK, form, accession number, filing year, `fy`, or `date_from` and `date_to`.
 
 ```json
 {
   "object": "fulltext_search",
   "query": "material weakness",
   "filings": { "object": "list", "data": [], "count": 0 },
-  "sections": { "object": "list", "data": [], "count": 0, "degradedState": null }
+  "sections": {
+    "object": "list",
+    "data": [],
+    "count": 0,
+    "degradedState": null
+  },
+  "requestId": "req_example"
 }
 ```
 
-An empty example is intentional: result fields depend on the filings that match at request time. In a real response, preserve the filing accession and source URL, then open the filing or retrieve the section before making a conclusion.
+The example intentionally shows an empty result: matched fields depend on the filing corpus at request time. In a real response, retain filing identity and source URLs, then open the filing or retrieve its section before drawing a conclusion.
 
-## Choose the right search method
+## When to use another path
 
-- Need the exact word or phrase across filing records and sections: use full-text search.
-- Need related concepts expressed in different language: use [semantic search](/seo/sec-semantic-search-api).
-- Need a cited excerpt from extracted sections: use [section search](/api-reference/sections/get-v1-sections-search).
+- Use [semantic search](/seo/sec-semantic-search-api) for related concepts expressed in different language.
+- Use [section search](/api-reference/sections/get-v1-sections-search) when you need a cited extracted passage.
+- Use [filing search](/seo/sec-filing-search-api) when the question is which filings exist, not what they say.
 
-## Practical limits
+## Production notes
 
-Search results are evidence to review. They do not establish materiality, completeness, or a legal or investment conclusion. An issuer can describe the same issue under different language, and an exact search can miss that variation. For broader concept retrieval, use semantic search and verify every cited result in the source filing.
-
-Read the [full-text search reference](/api-reference/search/get-v1-search-fulltext), the [search guide](/products/search), and the [filing-search guide](/products/filing-search). For product context, see the [search feature page](https://secapi.ai/features/search).
+An empty response is not evidence that the issuer never made a disclosure. Exact wording, form selection, date filters, and search-backend availability all affect the result. Log `requestId` and retry only bounded, retryable server failures.

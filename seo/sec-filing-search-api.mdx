@@ -1,55 +1,44 @@
 ---
 title: "SEC Filing Search API"
-description: "Find SEC filings by issuer, form, date, fiscal period, or accession number, then retrieve the filing or a named section with a stable source record."
+description: "Find an SEC filing by issuer, form, date, fiscal period, or accession number, then retrieve its content with a stable source record."
 ---
 
-Use SEC API filing search to find the filing record you need before you retrieve or analyze its content. The result gives you the form, filing date, accession number, and SEC source URL to carry into the next request.
+Find the filing record first. The result provides the form, filing date, accession number, and SEC URL you need for exact retrieval and review.
 
-<Card title="Evaluate filing search" icon="clipboard-check" href="/evaluate/sec-filing-search-api">
-  Run the issuer, form, citation, and response-shape checks that matter to your team before you commit to an integration.
-</Card>
-
-## Search a company's filing history
+## Search an issuer's filing history
 
 ```bash
-curl "https://api.secapi.ai/v1/filings?ticker=NVDA&form=10-K&limit=5&sort=filing_date_desc" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=NVDA&form=10-K&limit=5&sort=filing_date_desc"
 ```
 
-For one issuer's newest 10-K, use `GET /v1/filings/latest?form=10-K`.
-Without `form`, it returns the newest filing of any type. For a known record,
-use the accession-number route. For a question about filing text, choose a
-content-search endpoint instead of treating the filing manifest as the answer.
+For one issuer's newest annual report, use `GET /v1/filings/latest?ticker=NVDA&form=10-K`. Without `form`, latest filing means the newest filing of any type. For a known filing, use the accession-number route. For a question about content, use a content-search route rather than treating the manifest as the answer.
 
-## Search the content of filings
+## Continue with the filing you found
 
 ```bash
-curl "https://api.secapi.ai/v1/search/semantic?q=merger%20agreement&ticker=MSFT&form=8-K&mode=hybrid&limit=10" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/0001045810-24-000029"
+
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/0001045810-24-000029/sections/item_1a?ticker=NVDA&form=10-K"
 ```
 
-The semantic endpoint is `GET /v1/search/semantic`; `q` is required. It can
-return matching sections with citation fields that point back to the SEC
-source. Use `mode=keyword`, `mode=semantic`, or `mode=hybrid` according to the
-retrieval behavior you need; inspect a reported degraded state before treating
-a fallback result as a full semantic search.
+Keep `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` with any excerpt or report. Preserve route-specific provenance and freshness metadata when supplied.
 
-## A practical research sequence
+## Choose the right route
 
-1. Find the filing with `GET /v1/filings` or retrieve the newest form with `GET /v1/filings/latest`.
-2. Keep `accessionNumber`, `filingDate`, and `filingUrl` in your research record.
-3. Retrieve a named section by accession, or search sections with a concrete question.
-4. Verify any excerpt against the linked SEC filing before it becomes an investor, legal, or compliance conclusion.
+| Need                            | Endpoint                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Filter filing records           | [`GET /v1/filings`](/api-reference/filings/get-v1-filings)                                     |
+| Find one issuer's newest filing | [`GET /v1/filings/latest`](/api-reference/filings/get-v1-filings-latest)                       |
+| Read a known filing             | [`GET /v1/filings/{accession_number}`](/api-reference/filings/get-v1-filings-accession-number) |
+| Search exact text               | [`GET /v1/search/fulltext`](/api-reference/search/get-v1-search-fulltext)                      |
+| Search related concepts         | [`GET /v1/search/semantic`](/api-reference/search/get-v1-search-semantic)                      |
+| Search cited passages           | [`GET /v1/sections/search`](/api-reference/sections/get-v1-sections-search)                    |
 
-## Filings and search are different jobs
+## Next steps
 
-| Need | Endpoint family |
-| --- | --- |
-| Filter filing records by issuer, form, or date | [`/v1/filings`](/api-reference/filings/get-v1-filings) |
-| Retrieve one issuer's newest filing | [`/v1/filings/latest`](/api-reference/filings/get-v1-filings-latest) |
-| Retrieve a known filing | [`/v1/filings/{accession_number}`](/api-reference/filings/get-v1-filings-accession-number) |
-| Search exact text | [`/v1/search/fulltext`](/api-reference/search/get-v1-search-fulltext) |
-| Search related concepts | [`/v1/search/semantic`](/api-reference/search/get-v1-search-semantic) |
-| Find cited passages in extracted sections | [`/v1/sections/search`](/api-reference/sections/get-v1-sections-search) |
-
-Read the [filing-search guide](/products/filing-search), [search guide](/products/search), and [filing types and exhibits](/filing-types-and-exhibits) for the coverage boundary. For the product view, see the [EDGAR Filing Search API page](https://secapi.ai/apis/filing-search) and [SEC EDGAR filing statistics](https://secapi.ai/statistics).
+- [Filing search guide](/products/filing-search)
+- [Filing content search](/products/search)
+- [Filing types and exhibits](/filing-types-and-exhibits)

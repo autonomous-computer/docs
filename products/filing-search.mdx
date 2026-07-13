@@ -1,72 +1,49 @@
 ---
-title: "EDGAR Filing Search API"
-description: "Find SEC filing records by issuer, form, date, fiscal period, or accession number, then keep the source URL and accession with your result."
+title: "SEC Filing Search"
+description: "Find SEC filing manifests by issuer, form, date, fiscal period, accession number, or indexed text."
 ---
 
-Use filing search when you need to find the SEC record before you read it. It returns filing manifests: the issuer, form, filing date, accession number, and SEC source URL that let you retrieve the same filing again.
+Use filing search to find the filing before you read or extract it. Keep the returned accession number and SEC filing URL; they are the source trail for the next request.
 
-For one issuer's newest filing, start with [latest filing](/api-reference/filings/get-v1-filings-latest). For a known accession, use [filing by accession](/api-reference/filings/get-v1-filings-accession-number). Use this endpoint when you need a filtered list.
-
-## Find recent 10-K filings
+## Find a recent annual report
 
 ```bash
-curl "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=3&sort=filing_date_desc" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&sort=filing_date_desc&limit=5"
 ```
 
-The response is a cursor-paginated list. Keep `accessionNumber` and `filingUrl` with any downstream note or model output; they identify the SEC source behind the result.
-
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "accessionNumber": "0000320193-24-000123",
-      "ticker": "AAPL",
-      "form": "10-K",
-      "filingDate": "2024-11-01",
-      "filingUrl": "https://www.sec.gov/Archives/..."
-    }
-  ],
-  "hasMore": true,
-  "nextCursor": "3"
-}
-```
-
-The fields available in the default view can be broader than this example. Use `view=agent` only when the [endpoint reference](/api-reference/filings/get-v1-filings) documents the smaller projection you need.
-
-## Narrow the result set
+The response is a paginated list of filing manifests. A result identifies the filing with `accessionNumber`, `form`, `filingDate`, and a source URL. Use the accession number for an exact lookup or section retrieval.
 
 ```bash
-# A filing window for a company and form.
-curl "https://api.secapi.ai/v1/filings?ticker=MSFT&form=10-Q&date_from=2023-01-01&date_to=2024-01-01&sort=filing_date_desc" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/0000320193-24-000123"
 
-# A specific fiscal year. Use `filing_year` when the filing year matters.
-curl "https://api.secapi.ai/v1/filings?ticker=MSFT&form=10-K&filing_year=2024" \
-  -H "x-api-key: $SECAPI_API_KEY"
-
-# A known accession number.
-curl "https://api.secapi.ai/v1/filings?accession_number=0000320193-24-000123" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/0000320193-24-000123/sections/item_1a?ticker=AAPL&form=10-K"
 ```
 
-Use `date_from` and `date_to` in `YYYY-MM-DD` form. `sort` accepts `filing_date_desc` or `filing_date_asc`. The exact filter set, aliases, and limits are part of the [filings reference](/api-reference/filings/get-v1-filings), which is the contract to use in production.
+## Filter deliberately
 
-## Continue through a list
+| Need                  | Parameters                        |
+| --------------------- | --------------------------------- |
+| One issuer            | `ticker`, `symbol`, or `cik`      |
+| Filing family         | `form` or comma-separated `forms` |
+| Filing-date window    | `date_from` and `date_to`         |
+| Period or year        | `fp`, `filing_year`, or `fy`      |
+| Exact filing          | `accession_number`                |
+| Indexed manifest text | `q`                               |
 
-Pass `nextCursor` from one response as `cursor` in the next request. Do not derive pages from a total count: the API returns `hasMore` and `nextCursor` so a client can stop when the result set is exhausted.
+`sort` accepts `filing_date_desc` or `filing_date_asc`. `limit` is 1 through 50. Send `nextCursor` back as `cursor` unchanged, and do not reuse it after changing filters.
 
-```bash
-curl "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=3&cursor=3" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
+## Production notes
 
-## Choose the next request
+- Pass `form=10-K` when that is the filing you need. Plain [latest filing](/api-reference/filings/get-v1-filings-latest) without `form` can return any filing type.
+- A missing result is not proof that an issuer made no filing. Check the date, form, and issuer constraints before expanding the query.
+- Preserve `requestId` and route-specific provenance and freshness metadata with cached or user-visible conclusions.
+- Correct `400` requests instead of retrying them. Honor `Retry-After` on `429`; bound retries for `5xx` responses.
 
-- Need the newest filing of a form: [retrieve the latest filing](/api-reference/filings/get-v1-filings-latest).
-- Need a named item from one filing: [extract a section](/api-reference/filings/get-v1-filings-accession-number-sections-section-key).
-- Need passages that match a question: [search filing content](/products/search).
-- Need a map of filing families and current section support: [filing types and exhibits](/filing-types-and-exhibits).
+## Next steps
 
-For product context, see the [filing-search API page](https://secapi.ai/apis/filing-search) or try the [sandbox](https://secapi.ai/sandbox).
+- [Filings API reference](/api-reference/filings)
+- [Search filing content](/products/search)
+- [Filing types and exhibits](/filing-types-and-exhibits)

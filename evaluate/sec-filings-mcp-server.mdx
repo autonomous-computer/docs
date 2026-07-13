@@ -1,60 +1,40 @@
 ---
-title: "Evaluate SEC Filings MCP Server"
-description: "Evaluate SEC API's hosted MCP server for Claude, Cursor, Codex, LangChain, LlamaIndex, and other agent clients."
+title: "Evaluate the SEC Filings MCP Server"
+description: "Test the hosted MCP server with one source-linked filing retrieval workflow."
 ---
 
-Use this page to evaluate hosted MCP before adding it to a coding-agent workspace or investor automation stack. For installation details, see [Hosted MCP Workflows](/mcp-workflows) and [MCP Server Installation](/mcp-install).
+Evaluate MCP the same way you evaluate REST: verify discovery, authenticate from the environment, and require a filing citation from one complete workflow.
 
-<CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Create an account and store the key in your agent environment.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Explore the API surface before connecting an MCP client.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Review pricing and budget posture before autonomous agent loops.
-  </Card>
-</CardGroup>
+## Test one evidence-preserving workflow
 
-## What to test
+1. Read the live discovery metadata at `https://api.secapi.ai/mcp` before configuring a client.
+2. Configure the hosted streamable HTTP server with an environment-backed `x-api-key`, not a checked-in secret.
+3. Resolve an issuer, fetch its latest 10-K, extract Item 1A, and require the accession number, SEC filing URL, and request ID alongside the text.
 
-- Public discovery metadata at `GET https://api.secapi.ai/mcp`
-- Auth through the `x-api-key` header
-- A single issuer workflow across entity resolution, filing retrieval, section extraction, statements, and ownership
-- Error handling with `requestId` and `traceparent`
-- Agent budget checks through billing and limits endpoints
+The equivalent REST calls make the expected result concrete:
 
-## Proof-of-concept prompt
+```bash
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 
-<Prompt>
-Evaluate the SEC API hosted MCP server for this agent workspace. Confirm the install metadata, register the streamable HTTP MCP server with the x-api-key header, resolve AAPL, fetch the latest 10-K, extract Item 1A, pull annual statements, and return a compact report with every tool call, requestId, source accession number, freshness metadata, and any billing or quota warning.
-</Prompt>
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K"
+```
 
-## Evaluation path
+## What to verify
 
-<Steps>
-  <Step title="Fetch live install metadata">
-    Do not rely on old local notes. Read the deployed MCP metadata before configuring a client.
-  </Step>
-  <Step title="Run one evidence-preserving workflow">
-    A useful MCP smoke test resolves an issuer, retrieves a filing, extracts a section, and returns citations.
-  </Step>
-  <Step title="Add client-specific guardrails">
-    Store the API key in environment variables, not in checked-in MCP config. Require the agent to preserve request metadata.
-  </Step>
-</Steps>
+- The client does not expose a key in source control or a browser-visible URL.
+- Tool output identifies the source filing and preserves failure details.
+- The consuming application keeps `requestId`, `traceparent`, and source metadata when returned.
 
-## Read next
+## Common failures
 
-<CardGroup cols={3}>
-  <Card title="Hosted MCP Workflows" icon="plug-zap" href="/mcp-workflows">
-    Full setup, auth, quota, and client examples.
-  </Card>
-  <Card title="Agent setup page" icon="bot" href="https://secapi.ai/agents/sec-filings-mcp-server">
-    Buyer-facing MCP page for SEC filing agents.
-  </Card>
-  <Card title="Client integrations" icon="blocks" href="/clients">
-    LangChain, LlamaIndex, Vercel AI SDK, Cursor-style clients, and more.
-  </Card>
-</CardGroup>
+- Old installation notes: read deployed discovery metadata again.
+- Missing or invalid API key: pass `x-api-key` from the environment.
+- Uncited text: retrieve the filing or section again before use downstream.
+
+## Next steps
+
+- [Hosted MCP workflows](/mcp-workflows)
+- [Filing search](/products/filing-search)
+- [API conventions](/api-conventions)

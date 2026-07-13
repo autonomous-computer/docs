@@ -1,97 +1,42 @@
 ---
-title: "Filing Intelligence API"
-description: "AI-tagged 8-K/6-K event feed, section-level filing diffs, earnings transcripts, structured guidance, and single-issuer coverage reports through one SEC API surface."
+title: "Filing Intelligence"
+description: "Use filing events, diffs, transcripts, and guidance as source-linked inputs to a filing research workflow."
 ---
 
-Turn raw SEC filings into a persisted, replayable intelligence feed. AI-tagged material events, section-level redline diffs, earnings transcripts, structured guidance, and single-issuer coverage rollups — all durable, cursor-paginated, and built for agents.
+Filing Intelligence provides derived views over selected filing material. Use those views to find and prioritize source filings, then inspect the SEC document before relying on the result.
 
-## Why use this
-
-Reading filings one-by-one does not scale, and re-deriving "what changed" or "what did management guide" on every request is slow and non-reproducible. The Filing Intelligence surface persists these derivations: one durable row per tagged filing, a stable diff report per filing pair, and structured transcript and guidance stores you can replay and cite.
-
-- **Tagged event feed** -- persisted AI-tagged 8-K/6-K events, one durable row per filing, cursor-paginated and replayable
-- **Section-level diffs** -- auto prior-period pairing, per-section change badges, word-level redline hunks, and materiality scores
-- **Earnings transcripts** -- speaker attribution, prepared-remarks/Q&A segmentation, and summaries from EX-99 materials
-- **Structured guidance** -- metric, direction, target period, and value ranges extracted from earnings materials
-- **Coverage reports** -- a single-issuer rollup over tagged events, guidance, transcripts, and footnote newness
-
-## Quick start
+## Compare two reporting periods
 
 ```bash
-# Recent AI-tagged 8-K events for a ticker
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/events?forms=8-K&tickers=AAPL&limit=25"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K&sections=item_1a_risk_factors,item_7_mdna"
 ```
 
-## Diff two filings
+`ticker` and `form` are required. Without `from` and `to`, the route compares the latest filing with the prior filing of that form. Set `from` and `to` to an accession number or ISO date for an explicit pair. Set `include_hunks=false` when section-level changes are sufficient.
 
-Compare two filings of the same form. With no `from`/`to`, the endpoint auto-pairs the latest filing against its prior period:
+## Query the persisted stores
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/events?forms=8-K,6-K&tickers=AAPL&limit=25"
+
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/transcripts?tickers=AAPL&limit=10"
+
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/guidance?tickers=AAPL&direction=raised&limit=10"
 ```
 
-`ticker` and `form` are required. Restrict the diff with `sections`, choose explicit `from`/`to` selectors (accession number or ISO date), and set `include_hunks=false` to drop the word-level redline when you only need per-section change badges and materiality scores.
+These endpoints support their documented filters and cursor pagination. Keep each result's filing identity and any returned source URL. Guidance results identify the source by `accessionNumber` but do not return a source URL, so use [filing retrieval](/products/filing-search) to fetch the filing record when a derived item affects a decision.
 
-## Transcripts and guidance
+## Limits to keep visible
 
-```bash
-# Earnings transcripts
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/transcripts?tickers=AAPL&limit=4"
+- A diff covers the selected pair; it is not a complete disclosure history.
+- Transcript and guidance output depends on covered filing material. Absence is not evidence that an issuer held no call or gave no guidance.
+- Derived events, summaries, and scores are retrieval aids, not legal, accounting, or investment conclusions.
 
-# Structured guidance, raised only
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/guidance?tickers=AAPL&direction=raised"
-```
+## Next steps
 
-## Single-issuer coverage report
-
-Roll up the persisted stores into one issuer-level report:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/coverage?ticker=AAPL"
-```
-
-Either `ticker` or `cik` is required. Bound the window with `date_from` / `date_to`.
-
-## Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/filings/events` | Persisted AI-tagged 8-K/6-K event feed |
-| `GET /v1/filings/diff` | Section-level diff report across two filings of the same form |
-| `GET /v1/filings/transcripts` | Earnings-transcript store with speaker attribution |
-| `GET /v1/filings/guidance` | Structured guidance store (metric, direction, period, range) |
-| `GET /v1/intelligence/coverage` | Single-issuer coverage rollup |
-
-## SDK and CLI
-
-The `secapi` CLI mirrors the plane:
-
-```bash
-secapi filings events --forms 8-K --tickers AAPL --limit 25
-secapi filings diff --ticker AAPL --form 10-K
-secapi filings transcripts --tickers AAPL --limit 4
-secapi filings guidance --tickers AAPL --direction raised
-secapi filings coverage --ticker AAPL
-```
-
-The JavaScript SDK exposes the same surface under `client.filingsIntelligence`:
-
-```js
-await client.filingsIntelligence.events({ forms: "8-K", tickers: "AAPL", limit: 25 })
-await client.filingsIntelligence.diff({ ticker: "AAPL", form: "10-K" })
-await client.filingsIntelligence.transcripts({ tickers: "AAPL", limit: 4 })
-await client.filingsIntelligence.guidance({ tickers: "AAPL", direction: "raised" })
-await client.filingsIntelligence.coverage({ ticker: "AAPL" })
-```
-
-## Related
-
-- [API Reference: Filings](/api-reference/filings)
-- [API Reference: Intelligence](/api-reference/intelligence)
-- [Filing Search API](/products/filing-search)
-- [Special Situations API](/products/special-situations)
+- [Filings API reference](/api-reference/filings)
+- [Find a filing](/products/filing-search)
+- [Filing types and exhibits](/filing-types-and-exhibits)
