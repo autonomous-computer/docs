@@ -1,122 +1,62 @@
 ---
-title: "13F API — Institutional Holdings Data for Investors and AI Agents"
-description: "Use SEC API to query structured Form 13F holdings, compare manager filings, monitor institutional ownership changes, and preserve source evidence for investor agents."
+title: "13F API for institutional holdings"
+description: "Retrieve a manager's reported 13F holdings, select a filed period, and preserve the evidence needed to interpret a delayed disclosure"
 ---
 
-Use this page when you need Form 13F holdings in a product, screen, monitor, or AI agent. SEC API parses institutional manager filings and exposes structured holdings data through REST, SDKs, CLI, and hosted MCP while preserving the filing evidence you need to audit the result.
+Call the 13F routes when you need a normalized report for an institutional manager rather than a live portfolio estimate. Start with a manager CIK, then retain the report date, filing date, accession number, and filing URL in the result you show a user or pass to an agent.
 
-<CardGroup cols={3}>
-  <Card title="Evaluate this workflow" icon="clipboard-check" href="/evaluate/13f-api">
-    Test manager holdings, quarter comparisons, identifiers, and source trails.
-  </Card>
-  <Card title="13F monitor workflow" icon="workflow" href="https://secapi.ai/workflows/13f-monitor-agent">
-    See the buyer-facing agent workflow.
-  </Card>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup?utm_source=docs&utm_medium=13f_api&utm_campaign=docs_to_signup">
-    Create an account and run the first holdings request.
-  </Card>
-</CardGroup>
-
-## What to verify first
-
-- **Manager identity**: Confirm manager CIK, manager name, report period, filed date, and accession number.
-- **Issuer identity**: Verify CUSIP, issuer name, ticker, and any issuer CIK mapping your workflow depends on.
-- **Change semantics**: Decide how you will treat added, removed, increased, reduced, and unchanged positions across quarters.
-- **Timing**: 13F filings are quarterly and delayed. They are useful for ownership history and manager behavior, not real-time position proof.
-- **Agent contract**: Require the final answer to preserve source URL, request ID, filing date, report period, and caveats.
-
-## Quick start
-
-Get Berkshire Hathaway's current 13F holdings:
+## Get the latest reported holdings
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=10"
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
 ```
 
-```json
-{
-  "data": [
-    {
-      "issuer_name": "APPLE INC",
-      "cusip": "037833100",
-      "value": 84248000,
-      "shares": 400000000,
-      "share_type": "SH",
-      "investment_discretion": "SOLE",
-      "voting_authority_sole": 400000000
-    }
-  ],
-  "period": "2024-Q4",
-  "manager_name": "BERKSHIRE HATHAWAY INC",
-  "filed_at": "2025-02-14"
-}
-```
+The selected report includes the manager, filing and report dates, the accession number, holdings, and provenance. `limit` is capped at 50. To return the compact, citation-preserving shape for an agent, add `view=agent`.
 
-Compare holdings across quarters:
+## Select a reported period
+
+First list the manager's available 13F filings:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f/compare?cik=0001067983&period_a=2024-Q3&period_b=2024-Q4"
+  "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=8"
 ```
 
-## Give this prompt to your agent
+Then select a report with a returned date:
 
-<Prompt>
-Evaluate SEC API for a 13F manager-monitor workflow. Pull the latest reported holdings for Berkshire Hathaway, compare the two latest available quarters if the endpoint supports it, and return added, removed, increased, and reduced positions. Preserve manager CIK, issuer identifiers, report period, filed date, accession number, source URL, requestId, and a caveat that 13F data is quarterly and delayed.
-</Prompt>
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&reportDate=2024-12-31&limit=20"
+```
 
-## Use cases
+`reportDate` is the quarter-end report date; `filingDate` is when the SEC received the filing. Do not substitute one for the other in a screen, report, or alert.
 
-### Track position changes for top managers
+## Compare latest available reports
 
-Monitor when the largest hedge funds and asset managers add or exit positions. The compare endpoint surfaces exactly what changed.
+Use the comparison route to obtain a row-level change list for the latest two parsable reports:
 
-### Build a 13F-based stock screener
+```bash
+curl -X POST \
+  -H "content-type: application/json" \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -d '{"cik":"0001067983","limit":50}' \
+  "https://api.secapi.ai/v1/owners/13f/compare"
+```
 
-Screen for stocks that are being accumulated by multiple institutional investors simultaneously. Cross-reference with insider buying for stronger conviction signals.
+This endpoint does not compare user-selected periods. Its `added`, `removed`, and `changed` rows identify differences in the two selected disclosures; they do not establish when a manager traded, why it changed the position, or what it owns now.
 
-### Backtest institutional following
+## Build with disclosure limits
 
-Analyze whether stocks with increasing institutional ownership outperform. Use historical 13F data to build and validate strategies.
+- Form 13F is a periodic disclosure, not a real-time position feed.
+- It has its own reporting scope and does not show a manager's complete exposure, including every short, derivative, cash, liability, or non-reportable asset.
+- Reported value is not a current market value.
+- An amendment, manager identity change, or security-class detail can change the reading of a row. Use the accession number and filing URL to inspect the filing.
 
-### Give 13F data to an agent
+For issuer-centric reported holders, use `GET /v1/owners/institutional/ticker` and label the returned cohort's dates.
 
-Use 13F endpoints when your agent needs to answer questions like "which managers increased NVDA exposure last quarter?" or "which new positions appeared across multiple high-conviction funds?" Keep the manager CIK, reporting period, accession number, and request ID attached to the answer so the result can be audited.
+## Continue
 
-### Compliance and reporting
-
-Wealth managers and fund administrators can use 13F data to verify holdings disclosures and track competitive positioning.
-
-## When SEC API is the right layer
-
-Raw EDGAR is still the source of record. SEC API is the right layer when you want a normalized contract for managers, holdings, identifiers, source links, and agent-readable responses without maintaining your own 13F parser and quarter-comparison code.
-
-<CardGroup cols={3}>
-  <Card title="13F monitor workflow" icon="workflow" href="https://secapi.ai/workflows/13f-monitor-agent">
-    See how the ownership data becomes a recurring investor-agent workflow.
-  </Card>
-  <Card title="Ownership API page" icon="users" href="https://secapi.ai/apis/ownership">
-    Review the broader ownership surface: 13F, insiders, holders, and governance.
-  </Card>
-  <Card title="Pricing and limits" icon="credit-card" href="/evaluate/pricing-and-limits">
-    Check the meter and fanout posture before monitoring many managers.
-  </Card>
-</CardGroup>
-
-## API endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/owners/13f` | List holdings for a 13F filer |
-| `GET /v1/owners/13f/compare` | Compare holdings between two quarters |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="https://secapi.ai/signup?utm_source=docs&utm_medium=13f_api_bottom&utm_campaign=docs_to_signup">
-  Start pulling 13F data with source trails and request metadata.
-</Card>
-
-- [Monitor 13F Holdings Tutorial](/tutorials/monitor-13f-holdings)
-- [Ownership Workflows](/ownership-workflows)
-- [API Reference](/api-reference/owners)
+- [13F comparison API](/seo/sec-13f-comparison-api)
+- [Evaluate 13F API](/evaluate/13f-api)
+- [Ownership workflows](/ownership-workflows)

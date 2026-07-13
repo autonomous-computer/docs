@@ -1,99 +1,91 @@
 ---
-title: "Ownership Workflows"
-description: "Retrieve a manager's 13F filings and holdings, compare the latest parsable reports, and inspect issuer-level institutional holders."
+title: "Ownership workflows"
+description: "Retrieve 13F, insider, and beneficial-ownership disclosures with the dates and filing evidence needed to interpret them"
 ---
 
-Start with the disclosure you need to inspect. A manager CIK and an issuer ticker answer different questions: use the manager endpoints to inspect a disclosed portfolio and the issuer endpoint to find institutional holders of one security.
+Use these workflows to turn a manager CIK, issuer ticker, or reporting-owner name into a source-cited ownership record. Start with the disclosure family that matches the question: 13F for a manager's reported holdings, Forms 3/4/5 for reported insider transactions, and Schedule 13D or 13G for beneficial ownership.
 
-## Latest 13F ownership report
+## Get a manager's latest reported 13F holdings
 
-### API
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "$SECAPI_BASE_URL/v1/owners/13f?cik=0001067983&limit=10"
-```
-
-For quarter-specific retrieval, add `reportDate=YYYY-MM-DD`, for example
-`/v1/owners/13f?cik=0001067983&reportDate=2024-12-31`.
-
-When the reporting period matters, list the manager's filings first and select a `reportDate` from the returned record rather than guessing the date:
+Pass a manager CIK to `GET /v1/owners/13f`. The response is a selected 13F report, not a live portfolio. Keep the report date, filing date, accession number, and filing URL with every downstream result.
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "$SECAPI_BASE_URL/v1/owners/13f/filings?cik=0001067983&limit=8"
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
 ```
 
-### SDK
-
-```ts
-const client = new SecApiClient({ apiKey: process.env.SECAPI_API_KEY })
-const report = await client.latest13F({ cik: "0001067983", limit: 10 })
-```
-
-### CLI
+To select a particular report, use a `reportDate` or `filingDate` returned by the filing list:
 
 ```bash
-secapi owners 13f --cik 0001067983 --limit 10
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=8"
 ```
 
-## Compare the latest two 13F reports
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&reportDate=2024-12-31&limit=20"
+```
 
-This endpoint compares the latest two parsable reports it can retrieve for the manager. It does not accept two arbitrary periods. Preserve `currentFilingDate`, `previousFilingDate`, and the returned source provenance; list the manager's filings and retrieve the selected reports separately when you need both accession numbers.
+## Compare the latest two parsable reports
 
-### API
+`POST /v1/owners/13f/compare` chooses the latest two parsable reports for one manager. It does not accept arbitrary quarter selectors. Use the filings endpoint and individual report requests when you need a specific pair of reports.
 
 ```bash
 curl -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -d '{"cik":"0001067983","limit":10}' \
-  "$SECAPI_BASE_URL/v1/owners/13f/compare"
+  -d '{"cik":"0001067983","limit":50}' \
+  "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 
-### SDK
+The comparison rows identify `added`, `removed`, `changed`, or unchanged positions. A change in reported shares or value is a research lead, not evidence of a current trade, manager intent, or complete exposure.
 
-```ts
-const comparison = await client.compare13F({ cik: "0001067983", limit: 10 })
-```
+## Check institutional holders of one issuer
 
-### CLI
-
-```bash
-secapi owners compare-13f --cik 0001067983 --limit 10
-```
-
-## Historical institutional ownership extract
-
-### API
+Use the issuer-centric holder view when the question is who disclosed a position in one security:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "$SECAPI_BASE_URL/v1/owners/institutional/extract?cik=0001067983&year=2025&quarter=4&limit=25"
+  "https://api.secapi.ai/v1/owners/institutional/ticker?ticker=AAPL&limit=25"
 ```
 
-### SDK
+This view is based on a 13F cohort. Compare its `reportDate`, `filingDate`, and `accessionNumber` before joining it to a different quarter or calling it current ownership.
 
-```ts
-const extract = await client.institutionalOwnershipExtract({
-  cik: "0001067983",
-  year: 2025,
-  quarter: 4,
-  limit: 25,
-})
-```
+## Find 13D and 13G disclosures
 
-## Institutional holders of one issuer
+Use `GET /v1/owners/13d-13g` for beneficial-ownership reports. You can filter by issuer, filer, SEC form, and filing date.
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "$SECAPI_BASE_URL/v1/owners/institutional/ticker?ticker=AAPL&limit=25"
+  "https://api.secapi.ai/v1/owners/13d-13g?ticker=AAPL&forms=SC%2013D,SC%2013G&limit=25"
 ```
 
-The holder response is based on a materialized 13F cohort. Read `reportDate`, `filingDate`, and `accessionNumber` before comparing it with a different cohort or treating it as current ownership.
+Keep the reported class, ownership percentage, amendment status, filing date, and source filing together. A beneficial-ownership filing is not a real-time cap table or a complete measure of economic exposure.
 
-## Recent insider trades
+## Review reported insider transactions
+
+Use `GET /v1/insiders` to retrieve normalized records from Forms 3, 4, and 5:
 
 ```bash
-secapi insiders list --ticker AAPL --limit 10
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
 ```
+
+For a narrow Form 4 queue, add a transaction-code filter:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&transaction_code=P&limit=10"
+```
+
+`transactionCode` and `transactionDirection` are different fields. Preserve both, along with the transaction date, filing date, accession number, and filing URL. The row may omit a price, title, or post-transaction ownership; leave absent fields absent rather than estimating them.
+
+## Handle results and failures
+
+List routes return pagination fields such as `hasMore` and `nextCursor`; use the returned cursor for the next page. Treat a non-2xx response as a failed request, retain `requestId` and `traceparent` for diagnosis, and do not turn an empty result into a claim that an issuer or manager has no relevant disclosure.
+
+## Continue
+
+- [Institutional ownership and insider trading API](/products/ownership)
+- [13F holdings API](/seo/13f-data-api)
+- [Insider trading API](/seo/insider-trading-api)

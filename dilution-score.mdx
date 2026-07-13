@@ -1,97 +1,62 @@
 ---
-title: "Dilution Score"
-description: "A single 0-100 metric expressing near-term dilution risk per issuer, composed from five factor signals with categorical sub-ratings."
+title: "Dilution score"
+description: "Retrieve a beta per-issuer dilution score, its categorical band, and the filing-derived inputs needed for a review workflow"
 ---
 
+Use the Dilution Score as a triage signal for an issuer, then inspect the cited filing-derived records before making a capital-structure conclusion. `GET /v1/dilution/score` requires a ticker and returns the score's rating view; dilution routes return the `SECAPI-Maturity: beta` response header.
+
 <Warning>
-The Dilution surfaces are in **beta** — dilution data coverage is still being populated, so some issuers may return degraded confidence or no rating. All dilution responses carry the `SECAPI-Maturity: beta` response header; do not yet treat returned values as production-grade.
+Dilution routes are beta. Coverage and extracted terms can be incomplete or unavailable for an issuer. Treat a returned score as a research input, not a production-grade investment conclusion.
 </Warning>
 
-A single 0-100 derived metric expressing near-term dilution risk per issuer. Built by composing five factor signals from the SEC API dilution dataset (filed offering events, outstanding warrants and convertibles, latest cash position, share-float trajectory, Nasdaq compliance status). Surfaces alongside six categorical sub-ratings, a `regsho` flag, and an optional rolling-history timeseries materialized daily.
-
-## Methodology
-
-| Factor | Weight | Inputs |
-|---|---|---|
-| Active offering pressure | 0.30 | `dilution_events` (≤90d): offering size vs market cap; ATM and over-baby-shelf flags |
-| Cash runway pressure | 0.25 | `dilution_cash_position`: cash-remaining-months capped at 18mo; categorical `cash_need` floor |
-| Convertible & warrant overhang | 0.20 | `dilution_warrants` + `dilution_convertibles`: underlying shares vs SO; near-term exercisable (≤12mo) weighted 1.5× |
-| Share float velocity | 0.15 | `dilution_share_float_history`: trailing-12mo % increase in shares outstanding |
-| Compliance pressure | 0.10 | `dilution_nasdaq_compliance`: worst status (delisted → 100, pending → 80, extension_granted → 60, resolved → 10) |
-
-Final score = round-1-decimal(Σ factor.score × factor.weight).
-
-Bands: `low` 0-34, `moderate` 35-54, `elevated` 55-74, `high` 75-100.
-
-## Quality controls
-
-- methodology version is returned in every payload (bumping the version invalidates persisted history without overwriting prior rows)
-- confidence drops when SEC API has to fall back because dilution events, warrants/convertibles, cash-position, share-float-history, or Nasdaq-compliance inputs are unavailable
-- degraded reasons are surfaced explicitly so consumers can reason about gaps instead of treating the score as full-confidence
-- score is deterministic given (inputs, methodology_version) — same inputs always produce the same envelope
-- score is always bounded `[0, 100]`; never NaN or Infinity even under extreme inputs
-
-## Sub-ratings (6 categorical)
-
-Derived deterministically from the factor scores; mirror the columns on `dilution_ratings`:
-
-- `overallRisk` — average of the 5 factor scores, bucketed
-- `offeringAbilityRisk` — `active_offering_pressure` bucket
-- `dilutionRisk` — average of `active_offering_pressure` and `convertible_warrant_overhang`, bucketed
-- `historicalRisk` — `share_float_velocity` bucket
-- `cashNeedLevel` — `cash_runway_pressure` bucket
-- `warrantExerciseRating` — `convertible_warrant_overhang` bucket
-
-Buckets: `high` (≥70), `medium` (≥40), `low` (>0), `unknown` (0).
-
-## Output
-
-- score on a `0-100` scale
-- band: `low`, `moderate`, `elevated`, `high`
-- confidence: `high`, `medium`, `low`
-- factor-level breakdown with weights and per-factor explanations
-- six categorical sub-ratings + `regsho` flag
-- percentile rank (against the trailing-365-day score-history population at the same methodology version)
-- freshness metadata, degraded reasons, and provenance
-- optional `history[]` array when `?history=30d|90d|1y` is set
-
-## Refresh cadence
-
-A daily materialization in our scheduled data pipeline runs at 09:00 UTC and UPSERTs into the persisted score-history store, keyed uniquely by `(ticker, methodology_version, as_of)`. The endpoint reads the latest live computation on every request; `?history=` reads the persisted timeseries.
-
-## Endpoints
-
-Two endpoints expose the Dilution Score. They are not interchangeable — pick based on how much metadata you need:
-
-- **`GET /v1/signals/dilution`** — the canonical Dilution Score. Returns the full envelope: score, band, confidence, factor-level breakdown, the six categorical sub-ratings, percentile rank, optional `history[]` (via `?history=30d|90d|1y`), and full provenance/freshness metadata. Use this when you need to reason about the score or display its components.
-- **`GET /v1/dilution/score`** — the `dilution_rating` view of the same score for an issuer (`ticker` required). Lighter than the signal (no percentile, no `history[]`), but it now carries the **full per-factor breakdown**: see Factor breakdown below. Use it for a band/score lookup plus factor attribution where percentile and history are not needed.
-
-Both endpoints compute the score live from the dilution inputs on each request (the legacy persisted ratings table was retired — see the [API changelog](/changelog)). `/v1/dilution/score` reshapes the same live computation into the `dilution_rating` envelope. They differ only in the surrounding metadata `/v1/signals/dilution` adds (percentile, history, full provenance) — the score, band, sub-ratings, and factor breakdown are identical.
-
-## Factor breakdown
-
-The five weighted factors are exposed three ways so every consumer sees the same per-factor scores additively:
-
-- **`/v1/signals/dilution` default view** — `factors[]`, each entry `{ key, label, score (0–100), weight (0–1), value, explanation }`.
-- **`/v1/dilution/score` (and `/v1/dilution/ratings`)** — the `dilution_rating` envelope carries **both** the legacy flat `factorExposures` (`{ key: score }`, retained for back-compat) **and** the full `factors[]` array in the same shape as the signal's default view (`key`, `label`, `score`, `weight`, `value`, `explanation`).
-- **`/v1/signals/dilution?view=agent`** — a **compact** `factors[]` where each entry is only `{ key, score, weight }`. The verbose `label`, `value`, and `explanation` fields are intentionally dropped under `view=agent` to hold the agent token budget; the stable factor `key` plus its `score` and `weight` are enough to rank factor contributions. Request the default view when an agent needs the human-readable explanation.
-
-## Example
+## Get a score
 
 ```bash
-# Default response — full envelope with factors[]
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/signals/dilution?ticker=MULN"
-
-# With rolling 90d history
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/signals/dilution?ticker=MULN&history=90d"
-
-# Compact agent shape — factors[] reduced to { key, score, weight }
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/signals/dilution?ticker=MULN&view=agent"
-
-# With factor-model context (macro liquidity regime + momentum exposure)
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/signals/dilution/enhanced?ticker=MULN"
+  "https://api.secapi.ai/v1/dilution/score?ticker=AAPL"
 ```
+
+The response provides the issuer score, band, categorical sub-ratings, factor breakdown, freshness, provenance, and methodology version. Retain those fields with the response instead of reducing the result to a single number.
+
+## Use the score with the underlying records
+
+Follow a score with the records that can explain an issuer's capital-structure risk:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/dilution/events?ticker=AAPL&limit=25"
+```
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/dilution/warrants?ticker=AAPL&limit=25"
+```
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/dilution/convertibles?ticker=AAPL&limit=25"
+```
+
+For a filing-family view of registration statements and prospectuses, query offerings separately:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/offerings?ticker=AAPL&forms=S-1,424B4&limit=10"
+```
+
+An offering or registration record is not proof that securities were issued, sold, freely tradable, or immediately dilutive. Read the cited filing for security terms, selling-holder context, conversion terms, exercise conditions, and later amendments.
+
+## Handle missing and degraded results
+
+- Omitting `ticker` from `/v1/dilution/score` returns a `400` `missing_ticker` error.
+- An unresolved issuer returns a `404` `dilution_score_not_found` error.
+- A route failure returns a `502` with a dilution-score lookup error code.
+- List routes paginate; follow `nextCursor` only while `hasMore` is true.
+
+An empty list or a low-confidence input is not evidence that a security has no dilution risk. Preserve the response metadata and identify the source filing needed for a material conclusion.
+
+## Continue
+
+- [Dilution API reference](/api-reference/dilution)
+- [Offerings API reference](/api-reference/offerings)
+- [Ownership workflows](/ownership-workflows)

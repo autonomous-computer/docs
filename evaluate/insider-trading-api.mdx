@@ -1,60 +1,44 @@
 ---
-title: "Evaluate Insider Trading API"
-description: "Evaluate Form 3, Form 4, and Form 5 insider transaction data for monitoring, compliance, and investor-agent workflows."
+title: "Evaluate insider trading API"
+description: "Test Form 3, 4, and 5 transaction queries, source fields, and the interpretation limits an insider-monitoring workflow must retain"
 ---
 
-Use this page to evaluate insider-trading workflows before publishing alerts or feeding an investment process. For implementation details, see the [insider trading API guide](/seo/insider-trading-api).
+Use this page to evaluate the insider endpoint before you publish alerts or feed its results into an investor workflow. A successful evaluation produces reviewable Form 3, 4, or 5 records with their filing evidence; it does not validate an investment signal or a claim about insider intent.
 
-<CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Create an account and test Form 4 transaction queries.
-  </Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
-    Explore insider and filing workflows before wiring alerts.
-  </Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Review pricing before running watchlists or repeated monitors.
-  </Card>
-</CardGroup>
+## Run a narrow Form 4 query
 
-## What to test
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
+```
 
-- Recent Form 4 transactions for one issuer
-- Purchase versus sale filtering
-- Insider identity, title, transaction code, share count, price, and post-transaction ownership
-- Filing citation fields and amendment behavior
-- Monitoring cadence for two-business-day reporting windows
+Then test a transaction-code filter:
 
-## Proof-of-concept prompt
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=JPM&forms=4&transaction_code=P&limit=25"
+```
+
+## Verify your implementation
+
+1. Check that issuer, reporting owner, form, filing date, and transaction date are represented separately.
+2. Preserve `transactionCode` and `transactionDirection` together.
+3. Preserve the accession number, `provenance.filingUrl`, and `requestId` in every alert or report.
+4. Confirm that your pagination follows `nextCursor` only when `hasMore` is true.
+5. Test records with absent price, security-title, or ownership values; do not replace filing-derived gaps with estimates.
+
+## Evaluation prompt
 
 <Prompt>
-Evaluate SEC API insider transaction data for a portfolio monitor. For NVDA and JPM, fetch recent Form 4 transactions, group the records by reported transaction code and direction, and return a concise table with reporting owner, title, transaction date, shares, price, remaining ownership, accession number, filing URL, requestId, and caveats. Do not label code `P` as open-market activity without checking the source filing and its footnotes.
+Use SEC API to retrieve recent Form 4 records for one issuer. Return reporting owner, title when present, transaction and filing dates, transaction code, direction, shares and price when present, accession number, filing URL, and request ID. Do not infer motive, open-market activity, or an investment recommendation from a code without reviewing the cited filing and footnotes.
 </Prompt>
 
-## Evaluation path
+## Interpretation limits
 
-<Steps>
-  <Step title="Start with one issuer and one filter">
-    Test purchase-only and all-transaction views so your workflow does not mistake routine compensation activity for open-market buying.
-  </Step>
-  <Step title="Preserve the filing trail">
-    Require accession number and filing URL in the downstream artifact. Insider signals without source context are too easy to misuse.
-  </Step>
-  <Step title="Budget recurring monitors">
-    Check [Pricing and limits](/evaluate/pricing-and-limits) before running broad watchlists.
-  </Step>
-</Steps>
+A Form 4 can cover grants, exercises, tax withholding, gifts, indirect ownership, and planned activity. A transaction code is not a complete explanation of the event. A non-2xx response is a failed lookup, not evidence of no insider activity; retain request metadata for diagnosis.
 
-## Read next
+## Continue
 
-<CardGroup cols={3}>
-  <Card title="Insider trading implementation guide" icon="user-check" href="/seo/insider-trading-api">
-    Endpoint examples and use cases.
-  </Card>
-  <Card title="Insider monitor workflow" icon="workflow" href="https://secapi.ai/workflows/insider-trading-monitor">
-    Buyer-facing workflow page for agentic monitoring.
-  </Card>
-  <Card title="Analyze insider trading tutorial" icon="graduation-cap" href="/tutorials/analyze-insider-trading">
-    Build a working insider-analysis flow.
-  </Card>
-</CardGroup>
+- [Insider trading data API](/seo/insider-trading-api)
+- [Ownership workflows](/ownership-workflows)
+- [Insiders API reference](/api-reference/insiders)

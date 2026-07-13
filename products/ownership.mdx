@@ -1,76 +1,64 @@
 ---
-title: "Institutional Ownership and Insider Trading API"
-description: "Retrieve normalized 13F holdings, Form 3/4/5 transactions, 13D/13G reports, and executive-compensation data with SEC filing citations."
+title: "Institutional ownership and insider trading API"
+description: "Build source-cited ownership research with 13F, Form 3/4/5, and Schedule 13D/13G filing records"
 ---
 
-Ownership research usually starts with a simple question: who owns the security, who is changing that position, and what did the filing actually say? SEC API turns the relevant disclosure families into queryable records while keeping the accession number and filing URL beside the data.
+SEC API gives an application or research workflow structured records for three different ownership questions: a manager's reported 13F holdings, an insider's reported transaction, and a beneficial owner's 13D or 13G disclosure. Each record is filing-derived, so your output can retain the accession number and source URL needed to inspect the original disclosure.
 
-Use this surface when you need to inspect a manager's 13F holdings, track reported insider transactions, review beneficial-ownership filings, or compare executive compensation. It is not a substitute for reading a filing when the investment decision depends on footnotes, amendments, or the terms of a transaction.
+## Choose the right disclosure
 
-## Start with the question you have
-
-| If you need to... | Use | What to keep |
+| Question | Route | What the result establishes |
 | --- | --- | --- |
-| Inspect one manager's reported portfolio | `GET /v1/owners/13f` | `reportDate`, `filingDate`, `accessionNumber`, and the holding fields |
-| Compare a manager's latest two parsable reports | `POST /v1/owners/13f/compare` | both filing dates, row status, deltas, and provenance |
-| Find holders of one issuer | `GET /v1/owners/institutional/ticker` | report date, manager identity, value, shares, and rank |
-| Review reported insider transactions | `GET /v1/insiders` | Form 4 code, direction, transaction date, accession number, and filing URL |
-| Find a 13D or 13G disclosure | `GET /v1/owners/13d-13g` | filer, ownership context, filing date, and source filing |
+| What did this manager report at a quarter end? | `GET /v1/owners/13f` | A selected, normalized 13F report |
+| What changed between a manager's latest reports? | `POST /v1/owners/13f/compare` | A comparison of the latest two parsable reports |
+| Which managers reported this issuer? | `GET /v1/owners/institutional/ticker` | A holder ranking for a reported 13F cohort |
+| What insider transactions were reported? | `GET /v1/insiders` | Normalized records from Forms 3, 4, and 5 |
+| Which beneficial-ownership reports were filed? | `GET /v1/owners/13d-13g` | 13D/13G-family disclosure records |
 
-## First requests
+## First useful result
 
-Retrieve the latest parsable 13F report for a manager CIK:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
-```
-
-Retrieve Form 4 transactions for an issuer:
+Retrieve recent Form 4 records for an issuer:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
 ```
 
-The 13F response includes the manager name, filing date, period of report, accession number, holdings, and provenance. An insider row includes the reporting owner's name and role, Form 4 transaction code and direction, security title, transaction shares and price when reported, post-transaction ownership when reported, and the source filing.
-
-## Compare a manager's latest reports
-
-Use the comparison endpoint when you want the latest two **parsable** reports available to the service for a manager. The endpoint does not accept two arbitrary quarter selectors; inspect `currentFilingDate`, `previousFilingDate`, and the returned source provenance before describing a change as a particular quarter-over-quarter move. If you need the accession number for both reports, list the manager's filings and retrieve the selected reports separately.
-
-```bash
-curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "content-type: application/json" \
-  -d '{"cik":"0001067983","limit":50}' \
-  "https://api.secapi.ai/v1/owners/13f/compare"
-```
-
-For a specific reporting period, first list the manager's filings or request a report with `reportDate=YYYY-MM-DD`:
+Retrieve a manager's latest reported 13F holdings:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=8"
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
 ```
 
-## Read ownership data carefully
+Both results are disclosure records, not conclusions. Store `accessionNumber`, the filing URL in `provenance`, relevant dates, and `requestId` before grouping, scoring, or alerting on the data.
 
-- **13F is delayed and incomplete by design.** It reports a manager's qualifying holdings after quarter end, not a live portfolio, and it does not describe every asset class or position.
-- **A row is not the whole thesis.** A new or reduced position can reflect rebalancing, client flows, derivatives, or other context that the holding row cannot settle.
-- **Transaction code and direction are different fields.** Form 4 code `P` identifies a purchase transaction; `transactionDirection` describes whether the reported shares were acquired or disposed. Keep both when classifying activity.
-- **Keep the source trail.** Preserve `accessionNumber` and `provenance.filingUrl` in downstream reports so an analyst can inspect the original filing.
+## Build a defensible ownership record
 
-## Continue from here
+1. Query a narrow issuer, manager, or owner scope first.
+2. Retain the source fields with the normalized record.
+3. Use the report date and filing date as separate values.
+4. Read the cited filing when a footnote, amendment, security class, or transaction term could change the conclusion.
 
-<CardGroup cols={3}>
-  <Card title="Monitor 13F holdings" icon="chart-no-axes-combined" href="/tutorials/monitor-13f-holdings">
-    Build a quarterly comparison workflow with REST, Python, and JavaScript.
-  </Card>
-  <Card title="Analyze insider trading" icon="user-check" href="/tutorials/analyze-insider-trading">
-    Filter Form 4 transactions and preserve the filing evidence.
-  </Card>
-  <Card title="Ownership API reference" icon="book-open" href="/api-reference/owners">
-    Inspect endpoint parameters and response contracts.
-  </Card>
-</CardGroup>
+For example, get a beneficial-ownership queue for one issuer:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13d-13g?ticker=AAPL&forms=SC%2013D,SC%2013G&limit=25"
+```
+
+Use `forms` only for the SEC form families you intend to evaluate. A later amendment may supersede important facts from an earlier filing, so preserve the filing form and amendment status in the research record.
+
+## Limits to keep in the product
+
+- A 13F is delayed and limited to its reporting scope. It is not a manager's live, complete portfolio.
+- A Form 4 code does not, by itself, establish motive or open-market activity. Read the filing and its footnotes when that distinction matters.
+- A 13D or 13G is a dated beneficial-ownership disclosure, not a fully diluted cap table or an exhaustive view of a holder's exposure.
+- The holder route reflects its returned reporting cohort. Do not combine it with another period without labeling the dates.
+
+## Next steps
+
+- [Ownership workflows](/ownership-workflows)
+- [13F comparison API](/seo/sec-13f-comparison-api)
+- [Insider trading API](/seo/insider-trading-api)
+- [Ownership API reference](/api-reference/owners)

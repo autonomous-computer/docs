@@ -1,101 +1,56 @@
 ---
-title: "13F Holdings Comparison API — Compare a Manager's Latest Disclosed Reports"
-description: "Compare a manager's two most recent parsable 13F reports by CIK. Inspect added, removed, and changed positions with filing provenance and clear timing limits."
+title: "13F holdings comparison API"
+description: "Compare the latest two parsable 13F reports for one manager and keep the dates and filing evidence that bound the result"
 ---
 
-Institutional investors file Form 13F on a delayed schedule. The useful question is usually not simply what a manager owns, but what changed between its two most recent disclosed reports. SEC API compares the latest two parsable 13F reports for a manager CIK and returns a row-level position diff alongside the source record for the current report.
+Use `POST /v1/owners/13f/compare` to identify differences between the latest two parsable 13F reports available for a manager CIK. The route is useful for building a review queue; it is not a way to select two arbitrary quarters or infer a manager's current book.
 
-## Capabilities
-
-<CardGroup cols={2}>
-  <Card title="Latest disclosed-report diff" icon="code-compare">
-    Compare the latest two parsable 13F reports for one manager CIK. Each position is classified as added, removed, changed, or unchanged.
-  </Card>
-  <Card title="Share and value changes" icon="arrow-up-right-dots">
-    Inspect current and prior shares and value, with absolute deltas for positions that changed.
-  </Card>
-  <Card title="Filing provenance" icon="file-check">
-    Keep the current filing accession, source URL, filing date, and request metadata with the comparison output.
-  </Card>
-  <Card title="Bounded position output" icon="list-tree">
-    Set a position limit when you need a concise comparison; use the underlying reports when a full filing review is required.
-  </Card>
-</CardGroup>
-
-## Quick start
-
-Compare a manager's two most recent parsable disclosed reports:
+## Get a comparison
 
 ```bash
-curl -X POST "https://api.secapi.ai/v1/owners/13f/compare" \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl -X POST \
   -H "content-type: application/json" \
-  -d '{"cik":"0001350694","limit":50}'
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -d '{"cik":"0001350694","limit":50}' \
+  "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 
-```json
-{
-  "managerName": "Example Manager",
-  "currentFilingDate": "2025-02-14",
-  "previousFilingDate": "2024-11-14",
-  "rows": [
-    {
-      "issuer": "Example Issuer",
-      "cusip": "000000000",
-      "status": "changed",
-      "currentValueUsdThousands": 1200,
-      "previousValueUsdThousands": 900,
-      "deltaValueUsdThousands": 300,
-      "currentShares": 10000,
-      "previousShares": 8000,
-      "deltaShares": 2000
-    }
-  ]
-}
+The response identifies the current and previous filing dates and returns position rows with a status and reported share/value differences. Keep `managerName`, both filing dates, the row `cusip`, the status, `provenance`, and `requestId` in a downstream report.
+
+## Read the result correctly
+
+| Response field | Use it for | Do not use it for |
+| --- | --- | --- |
+| `currentFilingDate` and `previousFilingDate` | Identifying the two disclosed reports | Inferring trade dates |
+| `status` | Grouping added, removed, changed, and unchanged rows | Explaining manager intent |
+| `currentShares` and `previousShares` | Measuring disclosed share-count change | Measuring complete exposure |
+| reported value fields | Ranking rows for review | Current mark-to-market value |
+| `provenance.filingUrl` | Opening the source filing | Replacing a review of the source filing |
+
+## Retrieve a specific period instead
+
+For a selected period, list available filings and request the reports separately:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f/filings?cik=0001350694&limit=8"
 ```
 
-The route selects the latest two parsable reports. It does not accept arbitrary reporting periods. For a period-specific report, retrieve the underlying 13F filing first and retain both the filing date and the report date in your research record.
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f?cik=0001350694&reportDate=2024-12-31&limit=50"
+```
 
-## Use cases
+The compare endpoint has no `period_a` or `period_b` query parameters. Build a custom selected-period comparison only after retrieving and labeling the two source reports yourself.
 
-### Smart money tracking
+## Failure and interpretation limits
 
-Monitor how a selected manager's disclosed positions changed from one report to the next. Treat the result as a delayed disclosure signal, not a view of its current book.
+The request requires a CIK and accepts a body `limit` from 1 through 50. A comparison can fail when the service cannot produce the two parsable reports; handle the non-2xx response, keep its request metadata, and avoid treating a failed comparison as an unchanged portfolio.
 
-### Crowded trade detection
+13F reports are delayed, limited disclosures. They do not reveal every position, hedge, cash balance, derivative, or trade after the report date.
 
-Use the row-level diff to identify positions worth investigating, then compare the issuer's filings, valuation, and other managers separately.
+## Continue
 
-### Portfolio rebalancing signals
-
-Use disclosed changes as one input to a research process. Shares and reported value may move for reasons other than a discretionary buy or sell.
-
-### Client reporting
-
-Create a reviewed report that links each change to the relevant 13F source filing and explains the timing limitations to its reader.
-
-## API endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `POST /v1/owners/13f/compare` | Compare the latest two parsable reports for a manager CIK |
-| `GET /v1/owners/13f` | Retrieve a normalized 13F report, with optional quarter selection |
-
-## Why SEC API for 13F comparison
-
-| What to check | Why it matters |
-|---------|-----------|
-| Filing date versus report date | 13F data is delayed. The report date and the date the SEC received it answer different questions. |
-| Added or removed versus changed | The response labels each position, but a changed row does not explain the manager's decision. |
-| Shares versus reported value | Reported value is not a live market value and can change independently of share count. |
-| Source filing | A comparison is a navigation aid. Review the source 13F before citing a position change. |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="/getting-started">
-  Start comparing institutional holdings in under 60 seconds. 150 free API calls (one-time).
-</Card>
-
-- [13F Institutional Holdings API](/seo/13f-data-api)
-- [Insider Trading API](/seo/insider-trading-api)
-- [API Reference](/api-reference)
+- [13F API for institutional holdings](/seo/13f-data-api)
+- [Ownership workflows](/ownership-workflows)
+- [Ownership API reference](/api-reference/owners)

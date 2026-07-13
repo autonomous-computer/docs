@@ -1,82 +1,50 @@
 ---
-title: "Insider Trading Data API: SEC Forms 3, 4, and 5"
-description: "Query normalized insider-transaction records from SEC Forms 3, 4, and 5 by issuer, owner, Form 4 code, filing date, and source filing."
+title: "Insider trading data API"
+description: "Query normalized Form 3, 4, and 5 records by issuer or reporting owner while retaining the filing evidence needed for review"
 ---
 
-Use the insider-trading API to review transactions disclosed by officers, directors, and 10% owners. It returns normalized transaction rows from Forms 3, 4, and 5, together with the SEC accession number and filing URL needed to review the source.
+Use `GET /v1/insiders` to create a source-cited queue of reported insider transactions. The route returns normalized records from Forms 3, 4, and 5; it does not determine an insider's motive, whether a transaction was discretionary, or an investment conclusion.
 
-An insider filing is evidence, not an investment conclusion. A sale can reflect taxes, diversification, or scheduled activity; a code alone does not explain the surrounding facts.
-
-<CardGroup cols={3}>
-  <Card title="Try the endpoint" icon="terminal-square" href="/api-reference/insiders">
-    Inspect parameters, response formats, and agent mode.
-  </Card>
-  <Card title="Build an analysis" icon="graduation-cap" href="/tutorials/analyze-insider-trading">
-    Work through a complete Form 4 filtering example.
-  </Card>
-  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">
-    Run the requests against your own watchlist.
-  </Card>
-</CardGroup>
-
-## Get recent Form 4 transactions
+## Get recent Form 4 records
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
 ```
 
-The list envelope contains `data`, `hasMore`, `nextCursor`, `requestId`, and `traceparent`. Each transaction row can include:
+Each row can include the reporting owner, role, form, filing date, transaction date, transaction code, direction, security title, shares, price, post-transaction ownership, accession number, and filing URL. Filing-derived values can be absent, so preserve null or missing values rather than filling them with estimates.
 
-```json
-{
-  "ownerName": "Example reporting owner",
-  "ownerTitle": "Chief Executive Officer",
-  "form": "4",
-  "filingDate": "2026-07-01",
-  "transactionDate": "2026-06-30",
-  "transactionCode": "P",
-  "transactionDirection": "acquired",
-  "securityTitle": "Common Stock",
-  "transactionShares": 1000,
-  "transactionPrice": 25.5,
-  "transactionValue": 25500,
-  "sharesOwnedFollowing": 51000,
-  "accessionNumber": "0000000000-00-000000",
-  "provenance": {
-    "filingUrl": "https://www.sec.gov/Archives/..."
-  }
-}
-```
+## Narrow the review queue
 
-The values above illustrate the response shape only. The source filing remains the authority for a transaction's terms, footnotes, and context.
-
-## Filter the records you need
-
-To retrieve Form 4 transactions reported with code `P`, pass `forms=4` and `transaction_code=P`:
+Filter Form 4 records by a reported transaction code:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=JPM&forms=4&transaction_code=P&limit=10"
+  "https://api.secapi.ai/v1/insiders?ticker=JPM&forms=4&transaction_code=P&limit=25"
 ```
 
-| Parameter | Use it for | Example |
-| --- | --- | --- |
-| `ticker` or `cik` | Scope to an issuer | `ticker=AAPL` |
-| `forms` | Limit the filing family | `forms=4` |
-| `owner_name` or `owner_cik` | Focus on a reporting owner | `owner_name=Jamie%20Dimon` |
-| `security_title` | Separate common stock from another security | `security_title=Common%20Stock` |
-| `transaction_code` | Select a Form 4 transaction code | `transaction_code=P` |
-| `date_from` and `date_to` | Bound the filing-date window | `date_from=2026-01-01` |
-| `limit` and `cursor` | Page through a result set | `limit=25&cursor=25` |
+| Parameter | Purpose |
+| --- | --- |
+| `ticker` or `cik` | Select the issuer |
+| `forms` | Select filing families such as `4` |
+| `owner_name` or `owner_cik` | Select a reporting owner |
+| `security_title` | Limit results to a disclosed security title |
+| `transaction_code` | Select a Form 4 transaction code |
+| `date_from` and `date_to` | Bound the filing-date window |
+| `limit` and `cursor` | Page through results |
 
-## What to preserve in an investor workflow
+## Keep the fields that make a result reviewable
 
-1. **The code and direction.** Keep both `transactionCode` and `transactionDirection`; they answer different questions.
-2. **Dates.** `transactionDate` can differ from `filingDate`. Form 4 is generally due within two business days, but the filing date is the date this API query is filtering.
-3. **The filing evidence.** Store `accessionNumber` and `provenance.filingUrl` with any alert or research note.
-4. **Nulls and missing context.** Price, value, title, and post-transaction ownership are filing-derived and may be absent. Do not silently replace an unavailable field with an estimate.
+Keep `transactionCode` and `transactionDirection` together. Keep `transactionDate` separate from `filingDate`. Store the `accessionNumber`, `provenance.filingUrl`, and `requestId` with any alert or table row.
 
-## Where this fits
+A code such as `P` does not prove open-market activity, and a sale can reflect tax withholding, an exercise, a gift, a plan, or another filing-specific fact. Read the source filing and footnotes before assigning motive or labeling activity in an investor-facing product.
 
-Use this endpoint for a portfolio monitor, a compliance review, or a research queue. Pair it with the [Form 4 glossary](https://secapi.ai/glossary/form-4) for regulatory context, the [ownership product guide](/products/ownership) for 13F and 13D/13G workflows, and the [insider-trading monitor workflow](https://secapi.ai/workflows/insider-trading-monitor) for a buyer-facing implementation path.
+## Handle pagination and failures
+
+The list response supplies `hasMore` and `nextCursor`; use the returned cursor to continue. A non-2xx response is a failed lookup, not an empty transaction set. Retain `requestId` and `traceparent` for support or diagnostics.
+
+## Continue
+
+- [Evaluate insider trading API](/evaluate/insider-trading-api)
+- [Ownership workflows](/ownership-workflows)
+- [Insiders API reference](/api-reference/insiders)
