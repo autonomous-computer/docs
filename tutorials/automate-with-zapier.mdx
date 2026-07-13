@@ -1,42 +1,55 @@
 ---
 title: "SEC Data Automation with Zapier"
-description: "Send signed SEC filing-monitor events to Zapier and turn matching filings into rows, messages, or review tasks."
+description: "Route verified SEC filing-monitor matches through Zapier while preserving each filing's source link and event identity."
 ---
 
-Use Zapier to route SEC filing matches into an existing operating workflow. The reliable boundary is simple: SEC API delivers a signed `monitor.match` event; Zapier stores or routes the normalized filing fields; the next human or system can follow the source filing.
+Use Zapier to send saved filing-monitor matches to an existing review workflow. SEC API sends a signed `monitor.match` event; Zapier creates a row, message, or task for each matched filing. A delivery is evidence routing, not a conclusion about the filing.
 
-## Set up the connection
+## Prerequisites
 
-1. In Zapier, create a Zap with **Webhooks by Zapier: Catch Hook** and copy the HTTPS hook URL.
-2. In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), add that URL as an organization endpoint and subscribe it to `monitor.match`.
-3. Create the monitor in the same dashboard. A useful first monitor has a focused query, form filter, and a small ticker list.
+- A Zap with **Webhooks by Zapier: Catch Hook** and a copied HTTPS hook URL.
+- A signed-in SEC API organization administrator for the [Delivery dashboard](https://secapi.ai/app/webhooks).
+- A trusted server-side verification boundary for the SEC API signing secret. Keep `SECAPI_API_KEY` only in server-side tooling for the match lookup below.
 
-Webhook and monitor configuration are human-authenticated organization actions. They require the dashboard's WorkOS session; an API key cannot create, edit, test, or delete them.
+## 1. Connect the monitor
 
-## Map a filing match
+1. Create the Catch Hook and copy its URL.
+2. In the Delivery dashboard, register the URL as an organization endpoint and subscribe it to `monitor.match`.
+3. Create a focused monitor with a keyword query, a form filter, and a small ticker list, then attach it to that endpoint.
 
-Use these fields in a Zapier action:
+Endpoint and monitor changes are human-authenticated dashboard actions. API keys cannot create, update, test, replay, rotate, or delete those resources. SEC API signs the exact body, so verify its HMAC before forwarding a trusted event to Zapier; [Build a filing monitor](/tutorials/build-filing-monitor) contains the receiver pattern.
 
-| Field | Use it for |
+## 2. Map a filing review task
+
+Use a Zapier action after the verified event to store or send these fields:
+
+| Event field | Purpose |
 | --- | --- |
-| `data.monitor.name` | Alert and routing label |
-| `data.matches[].ticker` | Company filter or destination key |
-| `data.matches[].form` | Form-specific logic |
-| `data.matches[].filingDate` | Deadline or recency logic |
-| `data.matches[].htmlUrl` | Link to the source filing |
+| `id` | De-duplicate retry delivery |
+| `requestId` | Support and audit correlation |
+| `data.monitor.name` | Alert label and routing context |
+| `data.matches[].ticker` / `form` / `filingDate` | Filing identity and triage fields |
+| `data.matches[].htmlUrl` | Source filing for review |
 
-Use the dashboard's test-delivery action to teach Zapier the payload. It sends `webhook.test`; real filing alerts send `monitor.match` on the scheduled monitor sweep.
+The expected production payload has type `monitor.match`. Use the Delivery dashboard's test action to establish connectivity: it sends `webhook.test`, which should be acknowledged but should not become a filing task.
 
-## Validate a configured monitor
+## 3. Check the query and source evidence
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10" \
+  | jq '{data, requestId, traceparent}'
 ```
 
-The API key is intentionally limited to these data reads. Keep the source URL with the Zapier row or task so reviewers can inspect the filing that caused the alert.
+This returns the current matches for the configured monitor. Retain the source URL and returned `requestId` with every Zapier record so a reviewer can open the cited filing and reproduce the route.
 
-## Read next
+## Failure modes
 
-- [Monitor SEC filing events](/monitors)
-- [Build a filing monitor](/tutorials/build-filing-monitor)
+- A webhook URL alone is not an authenticated integration. Do not send a signing secret into Zapier fields or accept unsigned inbound bodies.
+- Repeated delivery is possible; enforce uniqueness on the event id in the receiving system.
+- One event can hold several matches. Split the array before creating row-level tasks.
+- A keyword hit, a test event, or a successful webhook response does not establish materiality or a completed review.
+
+## Next step
+
+Add an explicit reviewer decision and source-note field to the Zap destination, then use [Monitor SEC filing events](/monitors) to refine the saved query.

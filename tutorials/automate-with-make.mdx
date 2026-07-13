@@ -1,35 +1,50 @@
 ---
 title: "Automate SEC Alerts with Make"
-description: "Receive signed SEC filing-monitor events in Make, iterate through matched filings, and route evidence-rich alerts to your team."
+description: "Deliver filing-monitor matches to Make, split the matched filings into review items, and retain the filing source on every route."
 ---
 
-Make is useful when one SEC filing match should fan out to several operational systems. SEC API delivers one signed `monitor.match` event; Make's Iterator turns `data.matches[]` into one bundle per filing.
+Use Make when one saved filing-monitor match should become several operational actions. SEC API delivers a signed `monitor.match` event; Make's Iterator turns `data.matches` into one bundle per filing. The scenario routes evidence. It does not decide whether a filing is material, adverse, or actionable.
 
-## Configure the source
+## Prerequisites
 
-1. Create a **Custom webhook** in Make and copy its production HTTPS URL.
-2. In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), add that URL as an organization webhook endpoint and subscribe it to `monitor.match`.
-3. Create the saved monitor in the same dashboard with a narrow query and appropriate form/ticker filters.
+- A Make account and a scenario with a production **Custom webhook** trigger for trusted, forwarded events.
+- A public HTTPS receiver you control that can verify the raw webhook body before forwarding an accepted event to Make.
+- A signed-in SEC API organization administrator. Endpoint and monitor setup use the [Delivery dashboard](https://secapi.ai/app/webhooks), not an API key.
+- `SECAPI_API_KEY` only for the read-only monitor preview below.
 
-Endpoint and monitor changes require a WorkOS browser session. Do not place an API key in Make to create, update, test, or delete them; those requests return `human_auth_required`.
+## 1. Configure signed delivery
 
-## Build the scenario
+1. Build the small verification receiver described in [Build a filing monitor](/tutorials/build-filing-monitor). It must retain the raw request body, verify SEC API's HMAC signature, reject invalid events, and forward only accepted events to Make's **Webhooks > Custom webhook** URL.
+2. In the Delivery dashboard, create an organization webhook endpoint with the verification receiver's HTTPS URL and subscribe it to `monitor.match`.
+3. In the same dashboard, create a narrowly scoped monitor with a query, form filter, and ticker list, then connect it to that endpoint.
 
-1. Put **Webhooks > Custom webhook** first.
-2. Add **Tools > Iterator** with array `data.matches`.
-3. Map `ticker`, `form`, `filingDate`, and `htmlUrl` into Slack, email, Sheets, or a review queue.
-4. Include the monitor name and source URL in the outgoing message. The source filing is the evidence; the automation is only the routing layer.
+Save the dashboard-issued signing secret in the receiver's secret store. SEC API must post to the receiver, not directly to Make. Do not expose the signing secret in Make scenario fields; Make should receive only the receiver's accepted, normalized event.
 
-Use the dashboard's test-delivery action while Make is listening. The test event is `webhook.test`; production alerts are `monitor.match` and arrive on the scheduled monitor sweep.
+## 2. Split each filing into a bundle
 
-## Preview a monitor
+1. Put **Tools > Iterator** after the accepted event and set its array to `data.matches`.
+2. Map `data.monitor.name`, `ticker`, `form`, `filingDate`, and `htmlUrl` into Slack, email, Sheets, or a review queue.
+3. Include the monitor name and `htmlUrl` in the destination. `htmlUrl` is the path back to the source filing.
+
+The expected production event has type `monitor.match` and can contain zero or more matched filings. A dashboard test produces `webhook.test`; acknowledge it to prove delivery, but do not create a filing-review task from it.
+
+## 3. Preview the saved query
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10" \
+  | jq '{data, requestId, traceparent}'
 ```
 
-## Read next
+The response is a point-in-time match lookup for the configured monitor. Preserve the returned `requestId` and source URL with any Make-created record so a reviewer can trace the alert.
 
-- [Monitor SEC filing events](/monitors)
-- [Build a filing monitor](/tutorials/build-filing-monitor)
+## Failure modes
+
+- API-key attempts to create, edit, test, replay, rotate, or delete monitor/webhook configuration return `human_auth_required`; use the signed-in dashboard.
+- A scenario that consumes `data.matches[]` without an Iterator may produce one aggregate task rather than one filing task.
+- A `monitor.match` proves a query matched text; it does not prove materiality or a completed analyst review.
+- Retries can deliver the same event more than once. Use the event id as an idempotency key in the trusted receiver or destination.
+
+## Next step
+
+Use [Build a filing monitor](/tutorials/build-filing-monitor) for the raw-body signature verification and production receiver pattern.

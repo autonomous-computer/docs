@@ -3,7 +3,7 @@ title: "Build an SEC Filing Monitor"
 description: "Poll filing search on a schedule, de-duplicate new accessions, and hand an evidence-linked queue to an analyst or agent."
 ---
 
-This is the right journey when your scheduler needs checkpoints and you do not want an inbound webhook receiver. It polls recent 8-Ks, stores accession numbers, and optionally posts a compact review queue. It does not decide whether a filing is material.
+This is the right journey when your scheduler needs checkpoints and you do not want an inbound webhook receiver. It polls recent 8-Ks, stores accession numbers, and writes a compact review queue. It does not decide whether a filing is material. Use it for a bounded watchlist, not as a substitute for a complete EDGAR archive.
 
 ## Prerequisites
 
@@ -62,7 +62,7 @@ await writeFile(statePath, JSON.stringify({ seen: [...seen].slice(-5000) }, null
 console.log(JSON.stringify({ checked: 3, newFilings: alerts.length, alerts }, null, 2));
 ```
 
-Run `node monitor.mjs`. The first run seeds the state and may report existing records. Treat that as an intentional backfill, not a production alert.
+Run `node monitor.mjs`. The expected result is a JSON object with `checked`, `newFilings`, and source-linked queue records. The first run seeds the state and may report existing records. Treat that as an intentional backfill, not a production alert.
 
 ## Expected result and provenance
 

@@ -3,7 +3,13 @@ title: "Build a Compliance Screening Agent"
 description: "Route signed SEC filing-monitor events into a review agent that preserves the issuer, filing, evidence, and decision boundary."
 ---
 
-This guide builds a small screening service: SEC API sends a signed filing-monitor event, the service extracts the filing facts that matter, and a reviewer receives an evidence-linked queue item. It does not make a legal or investment decision.
+This guide builds a small screening service: SEC API sends a signed filing-monitor event, the service extracts the filing facts that matter, and a reviewer receives an evidence-linked queue item. It does not make a legal or investment decision, resolve a name match, or clear a counterparty.
+
+## Prerequisites
+
+- Python 3.9+, Flask, and a public HTTPS receiver URL.
+- A signed-in SEC API organization administrator for the [SEC API dashboard](https://secapi.ai/app/webhooks).
+- `SECAPI_WEBHOOK_SIGNING_SECRET` from the configured endpoint and `SECAPI_API_KEY` only for the read-only match lookup.
 
 ## Configure the monitor first
 
@@ -28,7 +34,11 @@ SECRET = os.environ["SECAPI_WEBHOOK_SIGNING_SECRET"]
 def valid(raw: bytes, header: str) -> bool:
     fields = dict(part.split("=", 1) for part in header.split(",") if "=" in part)
     timestamp, signature = fields.get("t", ""), fields.get("v1", "")
-    if not timestamp or not signature or abs(time.time() - int(timestamp)) > 300:
+    try:
+        stale = abs(time.time() - int(timestamp)) > 300
+    except ValueError:
+        return False
+    if not signature or stale:
         return False
     expected = hmac.new(SECRET.encode(), f"{timestamp}.".encode() + raw, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
@@ -46,7 +56,7 @@ def receive():
     return jsonify({"received": True}), 200
 ```
 
-Run it with `pip install flask` and `SECAPI_WEBHOOK_SIGNING_SECRET=whsec_... flask --app receiver run`. Expose the receiver at the HTTPS destination configured in the dashboard.
+Run it with `pip install flask` and `SECAPI_WEBHOOK_SIGNING_SECRET=whsec_... flask --app receiver run`. Expose the receiver at the HTTPS destination configured in the dashboard. A valid `monitor.match` produces one printed source-linked record per returned match; a valid `webhook.test` is acknowledged as ignored.
 
 ## Add evidence, then review
 
@@ -58,6 +68,13 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 ```
 
 Carry the issuer, form, filing date, source URL, monitor name, and SEC API request ID into every downstream record. An LLM can classify or summarize the filing, but the source filing and the human review decision should remain visible.
+
+## Failure modes
+
+- `401 invalid_signature` usually means the HMAC used parsed JSON instead of the raw bytes, the secret is wrong, or the timestamp is stale.
+- The example only prints records. In production, write the event id to a durable unique store before enqueueing work so retry delivery cannot create duplicate screenings.
+- A `webhook.test` proves the destination and signing path, not that the configured query will find a filing.
+- A text match or an LLM classification is a review lead. Preserve the source URL and require the appropriate reviewer to make the decision.
 
 ## Read next
 

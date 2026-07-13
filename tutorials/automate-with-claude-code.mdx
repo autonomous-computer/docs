@@ -1,282 +1,87 @@
 ---
-title: "Scheduled SEC Analysis with Claude Code"
-description: "Use Claude Code cron skills to run recurring SEC analysis workflows with SEC API. Build a weekly 13F comparison report that runs every Friday evening."
+title: "Automate a 13F Review with Claude Code"
+description: "Use a small, source-preserving 13F comparison script with Claude Code to prepare a human review queue."
 ---
 
-Claude Code can run scheduled tasks using cron skills, combining the SEC API with AI-powered analysis on a recurring cadence. In this tutorial you will set up a weekly 13F portfolio comparison report that runs every Friday evening and summarizes how major funds changed their positions.
+Use this workflow to turn a manager's two latest parsable Form 13F reports into a review artifact. Claude Code can help inspect and format the artifact, but the SEC API response and linked filings remain the evidence. A 13F is a delayed reported snapshot; it is not a current portfolio, trading blotter, or statement of investment intent.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- [Claude Code](https://claude.com/claude-code) installed and authenticated
-- Familiarity with [Custom Skills](/custom-skills) (recommended)
-- (Optional) Familiarity with the [Monitor 13F Holdings](/tutorials/monitor-13f-holdings) tutorial
-
-## What you will build
-
-A scheduled Claude Code skill that:
-
-1. Runs every Friday at 6:00 PM
-2. Fetches the latest 13F filings for a list of funds
-3. Compares current holdings to previous quarter
-4. Generates a summary of new positions, exits, and significant changes
-5. Saves the report as a Markdown file
-
-## Step 1 --- Create the analysis skill
-
-Create a skill file that defines the 13F comparison workflow. Save it as `.claude/skills/weekly-13f-review.md` in your project:
-
-```markdown
----
-name: weekly-13f-review
-description: >
-  Compare 13F holdings for major funds between the current and previous quarter.
-  Identify new positions, exits, and significant weight changes.
----
-
-# Weekly 13F Portfolio Review
-
-## Endpoints Used
-- GET /v1/owners/13f?cik={cik}&reportDate={reportDate}
-
-## Fund Watchlist
-- Berkshire Hathaway (CIK: 0001067983)
-- Bridgewater Associates (CIK: 0001350694)
-- Renaissance Technologies (CIK: 0001037389)
-- Citadel Advisors (CIK: 0001423053)
-- Two Sigma Investments (CIK: 0001179392)
-
-## Process
-
-1. For each fund in the watchlist, fetch the most recent 13F filing:
-   ```bash
-   curl -H "x-api-key: $SECAPI_API_KEY" \
-     "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=1"
-   ```
-
-2. Fetch the previous quarter 13F for comparison:
-   ```bash
-   curl -H "x-api-key: $SECAPI_API_KEY" \
-     "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=1&reportDate=2024-09-30"
-   ```
-
-3. Compare holdings between quarters:
-   - New positions (in current but not previous)
-   - Exited positions (in previous but not current)
-   - Increased positions (shares up >10%)
-   - Decreased positions (shares down >10%)
-
-4. Calculate portfolio concentration:
-   - Top 10 holdings by market value
-   - Percentage of total portfolio in top 10
-
-5. Generate a formatted report with sections for each fund.
-
-## Output Format
-
-Save the report as `reports/13f-weekly-{date}.md` with this structure:
-
-```
-# 13F Weekly Review - {date}
-
-## Berkshire Hathaway
-### New Positions
-- TICKER: X,XXX shares ($X.XM)
-
-### Exited Positions
-- TICKER: was X,XXX shares
-
-### Significant Changes
-- TICKER: +XX% (X,XXX -> Y,YYY shares)
-
-### Top 10 Holdings
-| Rank | Ticker | Shares | Value | % of Portfolio |
-...
-
-## Bridgewater Associates
-...
-```
-
-## Guidelines
-- Only flag changes where share count moved more than 10%
-- Include dollar values where available
-- Note the filing date and period of report for each 13F
-- If a fund has not filed a new 13F since last run, note that
-```
-
-## Step 2 --- Install the skill
+- [Claude Code](https://claude.com/claude-code) installed and authenticated.
+- Node.js 18+ and an SEC API key in `SECAPI_API_KEY`.
+- The reporting manager's CIK. This example uses `0001067983`.
 
 ```bash
-# From your project root
-mkdir -p .claude/skills
-cp weekly-13f-review.md .claude/skills/weekly-13f-review.md
+export SECAPI_API_KEY="your_api_key"
+export MANAGER_CIK="0001067983"
+mkdir 13f-review && cd 13f-review
 ```
 
-Verify the skill is recognized:
+## 1. Fetch a bounded comparison
+
+Create `fetch-13f-comparison.mjs`:
+
+```js
+import { writeFile } from "node:fs/promises";
+
+const cik = process.env.MANAGER_CIK;
+const apiKey = process.env.SECAPI_API_KEY;
+if (!cik || !apiKey) throw new Error("MANAGER_CIK and SECAPI_API_KEY are required");
+
+const response = await fetch("https://api.secapi.ai/v1/owners/13f/compare", {
+  method: "POST",
+  headers: { "x-api-key": apiKey, "content-type": "application/json" },
+  body: JSON.stringify({ cik, limit: 50 }),
+});
+if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
+
+const comparison = await response.json();
+await writeFile("13f-comparison.json", JSON.stringify(comparison, null, 2));
+console.log(JSON.stringify({
+  managerName: comparison.managerName,
+  currentFilingDate: comparison.currentFilingDate,
+  previousFilingDate: comparison.previousFilingDate,
+  rows: comparison.rows?.length ?? 0,
+  requestId: comparison.requestId,
+}, null, 2));
+```
+
+Run `node fetch-13f-comparison.mjs`. The expected result is `13f-comparison.json` containing the two selected filings, position rows, provenance, and request metadata. The route selects the latest two parsable reports; it does not compare arbitrary historical quarters.
+
+## 2. Ask Claude Code for a review artifact
+
+Open the directory in Claude Code and give it this bounded request:
+
+```text
+Read 13f-comparison.json. Create 13f-review.md with sections for added, removed,
+and changed rows. For every row retain issuer, CUSIP, previous and current shares,
+the two filing dates, and any accession or filing URL returned by the API. Do not
+describe a change as a trade, current holding, or investment thesis. Add a short
+"Review required" note that points the reader to the source filings.
+```
+
+Review the generated markdown before sharing it. A useful artifact groups the returned [SEC API status](/status) rows and makes both filing dates visible; it does not manufacture explanations for a change.
+
+## 3. Resolve the underlying reports
+
+Use the filings route when the reviewer needs the report date, accession, or SEC link for a selected comparison:
 
 ```bash
-claude skill list
+curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  --data-urlencode "cik=$MANAGER_CIK" --data-urlencode "limit=8" \
+  "https://api.secapi.ai/v1/owners/13f/filings" \
+  | jq '{data, requestId, traceparent, provenance}'
 ```
 
-You should see `weekly-13f-review` in the output.
+Keep the manager CIK, report date, filing date, accession, filing URL, and `requestId` alongside the generated review. The source filing is the authoritative record for a material statement.
 
-## Step 3 --- Test the skill manually
+## Failure modes
 
-Run the skill once to verify it works:
+- A `400` response commonly means the CIK is missing or malformed; this route needs the reporting manager CIK, not a portfolio-company ticker.
+- A comparison needs two parsable reports. An empty or unavailable comparison is not evidence of no exposure or no change.
+- Do not let an agent replace null values with zero or infer a trade from an added or removed row; corporate actions and reporting conventions can change a row.
+- Keep the JSON artifact out of version control if it contains data your repository should not retain, and never place the API key in a prompt, source file, or commit.
 
-```bash
-claude "Run the weekly-13f-review skill for this week"
-```
+## Next step
 
-Claude Code will:
-1. Call the SEC API for each fund
-2. Compare current and previous quarter holdings
-3. Generate the report
-4. Save it to `reports/13f-weekly-2024-12-13.md`
-
-Review the output to make sure the data looks correct.
-
-## Step 4 --- Set up the cron schedule
-
-Create a cron skill configuration to run the analysis on a schedule. Add this to `.claude/skills/cron-13f-review.md`:
-
-```markdown
----
-name: cron-13f-review
-description: "Scheduled trigger for weekly 13F review every Friday at 6 PM"
-cron: "0 18 * * 5"
-skill: weekly-13f-review
----
-
-# Cron: Weekly 13F Review
-
-Runs `weekly-13f-review` every Friday at 18:00 local time.
-
-## On Success
-- Save report to `reports/` directory
-- Print summary to stdout
-
-## On Failure
-- Retry once after 5 minutes
-- Log error to `reports/13f-errors.log`
-```
-
-## Step 5 --- Configure the environment
-
-Make sure your API key is available to scheduled runs. Add it to your shell profile or a `.env` file:
-
-```bash
-# In ~/.zshrc or ~/.bashrc
-export SECAPI_API_KEY="<your-api-key>"
-```
-
-Or create a `.env` file in your project root:
-
-```
-SECAPI_API_KEY=<your-api-key>
-```
-
-## Step 6 --- Verify the schedule
-
-Check that the cron skill is registered:
-
-```bash
-claude skill list --scheduled
-```
-
-You should see:
-
-```
-cron-13f-review    0 18 * * 5    weekly-13f-review    active
-```
-
-## Example report output
-
-After the skill runs, you will find a report like this in `reports/13f-weekly-2024-12-13.md`:
-
-```markdown
-# 13F Weekly Review - 2024-12-13
-
-## Berkshire Hathaway
-*Filed: 2024-11-14 | Period: 2024-09-30*
-
-### New Positions
-- SU (Suncor Energy): 5,250,000 shares ($210.5M)
-
-### Exited Positions
-- HP (Helmerich & Payne): was 2,604,637 shares
-- PARA (Paramount Global): was 63,316,002 shares
-
-### Significant Changes
-- OXY (Occidental Petroleum): +12% (255,281,524 -> 285,915,108 shares)
-- CB (Chubb Limited): -15% (27,033,784 -> 22,978,716 shares)
-
-### Top 10 Holdings
-| Rank | Ticker | Shares | Value ($M) | % of Portfolio |
-|------|--------|--------|------------|----------------|
-| 1 | AAPL | 400,000,000 | 91,600 | 28.1% |
-| 2 | AXP | 151,610,700 | 42,451 | 13.0% |
-| 3 | BAC | 680,233,587 | 30,274 | 9.3% |
-| 4 | KO | 400,000,000 | 28,400 | 8.7% |
-| 5 | CVX | 118,610,534 | 18,553 | 5.7% |
-...
-
-## Renaissance Technologies
-*Filed: 2024-11-14 | Period: 2024-09-30*
-
-### New Positions
-- SMCI (Super Micro Computer): 1,200,000 shares ($48.6M)
-...
-```
-
-## Extending the workflow
-
-### Add email delivery
-
-Modify the skill to send the report via email after generation:
-
-```markdown
-## On Success
-- Save report to `reports/` directory
-- Email report to `team@yourcompany.com` using the configured SMTP skill
-```
-
-### Add Slack posting
-
-Add a step to post the executive summary to Slack:
-
-```bash
-# After generating the report, post a summary
-curl -X POST -H "Content-Type: application/json" \
-  -d "{\"text\": \"Weekly 13F Review is ready. $(head -20 reports/13f-weekly-$(date +%Y-%m-%d).md)\"}" \
-  "$SLACK_WEBHOOK_URL"
-```
-
-### Compare across quarters
-
-Extend the skill to look at trends over multiple quarters instead of just the most recent change:
-
-```markdown
-## Extended Process
-- Fetch 13F data for the last 4 quarters
-- Calculate rolling position changes
-- Identify consistent accumulators and distributors
-```
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| Skill not found | Verify the file is in `.claude/skills/` and the frontmatter `name` field is correct. Run `claude skill list` to confirm. |
-| API key not available in cron | Make sure `SECAPI_API_KEY` is exported in your shell profile, not just the current session. |
-| Report is empty | Check that the CIKs in the watchlist are correct. Test with a single fund first using `curl` directly. |
-| Cron not firing | Verify the cron expression `0 18 * * 5` is correct for your timezone. Check `claude skill list --scheduled`. |
-| Stale data | 13F filings are quarterly. If no new filing has been published since the last run, the report will show no changes. This is expected. |
-
-## Next steps
-
-- **Add more funds**: Expand the watchlist in the skill file with additional CIKs.
-- **Combine with insider data**: Cross-reference 13F changes with [insider trading patterns](/tutorials/analyze-insider-trading) for a complete ownership picture.
-- **Track specific stocks**: Create a variant skill that monitors which funds hold a specific ticker and alerts when ownership changes.
-
-See the [Custom Skills](/custom-skills) guide for more on building and scheduling Claude Code skills.
+Schedule the fetch script after expected Form 13F filing windows, then have a reviewer inspect the linked reports before distributing a change summary. See [Monitor 13F Holdings](/tutorials/monitor-13f-holdings) for the same evidence path without Claude Code.

@@ -3,18 +3,18 @@ title: "Build a Filing Monitor with Webhooks"
 description: "Create a saved filing search, receive signed monitor.match events, and retain the filing evidence needed for analyst review."
 ---
 
-Use this workflow when a research or compliance team needs a durable alert when a watchlist company files language matching a defined question. The monitor finds candidates; your receiver records the event and sends the cited filing to a reviewer. It is not an EDGAR firehose or a materiality decision.
+Use this workflow when a research or compliance team needs a durable alert when a watchlist company files language matching a defined question. The monitor finds candidates; your receiver records the event and sends the cited filing to a reviewer. It is not an EDGAR firehose or a materiality decision. The completed path is dashboard configuration, raw-body signature verification, and a source-linked review queue.
 
 ## Prerequisites
 
 - A signed-in organization administrator who can use the [Delivery dashboard](https://secapi.ai/app/webhooks).
 - An API key in `SECAPI_API_KEY` for the read-only match lookup below.
-- A public HTTPS endpoint you control, such as `https://alerts.example.com/secapi`.
+- A public HTTPS endpoint you control, such as `https://example.com/secapi`.
 - A secret store for the webhook signing secret. It is shown only when the endpoint is created or rotated.
 
 ```bash
 export SECAPI_API_KEY="your_api_key"
-export RECEIVER_URL="https://alerts.example.com/secapi"
+export RECEIVER_URL="https://example.com/secapi"
 ```
 
 ## 1. Create the signed delivery endpoint in the dashboard
@@ -31,7 +31,7 @@ Record the returned `mon_...` id. The expected result is an active monitor with 
 
 ## 3. Verify the receiver before parsing a payload
 
-SEC API signs the exact request body with HMAC-SHA256 over `${timestamp}.${rawBody}`. This minimal Node.js receiver rejects a stale or invalid body, de-duplicates the event id, and only then queues the match metadata. Replace the in-memory set with a database unique constraint in production.
+SEC API signs the exact request body with HMAC-SHA256 over `${timestamp}.${rawBody}`. This minimal Node.js receiver rejects a stale or invalid body, de-duplicates the event id, and only then queues the match metadata. The expected test result is a `204` for a signed `webhook.test`; a production `monitor.match` emits source-linked queue records. Replace the in-memory set with a database unique constraint in production.
 
 ```js
 import { createHmac, timingSafeEqual } from "node:crypto";

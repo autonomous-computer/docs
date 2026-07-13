@@ -1,20 +1,27 @@
 ---
 title: "Automate SEC Alerts with n8n"
-description: "Send signed SEC filing-monitor events to n8n, turn each match into an item, and route the result to Slack or another n8n action."
+description: "Deliver verified filing-monitor events to n8n, turn each filing match into an item, and retain source evidence in the workflow."
 ---
 
-Use n8n when a filing match should start a visible automation rather than a polling job. SEC API sends signed `monitor.match` events to one organization webhook endpoint; n8n turns the event's `matches` array into the downstream actions you choose.
+Use n8n when a filing-monitor match should begin a visible automation. SEC API sends signed `monitor.match` events to an organization endpoint; n8n turns each returned match into a downstream item. It is a routing workflow, not a materiality or compliance decision engine.
 
-## Before you start
+## Prerequisites
 
-- Build an n8n workflow with a production Webhook trigger.
-- In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), register that public HTTPS URL, subscribe it to `monitor.match`, and create the monitor that should feed it.
-- Save the signing secret from the dashboard. Endpoint and monitor setup require a WorkOS browser session, not an API key.
+- An active n8n workflow with a production **Webhook** trigger and public HTTPS URL.
+- A signed-in SEC API organization administrator for the [Delivery dashboard](https://secapi.ai/app/webhooks).
+- The endpoint signing secret in a server-side secret store and `SECAPI_API_KEY` for previewing matches.
 
-## Build the workflow
+## 1. Configure the event source
 
-1. Add a **Webhook** trigger and copy its production URL.
-2. Add a **Code** node after it. Return one item per filing match:
+1. Copy the n8n production webhook URL.
+2. In the Delivery dashboard, create an organization endpoint for that URL and subscribe it to `monitor.match`.
+3. Create a narrow monitor in the same dashboard and attach the endpoint.
+
+Monitor and webhook configuration are human-authenticated organization actions. API keys cannot create or mutate them. Verify SEC API's raw-body signature before a workflow trusts the payload; use the receiver in [Build a filing monitor](/tutorials/build-filing-monitor) as the verification boundary when the n8n trigger cannot preserve and validate the exact raw body.
+
+## 2. Turn one event into filing items
+
+Add a **Code** node after the verified webhook input:
 
 ```javascript
 const event = $json;
@@ -22,29 +29,36 @@ if (event.type !== "monitor.match") return [];
 
 return (event.data?.matches ?? []).map((match) => ({
   json: {
+    eventId: event.id,
+    requestId: event.requestId,
     monitor: event.data?.monitor?.name,
     ticker: match.ticker,
     form: match.form,
-    filedAt: match.filingDate,
+    filingDate: match.filingDate,
     sourceUrl: match.htmlUrl,
   },
 }));
 ```
 
-3. Connect Slack, email, a database, or your research queue. Use `sourceUrl` as the evidence link rather than asking the next step to reconstruct the filing.
+Connect this node to Slack, email, a database, or a reviewer queue. The expected result is one n8n item per matched filing, with the event and source identifiers retained. The dashboard test action sends `webhook.test`; it checks delivery, not the monitor query, and this node intentionally produces no review item for it.
 
-## Test and operate
-
-Use the dashboard's test-delivery action while the n8n workflow is active. It sends a signed `webhook.test` event; production matches use `monitor.match`. To inspect what a configured monitor matches without waiting for a sweep, use your API key:
+## 3. Inspect a monitor before waiting for a sweep
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10" \
+  | jq '{data, requestId, traceparent}'
 ```
 
-Monitor dispatch runs on a 15-minute cadence. A webhook is a notification, not a substitute for investor judgment: keep the form, issuer, filing date, and source URL with every downstream alert.
+Use the output to check the source URLs and expected volume. Keep `eventId` as a unique key downstream so retry delivery does not create duplicate review tasks.
 
-## Read next
+## Failure modes
 
-- [Monitor SEC filing events](/monitors)
-- [Build a filing monitor](/tutorials/build-filing-monitor)
+- An API key cannot configure webhook endpoints or monitors; the dashboard requires a WorkOS browser session.
+- Signing parsed JSON instead of the exact received body, using the wrong secret, or accepting a stale timestamp causes signature verification to fail.
+- An empty `matches` array or a test event is not an error and should not generate a fictional filing alert.
+- A text match is only a retrieval lead. Open the linked filing before making a research, compliance, or legal statement.
+
+## Next step
+
+Add a human review status to the destination item, then use [Build a filing monitor](/tutorials/build-filing-monitor) to harden idempotency and webhook verification.

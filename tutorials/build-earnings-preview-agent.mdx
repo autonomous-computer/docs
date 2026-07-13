@@ -1,497 +1,108 @@
 ---
 title: "Build an Earnings Preview Agent"
-description: "Build a Node.js agent that generates pre-earnings research briefs using SEC API intelligence bundles, factor decomposition, and insider activity data."
+description: "Create a source-preserving pre-earnings research brief from the earnings-preview, filing, and insider-data routes."
 ---
 
-Before a company reports earnings, analysts need a quick-hit research brief covering the company's fundamentals, factor exposures, and recent insider activity. This tutorial builds a Node.js agent that pulls data from multiple SEC API endpoints and assembles a pre-earnings research brief you can share with your team.
-
-## What you will build
-
-- A Node.js script that generates pre-earnings research briefs
-- Company intelligence summary from the SEC API intelligence bundle
-- Factor decomposition showing what is driving the stock
-- Recent insider transactions leading up to earnings
-- A formatted markdown report ready for distribution
+This tutorial builds a small Node.js job that produces a pre-earnings review packet for one issuer. It collects an earnings-preview response, the latest annual filing identity, and recent Form 4 rows, then writes the raw evidence and a compact handoff. It is not a forecast, recommendation, or statement that a reported date will occur.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- Node.js 18+
-- Basic familiarity with the SEC API
-
-## Step 1 — Set up the project
-
-Create the project and install dependencies.
+- Node.js 18+ and an API key in `SECAPI_API_KEY`.
+- A ticker. This example uses `AAPL`.
+- A local directory where it is appropriate to retain SEC-derived research output.
 
 ```bash
-mkdir -p earnings-preview-agent
-cd earnings-preview-agent
-npm init -y
+export SECAPI_API_KEY="your_api_key"
+mkdir earnings-preview-agent && cd earnings-preview-agent
 ```
 
-Create `package.json`:
+## 1. Check the three evidence sources
 
-```json
-{
-  "name": "earnings-preview-agent",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "preview": "node index.js"
+```bash
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=AAPL" \
+  | jq '{requestId, traceparent, provenance, freshness, data}'
+
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K" \
+  | jq '{accessionNumber, filingDate, filingUrl, requestId, provenance}'
+
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=20" \
+  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
+```
+
+Before automating, inspect the returned shapes and source links. The earnings-preview response is a scoped research input, the 10-K is the annual filing record, and Form 4 rows describe reported transactions. Keep those roles distinct.
+
+## 2. Write the preview packet
+
+Create `preview.mjs`:
+
+```js
+import { mkdir, writeFile } from "node:fs/promises";
+
+const ticker = (process.argv[2] ?? "AAPL").toUpperCase();
+const apiKey = process.env.SECAPI_API_KEY;
+const baseUrl = "https://api.secapi.ai";
+if (!apiKey) throw new Error("SECAPI_API_KEY is required");
+
+async function get(path) {
+  const response = await fetch(`${baseUrl}${path}`, { headers: { "x-api-key": apiKey } });
+  if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
+  return response.json();
+}
+
+const encodedTicker = encodeURIComponent(ticker);
+const [earnings, annualFiling, insiders] = await Promise.all([
+  get(`/v1/intelligence/earnings-preview?ticker=${encodedTicker}`),
+  get(`/v1/filings/latest?ticker=${encodedTicker}&form=10-K`),
+  get(`/v1/insiders?ticker=${encodedTicker}&forms=4&limit=20`),
+]);
+
+const packet = {
+  generatedAt: new Date().toISOString(), ticker,
+  earningsPreview: earnings,
+  annualFiling: {
+    accessionNumber: annualFiling.accessionNumber,
+    filingDate: annualFiling.filingDate,
+    filingUrl: annualFiling.filingUrl ?? annualFiling.provenance?.filingUrl ?? null,
+    requestId: annualFiling.requestId,
+    provenance: annualFiling.provenance ?? null,
   },
-  "dependencies": {}
-}
+  insiderRows: insiders.data ?? [],
+  insiderRequest: { requestId: insiders.requestId, traceparent: insiders.traceparent,
+    hasMore: insiders.hasMore, nextCursor: insiders.nextCursor },
+};
+
+await mkdir("output", { recursive: true });
+await writeFile(`output/${ticker.toLowerCase()}-earnings-packet.json`, JSON.stringify(packet, null, 2));
+console.log(JSON.stringify({ ticker, output: `output/${ticker.toLowerCase()}-earnings-packet.json`,
+  annualFiling: packet.annualFiling, insiderRows: packet.insiderRows.length,
+  earningsPreviewRequestId: earnings.requestId }, null, 2));
 ```
 
-Install dependencies:
+Run `node preview.mjs AAPL`. The expected result is a JSON packet with the untouched responses and an annual-filing pointer. The console deliberately reports only identifiers and counts; actual values depend on the issuer and when the job runs.
 
-```bash
-npm install @secapi/sdk-js dotenv
+## 3. Produce a human review brief
+
+Give an analyst or agent the JSON packet with this instruction:
+
+```text
+Summarize the returned earnings-preview fields and recent Form 4 rows for a review
+brief. Cite the annual filing accession and URL, preserve each request ID, and
+separate reported facts from interpretation. Do not create an earnings forecast,
+call a transaction bullish or bearish, or treat absent rows as no activity.
 ```
 
-Create a `.env` file:
+Read the linked filing and every material Form 4 before distributing commentary. Form 4 codes are SEC transaction codes, not investment sentiment labels.
 
-```
-SECAPI_API_KEY=your-api-key
-```
+## Failure modes
 
-## Step 2 — Build the data fetchers
+- A `401` or `403` means the runtime did not receive a valid entitled key; do not write a partial packet as if it were complete.
+- The three calls have independent availability. If one fails, fail the job or label the packet incomplete rather than silently substituting empty data.
+- Follow `nextCursor` when `hasMore` is true if the insider history must be complete for the chosen window.
+- The latest 10-K may not be the filing most relevant to an imminent report; preserve the filing date and select any additional source deliberately.
 
-Create `index.js` with functions that pull data from each SEC API endpoint.
+## Next step
 
-```javascript
-import "dotenv/config";
-import { writeFileSync } from "fs";
-import { SecApiClient } from "@secapi/sdk-js";
-
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY,
-});
-
-const ticker = process.argv[2] || "AAPL";
-
-/**
- * Fetch company intelligence bundle — a high-level overview of the company
- * including business description, key metrics, and recent developments.
- */
-async function fetchCompanyIntel(ticker) {
-  const intel = await client.intelligenceCompany({ ticker });
-  return intel;
-}
-
-/**
- * Fetch the earnings preview intelligence bundle — pre-built earnings
- * context including filing-derived performance, recent guidance, and key topics.
- */
-async function fetchEarningsPreview(ticker) {
-  const preview = await client.intelligenceEarningsPreview({ ticker });
-  return preview;
-}
-
-/**
- * Fetch factor decomposition — shows how much of the stock's recent
- * return is explained by systematic factors vs. idiosyncratic moves.
- */
-async function fetchFactorDecomposition(ticker) {
-  const factors = await client.factorDecomposition({ symbol: ticker });
-  return factors;
-}
-
-/**
- * Fetch recent Form 4 transaction rows for the report. The transaction code
- * and filing link remain available for a reviewer to interpret the activity.
- */
-async function fetchInsiderActivity(ticker) {
-  const insiders = await client.insiders({
-    ticker,
-    forms: "4",
-    limit: 20,
-  });
-  return insiders;
-}
-
-/**
- * Fetch upcoming earnings date from the market calendar.
- */
-async function fetchEarningsDate(ticker) {
-  const today = new Date();
-  const nextMonth = new Date(Date.now() + 30 * 86400000);
-  const calendar = await client.marketEarningsCalendar({
-    ticker,
-    date_from: today.toISOString().split("T")[0],
-    date_to: nextMonth.toISOString().split("T")[0],
-  });
-  return calendar;
-}
-```
-
-## Step 3 — Build the report generator
-
-Add the logic that assembles all the data into a structured markdown report.
-
-```javascript
-function formatCurrency(value) {
-  if (!value && value !== 0) return "N/A";
-  if (Math.abs(value) >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
-  if (Math.abs(value) >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (Math.abs(value) >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-  return `$${value.toLocaleString()}`;
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "N/A";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function generateReport(ticker, intel, preview, factors, insiders, earnings) {
-  const lines = [];
-  const now = new Date().toISOString().split("T")[0];
-
-  // Header
-  lines.push(`# Earnings Preview: ${ticker}`);
-  lines.push("");
-  lines.push(`**Generated:** ${now}  `);
-
-  if (earnings?.data?.[0]) {
-    const next = earnings.data[0];
-    lines.push(
-      `**Next earnings:** ${formatDate(next.date)} (${next.time || "TBD"})  `
-    );
-  }
-  lines.push("");
-
-  // Company overview
-  lines.push("## Company Overview");
-  lines.push("");
-  if (intel?.data) {
-    const d = intel.data;
-    lines.push(`**${d.company_name || ticker}**`);
-    lines.push("");
-    if (d.description) {
-      lines.push(d.description.slice(0, 500));
-      lines.push("");
-    }
-    lines.push("| Metric | Value |");
-    lines.push("|--------|-------|");
-    if (d.market_cap) lines.push(`| Market Cap | ${formatCurrency(d.market_cap)} |`);
-    if (d.sector) lines.push(`| Sector | ${d.sector} |`);
-    if (d.industry) lines.push(`| Industry | ${d.industry} |`);
-    if (d.employees) lines.push(`| Employees | ${d.employees.toLocaleString()} |`);
-    lines.push("");
-  }
-
-  // Earnings preview context
-  lines.push("## Earnings Context");
-  lines.push("");
-  if (preview?.data) {
-    const p = preview.data;
-    if (p.consensus_eps) {
-      lines.push(`**Consensus EPS:** $${p.consensus_eps}  `);
-    }
-    if (p.consensus_revenue) {
-      lines.push(
-        `**Consensus Revenue:** ${formatCurrency(p.consensus_revenue)}  `
-      );
-    }
-    if (p.key_topics && p.key_topics.length > 0) {
-      lines.push("");
-      lines.push("### Key topics to watch");
-      lines.push("");
-      for (const topic of p.key_topics) {
-        lines.push(`- ${topic}`);
-      }
-    }
-    if (p.recent_guidance) {
-      lines.push("");
-      lines.push("### Recent guidance");
-      lines.push("");
-      lines.push(p.recent_guidance);
-    }
-    lines.push("");
-  } else {
-    lines.push("_No earnings preview data available._");
-    lines.push("");
-  }
-
-  // Factor decomposition
-  lines.push("## Factor Decomposition");
-  lines.push("");
-  if (factors?.data) {
-    lines.push(
-      "Shows how much of the stock's recent return is attributable to systematic factors."
-    );
-    lines.push("");
-    lines.push("| Factor | Exposure | Contribution |");
-    lines.push("|--------|----------|-------------|");
-    const exposures = factors.data.exposures || factors.data;
-    if (Array.isArray(exposures)) {
-      for (const f of exposures.slice(0, 10)) {
-        const name = f.factor_name || f.factor || "Unknown";
-        const exposure = f.exposure?.toFixed(3) ?? "N/A";
-        const contribution = f.contribution
-          ? `${(f.contribution * 100).toFixed(2)}%`
-          : "N/A";
-        lines.push(`| ${name} | ${exposure} | ${contribution} |`);
-      }
-    }
-    lines.push("");
-  } else {
-    lines.push("_No factor decomposition available._");
-    lines.push("");
-  }
-
-  // Insider activity
-  lines.push("## Recent Insider Activity");
-  lines.push("");
-  if (insiders?.data && insiders.data.length > 0) {
-    lines.push("| Date | Name | Title | Type | Shares | Price |");
-    lines.push("|------|------|-------|------|--------|-------|");
-    for (const txn of insiders.data.slice(0, 15)) {
-      const date = txn.transactionDate || txn.filingDate || "N/A";
-      const name = txn.ownerName || "Unknown";
-      const title = txn.ownerTitle || "";
-      const type = txn.transactionCode || txn.transactionDirection || "N/A";
-      const shares = txn.transactionShares?.toLocaleString() ?? "N/A";
-      const price = txn.transactionPrice == null ? "N/A" : `$${txn.transactionPrice.toFixed(2)}`;
-      lines.push(`| ${date} | ${name} | ${title} | ${type} | ${shares} | ${price} |`);
-    }
-    lines.push("");
-
-    // Reported Form 4 code counts. These are not an investment signal.
-    const buys = insiders.data.filter(
-      (t) => t.transactionCode === "P"
-    ).length;
-    const sells = insiders.data.filter(
-      (t) => t.transactionCode === "S"
-    ).length;
-    lines.push(
-      `**Reported Form 4 code counts (last 20 rows):** P=${buys}, S=${sells}`
-    );
-    lines.push("");
-  } else {
-    lines.push("_No recent insider activity found._");
-    lines.push("");
-  }
-
-  // Footer
-  lines.push("---");
-  lines.push(
-    "*Data sourced from SEC EDGAR via SEC API. This is not investment advice.*"
-  );
-
-  return lines.join("\n");
-}
-```
-
-## Step 4 — Wire up the main function
-
-Add the entry point that orchestrates all the data fetches and generates the report.
-
-```javascript
-async function main() {
-  console.log(`Generating earnings preview for ${ticker}...`);
-
-  // Fetch all data in parallel for speed
-  const [intel, preview, factors, insiders, earnings] =
-    await Promise.allSettled([
-      fetchCompanyIntel(ticker),
-      fetchEarningsPreview(ticker),
-      fetchFactorDecomposition(ticker),
-      fetchInsiderActivity(ticker),
-      fetchEarningsDate(ticker),
-    ]);
-
-  // Extract values, using null for any that failed
-  const getValue = (result) =>
-    result.status === "fulfilled" ? result.value : null;
-
-  const report = generateReport(
-    ticker,
-    getValue(intel),
-    getValue(preview),
-    getValue(factors),
-    getValue(insiders),
-    getValue(earnings)
-  );
-
-  // Write report
-  const filename = `earnings-preview-${ticker.toLowerCase()}-${new Date().toISOString().split("T")[0]}.md`;
-  writeFileSync(filename, report);
-  console.log(`Report saved to ${filename}`);
-  console.log("");
-  console.log(report);
-}
-
-main().catch((err) => {
-  console.error("Error generating earnings preview:", err.message);
-  process.exit(1);
-});
-```
-
-## Step 5 — Run the agent
-
-Generate an earnings preview for any ticker.
-
-```bash
-# Default: AAPL
-npm run preview
-
-# Specify a ticker
-node index.js MSFT
-node index.js NVDA
-```
-
-### Expected output
-
-```
-Generating earnings preview for AAPL...
-Report saved to earnings-preview-aapl-2025-04-11.md
-
-# Earnings Preview: AAPL
-
-**Generated:** 2025-04-11
-**Next earnings:** May 1, 2025 (AMC)
-
-## Company Overview
-
-**Apple Inc**
-
-Apple Inc. designs, manufactures, and markets smartphones, personal
-computers, tablets, wearables, and accessories worldwide...
-
-| Metric | Value |
-|--------|-------|
-| Market Cap | $3.45T |
-| Sector | Technology |
-| Industry | Consumer Electronics |
-| Employees | 161,000 |
-
-## Earnings Context
-
-**Consensus EPS:** $1.62
-**Consensus Revenue:** $94.2B
-
-### Key topics to watch
-
-- Services revenue growth trajectory
-- China market headwinds
-- AI feature adoption and monetization
-- Capital return program updates
-
-## Factor Decomposition
-
-| Factor | Exposure | Contribution |
-|--------|----------|-------------|
-| Market | 1.102 | 8.24% |
-| Momentum | 0.342 | 1.87% |
-| Quality | 0.891 | 2.14% |
-| Size | -0.234 | -0.42% |
-
-## Recent Insider Activity
-
-| Date | Name | Title | Type | Shares | Price |
-|------|------|-------|------|--------|-------|
-| 2025-04-01 | Tim Cook | CEO | Sale | 200,000 | $178.23 |
-| 2025-03-15 | Luca Maestri | SVP, CFO | Sale | 50,000 | $171.45 |
-
-**Insider sentiment (last 20 transactions):** 0 buys, 8 sells
-```
-
-## Step 6 — Generate batch previews
-
-Add support for generating previews for all companies reporting in a given week.
-
-```javascript
-async function batchPreview() {
-  // Fetch the earnings calendar for the next 7 days
-  const calendar = await client.marketEarningsCalendar({
-    date_from: new Date().toISOString().split("T")[0],
-    date_to: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
-  });
-
-  const tickers = (calendar.data || []).map((e) => e.symbol).slice(0, 10);
-  console.log(`Generating previews for ${tickers.length} companies...`);
-
-  for (const t of tickers) {
-    try {
-      // Re-run main logic for each ticker
-      const [intel, preview, factors, insiders, earnings] =
-        await Promise.allSettled([
-          fetchCompanyIntel(t),
-          fetchEarningsPreview(t),
-          fetchFactorDecomposition(t),
-          fetchInsiderActivity(t),
-          fetchEarningsDate(t),
-        ]);
-
-      const getValue = (result) =>
-        result.status === "fulfilled" ? result.value : null;
-
-      const report = generateReport(
-        t,
-        getValue(intel),
-        getValue(preview),
-        getValue(factors),
-        getValue(insiders),
-        getValue(earnings)
-      );
-
-      const filename = `earnings-preview-${t.toLowerCase()}-${new Date().toISOString().split("T")[0]}.md`;
-      writeFileSync(filename, report);
-      console.log(`  ${t}: saved to ${filename}`);
-    } catch (err) {
-      console.error(`  ${t}: failed — ${err.message}`);
-    }
-  }
-}
-
-// Run batch mode with --batch flag
-if (process.argv.includes("--batch")) {
-  batchPreview().catch(console.error);
-}
-```
-
-## Step 7 — Extend with custom queries
-
-Use the SEC API intelligence query endpoint to add custom research questions to the brief.
-
-```javascript
-async function askQuestion(ticker, question) {
-  const result = await client.intelligenceQuery({
-    query: question,
-    entities: [ticker],
-    responseMode: "compact_json_and_md",
-  });
-  return result?.answer || result?.markdown || result;
-}
-
-// Example: add to the report generation
-const customQuestions = [
-  "What were the key takeaways from the last earnings call?",
-  "What are the biggest risks heading into this quarter?",
-  "How has management guidance changed over the last two quarters?",
-];
-
-for (const q of customQuestions) {
-  const answer = await askQuestion(ticker, q);
-  if (answer) {
-    lines.push(`### ${q}`);
-    lines.push("");
-    lines.push(answer);
-    lines.push("");
-  }
-}
-```
-
-## Next steps
-
-- **Add technical indicators**: Pull price bars from `/v1/market/bars` and compute moving averages, RSI, or other signals.
-- **Include peer comparison**: Use `/v1/intelligence/security` for multiple tickers to build a peer comparison table.
-- **Automate distribution**: Pipe the markdown report to a Slack channel, email, or Notion page.
-- **Schedule before earnings**: Use the earnings calendar to automatically trigger preview generation 3 days before each report date.
-
-See the [JavaScript SDK](/javascript-sdk) documentation for the full list of available methods.
+Schedule the job before a manually selected review deadline, retain packets by generated timestamp, and use [Analyze Insider Transactions](/tutorials/analyze-insider-trading) when the Form 4 portion needs a deeper source review.
