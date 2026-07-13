@@ -1,9 +1,9 @@
 ---
 title: "Make your first SEC API request"
-description: "Resolve a public company with one API key, verify the response, and continue to a source filing"
+description: "Resolve a public company with one API key, verify the response, and retrieve a source filing"
 ---
 
-Start with one small, read-only request: resolve a ticker into SEC API's canonical issuer identity. It proves that your key, base URL, and request format work before you build a filing or research workflow.
+Start with a small, read-only request: resolve a ticker into SEC API's issuer identity. It confirms that your key, base URL, and request format work before you build a filing or research workflow.
 
 ## Set your API key
 
@@ -28,7 +28,7 @@ curl -sS \
 
 ## Expected response
 
-The exact `id` and `requestId` vary. A successful response identifies Apple and includes CIK `0000320193`:
+This shortened, representative excerpt shows the core identity fields. The exact `id` and `requestId` vary. A successful response identifies Apple and includes CIK `0000320193`:
 
 ```json
 {
@@ -40,7 +40,7 @@ The exact `id` and `requestId` vary. A successful response identifies Apple and 
 }
 ```
 
-`view=agent` is the compact, identifier-focused projection. Use the endpoint's default response when you need its full documented metadata.
+The full `view=agent` response also includes `id`, `primaryIdentifiers`, `matchConfidence`, and `matchBasis`. Use the endpoint's default response when you need its full documented metadata.
 
 ## 2. Retrieve a filing you can cite
 
@@ -53,7 +53,7 @@ curl -sS \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-The result changes when Apple files a newer annual report. Preserve the returned `accessionNumber`, `filingDate`, `form`, `filingUrl`, and `requestId` with work derived from it. Those fields identify the specific filing behind a result.
+The result changes when Apple files a newer annual report. Preserve the returned `accessionNumber`, `filingDate`, `form`, `filingUrl`, and `requestId` with work derived from it. Together, they identify the filing and request behind a result.
 
 For accepted identifiers, filters, response fields, and endpoint-specific limits, use the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve) and [latest filing reference](/api-reference/filings/get-v1-filings-latest).
 
@@ -76,6 +76,6 @@ For accepted identifiers, filters, response fields, and endpoint-specific limits
 
 ## If it does not work
 
-For `401 missing_api_key`, check that the key is exported in the current shell and sent through `x-api-key`. For `401 authentication_failed`, verify the key in the dashboard and update the calling environment. For `402`, address the stated billing or entitlement condition. For `429`, wait for `Retry-After` before retrying rather than sending concurrent retries.
+For `401 missing_api_key`, confirm that the key is exported in the current shell and sent through `x-api-key`. For `401 authentication_failed`, verify the key in the dashboard and update the calling environment. For `402`, resolve the billing or entitlement condition named in the response. For `429`, wait for `Retry-After` before retrying and avoid concurrent retries.
 
 Read [Troubleshooting](/troubleshooting) for error-specific next steps and [API conventions](/api-conventions) for versioning, pagination, and response metadata.
