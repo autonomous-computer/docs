@@ -1,50 +1,39 @@
 ---
 title: "Monitor SEC Filing Events"
-description: "Create saved SEC filing searches, review matches with an API key, and deliver scheduled alerts to email or signed webhooks."
+description: "Configure a saved filing monitor in the dashboard, audit its matched filings with an API key, and send source-backed alerts through email or signed webhooks."
 ---
 
-Monitors are saved searches that alert your organization when a new SEC filing matches a query. Use them for material 8-Ks, 13F holdings changes, insider activity, auditor changes, and filing-language alerts.
+Monitors are saved filing searches for a defined alert job: for example, 8-Ks for a five-issuer watchlist or amendments to a specific form. A monitor match is a signal to inspect a filing, not an assertion that the filing is material.
 
-## Set up a monitor
+## Configure the monitor with a human session
 
-Create, edit, pause, and delete monitors from the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks). These are organization control-plane actions: they require a WorkOS browser session and do not accept an API key. The same boundary applies to webhook endpoint setup, secret rotation, test deliveries, and stream-subscription changes.
+Create, edit, pause, and delete monitors from the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks). These are organization control-plane actions and require a WorkOS browser session. API keys and autonomous agents cannot create or alter them.
 
-For each monitor, choose a clear name, keyword query, optional company/form/date filters, and either an email destination or an organization webhook endpoint subscribed to `monitor.match`.
+For one bounded job, set a descriptive name, keyword query, ticker/form filters, and one delivery destination. Use email for a human inbox. Use an organization webhook endpoint subscribed to `monitor.match` for an application receiver.
 
-## Read monitor data with an API key
+## Preview before waiting for delivery
 
-After setup, these read operations accept `x-api-key` and are suitable for agents, scheduled checks, and audit reports:
+API keys can read monitor data after setup. Preview the saved query before you rely on the scheduled dispatch:
 
 ```bash
-# List active monitors for your organization.
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors"
-
-# Preview the filings currently matched by one monitor.
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/mon_123/matches?limit=10"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/mon_123/matches?limit=10" \
+  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
 ```
 
-`GET /v1/monitors/{monitor_id}/matches` runs the saved search on demand. It is useful for validating a query and investigating an alert, but it does not trigger delivery.
+Expected output is the current matching filing set, plus response correlation fields when returned. This on-demand read does not send an email or webhook. Keep each match's accession number, filing date, ticker, form, source URL, and the response `requestId` with your alert record.
 
-## Delivery choices
+## Delivery and limits
 
-### Email
+Active monitors run on a 15-minute cadence. A typical alert arrives about half a sweep after a new matching record becomes available; worst case is one sweep plus delivery time. This is scheduled monitoring, not an instant EDGAR feed.
 
-Choose email when the alert belongs in an inbox. Each match batch produces one transactional email with HTML and plaintext content plus a one-click unsubscribe path. A destination can be `active`, `unsubscribed`, `bounced`, `complaint_suppressed`, or `suppressed`; non-active destinations do not receive new alerts.
+Transient email failures retry automatically. The default delivery limits are 100 sends per monitor per hour and 1,000 per organization per day. Narrow a noisy query, split unrelated jobs, and make the receiver idempotent rather than assuming every event is unique.
 
-### Webhook
+## Investigate failures
 
-Use an organization webhook endpoint when a service should receive signed `monitor.match` events. In the dashboard, add a public HTTPS destination and subscribe it to `monitor.match`; then create the monitors that should feed it. Save the signing secret when the dashboard shows it, and verify the exact raw request body before parsing JSON. See [Build a Filing Monitor](/tutorials/build-filing-monitor) for a complete handler.
+- No preview matches: check query terms, ticker and form filters, then compare against a bounded filing search.
+- A webhook did not arrive: inspect signed delivery history and preserve its delivery id, status, attempt count, and request id.
+- Duplicate alert: deduplicate on the filing accession number and your delivery id.
+- Late alert: check the sweep cadence and source availability before changing the query.
 
-## Timing, retries, and limits
-
-SEC API checks active monitors on a 15-minute cadence. Typical filing-to-alert latency is about half a sweep; worst-case latency is one full sweep plus delivery time. Each dispatch emits `monitor.match` to subscribed organization webhook endpoints.
-
-Transient email failures are retried automatically. To avoid alert storms, the default limits are 100 sends per monitor per hour and 1,000 sends per organization per day. Narrow a query or split distinct alert jobs into separate monitors when those limits are not a good fit.
-
-## Related
-
-- [Build a filing monitor](/tutorials/build-filing-monitor)
-- [Webhook and stream workflows](/webhook-stream-workflows)
-- [Webhook delivery and event types](/webhook-sla)
+Read [Webhook and stream workflows](/webhook-stream-workflows) for receiver behavior and [Build a filing monitor](/tutorials/build-filing-monitor) for a signed handler.

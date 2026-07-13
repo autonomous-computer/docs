@@ -1,30 +1,39 @@
 ---
-title: "Webhook and stream workflows"
-description: "Configure SEC API delivery, verify signed events, and inspect delivery history from your application"
+title: "Webhook and Stream Workflows"
+description: "Choose push delivery or cursor polling, configure organization delivery in the dashboard, and process SEC API events idempotently."
 ---
 
-Use webhooks when SEC API should push an event to your application. Use stream polling when your application needs cursor-controlled retrieval. Configure delivery in the signed-in dashboard; webhook and stream control-plane changes require a human-authenticated organization session.
+Choose a webhook when SEC API should notify a public receiver. Choose stream polling when your worker needs explicit checkpoints and controlled replay. Both are delivery mechanisms; neither replaces retrieving and evaluating the cited filing.
 
-## Create a webhook endpoint
+## Configure delivery in the dashboard
 
-Open the [SEC API dashboard](https://secapi.ai/app/webhooks) to manage webhook endpoints, delivery subscriptions, signing secrets, test deliveries, and replay settings. Do not use an API key or an autonomous agent for these changes: the API returns `human_auth_required` so a person can review the destination and subscription.
+Open the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks) to create endpoint destinations, change subscriptions, rotate secrets, send tests, replay deliveries, or change stream subscriptions. These actions require a human-authenticated organization session. Do not give an API key or an autonomous agent authority to make them.
 
-For a filing monitor, register a public HTTPS endpoint, subscribe it to the event you need, save the signing secret, then create the monitor that should deliver to it.
+For a monitor job, subscribe the endpoint to `monitor.match`, save the signing secret once, and configure the saved monitor. The event tells your service which monitor matched and which filings require review.
 
-In the dashboard, enter the HTTPS destination and select the event types. Save the signing secret where your receiver can verify raw request bodies without exposing it to clients.
+## Process a webhook safely
 
-## Verify every webhook
+1. Read the exact raw body and verify `x-secapi-signature` before parsing JSON.
+2. Reject old timestamps and invalid signatures.
+3. Store the delivery/event identifier in a durable idempotency table.
+4. Queue the work, return a fast `2xx`, then retrieve the filing evidence needed downstream.
 
-Verify the exact raw request body against the `x-secapi-signature` header before parsing JSON. Then check the event type, store the delivery identifier, and preserve the source URL and request ID with your downstream work.
+Keep the event type, event id, request id, monitor id, accession number, and filing URL with the queued work. An event payload can be incomplete or retried; it is not a substitute for the filing source.
 
-Treat a webhook as a notification to retrieve and evaluate evidence. Do not treat an event payload alone as an investment conclusion.
+## Use cursor polling for checkpoints
 
-## Inspect delivery history
+Read events with an API key after the stream subscription exists:
 
-Inspect delivery attempts, event names, secret rotation, test delivery, replay, and subscription changes in the signed-in dashboard. Preserve the delivery identifier and source filing references when you investigate a failure.
+```bash
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/stream_subscriptions/str_123/events?limit=25" \
+  | jq '{data, nextCursor, replayCursor, requestId, traceparent}'
+```
 
-## Choose polling when you need checkpoints
+Process each event idempotently. Commit your cursor only after the database transaction or queue write succeeds, then pass the returned cursor on the next poll. Cursor order is recorded event order, not the SEC filing timestamp.
 
-Stream polling gives your application control over cursors and replay. Store the cursor only after you have processed an event idempotently, and use the returned cursor rather than an event timestamp as the next checkpoint.
+## Failure boundaries
 
-Read [Stream polling](/stream-polling) for the endpoint and CLI flow, or [Build a filing monitor](/tutorials/build-filing-monitor) for a complete monitor example.
+Retry a transient receiver failure through the delivery mechanism, not by treating your handler as stateless. Do not advance a stream cursor after a partial batch. For an unknown event type, verify the signature, record it, return success if appropriate for your receiver, and add support deliberately rather than failing every future delivery.
+
+See [Webhook delivery audit](/webhook-delivery-audit), [Stream polling](/stream-polling), and [Build a filing monitor](/tutorials/build-filing-monitor).

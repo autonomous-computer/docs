@@ -1,62 +1,50 @@
 ---
 title: "Install SEC API MCP"
-description: "Connect an MCP client to SEC API, authenticate with an API key, and verify a filing workflow"
+description: "Connect an MCP client to the hosted SEC API server, authenticate with an API key, and prove tool discovery with one source-backed filing request."
 ---
 
-Connect an MCP client to SEC API when you want filing, company, and research tools available inside that client. Authenticate once, then confirm that the client can return a specific SEC filing before using it in a larger workflow.
+SEC API serves hosted MCP at `https://api.secapi.ai/mcp`. Use an organization API key for a server-to-server client. `GET /mcp` publishes connection metadata; MCP requests are authenticated JSON-RPC `POST /mcp` calls with `x-api-key`.
 
-## Set the API key
+## Add the hosted server
 
-Create an API key in the signed-in [dashboard](https://secapi.ai/app), then expose it only to the MCP client process:
+Create an API key in the signed-in [dashboard](https://secapi.ai/app), then expose it only to the client process:
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
-```
-
-SEC API serves MCP at `https://api.secapi.ai/mcp`. `GET /mcp` returns public connection metadata. MCP requests use JSON-RPC over an authenticated `POST /mcp` request with the key in `x-api-key`.
-
-## Add the server
-
-For Claude Code, add the hosted server with the API key header:
-
-```bash
 claude mcp add --transport http secapi https://api.secapi.ai/mcp \
   --header "x-api-key: $SECAPI_API_KEY"
 ```
 
-For another MCP client, use its HTTP-server configuration with the same URL and header. A typical configuration looks like this:
+For another HTTP MCP client, configure the same URL and header:
 
 ```json
 {
   "mcpServers": {
     "secapi": {
       "url": "https://api.secapi.ai/mcp",
-      "headers": {
-        "x-api-key": "${SECAPI_API_KEY}"
-      }
+      "headers": { "x-api-key": "${SECAPI_API_KEY}" }
     }
   }
 }
 ```
 
-Use the environment-variable syntax required by your client. Do not put an API key directly in a checked-in configuration file.
+Use your client's environment-variable syntax. Do not put the key in a repository, a shared prompt, or browser-delivered configuration.
 
-## Verify a filing workflow
+## Verify discovery before research
 
-Restart or reload the client after adding the server. Then give it a bounded request that requires source fields in the answer:
+Restart the client, ask it to list tools, then give it this precise request:
 
 <Prompt>
-Resolve AAPL, retrieve its latest 10-K, and return Item 1A. Include the accession number, filing date, filing URL, and request ID from the SEC API result.
+Use tools.search to find an issuer-resolution tool and tools.describe before calling it. Resolve AAPL. Return the CIK, company name, requestId, and traceparent if returned. Then explain which tool you would use to retrieve the latest 10-K, but do not make that second call.
 </Prompt>
 
-A successful result identifies one filing and gives you fields to retain with any downstream analysis. Filing details change as new reports arrive, so do not compare the result to a fixed accession number.
+A successful result identifies Apple and shows that the client can discover schemas rather than relying on an embedded catalog. It should not require a particular tool count or a fixed CIK in the prompt.
 
-## Discover tools before calling them
+## Connection failures
 
-The server exposes its current tool catalog through the MCP protocol. Ask the client to list tools, or use `tools.search` to find a capability and `tools.describe` to inspect its input schema before calling it. This avoids relying on an old local catalog or a copied prompt.
+- No tools: reload the client configuration and verify `SECAPI_API_KEY` is in that process environment.
+- `401` or `403`: create or rotate the API key in the dashboard; do not substitute a browser bearer token.
+- JSON-RPC validation error: send one object with `jsonrpc: "2.0"`; batch JSON-RPC requests are not supported.
+- Quota, billing, or timeout response: retain the request id, narrow the next call, and follow the response guidance instead of replaying a broad request.
 
-## Troubleshoot a connection
-
-If the client cannot list tools, confirm the URL, reload the configuration, and verify that `SECAPI_API_KEY` is present in the process environment. If a tool call fails, retain the HTTP status or JSON-RPC error, `requestId`, and any trace context before retrying.
-
-Read [MCP workflows](/mcp-workflows) for task patterns and [Troubleshooting](/troubleshooting) for error-specific guidance.
+The key grants machine data access, not dashboard authority. A person configures [monitors](/monitors), webhook destinations, streams, billing, and key lifecycle in the signed-in dashboard. Continue with [MCP workflows](/mcp-workflows) for a source-backed filing job.

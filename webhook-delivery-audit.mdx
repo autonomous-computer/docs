@@ -1,23 +1,34 @@
 ---
-title: "Webhook Delivery Audit"
-description: "Inspect SEC API webhook delivery attempts per endpoint, including request ID, status, and latency, to debug and audit event delivery."
+title: "Audit Webhook Delivery"
+description: "Read webhook delivery attempts with an API key, correlate failures to source events, and use the dashboard for replay and endpoint changes."
 ---
 
-## Delivery attempts
+Use delivery history to answer a specific operational question: did our endpoint receive a `monitor.match`, what did it return, and should a human replay it after fixing the receiver?
 
-Webhook deliveries are now stored canonically and can be inspected per endpoint:
+## Read attempts with an API key
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "$SECAPI_BASE_URL/v1/webhook_endpoints/wh_123/deliveries?limit=20"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/webhook_endpoints/wh_123/deliveries?limit=20" \
+  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
 ```
 
-Each `webhook_delivery_attempt` includes:
-- request ID
-- status
-- latency
-- replay lineage through `replayedFromDeliveryId`
+Each delivery attempt is an audit record. Capture its id, event type, status, timestamps, latency, request id, and `replayedFromDeliveryId` when present. Join it to the event id and filing identifiers your receiver stored; an HTTP status alone does not prove that downstream processing succeeded.
 
-## Replay a delivery
+## Triage one failed delivery
 
-Replay a failed delivery from the signed-in dashboard. Replay is a human-authenticated organization action and does not accept an API key. The resulting delivery attempt appears in the endpoint's delivery history.
+1. Confirm the receiver verified the raw-body signature and accepted the event id only once.
+2. Compare the receiver log timestamp with the delivery attempt and request id.
+3. Fix the receiver, destination, or secret handling before asking for a replay.
+4. Verify the new attempt and preserve its replay lineage with the original record.
+
+Replay, endpoint changes, tests, and secret rotation belong in the signed-in dashboard because they are organization control-plane actions. Do not attempt them with an API key or delegate them to an agent.
+
+## Common failure modes
+
+- `401` from the receiver: signature verification uses parsed JSON or the wrong signing secret.
+- Repeated `5xx`: accept and queue quickly; move slow filing retrieval out of the request handler.
+- Duplicate work: the receiver did not persist the event/delivery id before processing.
+- Missing record: page through `nextCursor` and check the endpoint subscription before assuming a delivery was sent.
+
+Read [Webhook and stream workflows](/webhook-stream-workflows) for the receiver contract and [Webhook delivery and event types](/webhook-sla) for event-specific limits.

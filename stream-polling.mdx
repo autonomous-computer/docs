@@ -1,51 +1,33 @@
 ---
 title: "Stream Polling"
-description: "Use cursor-based stream polling in the SEC API for deterministic event replay when hosted webhooks are not the right delivery mechanism."
+description: "Poll SEC API stream events with cursor checkpoints, make processing idempotent, and recover safely after a worker failure."
 ---
 
-Hosted webhooks are not the only delivery mechanism. SEC API also exposes cursor-based stream polling for admin and agent workflows that want deterministic replay.
+Use cursor polling when your worker cannot receive a public webhook or when it needs explicit replay checkpoints. Create and change stream subscriptions in the signed-in dashboard; use an API key only to read the events after the subscription exists.
 
-## Endpoints
-
-- `GET /v1/stream_subscriptions`
-- `POST /v1/stream_subscriptions`
-- `GET /v1/stream_subscriptions/{stream_id}/events`
-
-## Poll the feed
+## Poll one bounded batch
 
 ```bash
-curl "$SECAPI_BASE_URL/v1/stream_subscriptions/str_123/events?limit=25" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/stream_subscriptions/str_123/events?limit=25" \
+  | jq '{data, nextCursor, replayCursor, requestId, traceparent}'
 ```
 
-The response includes:
+The response contains ordered `data`, `nextCursor` for the next read, and `replayCursor` for durable checkpoint recovery. Expected output is a bounded event batch; no event means the worker should wait and poll again according to its own schedule.
 
-- `data`: ordered stream events
-- `nextCursor`: the cursor to use on the next poll
-- `replayCursor`: the last durable cursor the client can checkpoint
+## Commit only after work succeeds
 
-## Resume from a checkpoint
+For every event, store the event id in the same transaction that creates downstream work. Only then store the returned cursor. On the next run, send that stored cursor:
 
 ```bash
-curl "$SECAPI_BASE_URL/v1/stream_subscriptions/str_123/events?cursor=evt_987" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/stream_subscriptions/str_123/events?cursor=$SECAPI_STREAM_CURSOR&limit=25"
 ```
 
-Use cursor polling when:
+Cursor order is recorded event order, not a filing timestamp. Use the server-returned cursor, never the last array position, a wall-clock time, or an accession number as a checkpoint.
 
-- a tenant cannot expose a public webhook endpoint
-- an agent runtime wants explicit checkpoint control
-- support needs to replay a recent stream window without replaying the entire subscription
+## Recover and operate
 
-## CLI
+If processing fails halfway through a batch, leave the checkpoint unchanged and rerun idempotently. If a worker is behind, reduce the batch size and drain progressively rather than skipping to a newer cursor. Retain subscription id, event id, cursor, request id, traceparent, and any cited filing identifiers in each run log.
 
-```bash
-secapi streams events --stream-id str_123 --limit 25
-secapi streams events --stream-id str_123 --cursor evt_987 --limit 25
-```
-
-## Operational notes
-
-- stream events are filtered to the current org
-- `cursor` ordering is based on recorded event order, not the original SEC filing timestamp
-- replay should advance from `replayCursor`, not from the last array element a client happened to inspect
+Use [Webhook and stream workflows](/webhook-stream-workflows) to choose the right delivery mode. Configuration, endpoint changes, and replay policy remain human-authenticated dashboard work.

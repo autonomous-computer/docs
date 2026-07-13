@@ -1,27 +1,24 @@
 ---
 title: "Webhook Delivery and Event Types"
-description: "Understand signed SEC API webhook deliveries, inspect delivery history, and configure organization endpoints safely."
+description: "Verify signed SEC API webhooks, understand monitor-match timing, and retain the evidence needed to investigate a delivery."
 ---
 
-SEC API sends signed delivery events to organization webhook endpoints. Use an endpoint for monitor matches, delivery notifications, or another event listed by the public event catalog.
+SEC API delivers signed events to organization webhook endpoints. The public event catalog is the authority for available event types; do not invent a filing event name in a receiver configuration.
 
-## Configure endpoints safely
+## The monitor event
 
-Create endpoints, rotate secrets, send test deliveries, replay failures, and change subscriptions in the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks). These are human-authenticated organization actions. API keys deliberately cannot mutate them.
+`monitor.match` is emitted when a saved filing monitor finds new matches during its scheduled dispatch. It is a notification to retrieve and assess the identified filing. It does not guarantee immediate EDGAR publication or imply a materiality judgment.
 
-Save the signing secret when the dashboard shows it. Verify every incoming request against the exact raw body and `x-secapi-signature` before parsing JSON. Never log the secret or the unverified payload as trusted data.
+For each received event, preserve the event id, type, created time, monitor id, match accession numbers, source URLs, and `requestId` when present. These values connect a downstream alert to the source record and the delivery audit trail.
 
-## Inspect delivery history
+## Signature and retry posture
 
-Open the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks) to inspect delivery history and the current public event catalog. Use the response status, attempt count, timestamps, event type, and request ID to debug a destination.
+Verify `x-secapi-signature` over the exact raw body before parsing JSON. Check the signature timestamp against a bounded clock-skew window and compare signatures in constant time. Never log the signing secret, and do not treat an unsigned body as a trusted event.
 
-Webhook endpoint inspection belongs to the same human-authenticated organization boundary as endpoint configuration. Preserve the identifiers you need for an investigation, then return to the dashboard rather than attempting a control-plane call with an API key.
+Make processing idempotent on event or delivery identifiers. Return quickly after a durable queue write, then perform slow filing enrichment outside the request. A retry can repeat a valid notification; it should not produce duplicate analyst alerts.
 
-## Monitor events
+## Human-only controls
 
-`monitor.match` is the event emitted when a saved filing monitor finds new matches. Monitor dispatch is scheduled, so a webhook is a prompt to inspect source-backed filing data, not a claim of instant EDGAR delivery.
+Create endpoints, rotate secrets, issue test events, change subscriptions, inspect control-plane state, and replay delivery from the signed-in [dashboard](https://secapi.ai/app/webhooks). API keys are for machine reads; they do not grant control-plane authority.
 
-## Read next
-
-- [Monitor SEC filing events](/monitors)
-- [Build a filing monitor](/tutorials/build-filing-monitor)
+Use [Webhook delivery audit](/webhook-delivery-audit) for a failed attempt, [Monitor SEC filing events](/monitors) to define the matching job, and [Build a filing monitor](/tutorials/build-filing-monitor) for a runnable signature verifier.

@@ -1,123 +1,48 @@
 ---
-title: "Agent Operating Layer"
-description: "Saved workflow templates, reusable query packs, billing-aware agent guardrails, and policy bundles"
+title: "Give an Agent Read-Only SEC API Access"
+description: "Issue a short-lived sponsor token from a signed-in session, exchange it once for an agent API key, and keep control-plane changes human-owned."
 ---
 
-The Agent Operating Layer provides infrastructure for running AI agents at scale against SEC API — with guardrails, templates, and billing controls.
+Use agent bootstrap when a human operator needs to give an ephemeral agent runtime its own SEC API credential. The credential is limited to the self-serve read scope. It can retrieve data through REST or hosted MCP; it cannot configure billing, monitors, webhook destinations, or stream subscriptions.
 
-## Workflow Templates
+## Choose the right credential
 
-Pre-built workflow templates that agents can execute with a single prompt:
+Use a normal API key for a service you operate. Use an agent bootstrap token when a signed-in organization member is sponsoring a separate runtime and does not want to place a long-lived key in that runtime.
 
-### Earnings Prep
-```
-"Prepare an earnings preview for {ticker} using SEC API"
-```
-Automatically calls: `intelligence/earnings-preview`, `factors/decomposition`, `insiders`, `owners/13f`
+The sponsor-token request requires a WorkOS-authenticated organization session. The exchange is intentionally one-time; keep both the token and the resulting API key out of prompts, browser code, logs, and source control.
 
-### Compliance Check
-```
-"Run a compliance check on {company} using SEC API"
-```
-Automatically calls: `events/enforcement`, `compensation`, `insiders`, `filings` (8-K events)
+## Sponsor a bounded agent job
 
-### Portfolio Review
-```
-"Review my portfolio using SEC API"
-```
-Automatically calls: `portfolio/analyze`, `portfolio/stress-test`, `factors/dashboard`
-
-## Query Packs
-
-Reusable query configurations that bundle multiple API calls:
-
-```json
-{
-  "name": "weekly-insider-review",
-  "queries": [
-    {"endpoint": "/v1/insiders", "params": {"ticker": "{ticker}", "limit": 20}},
-    {"endpoint": "/v1/owners/13f", "params": {"cik": "{manager_cik}"}},
-    {"endpoint": "/v1/events/enforcement", "params": {"respondent": "{company_name}"}}
-  ],
-  "schedule": "weekly",
-  "output": "markdown"
-}
-```
-
-## Billing-Aware Agent Guardrails
-
-### Budget Controls
-
-Set per-agent spending limits to prevent bill shock:
+From your authenticated server or dashboard-backed session, create a short-lived token for one concrete job. The current contract accepts only the self-serve read scope.
 
 ```bash
-# Set a $10/month budget for an agent
-curl -X PUT "https://api.secapi.ai/v1/billing/budget" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"spendCapCents": 1000, "softCapCents": 750}'
-```
-
-The agent receives `SECAPI-Budget-Used` headers on every response and gets warned at 75%, 90%, 95% thresholds.
-
-### Rate Limiting
-
-Per-endpoint rate limits prevent agents from overwhelming the API:
-
-| Endpoint Family | Rate Limit |
-|---|---|
-| Entity resolve | 600/min |
-| Filing search | 600/min |
-| Section extract | 180/min |
-| Intelligence query | 30/min |
-| Semantic search | 120/min |
-
-### Agent Bootstrap
-
-Create ephemeral, scoped credentials for agents. The sponsor-token endpoint requires a WorkOS-authenticated bearer token, not an API key.
-
-```bash
-# Sponsor creates a bootstrap token
-curl -X POST "https://api.secapi.ai/v1/agent/bootstrap_tokens" \
+curl --fail-with-body -X POST "https://api.secapi.ai/v1/agent/bootstrap_tokens" \
   -H "Authorization: Bearer $SECAPI_BEARER_TOKEN" \
-  -d '{"ttlSeconds": 3600, "scopes": ["read:sec"]}'
-
-# Agent exchanges token for credentials
-curl -X POST "https://api.secapi.ai/v1/agent/bootstrap" \
-  -d '{"token": "BOOTSTRAP_TOKEN"}'
+  -H "content-type: application/json" \
+  -d '{"label":"daily-10-k-research","ttlSeconds":900,"scopes":["read:sec"]}'
 ```
 
-## Policy Bundles by Vertical
+The response is an `agent_bootstrap_token`. Pass its secret directly to the worker through its secret channel. Do not print the response in a build log.
 
-Pre-configured policy sets for different customer types. For ready-to-run prompts that exercise these policy bundles end-to-end, see the [agent prompt library](/agents/prompt-library) — 50 v1 prompts across the same five personas.
-
-### Investment Manager Policy
-- Full access to all SEC, factor, and macro endpoints
-- Intelligence bundles enabled
-- Portfolio analytics enabled
-- Budget: usage-based (PAYG or Team plan)
-- 12 ready-to-run prompts: [/agents/prompt-library/investment-manager](/agents/prompt-library/investment-manager)
-
-### Law Firm Policy
-- Enforcement, filing search, entity resolution
-- Event monitoring (8-K, restatements, auditor changes)
-- Webhook delivery for real-time alerts
-- Budget: per-query with approval threshold
-- 12 ready-to-run prompts: [/agents/prompt-library/law-firm](/agents/prompt-library/law-firm)
-
-### Insurance/Risk Policy
-- Financial health indicators
-- Enforcement history
-- Compensation screening
-- Restricted to read-only operations
-- Budget: fixed monthly cap
-- 6 ready-to-run prompts: [/agents/prompt-library/insurance](/agents/prompt-library/insurance)
-
-## Monitoring
-
-Export detailed event logs:
+## Exchange it once in the worker
 
 ```bash
-curl "https://api.secapi.ai/v1/delivery/events/export?format=ndjson" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl --fail-with-body -X POST "https://api.secapi.ai/v1/agent/bootstrap" \
+  -H "content-type: application/json" \
+  -d '{"token":"'$SECAPI_BOOTSTRAP_TOKEN'","label":"daily-10-k-research","scopes":["read:sec"]}' \
+  | jq '{object, requestId, organization: .organization.id, apiKey: .apiKey.id, sponsorToken}'
 ```
+
+Expect `201` and `object: "agent_bootstrap"`. Store the returned API-key secret only in the running worker, then use it as `x-api-key` for REST or the hosted [MCP server](/mcp-install). Retain `requestId`, the token id, and the job label with your run record; never retain either secret.
+
+## Handle failure deliberately
+
+- `404 bootstrap_token_invalid`: the token is malformed or unavailable. Request a new token; do not guess or retry a different scope.
+- `409 bootstrap_token_already_used`: another worker consumed it. Stop the duplicate worker and issue a new token only for the intended job.
+- `410 bootstrap_token_expired`: sponsor a new short-lived token after checking the queue delay.
+- `400 bootstrap_token_scope_invalid`: the requested scope is outside the read-only contract.
+- `402 api_key_limit_reached`: revoke or rotate an unused key from the signed-in dashboard before retrying the exchange.
+
+## Production boundary
+
+Treat the bootstrap exchange as credential provisioning, not as agent authorization to change your organization. A person must configure [monitors](/monitors), [webhooks](/webhook-stream-workflows), streams, billing, and key lifecycle in the signed-in dashboard. For each agent run, log the job input, route/tool names, `requestId`, `traceparent` when returned, and filing identifiers used in its answer.

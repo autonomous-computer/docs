@@ -1,64 +1,36 @@
 ---
-title: "MCP workflows"
-description: "Use SEC API MCP tools for source-backed filing research with explicit inputs, evidence, and limits"
+title: "MCP Workflows for Source-Backed Filing Research"
+description: "Discover hosted SEC API MCP tools, run a bounded filing-research job, and keep the evidence needed to review or reproduce the result."
 ---
 
-Use SEC API MCP for a defined research job, such as locating a filing, reading a section, or checking reported ownership. Give the client a narrow question and require the filing identifiers that support its answer.
+Use SEC API MCP for a bounded research job. The reliable pattern is discover, inspect the schema, retrieve one source record, then summarize only what that record supports. Install the server first: [Install SEC API MCP](/mcp-install).
 
-Install the server before starting: [Install SEC API MCP](/mcp-install).
+## A complete first job
 
-Need an API key? [Create an SEC API account](https://secapi.ai/signup) before connecting your client.
-
-## Start with one cited filing
-
-Use a prompt that names the issuer, filing type, and evidence you expect back:
+Give the client this prompt after it has connected:
 
 <Prompt>
-Find NVIDIA's latest 10-K and summarize Item 1A. Return the accession number, filing date, filing URL, request ID, and any source or freshness fields included in the result.
+Find NVIDIA's latest 10-K. Retrieve Item 1A from that filing. Return: company name, accession number, filing date, filing URL, section title, a five-bullet summary, requestId, traceparent when present, and any truncation or freshness signals. Do not infer facts that are not in the retrieved section.
 </Prompt>
 
-This establishes a useful boundary: the client may summarize the filing, but the response must still identify the SEC document behind the summary.
+Expected output is one identified filing plus a bounded summary. A changed accession number on a later run is normal; a summary without its filing identity is not sufficient for a production report.
 
-## Find the right tool
+## Let the server choose the contract
 
-Use the server's tool catalog as the source of truth. Start with `tools.search` when you know the job but not the tool name, then use `tools.describe` before a call that needs exact arguments.
+The tool catalog is the current contract. Ask the client to call `tools.search` with a natural-language job, then call `tools.describe` on the selected tool before it supplies arguments. For the job above, useful searches are `company identity`, `latest filing`, and `filing section`.
 
-| Research job                            | Search terms to use                    |
-| --------------------------------------- | -------------------------------------- |
-| Identify an issuer from a ticker or CIK | `company identity`                     |
-| Find a filing by company, form, or date | `filing search`                        |
-| Retrieve a section such as Item 1A      | `filing section`                       |
-| Read reported financial values          | `financial statements` or `XBRL facts` |
-| Review institutional ownership          | `institutional holders`                |
+`tools/list` can be filtered to `core` or a namespace when your client supports that parameter. Do not copy an old tool list into an agent instruction. Tool names, schemas, quotas, and annotations are server-owned and can change.
 
-Tool names, inputs, and annotations can change as the server evolves. Keep discovery in the workflow rather than hard-coding a catalog from this page.
+## Keep a source trail
 
-## Preserve the evidence
+Persist the returned `accessionNumber`, `filingDate`, `filingUrl`, `requestId`, and `traceparent` with the agent result. Keep route-provided provenance, freshness, pagination, and truncation fields when present. `structuredContent` is the canonical typed payload; compact text formatting is for the human or agent reading it.
 
-For every filing-based answer, keep these fields when they are returned:
+## Limits and state changes
 
-- `accessionNumber`, `filingDate`, and `filingUrl`
-- `requestId` and `traceparent`
-- source URLs, citations, provenance, and freshness fields
-- pagination, truncation, or response-limit signals for list results
+Start with a narrow issuer, form, date range, and result limit. If a tool reports pagination or truncation, inspect the next page or reduce the request before asking the model to draw a conclusion. Do not blindly retry authentication, billing, quota, or validation failures.
 
-The identifiers let you trace a conclusion to a filing and diagnose a failed or partial request later.
+Most MCP tools are read-only. Inspect tool annotations before any stateful call; `situations.watch` and `exports.create` are not safe to parallelize or replay casually. Monitor, webhook, and stream control-plane changes remain human-authenticated dashboard actions.
 
-## Bound the request
+## Production handoff
 
-Specify the company, form type, date range, section, and output fields that the task needs. For a list result, set a small limit first, inspect the result, then widen the query only when needed. Use the documented response controls when you want a compact text representation; structured MCP content remains the canonical payload.
-
-Do not automatically replay a call after an authentication, billing, or quota response. For a timeout, narrow the request before trying again and retain the request ID from the failed response.
-
-## Move from research to code
-
-Use MCP when the task belongs in an MCP-aware client. Use an SDK or REST when you need a stable application integration, typed client behavior, or direct control over the request and response.
-
-<CardGroup cols={2}>
-  <Card title="Libraries and SDKs" icon="blocks" href="/libraries-and-sdks">
-    Choose JavaScript, Python, Go, Rust, CLI, or REST for application and terminal workflows.
-  </Card>
-  <Card title="Troubleshooting" icon="life-buoy" href="/troubleshooting">
-    Interpret authentication, quota, timeout, and API errors.
-  </Card>
-</CardGroup>
+Run the same prompt against a fixture issuer in CI, record the output identifiers, and set a reviewer rule for material conclusions. Use REST or an SDK when your application needs a stable request loop, typed error handling, and its own retry policy. See [API conventions](/api-conventions), [MCP installation](/mcp-install), and [Troubleshooting](/troubleshooting).
