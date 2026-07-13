@@ -1,9 +1,9 @@
 ---
 title: "GET /v1/statements"
-description: "Return a normalized statement backed by SEC company facts. Resolves us-gaap (10-K/10-Q) filers and IFRS foreign private issuers (ifrs-full on 20-F/6-K) aut…"
+description: "Retrieve a normalized balance sheet, income statement, or cash flow statement for one issuer, with US GAAP and IFRS foreign-private-issuer resolution."
 ---
 
-Return a normalized statement backed by SEC company facts. Resolves us-gaap (10-K/10-Q) filers and IFRS foreign private issuers (ifrs-full on 20-F/6-K) automatically.
+Retrieve a normalized balance sheet, income statement, or cash flow statement for one issuer, with US GAAP and IFRS foreign-private-issuer resolution.
 
 <Info>
 Audience: application and coding agent.
@@ -11,7 +11,20 @@ Audience: application and coding agent.
 
 ## Agent mode
 
-Pass `?view=agent` to receive the compact agent shape: rows + periods with tag/value/period metadata. Provenance, completeness, freshness, materialization, and validation envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+Pass `?view=agent` to receive the compact agent shape: rows + periods with tag, value, and period metadata. Provenance, completeness, freshness, materialization, and validation envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+
+## Choose the statement and period
+
+Supply one issuer identifier. Set `statement` when the workflow needs one statement type, then use `period`, `fy` / `year`, or a fiscal-year range to anchor the requested reporting slice. The route resolves US GAAP 10-K / 10-Q filers and, when applicable, IFRS foreign private issuers through `ifrs-full` 20-F / 6-K coverage.
+
+Read the returned periods, provenance, completeness, freshness, and materialization metadata alongside the rows. A missing normalized line item is not equivalent to zero, and values from different units, periods, or filing scopes should not be combined without normalization.
+
+## Related guides
+
+<CardGroup cols={2}>
+<Card title="Financial statements API guide" icon="table-properties" href="/seo/sec-financial-statements-api">Use statement data with explicit reporting-period context.</Card>
+<Card title="Coverage and depth" icon="layers" href="/coverage-and-depth">Understand source coverage and availability boundaries.</Card>
+</CardGroup>
 
 ## Canonical metadata
 
@@ -25,10 +38,7 @@ Pass `?view=agent` to receive the compact agent shape: rows + periods with tag/v
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/statements?ticker=EXAMPLE&statement=income_statement&fy=2025"
 ```
 </RequestExample>
 
@@ -37,37 +47,87 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "object": "statement",
+  "id": "stmt_example_income_statement_2025",
+  "createdAt": "2026-02-20T00:00:00.000Z",
+  "livemode": false,
+  "entityId": "ent_example",
+  "ticker": "EXAMPLE",
+  "companyName": "Example Issuer, Inc.",
+  "statementKey": "income_statement",
+  "title": "Income Statement",
+  "period": "annual",
+  "periods": [
+    {
+      "periodEnd": "2025-12-31",
+      "filedAt": "2026-02-20",
+      "form": "10-K",
+      "fy": 2025,
+      "fp": "FY"
+    }
+  ],
+  "rows": [
+    {
+      "key": "revenue",
+      "tag": "Revenues",
+      "taxonomy": "us-gaap",
+      "label": "Revenue",
+      "unit": "USD",
+      "values": [
+        {
+          "periodEnd": "2025-12-31",
+          "filedAt": "2026-02-20",
+          "form": "10-K",
+          "fy": 2025,
+          "fp": "FY",
+          "periodStart": "2025-01-01",
+          "value": 123456789,
+          "periodBasis": "fiscal_year_to_date"
+        }
+      ]
+    }
+  ],
   "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
+    "source": "example",
+    "sourceLabel": "Illustrative response - not a live SEC filing",
+    "accessionNumber": null,
+    "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+    "retrievedAt": "2026-02-20T00:00:00.000Z",
+    "parserVersion": "example"
+  },
+  "completeness": {
+    "source": "company_facts",
+    "observationsReturned": 1,
+    "hasResolvedConcept": true
   },
   "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
+    "status": "archival",
+    "asOf": "2026-02-20T00:00:00.000Z",
+    "sourcePublishedAt": "2026-02-20T00:00:00.000Z",
+    "lagMs": 0
   },
   "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+    "parserVersion": "example",
+    "materializationVersion": "example"
+  },
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## About this example
+
+This response is illustrative: `EXAMPLE`, all IDs, amounts, and `example.com` URLs are synthetic. It shows the response shape only and does not identify or claim a live SEC filing.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/statements to return a normalized statement backed by SEC company facts. Resolves us-gaap (10-K/10-Q) filers and IFRS foreign private issuers (ifrs-full on 20-F/6-K) automatically. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/statements to retrieve one normalized balance sheet, income statement, or cash flow statement for an issuer. Supply one issuer identifier and choose `statement` plus period or fiscal-year filters when the workflow requires a specific reporting slice. Preserve statement rows, periods, provenance, completeness, freshness, materialization, `requestId`, and `traceparent`; distinguish reported values from missing or incomparable line items.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- provide one issuer identifier and a supported statement selector when requesting a specific statement type
+- do not treat an absent normalized row as zero or use it to infer an unavailable disclosure
+- preserve provenance, completeness, freshness, materialization, `requestId`, and `traceparent` when handling a partial or transient result

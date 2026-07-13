@@ -1,13 +1,26 @@
 ---
 title: "GET /v1/statements/share-float"
-description: "Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise"
+description: "Retrieve disclosed public float when SEC company-facts coverage provides it, otherwise an explicitly labeled shares-outstanding proxy with its source and s…"
 ---
 
-Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise
+Retrieve disclosed public float when SEC company-facts coverage provides it, otherwise an explicitly labeled shares-outstanding proxy with its source and status.
 
 <Info>
 Audience: application and coding agent.
 </Info>
+
+## Interpret the source mode
+
+Supply one issuer identifier. `publicFloatUsd` is populated only when the relevant public-float fact is available on the SEC company-facts surface. When it is not, the response may provide `sharesOutstanding` with `sourceMode=shares_outstanding_proxy`; that proxy is a share count, not a public-float dollar value.
+
+Use `statusNote`, `capability`, `sourceMode`, provenance, freshness, and materialization to explain the result. Preserve `null` public float as unknown rather than substituting or estimating a dollar value.
+
+## Related guides
+
+<CardGroup cols={2}>
+<Card title="XBRL API guide" icon="braces" href="/seo/xbrl-api">Trace company-facts fields back to their SEC source context.</Card>
+<Card title="Coverage and depth" icon="layers" href="/coverage-and-depth">Understand when the available source data is partial or unavailable.</Card>
+</CardGroup>
 
 ## Canonical metadata
 
@@ -23,10 +36,7 @@ Audience: application and coding agent.
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/share-float?ticker=MSFT"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/statements/share-float?ticker=EXAMPLE"
 ```
 </RequestExample>
 
@@ -36,24 +46,24 @@ curl -X GET \
 ```json
 {
   "object": "share_float",
-  "id": "share_float_ent_msft",
-  "createdAt": "2026-03-18T16:00:00.000Z",
+  "id": "share_float_ent_example",
+  "createdAt": "2026-02-20T00:00:00.000Z",
   "livemode": false,
-  "entityId": "ent_msft",
-  "ticker": "MSFT",
-  "cik": "0000789019",
-  "companyName": "Microsoft Corporation",
-  "asOf": "2026-01-28",
-  "form": "10-Q",
-  "filingDate": "2026-01-28",
+  "entityId": "ent_example",
+  "ticker": "EXAMPLE",
+  "cik": "0000000000",
+  "companyName": "Example Issuer, Inc.",
+  "asOf": "2026-02-20",
+  "form": "10-K",
+  "filingDate": "2026-02-20",
   "reportDate": "2025-12-31",
   "capability": "degraded",
   "sourceMode": "shares_outstanding_proxy",
-  "statusNote": "The latest SEC company-facts coverage exposes shares outstanding but not a same-surface public-float dollar fact, so SEC API is returning the shares-outstanding proxy.",
+  "statusNote": "The illustrative company-facts coverage exposes shares outstanding but not a same-surface public-float dollar fact, so this example returns the shares-outstanding proxy.",
   "publicFloatUsd": null,
-  "sharesOutstanding": 7433000000,
+  "sharesOutstanding": 123456789,
   "xbrlData": {
-    "EntityCommonStockSharesOutstanding": 7433000000
+    "EntityCommonStockSharesOutstanding": 123456789
   },
   "facts": {
     "publicFloatUsd": null,
@@ -62,43 +72,49 @@ curl -X GET \
       "tag": "EntityCommonStockSharesOutstanding",
       "label": "Entity Common Stock, Shares Outstanding",
       "unit": "shares",
-      "value": 7433000000,
+      "value": 123456789,
       "periodEnd": "2025-12-31",
-      "filedAt": "2026-01-28",
-      "form": "10-Q"
+      "filedAt": "2026-02-20",
+      "form": "10-K"
     }
   },
-  "summaryMd": "## Share float coverage for Microsoft Corporation\n\nSEC API found 7,433,000,000 shares outstanding, but the issuer does not expose a same-surface public-float dollar fact in the latest company-facts coverage, so this response stays in degraded proxy mode.",
+  "summaryMd": "## Share float coverage for Example Issuer, Inc.\n\nThis illustrative response has 123,456,789 shares outstanding, but no same-surface public-float dollar fact, so it remains in degraded proxy mode.",
   "provenance": {
-    "source": "sec",
+    "source": "example",
+    "sourceLabel": "Illustrative response - not a live SEC filing",
     "accessionNumber": null,
-    "filingUrl": "https://www.sec.gov/edgar/searchedgar/companysearch",
-    "retrievedAt": "2026-03-18T16:00:00.000Z",
-    "parserVersion": "2026-03-18.1"
+    "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+    "retrievedAt": "2026-02-20T00:00:00.000Z",
+    "parserVersion": "example"
   },
   "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-18T16:00:00.000Z",
-    "sourcePublishedAt": "2026-01-28",
+    "status": "archival",
+    "asOf": "2026-02-20T00:00:00.000Z",
+    "sourcePublishedAt": "2026-02-20",
     "lagMs": 0
   },
   "materialization": {
-    "parserVersion": "2026-03-18.1",
-    "materializationVersion": "2026-03-18.1"
+    "parserVersion": "example",
+    "materializationVersion": "example"
   },
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## About this example
+
+This response is illustrative: `EXAMPLE`, all IDs, amounts, and `example.com` URLs are synthetic. It demonstrates the degraded shares-outstanding proxy when public float is unavailable and does not identify or claim a live SEC filing.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/statements/share-float to return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, `capability`, `sourceMode` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/statements/share-float to retrieve an issuer's disclosed public float when available, with explicit shares-outstanding proxy semantics otherwise. Supply one issuer identifier and preserve `publicFloatUsd`, `sharesOutstanding`, `sourceMode`, `statusNote`, provenance, freshness, materialization, `requestId`, and `traceparent`. Never label a shares-outstanding proxy as public float.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- provide one issuer identifier and preserve the returned `sourceMode` and `statusNote`
+- never relabel `shares_outstanding_proxy` as public float or estimate `publicFloatUsd` when it is null
+- preserve capability, provenance, freshness, materialization, `requestId`, and `traceparent` when handling a partial or transient result

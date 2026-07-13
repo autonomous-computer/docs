@@ -6958,12 +6958,277 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Section search results with pagination and request tracing metadata.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "data",
+                    "hasMore",
+                    "nextCursor",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "required": [
+                          "object",
+                          "id",
+                          "key",
+                          "title",
+                          "contentMd",
+                          "provenance",
+                          "accession",
+                          "section_key",
+                          "char_start",
+                          "char_end",
+                          "highlighted_snippet",
+                          "source_url"
+                        ],
+                        "properties": {
+                          "object": {
+                            "type": "string",
+                            "const": "section"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "ticker": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "form": {
+                            "type": "string"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "contentMd": {
+                            "type": "string"
+                          },
+                          "snippet": {
+                            "type": "string"
+                          },
+                          "accession": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "section_key": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "char_start": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "char_end": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "highlighted_snippet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "source_url": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "format": "uri"
+                          },
+                          "score": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "retrievalMode": {
+                            "type": "string",
+                            "enum": [
+                              "keyword",
+                              "semantic",
+                              "hybrid"
+                            ]
+                          },
+                          "provenance": {
+                            "$ref": "#/components/schemas/ResponseMetadata"
+                          }
+                        }
+                      }
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "queryPath": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "queryPathReason": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "policyYears": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "degradedState": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "responseMode": {
+                      "type": "string"
+                    },
+                    "include": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "traceparent": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "object": "list",
+                      "data": [
+                        {
+                          "object": "section",
+                          "id": "sec_example_2025_10k_item_1a",
+                          "ticker": "EXAMPLE",
+                          "form": "10-K",
+                          "key": "item_1a",
+                          "title": "Risk Factors",
+                          "contentMd": "Example discussion of liquidity risk and capital resources.",
+                          "snippet": "Example discussion of liquidity risk and capital resources.",
+                          "accession": "example-accession",
+                          "section_key": "item_1a",
+                          "char_start": 22,
+                          "char_end": 36,
+                          "highlighted_snippet": "Example discussion of **liquidity risk** and capital resources.",
+                          "source_url": "https://example.com/sec-filings/example-2025-10-k",
+                          "provenance": {
+                            "source": "example",
+                            "sourceLabel": "Illustrative response - not a live SEC filing",
+                            "accessionNumber": null,
+                            "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+                            "retrievedAt": "2026-02-20T00:00:00.000Z",
+                            "parserVersion": "example"
+                          }
+                        }
+                      ],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "queryPath": null,
+                      "queryPathReason": null,
+                      "policyYears": null,
+                      "degradedState": null,
+                      "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  }
                 }
               }
             }
@@ -22266,12 +22531,276 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Full-text filing and section search results with request tracing metadata.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "query",
+                    "filings",
+                    "sections",
+                    "requestId",
+                    "traceparent"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "fulltext_search"
+                    },
+                    "query": {
+                      "type": "string"
+                    },
+                    "filings": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "object",
+                        "data",
+                        "count"
+                      ],
+                      "properties": {
+                        "object": {
+                          "type": "string",
+                          "const": "list"
+                        },
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Filing"
+                          }
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    "sections": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "object",
+                        "data",
+                        "count",
+                        "degradedState"
+                      ],
+                      "properties": {
+                        "object": {
+                          "type": "string",
+                          "const": "list"
+                        },
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true,
+                            "required": [
+                              "object",
+                              "id",
+                              "key",
+                              "title",
+                              "contentMd",
+                              "provenance",
+                              "accession",
+                              "section_key",
+                              "char_start",
+                              "char_end",
+                              "highlighted_snippet",
+                              "source_url"
+                            ],
+                            "properties": {
+                              "object": {
+                                "type": "string",
+                                "const": "section"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "ticker": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "form": {
+                                "type": "string"
+                              },
+                              "key": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "contentMd": {
+                                "type": "string"
+                              },
+                              "snippet": {
+                                "type": "string"
+                              },
+                              "accession": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "section_key": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "char_start": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "char_end": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "highlighted_snippet": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "source_url": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "format": "uri"
+                              },
+                              "score": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "retrievalMode": {
+                                "type": "string",
+                                "enum": [
+                                  "keyword",
+                                  "semantic",
+                                  "hybrid"
+                                ]
+                              },
+                              "provenance": {
+                                "$ref": "#/components/schemas/ResponseMetadata"
+                              }
+                            }
+                          }
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "degradedState": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "additionalProperties": true
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "traceparent": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "object": "fulltext_search",
+                      "query": "liquidity risk",
+                      "filings": {
+                        "object": "list",
+                        "data": [],
+                        "count": 0
+                      },
+                      "sections": {
+                        "object": "list",
+                        "data": [
+                          {
+                            "object": "section",
+                            "id": "sec_example_2025_10k_item_1a",
+                            "ticker": "EXAMPLE",
+                            "form": "10-K",
+                            "key": "item_1a",
+                            "title": "Risk Factors",
+                            "contentMd": "Example discussion of liquidity risk and capital resources.",
+                            "snippet": "Example discussion of liquidity risk and capital resources.",
+                            "accession": "example-accession",
+                            "section_key": "item_1a",
+                            "char_start": 22,
+                            "char_end": 36,
+                            "highlighted_snippet": "Example discussion of **liquidity risk** and capital resources.",
+                            "source_url": "https://example.com/sec-filings/example-2025-10-k",
+                            "provenance": {
+                              "source": "example",
+                              "sourceLabel": "Illustrative response - not a live SEC filing",
+                              "accessionNumber": null,
+                              "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+                              "retrievedAt": "2026-02-20T00:00:00.000Z",
+                              "parserVersion": "example"
+                            }
+                          }
+                        ],
+                        "count": 1,
+                        "degradedState": null
+                      },
+                      "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  }
                 }
               }
             }
@@ -22391,12 +22920,226 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Semantic search results with request tracing metadata.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "query",
+                    "mode",
+                    "sections",
+                    "requestId",
+                    "traceparent"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "semantic_search"
+                    },
+                    "query": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "keyword",
+                        "semantic",
+                        "hybrid"
+                      ]
+                    },
+                    "sections": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "object",
+                        "data",
+                        "count",
+                        "degradedState"
+                      ],
+                      "properties": {
+                        "object": {
+                          "type": "string",
+                          "const": "list"
+                        },
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true,
+                            "required": [
+                              "object",
+                              "id",
+                              "key",
+                              "title",
+                              "contentMd",
+                              "provenance",
+                              "accession",
+                              "section_key",
+                              "char_start",
+                              "char_end",
+                              "highlighted_snippet",
+                              "source_url"
+                            ],
+                            "properties": {
+                              "object": {
+                                "type": "string",
+                                "const": "section"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "ticker": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "form": {
+                                "type": "string"
+                              },
+                              "key": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "contentMd": {
+                                "type": "string"
+                              },
+                              "snippet": {
+                                "type": "string"
+                              },
+                              "accession": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "section_key": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "char_start": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0
+                              },
+                              "char_end": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0
+                              },
+                              "highlighted_snippet": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "source_url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uri"
+                              },
+                              "score": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "retrievalMode": {
+                                "type": "string",
+                                "enum": [
+                                  "keyword",
+                                  "semantic",
+                                  "hybrid"
+                                ]
+                              },
+                              "provenance": {
+                                "$ref": "#/components/schemas/ResponseMetadata"
+                              }
+                            }
+                          }
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "degradedState": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "additionalProperties": true
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "traceparent": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "semantic_search",
+                      "query": "liquidity risk",
+                      "mode": "hybrid",
+                      "sections": {
+                        "object": "list",
+                        "data": [
+                          {
+                            "object": "section",
+                            "id": "sec_example_2025_10k_item_7",
+                            "ticker": "EXAMPLE",
+                            "form": "10-K",
+                            "key": "item_7",
+                            "title": "Management's Discussion and Analysis",
+                            "contentMd": "Example discussion of liquidity risk and capital resources.",
+                            "snippet": "Example discussion of liquidity risk and capital resources.",
+                            "accession": "example-accession",
+                            "section_key": "item_7",
+                            "char_start": 22,
+                            "char_end": 36,
+                            "highlighted_snippet": "Example discussion of **liquidity risk** and capital resources.",
+                            "source_url": "https://example.com/sec-filings/example-2025-10-k",
+                            "score": 0.8421,
+                            "retrievalMode": "hybrid",
+                            "provenance": {
+                              "source": "example",
+                              "sourceLabel": "Illustrative response - not a live SEC filing",
+                              "accessionNumber": null,
+                              "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+                              "retrievedAt": "2026-02-20T00:00:00.000Z",
+                              "parserVersion": "example"
+                            }
+                          }
+                        ],
+                        "count": 1,
+                        "degradedState": null
+                      },
+                      "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  }
                 }
               }
             }
@@ -26889,6 +27632,93 @@
   },
   "components": {
     "schemas": {
+      "Filing": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "entityId",
+          "form",
+          "filingDate",
+          "accessionNumber",
+          "title",
+          "provenance"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "filing"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "form": {
+            "type": "string"
+          },
+          "filingDate": {
+            "type": "string"
+          },
+          "reportDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "accessionNumber": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          }
+        },
+        "additionalProperties": true
+      },
       "Statement": {
         "type": "object",
         "required": [
@@ -27054,12 +27884,106 @@
           },
           "validation": {
             "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "traceparent": {
+            "type": "string"
           }
         },
         "additionalProperties": true
       },
       "StatementAgentRecord": {},
-      "StatementBundle": {},
+      "StatementBundle": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "entityId",
+          "ticker",
+          "companyName",
+          "period",
+          "statements",
+          "provenance"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "statement_bundle"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "statements": {
+            "type": "object",
+            "required": [
+              "balanceSheet",
+              "incomeStatement",
+              "cashFlowStatement"
+            ],
+            "properties": {
+              "balanceSheet": {
+                "$ref": "#/components/schemas/Statement"
+              },
+              "incomeStatement": {
+                "$ref": "#/components/schemas/Statement"
+              },
+              "cashFlowStatement": {
+                "$ref": "#/components/schemas/Statement"
+              }
+            },
+            "additionalProperties": false
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "CompactStatement": {},
       "FactPointList": {
         "type": "object",
@@ -27496,7 +28420,261 @@
         },
         "additionalProperties": true
       },
-      "ShareFloat": {},
+      "ShareFloat": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "entityId",
+          "ticker",
+          "cik",
+          "companyName",
+          "asOf",
+          "form",
+          "filingDate",
+          "reportDate",
+          "capability",
+          "sourceMode",
+          "statusNote",
+          "publicFloatUsd",
+          "sharesOutstanding",
+          "xbrlData",
+          "facts",
+          "summaryMd",
+          "provenance"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "share_float"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filingDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reportDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capability": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "sourceMode": {
+            "type": "string",
+            "enum": [
+              "company_facts",
+              "shares_outstanding_proxy",
+              "not_disclosed",
+              "unavailable"
+            ]
+          },
+          "statusNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publicFloatUsd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sharesOutstanding": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "xbrlData": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "facts": {
+            "type": "object",
+            "required": [
+              "publicFloatUsd",
+              "sharesOutstanding"
+            ],
+            "properties": {
+              "publicFloatUsd": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ShareFloatFact"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sharesOutstanding": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ShareFloatFact"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ShareFloatFact": {
+        "type": "object",
+        "required": [
+          "taxonomy",
+          "tag",
+          "label",
+          "unit",
+          "value",
+          "periodEnd",
+          "filedAt",
+          "form"
+        ],
+        "properties": {
+          "taxonomy": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "periodEnd": {
+            "type": "string"
+          },
+          "filedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
       "CompanyIncomeStatements": {},
       "CompanyBalanceSheets": {},
       "CompanyCashFlowStatements": {},
@@ -27504,8 +28682,391 @@
       "CompanyRatios": {},
       "CompanySegments": {},
       "CompanyOverview": {},
-      "SegmentedFactSeries": {},
-      "SegmentedRevenueSeries": {},
+      "SegmentedFactSeries": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "entityId",
+          "ticker",
+          "companyName",
+          "period",
+          "metric",
+          "records",
+          "provenance"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "segmented_fact_series"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "revenue",
+              "profit_loss"
+            ]
+          },
+          "capability": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "segmentAxis",
+                "segmentMember",
+                "segmentLabel",
+                "taxonomy",
+                "tag",
+                "unit",
+                "value",
+                "periodStart",
+                "periodEnd",
+                "filingDate",
+                "reportDate",
+                "form",
+                "accessionNumber",
+                "provenance",
+                "metricKey",
+                "axisFamily",
+                "hierarchyDepth",
+                "isMostGranularSibling"
+              ],
+              "properties": {
+                "segmentAxis": {
+                  "type": "string"
+                },
+                "segmentMember": {
+                  "type": "string"
+                },
+                "segmentLabel": {
+                  "type": "string"
+                },
+                "segmentType": {
+                  "type": "string",
+                  "enum": [
+                    "geographic",
+                    "product",
+                    "other"
+                  ]
+                },
+                "axisFamily": {
+                  "type": "string"
+                },
+                "hierarchyDepth": {
+                  "type": "integer"
+                },
+                "isMostGranularSibling": {
+                  "type": "boolean"
+                },
+                "metricKey": {
+                  "type": "string",
+                  "enum": [
+                    "revenue",
+                    "profit_loss"
+                  ]
+                },
+                "taxonomy": {
+                  "type": "string"
+                },
+                "tag": {
+                  "type": "string"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "periodStart": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "filingDate": {
+                  "type": "string"
+                },
+                "reportDate": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "form": {
+                  "type": "string"
+                },
+                "accessionNumber": {
+                  "type": "string"
+                },
+                "capability": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "trace": {
+                  "$ref": "#/components/schemas/Trace"
+                },
+                "provenance": {
+                  "$ref": "#/components/schemas/ResponseMetadata"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SegmentedRevenueSeries": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "entityId",
+          "ticker",
+          "companyName",
+          "period",
+          "records",
+          "provenance"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "segmented_revenue_series"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ]
+          },
+          "capability": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "segmentAxis",
+                "segmentMember",
+                "segmentLabel",
+                "taxonomy",
+                "tag",
+                "unit",
+                "value",
+                "periodStart",
+                "periodEnd",
+                "filingDate",
+                "reportDate",
+                "form",
+                "accessionNumber",
+                "provenance"
+              ],
+              "properties": {
+                "segmentAxis": {
+                  "type": "string"
+                },
+                "segmentMember": {
+                  "type": "string"
+                },
+                "segmentLabel": {
+                  "type": "string"
+                },
+                "segmentType": {
+                  "type": "string",
+                  "enum": [
+                    "geographic",
+                    "product",
+                    "other"
+                  ]
+                },
+                "axisFamily": {
+                  "type": "string"
+                },
+                "hierarchyDepth": {
+                  "type": "integer"
+                },
+                "isMostGranularSibling": {
+                  "type": "boolean"
+                },
+                "metricKey": {
+                  "type": "string",
+                  "const": "revenue"
+                },
+                "taxonomy": {
+                  "type": "string"
+                },
+                "tag": {
+                  "type": "string"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "periodStart": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "filingDate": {
+                  "type": "string"
+                },
+                "reportDate": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "form": {
+                  "type": "string"
+                },
+                "accessionNumber": {
+                  "type": "string"
+                },
+                "capability": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "trace": {
+                  "$ref": "#/components/schemas/Trace"
+                },
+                "provenance": {
+                  "$ref": "#/components/schemas/ResponseMetadata"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "Trace": {},
       "AnalyticsQueryInput": {},
       "AnalyticsQueryResult": {},

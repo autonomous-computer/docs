@@ -1,13 +1,24 @@
 ---
 title: "GET /v1/statements/{statement_key}"
-description: "Return a specific normalized statement keyed by statement type. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically."
+description: "Retrieve one normalized statement type for an issuer, with US GAAP and IFRS foreign-private-issuer resolution and optional fiscal-period filters."
 ---
 
-Return a specific normalized statement keyed by statement type. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.
+Retrieve one normalized statement type for an issuer, with US GAAP and IFRS foreign-private-issuer resolution and optional fiscal-period filters.
 
 <Info>
 Audience: application and coding agent.
 </Info>
+
+## Required inputs
+
+`statement_key` selects the normalized statement type; supply one issuer identifier and use `period`, `fy` / `year`, or a fiscal-year range when the workflow needs a particular reporting slice. Inspect the returned periods and provenance rather than inferring a fiscal period from the request alone.
+
+## Related guides
+
+<CardGroup cols={2}>
+<Card title="Financial statements API guide" icon="table-properties" href="/seo/sec-financial-statements-api">Understand normalized statement coverage and filing context.</Card>
+<Card title="Freshness and trust" icon="shield-check" href="/freshness-and-trust">Carry source and freshness metadata into downstream reports.</Card>
+</CardGroup>
 
 ## Canonical metadata
 
@@ -21,10 +32,7 @@ Audience: application and coding agent.
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/income_statement"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/statements/income_statement?ticker=EXAMPLE&fy=2025"
 ```
 </RequestExample>
 
@@ -33,37 +41,87 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "object": "statement",
+  "id": "stmt_example_income_statement_2025",
+  "createdAt": "2026-02-20T00:00:00.000Z",
+  "livemode": false,
+  "entityId": "ent_example",
+  "ticker": "EXAMPLE",
+  "companyName": "Example Issuer, Inc.",
+  "statementKey": "income_statement",
+  "title": "Income Statement",
+  "period": "annual",
+  "periods": [
+    {
+      "periodEnd": "2025-12-31",
+      "filedAt": "2026-02-20",
+      "form": "10-K",
+      "fy": 2025,
+      "fp": "FY"
+    }
+  ],
+  "rows": [
+    {
+      "key": "revenue",
+      "tag": "Revenues",
+      "taxonomy": "us-gaap",
+      "label": "Revenue",
+      "unit": "USD",
+      "values": [
+        {
+          "periodEnd": "2025-12-31",
+          "filedAt": "2026-02-20",
+          "form": "10-K",
+          "fy": 2025,
+          "fp": "FY",
+          "periodStart": "2025-01-01",
+          "value": 123456789,
+          "periodBasis": "fiscal_year_to_date"
+        }
+      ]
+    }
+  ],
   "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
+    "source": "example",
+    "sourceLabel": "Illustrative response - not a live SEC filing",
+    "accessionNumber": null,
+    "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+    "retrievedAt": "2026-02-20T00:00:00.000Z",
+    "parserVersion": "example"
+  },
+  "completeness": {
+    "source": "company_facts",
+    "observationsReturned": 1,
+    "hasResolvedConcept": true
   },
   "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
+    "status": "archival",
+    "asOf": "2026-02-20T00:00:00.000Z",
+    "sourcePublishedAt": "2026-02-20T00:00:00.000Z",
+    "lagMs": 0
   },
   "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+    "parserVersion": "example",
+    "materializationVersion": "example"
+  },
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## About this example
+
+This response is illustrative: `EXAMPLE`, all IDs, amounts, and `example.com` URLs are synthetic. It shows the response shape only and does not identify or claim a live SEC filing.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/statements/{statement_key} to return a specific normalized statement keyed by statement type. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/statements/{statement_key} for one normalized statement type. Set `statement_key` to the supported statement type, supply one issuer identifier, and add period or fiscal-year filters when the result must be tied to a reporting slice. Preserve rows, periods, provenance, completeness, freshness, materialization, `requestId`, and `traceparent`.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- provide a supported `statement_key` and one issuer identifier
+- use the returned periods and provenance rather than inferring the reporting slice from a requested fiscal year alone
+- preserve completeness, freshness, materialization, `requestId`, and `traceparent` when handling a partial or transient result

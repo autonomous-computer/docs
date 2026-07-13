@@ -1,13 +1,26 @@
 ---
 title: "GET /v1/search/fulltext"
-description: "Full-text search across filing content and section text"
+description: "Find exact terms across SEC filing content and extracted section text, then narrow the combined result set by issuer, form, filing identity, fiscal year, o…"
 ---
 
-Full-text search across filing content and section text
+Find exact terms across SEC filing content and extracted section text, then narrow the combined result set by issuer, form, filing identity, fiscal year, or filing date.
 
 <Info>
 Audience: application and coding agent.
 </Info>
+
+## Scope and filters
+
+`q` is required. Use exactly one of `ticker`, `symbol`, or `cik` to narrow to an issuer; `symbol` is an alias for `ticker`, and supplying both requires matching values. Add `form`, `accession_number`, `filing_year` or `fy`, and `date_from` / `date_to` when the workflow needs a filing-level boundary.
+
+`limit` is the maximum combined search budget before the response splits work across the filing and section legs. Use a smaller limit for a review queue and retain the returned filing and section context when presenting matches.
+
+## Related guides
+
+<CardGroup cols={2}>
+<Card title="Search product guide" icon="search" href="/products/search">Choose the right filing-search workflow and keep source context attached to results.</Card>
+<Card title="Full-text search guide" icon="file-search" href="/seo/sec-full-text-search-api">See filing filters and exact-term search examples.</Card>
+</CardGroup>
 
 ## Canonical metadata
 
@@ -18,10 +31,7 @@ Audience: application and coding agent.
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/search/fulltext?q=risk%20factors&ticker=AAPL&form=10-K"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/search/fulltext?q=liquidity&ticker=EXAMPLE&form=10-K&limit=20"
 ```
 </RequestExample>
 
@@ -30,19 +40,75 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "fulltext_search",
+  "query": "liquidity",
+  "filings": {
+    "object": "list",
+    "data": [
+      {
+        "object": "filing",
+        "id": "fil_example_2025_10k",
+        "ticker": "EXAMPLE",
+        "companyName": "Example Issuer, Inc.",
+        "form": "10-K",
+        "filingDate": "2026-02-20",
+        "accessionNumber": "example-accession",
+        "title": "Example Issuer annual report",
+        "provenance": {
+          "source": "example",
+          "sourceLabel": "Illustrative response - not a live SEC filing",
+          "accessionNumber": null,
+          "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+          "retrievedAt": "2026-02-20T00:00:00.000Z",
+          "parserVersion": "example"
+        }
+      }
+    ],
+    "count": 1
+  },
+  "sections": {
+    "object": "list",
+    "data": [
+      {
+        "object": "section",
+        "id": "sec_example_2025_10k_item_7",
+        "ticker": "EXAMPLE",
+        "form": "10-K",
+        "key": "item_7",
+        "title": "Management's Discussion and Analysis",
+        "snippet": "Example discussion of **liquidity** and capital resources.",
+        "provenance": {
+          "source": "example",
+          "sourceLabel": "Illustrative response - not a live SEC filing",
+          "accessionNumber": null,
+          "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+          "retrievedAt": "2026-02-20T00:00:00.000Z",
+          "parserVersion": "example"
+        }
+      }
+    ],
+    "count": 1,
+    "degradedState": null
+  },
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## About this example
+
+This response uses a synthetic issuer, accession, and `example.com` URL to illustrate the two result legs. It does not identify or quote a live SEC filing.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/search/fulltext to full-text search across filing content and section text. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/search/fulltext to find exact terms across filings and extracted sections. Start with `q`, then narrow by one issuer identifier and, when useful, `form`, filing year, accession number, or filing-date range. Preserve each result's filing identifier, section context, source URL, `requestId`, and `traceparent`; treat `limit` as a combined budget across the filing and section search legs.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- send `ticker` or its `symbol` alias, not conflicting values for both; matching values are required when both are present
+- treat an invalid query or filter response as a request-shape problem and retain the returned validation details
+- preserve filing and section context with every match; a keyword hit is not a conclusion about the issuer
+- preserve `requestId` and `traceparent` when retrying a transient failure

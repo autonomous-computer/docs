@@ -1,9 +1,9 @@
 ---
 title: "GET /v1/facts"
-description: "Return normalized SEC company facts for an issuer, concept, and optional form or unit. Defaults to the us-gaap taxonomy (10-K/10-Q); when no explicit taxon…"
+description: "Retrieve normalized SEC XBRL fact observations for an issuer and optional concept, taxonomy, unit, form, or fiscal-period filters."
 ---
 
-Return normalized SEC company facts for an issuer, concept, and optional form or unit. Defaults to the us-gaap taxonomy (10-K/10-Q); when no explicit taxonomy or form is supplied and the us-gaap lookup is empty, automatically falls back to ifrs-full on 20-F/6-K for foreign private issuers (e.g. SAP, TM, SONY, RIO).
+Retrieve normalized SEC XBRL fact observations for an issuer and optional concept, taxonomy, unit, form, or fiscal-period filters.
 
 <Info>
 Audience: application and coding agent.
@@ -11,7 +11,20 @@ Audience: application and coding agent.
 
 ## Agent mode
 
-Pass `?view=agent` to receive the compact agent shape: concept + value + unit + period fields + lifted `accessionNumber` / `filingUrl` from provenance. Metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+Pass `?view=agent` to receive the compact agent shape: concept, value, unit, and period fields plus lifted `accessionNumber` / `filingUrl` from provenance. Metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+
+## Selecting comparable facts
+
+Supply one issuer identifier. Omit `tag` to receive the service's common financial metrics, or pass an XBRL concept such as `Revenues`, `NetIncomeLoss`, or `PropertyPlantAndEquipmentNet` for a concept-specific series. Use `taxonomy`, `form`, `unit`, and fiscal-year filters to avoid mixing different concepts, reporting periods, or units.
+
+With no explicit taxonomy or form, the route starts with `us-gaap` 10-K / 10-Q coverage and falls back to `ifrs-full` 20-F / 6-K when that lookup is empty for a foreign private issuer. Read `requestedTag`, `resolvedTag`, `aliasStrategy`, and `completeness` before treating a series as a like-for-like historical comparison.
+
+## Related guides
+
+<CardGroup cols={2}>
+<Card title="XBRL API guide" icon="braces" href="/seo/xbrl-api">Understand concepts, units, and filing-backed fact retrieval.</Card>
+<Card title="Freshness and trust" icon="shield-check" href="/freshness-and-trust">Interpret provenance and freshness metadata before publishing a result.</Card>
+</CardGroup>
 
 ## Canonical metadata
 
@@ -25,10 +38,7 @@ Pass `?view=agent` to receive the compact agent shape: concept + value + unit + 
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/facts"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/facts?ticker=EXAMPLE&tag=Revenues&form=10-K&limit=6"
 ```
 </RequestExample>
 
@@ -41,30 +51,31 @@ curl -X GET \
   "data": [
     {
       "object": "fact_point",
-      "id": "fact_0000320193_Revenues_2025_Q3",
-      "createdAt": "2026-03-17T00:00:00.000Z",
-      "livemode": true,
-      "entityId": "cent_f3913349312cbf5bfd60ecdb",
-      "ticker": "AAPL",
-      "companyName": "Apple Inc.",
+      "id": "fact_example_revenues_2025_fy",
+      "createdAt": "2026-02-20T00:00:00.000Z",
+      "livemode": false,
+      "entityId": "ent_example",
+      "ticker": "EXAMPLE",
+      "companyName": "Example Issuer, Inc.",
       "taxonomy": "us-gaap",
       "tag": "Revenues",
       "label": "Revenue",
       "unit": "USD",
-      "value": 95359000000,
-      "periodStart": "2025-03-30",
+      "value": 123456789,
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "filedAt": "2026-02-20",
+      "form": "10-K",
       "fy": 2025,
-      "fp": "Q3",
-      "form": "10-Q",
-      "periodEnd": "2025-06-28",
-      "filedAt": "2025-08-01T00:00:00.000Z",
-      "frame": "CY2025Q2",
+      "fp": "FY",
+      "frame": "CY2025",
       "provenance": {
-        "source": "sec",
-        "accessionNumber": "0000320193-25-000079",
-        "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250628.htm",
-        "retrievedAt": "2026-03-17T00:00:00.000Z",
-        "parserVersion": "secapi-xbrl-v1"
+        "source": "example",
+        "sourceLabel": "Illustrative response - not a live SEC filing",
+        "accessionNumber": null,
+        "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+        "retrievedAt": "2026-02-20T00:00:00.000Z",
+        "parserVersion": "example"
       }
     }
   ],
@@ -84,14 +95,19 @@ curl -X GET \
 ```
 </ResponseExample>
 
+## About this example
+
+This response uses a synthetic issuer and `example.com` URL to show a coherent annual revenue fact. It does not identify or claim a live SEC source.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/facts to return normalized SEC company facts for an issuer, concept, and optional form or unit. Defaults to the us-gaap taxonomy (10-K/10-Q); when no explicit taxonomy or form is supplied and the us-gaap lookup is empty, automatically falls back to ifrs-full on 20-F/6-K for foreign private issuers (e.g. SAP, TM, SONY, RIO). Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/facts to retrieve SEC XBRL fact observations for one issuer. Start with one issuer identifier, then add `tag`, `taxonomy`, `form`, `unit`, or fiscal-year filters only when the workflow needs a narrower series. Preserve the resolved concept, unit, period, accession number, filing URL, completeness, `requestId`, and `traceparent`; do not combine facts with different units or periods as though they were comparable.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- provide one issuer identifier and avoid conflicting `ticker` and `symbol` values
+- do not substitute an unresolved concept or missing fact with zero; retain the returned concept-resolution and completeness fields
+- compare only facts with compatible taxonomy, unit, form, and reporting-period context
+- preserve `requestId` and `traceparent` when retrying a transient failure

@@ -1,9 +1,9 @@
 ---
 title: "GET /v1/sections/search"
-description: "Search filing sections and snippets with filing-scoped filters and cursor pagination"
+description: "Find extracted filing sections and snippets with issuer, form, filing, fiscal-period, and cursor controls for a bounded review workflow."
 ---
 
-Search filing sections and snippets with filing-scoped filters and cursor pagination
+Find extracted filing sections and snippets with issuer, form, filing, fiscal-period, and cursor controls for a bounded review workflow.
 
 <Info>
 Audience: application and coding agent.
@@ -24,6 +24,11 @@ Every result row carries seven additive top-level fields:
 
 When the validator can't produce a span (no section text, no query-term match, or offsets out of bounds), `char_start`/`char_end`/`highlighted_snippet` drop to `null` and `_citation_degraded` records the reason. Identity fields (`accession`, `section_key`, `source_url`, `ticker`) are always populated when known. See [api conventions → citation + char-range spans](/api-conventions#citation-char-range-spans) for the full contract.
 
+## Filters and pagination
+
+Use `q` with one issuer identifier to begin. Add `form`, `filing_id`, `filing_year`, `fy`, or `quarter` only when the review needs a smaller filing cohort. `cursor` is an opaque continuation token: send the returned `nextCursor` unchanged while `hasMore` is true, and do not derive offsets from result counts.
+
+
 ## Agent mode
 
 Pass `?view=agent` to receive the compact agent shape: key + snippet + lifted `accessionNumber` / `startOffset` / `endOffset` from provenance/trace, plus the citation envelope (`accession`, `section_key`, `char_start`, `char_end`, `highlighted_snippet`, `source_url`, `ticker`). Content-md and metadata envelopes are dropped. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
@@ -31,8 +36,8 @@ Pass `?view=agent` to receive the compact agent shape: key + snippet + lifted `a
 ## Related workflows
 
 <CardGroup cols={2}>
-<Card title="Risk factors glossary" icon="triangle-alert" href="https://secapi.ai/glossary/risk-factors">Use the marketing glossary page for investor-facing Item 1A interpretation, caveats, and agent prompts.</Card>
-<Card title="Risk-factor drift agent" icon="bot" href="https://secapi.ai/workflows/risk-factor-drift-agent">Use the workflow page when an agent needs to compare changed risk language across filings.</Card>
+<Card title="Risk factors glossary" icon="triangle-alert" href="https://secapi.ai/glossary/risk-factors">Read investor-facing Item 1A interpretation, caveats, and agent prompts.</Card>
+<Card title="Risk-factor drift agent" icon="bot" href="https://secapi.ai/workflows/risk-factor-drift-agent">Compare changed risk language across filings with source links intact.</Card>
 </CardGroup>
 
 ## Canonical metadata
@@ -47,10 +52,7 @@ Pass `?view=agent` to receive the compact agent shape: key + snippet + lifted `a
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/sections/search"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/sections/search?q=liquidity&ticker=EXAMPLE&form=10-K&limit=20"
 ```
 </RequestExample>
 
@@ -59,37 +61,58 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "section",
+      "id": "sec_example_2025_10k_item_7",
+      "createdAt": "2026-02-20T00:00:00.000Z",
+      "livemode": false,
+      "filingId": "fil_example_2025_10k",
+      "ticker": "EXAMPLE",
+      "form": "10-K",
+      "key": "item_7",
+      "title": "Management's Discussion and Analysis",
+      "contentMd": "Example discussion of liquidity and capital resources.",
+      "snippet": "Example discussion of liquidity and capital resources.",
+      "accession": "example-accession",
+      "section_key": "item_7",
+      "char_start": 22,
+      "char_end": 31,
+      "highlighted_snippet": "Example discussion of **liquidity** and capital resources.",
+      "source_url": "https://example.com/sec-filings/example-2025-10-k",
+      "provenance": {
+        "source": "example",
+        "sourceLabel": "Illustrative response - not a live SEC filing",
+        "accessionNumber": null,
+        "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+        "retrievedAt": "2026-02-20T00:00:00.000Z",
+        "parserVersion": "example"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "degradedState": null,
   "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## About this example
+
+This response is illustrative: `EXAMPLE`, all IDs, amounts, and `example.com` URLs are synthetic. It shows the response shape only and does not identify or claim a live SEC filing.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/sections/search to search filing sections and snippets with filing-scoped filters and cursor pagination. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/sections/search to find filing sections and snippets with exact filing context. Start with `q`, then narrow by one issuer identifier and optional form, filing year, fiscal period, or filing ID. Preserve the cursor, `hasMore`, citation fields, accession number, source URL, `requestId`, and `traceparent`; follow `nextCursor` until the requested scope is exhausted.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- send `ticker` or its `symbol` alias, not conflicting values for both
+- preserve and replay `nextCursor` exactly when `hasMore` is true; do not construct a cursor from an offset
+- treat null citation spans as unavailable evidence and verify the linked filing before quoting a passage
+- preserve `requestId` and `traceparent` when retrying a transient failure

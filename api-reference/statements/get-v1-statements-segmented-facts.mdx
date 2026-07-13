@@ -1,13 +1,26 @@
 ---
 title: "GET /v1/statements/segmented-facts"
-description: "Return filing-derived segmented fact history for supported metrics such as revenue and segment profit/loss, with product or geography dimensions, hierarchy…"
+description: "Retrieve filing-derived segment history for a required metric such as revenue or segment profit/loss, retaining disclosed dimensions, hierarchy, capability…"
 ---
 
-Return filing-derived segmented fact history for supported metrics such as revenue and segment profit/loss, with product or geography dimensions, hierarchy metadata, capability state, and trace references when issuers disclose them
+Retrieve filing-derived segment history for a required metric such as revenue or segment profit/loss, retaining disclosed dimensions, hierarchy, capability state, and trace references.
 
 <Info>
 Audience: application and coding agent.
 </Info>
+
+## Required metric and disclosure limits
+
+Supply one issuer identifier and the required `metric`. Use `period` and `segment_type` to narrow the requested history, and use `limit`, `segment_limit`, and `submission_file_limit` to bound the returned filings, segment rows, and inspected SEC submission files.
+
+Segment dimensions and hierarchy reflect what the issuer disclosed. Read capability state and trace references before aggregating rows; an absent segment, unsupported metric, or unavailable hierarchy is not a zero value or a complete geographic/product split.
+
+## Related guides
+
+<CardGroup cols={2}>
+<Card title="Business breakdown workflow" icon="git-branch" href="/business-breakdown">Use reported segment dimensions with explicit coverage caveats.</Card>
+<Card title="Coverage and depth" icon="layers" href="/coverage-and-depth">Check what source detail is available before building a comparison.</Card>
+</CardGroup>
 
 ## Canonical metadata
 
@@ -21,10 +34,7 @@ Audience: application and coding agent.
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/segmented-facts?ticker=AAPL&metric=revenue&period=annual"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/statements/segmented-facts?ticker=EXAMPLE&metric=revenue&period=annual&segment_type=geographic&limit=6"
 ```
 </RequestExample>
 
@@ -34,65 +44,72 @@ curl -X GET \
 ```json
 {
   "object": "segmented_fact_series",
-  "id": "segfact_cent_jpm_profit_loss_product",
-  "createdAt": "2026-03-17T00:00:00.000Z",
-  "livemode": true,
-  "entityId": "cent_jpm_example",
-  "ticker": "JPM",
-  "companyName": "JPMorgan Chase & Co.",
-  "period": "quarterly",
-  "metric": "profit_loss",
+  "id": "segfact_example_revenue_geographic",
+  "createdAt": "2026-02-20T00:00:00.000Z",
+  "livemode": false,
+  "entityId": "ent_example",
+  "ticker": "EXAMPLE",
+  "companyName": "Example Issuer, Inc.",
+  "period": "annual",
+  "metric": "revenue",
   "capability": "supported",
   "records": [
     {
-      "segmentAxis": "us-gaap:StatementBusinessSegmentsAxis",
-      "segmentMember": "jpm:ConsumerAndCommunityBankingMember",
-      "segmentLabel": "Consumer & Community Banking",
-      "segmentType": "product",
-      "axisFamily": "business",
+      "segmentAxis": "example:GeographicAxis",
+      "segmentMember": "example:DomesticMember",
+      "segmentLabel": "Domestic",
+      "segmentType": "geographic",
+      "axisFamily": "geography",
       "hierarchyDepth": 1,
       "isMostGranularSibling": true,
-      "metricKey": "profit_loss",
+      "metricKey": "revenue",
       "taxonomy": "us-gaap",
-      "tag": "ProfitLoss",
+      "tag": "Revenues",
       "unit": "USD",
-      "value": 4579000000,
-      "periodStart": "2026-01-01",
-      "periodEnd": "2026-03-31",
-      "filingDate": "2026-04-12",
-      "reportDate": "2026-03-31",
-      "form": "10-Q",
-      "accessionNumber": "0000019617-26-000123",
+      "value": 74000000,
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "filingDate": "2026-02-20",
+      "reportDate": "2025-12-31",
+      "form": "10-K",
+      "accessionNumber": "example-accession",
       "capability": "supported",
       "provenance": {
-        "source": "sec",
-        "accessionNumber": "0000019617-26-000123",
-        "filingUrl": "https://www.sec.gov/Archives/edgar/data/19617/000001961726000123/jpm-20260331.htm",
-        "retrievedAt": "2026-04-12T00:00:00.000Z",
-        "parserVersion": "secapi-segmented-statements-v1"
+        "source": "example",
+        "sourceLabel": "Illustrative response - not a live SEC filing",
+        "accessionNumber": null,
+        "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+        "retrievedAt": "2026-02-20T00:00:00.000Z",
+        "parserVersion": "example"
       }
     }
   ],
   "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000019617-26-000123",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/19617/000001961726000123/jpm-20260331.htm",
-    "retrievedAt": "2026-04-12T00:00:00.000Z",
-    "parserVersion": "secapi-segmented-statements-v1"
+    "source": "example",
+    "sourceLabel": "Illustrative response - not a live SEC filing",
+    "accessionNumber": null,
+    "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+    "retrievedAt": "2026-02-20T00:00:00.000Z",
+    "parserVersion": "example"
   },
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## About this example
+
+This response is illustrative: the issuer, accession, segment members, and `example.com` URL are synthetic. It aligns a geographic annual revenue record with the request and does not claim a live SEC filing.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/statements/segmented-facts to return filing-derived segmented fact history for supported metrics such as revenue and segment profit/loss, with product or geography dimensions, hierarchy metadata, capability state, and trace references when issuers disclose them. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/statements/segmented-facts to retrieve a supported disclosed segment metric for one issuer. Supply one issuer identifier and the required `metric`, then use `period`, `segment_type`, and limits to keep the response bounded. Preserve hierarchy, segment dimensions, capability state, trace references, provenance, freshness, materialization, `requestId`, and `traceparent`; absent segments are not zero values.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- provide one issuer identifier and the required `metric`; keep `limit` controls bounded for a predictable response
+- treat unsupported metrics, absent segment rows, or unavailable hierarchy as unavailable disclosure, not zero-valued segments
+- preserve capability state, trace references, provenance, freshness, materialization, `requestId`, and `traceparent` when handling a partial or transient result
