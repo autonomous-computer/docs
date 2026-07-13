@@ -1,180 +1,98 @@
 ---
-title: "Extract Revenue Metrics from 10-K Filings"
-description: "Learn how to pull structured revenue data from SEC 10-K filings using the SEC API. Includes curl, Python, and JavaScript examples."
+title: "Extract Revenue from a 10-K"
+description: "Retrieve annual revenue facts from SEC filings, retain filing provenance, and make the result usable in a production research workflow."
 ---
 
-Pull structured revenue, net income, and other financial metrics directly from 10-K filings without manually parsing XBRL or HTML. This tutorial walks through finding a company's latest annual filing, retrieving its financial statements, and extracting specific XBRL facts.
+Use the filings endpoint to identify the annual report, then use company facts for a revenue series. This avoids treating a displayed number as self-authenticating: keep the returned accession number and filing URL with every downstream value.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- Basic familiarity with REST APIs
-- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
-
-## Step 1 — Find the latest 10-K filing
-
-Start by fetching the most recent 10-K for a given ticker. The `/v1/filings/latest` endpoint returns the newest filing matching your criteria.
-
-### curl
+- An API key with access to `https://api.secapi.ai`, exported as `SECAPI_API_KEY`.
+- `curl` and `jq`, or Node.js 18+ for the programmatic example.
+- A ticker, CIK, or symbol. This example uses `AAPL`; use a CIK when your issuer mapping is fixed.
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
+export SECAPI_API_KEY="your_api_key"
 ```
 
-### Python
+Never put the key in a browser bundle, repository, or scheduled-job command line. Load it from your runtime's secret store.
 
-```python
-import os
+## 1. Identify the annual filing
 
-from secapi_client import SecApiClient
-
-client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
-
-filing = client.latest_filing(ticker="AAPL", form="10-K")
-print(filing["accessionNumber"])
-print(filing["filingDate"])
-```
-
-### JavaScript
-
-```ts
-import { SecApiClient } from "@secapi/sdk-js";
-
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
-});
-
-const filing = await client.latestFiling({
-  ticker: "AAPL",
-  form: "10-K",
-});
-console.log(filing.accessionNumber);
-console.log(filing.filingDate);
-```
-
-### Expected output
-
-```json
-{
-  "accessionNumber": "0000320193-24-000081",
-  "form": "10-K",
-  "filingDate": "2024-11-01",
-  "companyName": "Apple Inc",
-  "cik": "0000320193"
-}
-```
-
-## Step 2 — Retrieve financial statements
-
-With the filing identified, pull the structured income statement using `/v1/statements`. This returns XBRL-sourced line items already mapped to a normalized schema.
-
-### curl
+`GET /v1/filings/latest` accepts `ticker`, `symbol`, or `cik`; `form=10-K` restricts the lookup to an annual report.
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
+curl --fail-with-body \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K" \
+  | jq '{accessionNumber, filingDate, form, companyName, filingUrl, requestId, provenance}'
 ```
 
-### Python
+**Result:** one latest matching filing. Persist its `accessionNumber`, `filingUrl` (or `provenance.filingUrl` when supplied), filing date, and `requestId` beside the metric.
 
-```python
-statements = client.all_statements(
-    ticker="AAPL",
-    period="annual",
-    limit=1,
-)
+## 2. Retrieve the annual revenue series
 
-income = statements["income_statement"]
-print(f"Revenue: {income['revenue']}")
-print(f"Net Income: {income['net_income']}")
-print(f"Gross Profit: {income['gross_profit']}")
-```
-
-### JavaScript
-
-```ts
-const statements = await client.allStatements({
-  ticker: "AAPL",
-  period: "annual",
-  limit: 1,
-});
-
-const income = statements.incomeStatement;
-console.log(`Revenue: ${income.revenue}`);
-console.log(`Net Income: ${income.netIncome}`);
-console.log(`Gross Profit: ${income.grossProfit}`);
-```
-
-### Expected output
-
-```json
-{
-  "income_statement": {
-    "revenue": 383285000000,
-    "cost_of_revenue": 214137000000,
-    "gross_profit": 169148000000,
-    "net_income": 93736000000,
-    "period": "2024-09-28",
-    "fiscal_year": 2024
-  }
-}
-```
-
-## Step 3 — Extract specific XBRL facts
-
-For granular control, use `/v1/facts` to pull individual XBRL concepts. This is useful when you need a specific metric that may not appear in the normalized statement schema.
-
-### curl
+`GET /v1/facts` returns normalized SEC company facts. `tag=Revenues`, `form=10-K`, and `limit=4` request up to four annual observations; `resolvedTag` tells you which concept was actually used.
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&period=annual&limit=4"
+curl --fail-with-body \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4" \
+  | jq '{requestedTag, resolvedTag, aliasStrategy, data: [.data[] | {value, unit, periodEnd, fy, fp, form, filedAt, provenance}], requestId, traceparent}'
 ```
 
-### Python
+The `data` array contains fact points, including `value`, `unit`, `periodEnd`, fiscal labels, the filing date, and per-point provenance. Values are raw units, not display-formatted dollars.
 
-```python
-facts = client.facts(
-    ticker="AAPL",
-    tag="Revenues",
-    period="annual",
-    limit=4,
-)
+## Node.js implementation
 
-for fact in facts["data"]:
-    print(f"{fact['periodEnd']}: ${fact['value']:,.0f}")
+This example validates the HTTP result and writes a compact, provenance-preserving record. It deliberately does not assume a specific annual value or filing date.
+
+```js
+const base = "https://api.secapi.ai";
+const headers = { "x-api-key": process.env.SECAPI_API_KEY ?? "" };
+
+if (!headers["x-api-key"]) throw new Error("SECAPI_API_KEY is required");
+
+const response = await fetch(
+  `${base}/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4`,
+  { headers },
+);
+if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
+
+const payload = await response.json();
+const revenue = payload.data.map((fact) => ({
+  value: fact.value,
+  unit: fact.unit,
+  periodEnd: fact.periodEnd,
+  fiscalYear: fact.fy,
+  form: fact.form,
+  filedAt: fact.filedAt,
+  accessionNumber: fact.provenance?.accessionNumber ?? null,
+  filingUrl: fact.provenance?.filingUrl ?? null,
+}));
+
+console.log(JSON.stringify({
+  requestedTag: payload.requestedTag,
+  resolvedTag: payload.resolvedTag,
+  revenue,
+  requestId: payload.requestId,
+  traceparent: payload.traceparent,
+}, null, 2));
 ```
 
-### JavaScript
+## Common failure modes
 
-```ts
-const facts = await client.facts({
-  ticker: "AAPL",
-  tag: "Revenues",
-  period: "annual",
-  limit: 4,
-});
+- `401` or `403`: check that the job received `SECAPI_API_KEY` and that its plan permits the route.
+- Empty `data`: confirm the issuer identifier and inspect `resolvedTag`; issuers can use a different valid concept or taxonomy.
+- Unexpected period mix: retain `form`, `fp`, `periodEnd`, and `filedAt`; do not compare annual and quarterly observations as though they were interchangeable.
+- A restated value: treat the filing accession and filing date as part of the metric identity, then decide in your model whether to prefer the latest filing or the originally reported value.
 
-for (const fact of facts.data) {
-  console.log(`${fact.periodEnd}: $${fact.value.toLocaleString()}`);
-}
-```
+## Production notes
 
-### Expected output
+Store values as integers or decimals in their returned unit, preserve source metadata, and log `requestId` and `traceparent` for support. Cache historical results, rate-limit batch work, and make every aggregate link back to its underlying filing evidence. SEC filings are source documents, not investment recommendations.
 
-```
-2024-09-28: $383,285,000,000
-2023-09-30: $383,933,000,000
-2022-10-01: $394,328,000,000
-2021-09-25: $365,817,000,000
-```
+## Next actions
 
-## Next steps
-
-- **Compare multiple companies**: Loop over a list of tickers to build a revenue comparison table.
-- **Add quarterly data**: Change `period=annual` to `period=quarterly` for more granular trends.
-- **Explore all statement types**: Use `/v1/statements/all` to retrieve balance sheets and cash flow statements alongside income statements.
-- **Build dashboards**: Pipe the JSON output into your visualization tool of choice.
-
-See the [API Reference](/api-reference) for the full list of available endpoints and parameters.
+- Use `GET /v1/statements/all?ticker=AAPL&period=annual&limit=1` when you need a normalized bundle of income statement, balance sheet, and cash-flow data.
+- Add a fiscal-year selector (`fy`) when the analysis must be reproducible at a fixed reporting period.
+- Read the [facts reference](/api-reference/facts) and [statements reference](/api-reference/statements) before expanding the metric taxonomy.

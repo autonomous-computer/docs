@@ -1,184 +1,91 @@
 ---
 title: "Find Risk Factors with Semantic Search"
-description: "Use AI-powered semantic search to find relevant risk factors across SEC filings. Includes curl, Python, and JavaScript examples."
+description: "Search SEC filing passages by meaning, preserve citation metadata, and use the results as a research queue rather than a conclusion engine."
 ---
 
-Traditional keyword search misses synonyms, paraphrases, and contextual matches. Semantic search uses embeddings to find passages that are conceptually related to your query, even when the exact words differ. This tutorial shows how to search across filing sections for risk factors using natural language.
+Semantic search can surface related language that a literal keyword search misses. It does not establish materiality or completeness. Treat the response as a ranked route into the underlying filing and retain the returned citation fields with every excerpt.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- Basic familiarity with REST APIs
-- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
-
-## Step 1 — Run a basic semantic search
-
-The `/v1/search/semantic` endpoint accepts a natural language query and returns the most relevant passages from SEC filings.
-
-### curl
+- An API key exported as `SECAPI_API_KEY`.
+- `curl` and `jq`, or Node.js 18+.
+- A natural-language research question. This example searches semiconductor supply-chain risk.
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20disruption%20risks%20in%20semiconductor%20industry&limit=5"
+export SECAPI_API_KEY="your_api_key"
 ```
 
-### Python
+## 1. Run a scoped hybrid search
 
-```python
-import os
+`GET /v1/search/semantic` requires `q`. The `mode` parameter accepts `keyword`, `semantic`, or `hybrid`; hybrid is a practical starting point when you want both terminology and conceptual relevance. Scope by `ticker`, `cik`, `form`, and `filing_year` when the question calls for it.
 
-from secapi_client import SecApiClient
-
-client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
-
-results = client.semantic_search(
-    q="supply chain disruption risks in semiconductor industry",
-    limit=5,
-)
-
-for hit in results["sections"]["data"]:
-    print(f"[{hit.get('score', 0):.3f}] {hit.get('companyName')} ({hit.get('form')} {hit.get('filingDate')})")
-    print(f"  Section: {hit.get('section_key')}")
-    print(f"  {hit.get('snippet', '')[:200]}...")
-    print()
+```bash
+curl --get --fail-with-body \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  --data-urlencode "q=supply chain disruption risk" \
+  --data-urlencode "ticker=NVDA" \
+  --data-urlencode "form=10-K" \
+  --data-urlencode "mode=hybrid" \
+  --data-urlencode "limit=10" \
+  "https://api.secapi.ai/v1/search/semantic" \
+  | jq '{sections, requestId, traceparent}'
 ```
 
-### JavaScript
+**Result:** ranked matching passages in the search response. Before publishing or scoring a result, retain `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet`; open the cited filing to review the passage in context.
 
-```ts
-import { SecApiClient } from "@secapi/sdk-js";
+## 2. Compare a question across annual filings
 
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
-});
+Use the same query and issuer scope for each filing year. A changed rank or a new match is a research lead, not proof that the risk changed.
 
-const results = await client.semanticSearch({
-  q: "supply chain disruption risks in semiconductor industry",
-  limit: 5,
-});
+```js
+const base = "https://api.secapi.ai/v1/search/semantic";
+const headers = { "x-api-key": process.env.SECAPI_API_KEY ?? "" };
 
-for (const hit of results.sections.data) {
-  console.log(`[${(hit.score ?? 0).toFixed(3)}] ${hit.companyName} (${hit.form} ${hit.filingDate})`);
-  console.log(`  Section: ${hit.section_key}`);
-  console.log(`  ${(hit.snippet ?? "").slice(0, 200)}...`);
-  console.log();
+for (const filingYear of [2023, 2024, 2025]) {
+  const query = new URLSearchParams({
+    q: "artificial intelligence regulatory risk",
+    ticker: "MSFT",
+    form: "10-K",
+    filing_year: String(filingYear),
+    mode: "hybrid",
+    limit: "5",
+  });
+  const response = await fetch(`${base}?${query}`, { headers });
+  if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
+
+  const payload = await response.json();
+  const hits = payload.sections?.data ?? payload.data ?? [];
+  console.log(JSON.stringify({
+    filingYear,
+    requestId: payload.requestId,
+    hits: hits.map((hit) => ({
+      companyName: hit.companyName ?? null,
+      form: hit.form ?? null,
+      filingDate: hit.filingDate ?? null,
+      accession: hit.accession,
+      source_url: hit.source_url,
+      section_key: hit.section_key,
+      char_start: hit.char_start,
+      char_end: hit.char_end,
+      highlighted_snippet: hit.highlighted_snippet,
+    })),
+  }, null, 2));
 }
 ```
 
-### Expected output
+## Common failure modes
 
-```
-[0.943] NVIDIA Corp (10-K 2024-02-21)
-  Section: Risk Factors
-  Our operations depend on the ability of our suppliers to deliver components
-  in a timely manner. Global semiconductor supply constraints, geopolitical
-  tensions, and natural disasters could materially impact...
+- `400`: `q` is required; confirm `mode` is `keyword`, `semantic`, or `hybrid` and `limit` is 1-100.
+- Empty or weak matches: narrow by issuer, form, or filing year, then try both a concrete phrase and a business question. Do not compensate by inventing a relevance threshold.
+- Lost evidence: a result without `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet` cannot be independently reviewed.
+- Unstable comparisons: compare like with like, including form type and reporting period; an annual report and an interim report answer different questions.
 
-[0.921] Advanced Micro Devices Inc (10-K 2024-01-31)
-  Section: Risk Factors
-  We rely on third-party manufacturers, primarily TSMC, to produce our
-  products. Disruptions to our supply chain, whether due to pandemic, trade
-  restrictions, or capacity constraints...
+## Production notes
 
-[0.908] Intel Corp (10-K 2024-01-26)
-  Section: Risk Factors
-  Our manufacturing operations and supply chain are subject to risks
-  including shortages of materials, equipment failures, and geopolitical
-  events that could affect our ability to meet customer demand...
-```
+Store the query, filters, retrieval mode, request ID, and every citation field. Cache repeated research queries, bound the number of results you present to a reviewer, and retrieve the cited filing section before using an excerpt in a report. Model outputs or search ranks should never be represented as legal, accounting, or investment advice.
 
-## Step 2 — Scope the search to specific companies or form types
+## Next actions
 
-Add filters to narrow your search to a watchlist of companies or specific filing types.
-
-### curl
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/semantic?q=cybersecurity%20incident%20disclosure%20requirements&ticker=AAPL&form=10-K&limit=10"
-```
-
-### Python
-
-```python
-results = client.semantic_search(
-    q="cybersecurity incident disclosure requirements",
-    ticker="AAPL",
-    form="10-K",
-    limit=10,
-)
-
-for hit in results["sections"]["data"]:
-    print(f"{hit.get('companyName')}: {hit.get('snippet', '')[:150]}...")
-```
-
-### JavaScript
-
-```ts
-const results = await client.semanticSearch({
-  q: "cybersecurity incident disclosure requirements",
-  ticker: "AAPL",
-  form: "10-K",
-  limit: 10,
-});
-
-for (const hit of results.sections.data) {
-  console.log(`${hit.companyName}: ${(hit.snippet ?? "").slice(0, 150)}...`);
-}
-```
-
-## Step 3 — Compare risk disclosures across periods
-
-Search for the same risk factor across multiple years of filings from one company to track how their disclosure language evolves.
-
-### Python
-
-```python
-QUERY = "artificial intelligence regulatory risk"
-
-for year in [2022, 2023, 2024]:
-    results = client.semantic_search(
-        q=QUERY,
-        ticker="MSFT",
-        form="10-K",
-        filing_year=year,
-        limit=1,
-    )
-
-    if results["sections"]["data"]:
-        hit = results["sections"]["data"][0]
-        print(f"--- {year} (score: {hit.get('score', 0):.3f}) ---")
-        print(f"{hit.get('snippet', '')[:300]}")
-        print()
-    else:
-        print(f"--- {year}: No matching disclosure ---")
-        print()
-```
-
-### Expected output
-
-```
---- 2022 (score: 0.812) ---
-We are investing significantly in artificial intelligence capabilities. The
-regulatory environment for AI is evolving and uncertain, which could affect our
-ability to develop and deploy AI-powered products and services...
-
---- 2023 (score: 0.891) ---
-The rapid adoption of generative AI technologies has increased regulatory
-scrutiny globally. Proposed regulations in the EU, US, and other jurisdictions
-could impose significant compliance costs and restrict certain AI applications...
-
---- 2024 (score: 0.934) ---
-AI regulation is advancing rapidly across major markets. The EU AI Act, US
-executive orders on AI safety, and emerging frameworks in Asia create a complex
-compliance environment. Our AI investments face risks from divergent regulatory
-requirements, potential liability frameworks, and restrictions on training data...
-```
-
-## Next steps
-
-- **Build a risk dashboard**: Run semantic search across your portfolio holdings to surface emerging risk themes.
-- **Combine with structured data**: Cross-reference risk factor mentions with financial metrics from `/v1/statements` to quantify potential impact.
-- **Track disclosure changes**: Set up a quarterly job to re-run the same queries and diff the results.
-
-See the [API Reference](/api-reference/search) for the full semantic search endpoint specification.
+- Pair search results with [filing sections](/api-reference/filings) to retrieve and review the cited text.
+- Run the same saved query after new annual or quarterly filings arrive, then compare evidence records rather than raw snippets.
+- Read the [search reference](/api-reference/search) for all supported filters and response views.
