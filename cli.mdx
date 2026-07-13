@@ -1,77 +1,56 @@
 ---
-title: "SEC API CLI"
-description: "Install the SEC API CLI, authenticate through your environment, and run source-backed filing workflows from a terminal"
+title: "Use the SEC API CLI"
+description: "Install the CLI, verify its configuration without exposing a key, and run one source-backed request from a terminal."
 ---
 
-Use the SEC API CLI for terminal workflows, shell scripts, and quick checks. It prints structured output so you can keep filing identifiers and request metadata in the next command or a saved artifact.
+## Prerequisites
 
-## Install
+- Node.js and npm.
+- An API key in your shell environment.
 
 ```bash
 npm install -g @secapi/cli
+export SECAPI_API_KEY="secapi_..."
 secapi --version
 ```
 
-New scripts should use the `secapi` command.
+The preferred command is `secapi`. `omni-sec` remains a compatibility alias.
 
-## Authenticate
-
-Set the API key in the calling environment:
-
-```bash
-export SECAPI_API_KEY="secapi_..."
-secapi doctor
-```
-
-`doctor` reports the active API origin, credential source name, and available setup information without printing your key. Do not place credentials in shell history, process arguments, or saved command output.
-
-## Run a first workflow
-
-```bash
-secapi entities resolve --ticker AAPL
-secapi filings latest --ticker AAPL --form 10-K
-secapi sections get --ticker AAPL --form 10-K --section item_1a --view agent
-```
-
-Keep the returned `requestId`, `accessionNumber`, `filingDate`, and `filingUrl` with any result you use. They identify the request and the underlying SEC filing.
-
-## Inspect before you run
-
-Use built-in help to check a command's flags and examples before issuing a request:
-
-```bash
-secapi --help
-secapi help all
-secapi filings latest --help
-secapi agent-context
-```
-
-`agent-context` emits a machine-readable command inventory for an agent or integration that needs to select a CLI command deliberately.
-
-For supported account or delivery commands, `--dry-run` prints the request shape without making a network call:
-
-```bash
-secapi api-keys create --label development --dry-run
-secapi webhooks create \
-  --destination-url https://example.com/hooks/sec \
-  --event-types monitor.match \
-  --dry-run
-```
-
-Use the signed-in dashboard for key, billing, and delivery-resource configuration. These organization changes require a human-authenticated browser session.
-
-## Use profiles for multiple environments
-
-Profiles can store a base URL and the *name* of an environment variable that contains a key. They do not need to store secret values.
+## Check local configuration
 
 ```bash
 secapi config show
-secapi config profiles
-secapi --profile local config show
+secapi doctor
 ```
 
-Use `--base-url` for one command when you are testing an environment you control. Leave production as the default unless you mean to change it.
+`config show` is local-only and reports the configured origin and credential source names without printing secrets. `doctor` can call the API to check setup and account context; use it when authentication is uncertain.
 
-## Troubleshoot a command
+## Run one source-backed command
 
-Run `secapi doctor` first. Then preserve the command, HTTP status, error code, request ID, and trace context from a failed request. Read [Troubleshooting](/troubleshooting) for retry and billing guidance, or [MCP installation](/mcp-install) when the issue is an MCP client configuration.
+```bash
+secapi filings latest --ticker AAPL --form 10-K
+```
+
+Expect JSON containing a current filing identity. Preserve `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` if you use the result in a script or report. The filing identity is live and changes when a newer annual filing becomes available.
+
+To inspect a command before making a request:
+
+```bash
+secapi filings latest --help
+secapi help all
+```
+
+## Handle failures
+
+- A missing or invalid key returns an authentication failure. Check the environment variable rather than passing a secret as a command argument.
+- For `429`, wait for the documented retry interval before retrying a read.
+- For a persistent failure, rerun with `--request-summary` and retain the request ID, status, endpoint, and timestamp. The command response remains on stdout; the summary is written to stderr.
+
+## Production notes
+
+- In CI, inject keys through the runner's secret mechanism. Never write them into profiles, command history, or command output.
+- Use `--dry-run` only on supported mutating commands to inspect a request shape; it does not test account permission or delivery behavior.
+- Profiles store environment-variable names, not secret values. Use a separate profile and base URL only for an environment you control.
+- Parse JSON as a contract that can gain optional fields; pin any application assumptions to the relevant API reference.
+
+Next: [API conventions](/api-conventions), [request diagnostics](/request-diagnostics), or [JavaScript SDK](/javascript-sdk).

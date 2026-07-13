@@ -3,6 +3,18 @@ title: "Evaluate insider trading API"
 description: "Test Form 3, 4, and 5 transaction queries, source fields, and the interpretation limits an insider-monitoring workflow must retain"
 ---
 
+<CardGroup cols={3}>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
+    Test Form 3, 4, and 5 records before creating an alerting workflow.
+  </Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
+    Inspect issuer, owner, transaction, and evidence fields before writing alert logic.
+  </Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
+    Size recurring issuer monitoring before expanding a watchlist.
+  </Card>
+</CardGroup>
+
 Use this page to evaluate the insider endpoint before you publish alerts or feed its results into an investor workflow. A successful evaluation produces reviewable Form 3, 4, or 5 records with their filing evidence; it does not validate an investment signal or a claim about insider intent.
 
 ## Run a narrow Form 4 query
@@ -21,11 +33,20 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 ## Verify your implementation
 
-1. Check that issuer, reporting owner, form, filing date, and transaction date are represented separately.
-2. Preserve `transactionCode` and `transactionDirection` together.
-3. Preserve the accession number, `provenance.filingUrl`, and `requestId` in every alert or report.
-4. Confirm that your pagination follows `nextCursor` only when `hasMore` is true.
-5. Test records with absent price, security-title, or ownership values; do not replace filing-derived gaps with estimates.
+<Steps>
+  <Step title="Narrow one query">
+    Check that issuer, reporting owner, form, filing date, and transaction date are represented separately.
+  </Step>
+  <Step title="Preserve filing fields together">
+    Keep `transactionCode` and `transactionDirection` with accession number, `provenance.filingUrl`, and `requestId` in every alert.
+  </Step>
+  <Step title="Exercise pagination">
+    Follow `nextCursor` only when `hasMore` is true.
+  </Step>
+  <Step title="Keep sparse records sparse">
+    Test absent price, security-title, or ownership values without replacing filing-derived gaps with estimates.
+  </Step>
+</Steps>
 
 ## Evaluation prompt
 

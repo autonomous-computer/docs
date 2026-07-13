@@ -1,92 +1,72 @@
 ---
-title: "JavaScript SDK"
-description: "Install the SEC API JavaScript client, make a first request, and handle a failed response"
+title: "Start with the JavaScript SDK"
+description: "Install the SEC API JavaScript SDK, retrieve one filing, and handle errors in a server-side runtime."
 ---
 
-Use the JavaScript SDK in a TypeScript or JavaScript service when you want a client wrapper around the REST contract. Keep the API key in a trusted server-side environment, not in browser code.
+## Prerequisites
 
-## Install and configure
+- Node.js 18 or newer.
+- An API key in a trusted server-side environment.
 
 ```bash
 npm install @secapi/sdk-js
 export SECAPI_API_KEY="secapi_..."
 ```
 
-```ts
-import { SecApiClient } from "@secapi/sdk-js"
+## Run a complete first request
 
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
-})
-```
+Create `first-request.mjs`:
 
-Do not expose `SECAPI_API_KEY` to browser code. Call the SDK from a server route, worker, background job, or other trusted runtime.
-
-## Make a first request
-
-```ts
-const issuer = await client.resolveEntity({ ticker: "AAPL" })
-const filing = await client.agentLatestFiling({
-  ticker: "AAPL",
-  form: "10-K",
-})
-
-console.log({
-  ticker: issuer.ticker,
-  cik: issuer.cik,
-  accessionNumber: filing.accessionNumber,
-  filingUrl: filing.filingUrl,
-  requestId: filing.requestId,
-})
-```
-
-`resolveEntity` calls `GET /v1/entities/resolve`. `agentLatestFiling` calls the latest-filings endpoint with `view=agent`. The returned identifier and filing fields vary with the current filing, so use this output to confirm the request and preserve it with downstream work. Use `latestFiling` when you need the endpoint's default response instead.
-
-For accepted parameters, response fields, and endpoint limits, see the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve) and [latest filing reference](/api-reference/filings/get-v1-filings-latest).
-
-## Retrieve a filing section
-
-```ts
-const riskFactors = await client.agentSection({
-  ticker: "AAPL",
-  form: "10-K",
-  sectionKey: "item_1a",
-})
-```
-
-`agentSection` requests the latest matching section with `view=agent`. Preserve the returned filing identifiers and request ID with an extracted section or a conclusion built from it.
-
-## Handle errors
-
-```ts
+```js
 import { SecApiClient, SecApiError } from "@secapi/sdk-js"
 
+const sec = new SecApiClient()
+
 try {
-  await client.resolveEntity({ ticker: "AAPL" })
+  const filing = await sec.agentLatestFiling({
+    ticker: "AAPL",
+    form: "10-K",
+  })
+
+  console.log(JSON.stringify({
+    accessionNumber: filing.accessionNumber,
+    filingDate: filing.filingDate,
+    filingUrl: filing.filingUrl,
+    requestId: filing.requestId,
+  }, null, 2))
 } catch (error) {
   if (error instanceof SecApiError) {
-    console.error({
-      status: error.status,
-      code: error.code,
-      requestId: error.requestId,
-      message: error.message,
-    })
+    console.error({ status: error.status, code: error.code, requestId: error.requestId })
+    process.exitCode = 1
+  } else {
+    throw error
   }
 }
 ```
 
-The SDK handles its documented retry behavior for safe reads. For `429`, let the client honor the service's retry timing; do not add concurrent retry loops. Only opt into retries for a mutation when your operation is idempotent. Read [SDK reliability](/sdk-reliability) and [Troubleshooting](/troubleshooting) before adding application-level retries.
+```bash
+node first-request.mjs
+```
 
-## Read next
+Expect an accession number, filing date, SEC filing URL, and request ID. The accession and date are live values and will change after a newer filing.
 
-<CardGroup cols={3}>
-  <Card title="API reference" icon="book-open" href="/api-reference">
-    Check the REST request and response behind a client method.
-  </Card>
-  <Card title="Python SDK" icon="code-2" href="/python-sdk">
-    Use the equivalent client from research scripts and services.
-  </Card>
-  <Card title="MCP workflows" icon="bot" href="/mcp-workflows">
-    Connect SEC API tools to an MCP-aware client.
-  </Card>
-</CardGroup>
+## Use the response correctly
+
+`agentLatestFiling()` sets `view=agent`. This is a smaller, endpoint-supported response shape; it is not a guarantee that every default-response field is included. When you need the full endpoint response, use `latestFiling()` and inspect the [operation reference](/api-reference/filings/get-v1-filings-latest).
+
+Keep the returned accession number, filing URL, and request ID with any derived output. They connect a result to its source filing and API request.
+
+## Errors and retries
+
+The SDK throws `SecApiError` with an HTTP status, `code`, `requestId`, and, when supplied, retry guidance. Its retry policy is bounded and honors `Retry-After`. A `429` can be retried even when it follows a mutating request; treatment of other failures depends on the HTTP method and request options.
+
+Do not add another concurrent retry loop. Before a mutation whose replay is unsafe, disable SDK retries with `new SecApiClient({ retry: false })` or ensure the operation is idempotent and use an idempotency key.
+
+## Production notes
+
+- Keep `SECAPI_API_KEY` in server-only configuration.
+- Set `apiVersion` explicitly after testing the endpoint behavior you depend on; log the response `SECAPI-Version`.
+- Use `retry: false` when your infrastructure already owns retries.
+- Paginate list endpoints with the SDK iterator rather than assuming one page is complete.
+
+Next: [SDK reliability](/sdk-reliability), [Python SDK](/python-sdk), or [API conventions](/api-conventions).

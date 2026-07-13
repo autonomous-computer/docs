@@ -1,155 +1,51 @@
 ---
-title: "Token Efficiency"
-description: "How SEC API reduces token consumption for AI agent workflows vs sec-api.io"
+title: "Measure response size before optimizing"
+description: "Compare a supported response view with the default response, then choose the smallest shape that still carries the fields your workflow needs."
 ---
 
-AI agents pay for tokens. SEC API is designed to minimize token consumption while maximizing information density.
+Response size is an endpoint and request-shape property. Measure it with the issuer, filters, and response fields your workload actually uses. Do not turn a result from one endpoint into a platform-wide token-savings claim.
 
-## The Token Tax
+## Prerequisites
 
-When an AI agent queries SEC data, every byte of the API response consumes tokens. Bloated responses waste money and slow down agent reasoning. SEC API solves this with compact, purpose-built responses.
+- An API key in `SECAPI_API_KEY`.
+- `curl` and `wc`.
 
-## Headline numbers
-
-Two effects compound:
-
-- **vs raw SEC EDGAR documents: roughly 21x fewer tokens.** Pulling a filing from EDGAR and feeding the raw HTML/XBRL to an agent costs an order of magnitude more tokens than the structured, pre-extracted response SEC API returns for the same question.
-- **`?view=agent` trims about 93% of the response envelope** versus the default view on envelope-heavy endpoints (for example, `entities.resolve` drops from ~4.9 KB to ~0.3 KB), while preserving the citation fields agents need.
-
-These are workload-specific measurements, not universal guarantees — re-run them with the [Measure It Yourself](#measure-it-yourself) snippet below against your own queries.
-
-## Side-by-Side: SEC API vs sec-api.io
-
-Competitor numbers below were captured 2026-03-18; re-capture before citing as current.
-
-
-### Entity Resolution
-
-| Metric | SEC API | sec-api.io | Savings |
-|---|---|---|---|
-| Response size | 273 bytes | 412 bytes | **34%** |
-| Estimated tokens | 68 | 103 | **34%** |
-| Latency | 62ms | 231ms | **73%** |
-
-### Filing Search
-
-| Metric | SEC API | sec-api.io | Savings |
-|---|---|---|---|
-| Response size | 500 bytes | 792 bytes | **37%** |
-| Estimated tokens | 125 | 198 | **37%** |
-| Latency | 64ms | 281ms | **77%** |
-
-### Section Extraction
-
-| Metric | SEC API | sec-api.io | Savings |
-|---|---|---|---|
-| Response size | 1,800 bytes | 2,880 bytes | **38%** |
-| Estimated tokens | 450 | 720 | **38%** |
-| Latency | 64ms | 348ms | **82%** |
-
-## Intelligence Bundles: 75% Token Reduction
-
-A typical "company briefing" requires assembling data from multiple sources:
-
-### Traditional Approach (sec-api.io)
-```
-1. Entity resolve         →  103 tokens
-2. Latest 10-K search     →  198 tokens
-3. Item 1A extraction     →  720 tokens
-4. Latest 10-Q search     →  198 tokens
-5. Executive compensation →  450 tokens
-6. Insider trades          →  350 tokens
-7. 13F holdings           →  400 tokens
-8. Recent 8-K events      →  600 tokens
-─────────────────────────────────────
-Total: 8 API calls, ~3,019 tokens
-```
-
-### SEC API Intelligence Bundle
-```
-1. Company intelligence   →  ~800 tokens
-─────────────────────────────────────
-Total: 1 API call, ~800 tokens
-```
-
-**Result: 75% fewer tokens, 87% fewer API calls.**
-
-## Why SEC API Responses Are Smaller
-
-1. **No wrapper bloat.** Responses contain data, not framework metadata.
-2. **Agent mode.** Use `?view=agent` to get token-efficient responses that preserve citation fields where applicable.
-3. **Pre-computed intelligence.** One bundle call replaces 8+ raw API calls.
-4. **Semantic search.** Find relevant content in one call instead of paginating through keyword results.
-
-## Field selection and tabular output (MCP)
-
-Over MCP, `tools/call` accepts two `params`-level controls (siblings of `name` and `arguments`, **not** inside `arguments`). Both shape only the human/agent-facing **text** content — `structuredContent` always stays canonical JSON, so typed clients and `outputSchema` validation are unaffected.
-
-### `params.fields` — keep only the fields you asked for
-
-Pass a comma-separated list of dotted paths to project the text content down to those fields. For a list result the projection is applied to each row in `data`; envelope keys (`object`, `requestId`, `traceparent`, and the list keys `data`/`hasMore`/`nextCursor`/`degradedState`) are always retained so the result stays schema-valid. Paths address object fields — the projection does not descend into nested arrays.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "companies.overview",
-    "arguments": { "tickers": ["AAPL", "MSFT", "NVDA"] },
-    "fields": "identity.ticker,financialSnapshot.metrics.revenue.value"
-  }
-}
-```
-
-### `params.response_format` — compact columnar or CSV for lists
-
-`json` (default) returns the full object form. `table` returns a compact columnar envelope (`{ object: "table", columns, rows }`) that lists the columns once and emits one array of cells per row, dropping the repeated per-row keys; `csv` returns RFC-4180 CSV text. Both apply to the `data` array of list-shaped results and shine on flat rows; non-list results fall back to JSON. Decoding is trivial — pair each `columns[i]` with `rows[n][i]`.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "insiders.list",
-    "arguments": { "ticker": "META" },
-    "response_format": "table"
-  }
-}
-```
-
-`fields` and `response_format` compose: projection runs first, so a table's columns are exactly the (flat) fields you kept. This pairs naturally with the multi-entity batch tools (`companies.overview`, `companies.financials`, `companies.ratios` accept a `tickers` array of up to 50) — request a portfolio in one call, then trim and tabularize it.
-
-### `include=` — REST opt-in for expensive sub-objects
-
-`include=` is a **REST query param**, not an MCP control: where `fields` *subtracts*, `include` *adds* bounded enrichments that are omitted by default — for example `GET /v1/companies/overview?include=segments,footnotes,dilution,factors`. Omitted enrichments report `status: not_requested` rather than being computed.
-
-## Measure It Yourself
-
-The `?view=agent` reduction is the easiest to reproduce — compare the agent view
-against the default view of the same endpoint:
+## Compare one endpoint
 
 ```bash
-# view=agent vs default response size (same endpoint, same key)
-AGENT=$(curl -s "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent" \
+DEFAULT=$(curl -sS --fail-with-body \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
   -H "x-api-key: $SECAPI_API_KEY" | wc -c)
 
-DEFAULT=$(curl -s "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
+AGENT=$(curl -sS --fail-with-body \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent" \
   -H "x-api-key: $SECAPI_API_KEY" | wc -c)
 
-echo "view=agent: $AGENT bytes, default: $DEFAULT bytes"
-# Example result: view=agent ~339 bytes vs default ~4880 bytes (~93% smaller)
+printf 'default=%s bytes\nagent=%s bytes\n' "$DEFAULT" "$AGENT"
 ```
 
-To compare against sec-api.io, use your own sec-api.io key (their endpoints
-require authentication and reject anonymous requests):
+The expected result is two byte counts, not a fixed number. Values change with the issuer, API response, and endpoint implementation.
 
-```bash
-SEC_API_SIZE=$(curl -s "https://api.sec-api.io/mapping/ticker/AAPL?token=$SEC_API_KEY" | wc -c)
-echo "sec-api.io: $SEC_API_SIZE bytes"
-```
+## Choose the response view deliberately
 
-For exact output-token telemetry, add `SECAPI-Compute-Headers: token-count` to
-the request. Every response includes a `SECAPI-Estimated-Cost` header; cache
-hits also return an exact `SECAPI-Token-Count` without recomputing the body.
+| Need | Guidance |
+| --- | --- |
+| Lowest useful payload on a supported route | Test `view=agent` and validate the fields your consumer needs. |
+| Default endpoint context | Omit the view parameter and inspect the documented response. |
+| Optional enrichment | Use only the endpoint's documented `include` values; they can add material response size. |
+| Token telemetry | Request `SECAPI-Compute-Headers: token-count` when you need header-based token information for a measured request. |
+
+`view=agent` and `view=compact` are not universal schemas. They can omit provenance, freshness, materialization, pagination, or other envelope fields that a default response carries. Read the operation reference before using a smaller view for a user-facing citation or compliance record.
+
+## Handle errors and limits
+
+An unsupported parameter or response view is a validation problem, not a reason to silently fall back to a different endpoint. For `429`, wait for `Retry-After`; for a `5xx`, retain the endpoint, response view, `Request-Id`, and request size measurement before retrying through your normal bounded policy.
+
+## Production notes
+
+- Measure serialized responses after authentication and with production-like filters.
+- Store response-size and token telemetry separately from raw payloads when payload retention is sensitive.
+- Set budgets around the whole workflow, including pagination and retries, rather than optimizing one request in isolation.
+- Keep source identifiers and any provenance fields required by the result before reducing a response shape.
+
+Next: [API conventions](/api-conventions), [freshness and trust](/freshness-and-trust), or [SDK reliability](/sdk-reliability).

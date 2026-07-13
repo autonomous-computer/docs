@@ -3,6 +3,18 @@ title: "Evaluate SEC Filing RAG"
 description: "Build a small, source-cited filing retrieval loop before adding generated answers."
 ---
 
+<CardGroup cols={3}>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
+    Run a source-cited retrieval proof against one issuer and question.
+  </Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
+    Inspect filing-search and section-retrieval responses before adding generation.
+  </Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
+    Size retrieval and review usage before expanding an agent workflow.
+  </Card>
+</CardGroup>
+
 Evaluate the retrieval layer before generation. A passing test returns a passage a reader can locate in an SEC filing and makes the gap between source text and interpretation explicit.
 
 ## Minimal loop
@@ -12,10 +24,10 @@ curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20risk&ticker=TSLA&form=10-K&mode=hybrid&limit=5"
 
 curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/ACCESSION/sections/item_1a?ticker=TSLA&form=10-K"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=TSLA&form=10-K"
 ```
 
-Replace `ACCESSION` with the search result's `accession`. Save `source_url`, `section_key`, and any available character range with the text you provide to a model.
+Use the latest-section route for a quick proof. When an application needs the exact search hit, call the accession-specific section route with the returned `accessionNumber`. Save `source_url`, `section_key`, and any available character range with the text you provide to a model.
 
 ## Evidence boundary
 
@@ -29,10 +41,24 @@ Do not turn a missing match into a claim about what an issuer did not disclose. 
 
 ## Production checklist
 
-- Use semantic `mode` explicitly after evaluation.
-- Fetch the cited section before quoting it.
-- Preserve `requestId`, `traceparent`, provenance, and freshness where supplied.
-- Treat a `503` vector-search failure as unavailable retrieval, not an empty result set.
+<Steps>
+  <Step title="Scope one issuer and question">
+    Use semantic `mode` explicitly after evaluation.
+  </Step>
+  <Step title="Retrieve and verify the source">
+    Fetch the cited section before quoting it.
+  </Step>
+  <Step title="Keep the evidence with the answer">
+    Preserve `requestId`, `traceparent`, provenance, and freshness where supplied.
+  </Step>
+  <Step title="Treat unavailable retrieval as unavailable">
+    A `503` vector-search response is not an empty result set.
+  </Step>
+</Steps>
+
+<Prompt>
+For TSLA, run hybrid semantic search for "supply chain risk" in 10-K filings, retrieve the cited Item 1A section, and return only claims supported by that section. Include accession number, filing date, filing URL, section key, request ID, and any missing citation detail. Separate retrieved text from your interpretation.
+</Prompt>
 
 ## Next steps
 

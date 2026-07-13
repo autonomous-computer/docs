@@ -3,13 +3,33 @@ title: "Evaluate the SEC Filings MCP Server"
 description: "Test the hosted MCP server with one source-linked filing retrieval workflow."
 ---
 
+<CardGroup cols={3}>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
+    Create the environment-backed credential used by your MCP client.
+  </Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
+    Inspect the underlying SEC API response shapes before connecting an agent client.
+  </Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
+    Review limits before scheduling recurring agent research.
+  </Card>
+</CardGroup>
+
 Evaluate MCP the same way you evaluate REST: verify discovery, authenticate from the environment, and require a filing citation from one complete workflow.
 
 ## Test one evidence-preserving workflow
 
-1. Read the live discovery metadata at `https://api.secapi.ai/mcp` before configuring a client.
-2. Configure the hosted streamable HTTP server with an environment-backed `x-api-key`, not a checked-in secret.
-3. Resolve an issuer, fetch its latest 10-K, extract Item 1A, and require the accession number, SEC filing URL, and request ID alongside the text.
+<Steps>
+  <Step title="Read live discovery metadata">
+    Inspect `https://api.secapi.ai/mcp` before configuring a client.
+  </Step>
+  <Step title="Keep the credential out of source">
+    Configure the hosted streamable HTTP server with an environment-backed `x-api-key`, not a checked-in secret.
+  </Step>
+  <Step title="Complete one cited retrieval">
+    Resolve an issuer, fetch its latest 10-K, extract Item 1A, and require the accession number, SEC filing URL, and request ID alongside the text.
+  </Step>
+</Steps>
 
 The equivalent REST calls make the expected result concrete:
 
@@ -26,6 +46,10 @@ curl -sS -H "x-api-key: $SECAPI_API_KEY" \
 - The client does not expose a key in source control or a browser-visible URL.
 - Tool output identifies the source filing and preserves failure details.
 - The consuming application keeps `requestId`, `traceparent`, and source metadata when returned.
+
+<Prompt>
+After connecting to `https://api.secapi.ai/mcp` with an environment-backed `x-api-key`, use `tools.search` to find issuer resolution, latest filing, and filing-section capabilities. Use `tools.describe` before supplying arguments. For AAPL, retrieve the latest 10-K Item 1A and return the accession number, filing URL, section title, request ID, `traceparent` when present, and any truncation or freshness signal.
+</Prompt>
 
 ## Common failures
 

@@ -1,163 +1,75 @@
 ---
-title: "Go SDK"
-description: "A thin Go client that mirrors the SEC API REST contract and gives you explicit request control without a generated client jungle"
+title: "Start with the Go SDK"
+description: "Add the SEC API Go module, make one type-safe read, and keep the response identifiers needed for production support."
 ---
 
-<Info>
-The Go SDK is deliberately thin. It mirrors the canonical REST contract and stays useful when you want explicit request control without building a generated client jungle.
-</Info>
+## Prerequisites
 
-## Status
-
-<CardGroup cols={3}>
-  <Card title="Bootstrap client" icon="package" href="/libraries-and-sdks">
-    A lightweight Go client for the SEC API.
-  </Card>
-  <Card title="REST parity" icon="equal" href="/api-reference">
-    The Go surface mirrors the public wire format instead of inventing Go-only semantics.
-  </Card>
-  <Card title="Backend fit" icon="server" href="/audit-logs">
-    Best for services that want typed helpers and explicit control over retries and logging.
-  </Card>
-</CardGroup>
-
-## First useful path
-
-<Steps>
-  <Step title="Set the key">
-    Export `SECAPI_API_KEY`.
-  </Step>
-  <Step title="Verify one market or entity call">
-    Confirm auth and connectivity before adding more surface area.
-  </Step>
-  <Step title="Move to a filing or ownership workflow">
-    The value is in real investor tasks, not just a single ping.
-  </Step>
-</Steps>
-
-## Example
-
-```go
-client := sdkgo.NewClient(os.Getenv("SECAPI_API_KEY"))
-client.BaseURL = "https://api.secapi.ai"
-
-calendar, err := client.MarketCalendar(map[string]string{
-  "market": "XNYS",
-  "duration": "5",
-})
-```
-
-## Live example
-
-Run the repo-tested agent workflow when you want the smallest production-backed
-integration check: it resolves AAPL, fetches the latest 10-K, and extracts Item
-1A in compact mode using `SECAPI_API_KEY` from the environment.
+- Go 1.23 or newer.
+- An API key in `SECAPI_API_KEY`.
 
 ```bash
-export SECAPI_API_KEY="<your-api-key>"
-go run ./examples/agent_workflow
+mkdir secapi-go-quickstart
+cd secapi-go-quickstart
+go mod init example.com/secapi-go-quickstart
+go get github.com/secapi-ai/secapi-go
+export SECAPI_API_KEY="secapi_..."
 ```
 
-This same workflow ships in the JavaScript, Python, Go, and Rust SDKs, so you
-can port it across stacks without changing the request shape.
+## Run a first request
 
-Dashboard/account workflows can use bearer-token auth with `sdkgo.NewBearerTokenClient(os.Getenv("SECAPI_BEARER_TOKEN"))`.
-
-Requests include `Accept: application/json` and a `User-Agent` like `secapi-go/1.0.1` so support and server logs can identify SDK traffic.
-
-## Typed request params
-
-The Go SDK keeps the raw `map[string]string` methods for exact REST control,
-and adds typed params for common read paths when you want editor completion:
+Create `main.go`:
 
 ```go
-filing, err := client.LatestFiling(sdkgo.LatestFilingParams{
-  Ticker: "AAPL",
-  Form: "10-K",
-  View: sdkgo.ResponseViewAgent,
-}.Params())
+package main
 
-history, err := client.FactorHistory("VALUE", sdkgo.FactorHistoryParams{
-  Range: "1y",
-  ResponseMode: "compact",
-  Include: "trust,series",
-}.Params())
-```
+import (
+  "fmt"
+  "log"
+  "os"
 
-Typed params are available for `LatestFiling`, `LatestSection`,
-`SearchSections`, `AllStatements`, and `FactorHistory`. Add `Extra` for newer or
-less common query parameters without changing the wire contract.
+  sdkgo "github.com/secapi-ai/secapi-go"
+)
 
-## Typed agent responses
-
-Use `*Agent` helpers when you want the compact agent response shape plus typed
-Go fields:
-
-```go
-filing, err := client.LatestFilingAgent(sdkgo.LatestFilingParams{
-  Ticker: "AAPL",
-  Form: "10-K",
-}.Params())
-value := func(s *string) string {
-  if s == nil {
+func stringValue(value *string) string {
+  if value == nil {
     return ""
   }
-  return *s
+  return *value
 }
-fmt.Println(filing.AccessionNumber, value(filing.FilingURL))
 
-sections, err := client.SearchSectionsAgent(sdkgo.SectionSearchParams{
-  Ticker: "AAPL",
-  Form: "10-K",
-  Query: "risk factors",
-  Limit: "3",
-}.Params())
-for _, section := range sections.Data {
-  fmt.Println(value(section.SectionKey), value(section.SourceURL))
+func main() {
+  client := sdkgo.NewClient(os.Getenv("SECAPI_API_KEY"))
+  filing, err := client.LatestFilingAgent(map[string]string{
+    "ticker": "AAPL",
+    "form": "10-K",
+  })
+  if err != nil {
+    log.Fatal(err)
+  }
+  fmt.Println(filing.AccessionNumber, filing.FilingDate, stringValue(filing.FilingURL))
 }
 ```
 
-Typed agent helpers are available for `ResolveEntityAgent`,
-`LatestFilingAgent`, `SearchSectionsAgent`, and `StatementAgent`. They force
-`view=agent` on supported routes before decoding into exported structs.
-Nullable API fields decode as pointers so callers can distinguish missing data
-from empty strings or zeros.
-
-## Dilution intelligence
-
-```go
-// Top 10 highest-dilution-risk issuers
-ratings, err := client.DilutionRatings(map[string]string{
-  "overall_risk": "high",
-  "limit":        "10",
-})
-
-// Single-ticker dilution rollup
-score, err := client.DilutionScore(map[string]string{"ticker": "BBBB"})
-
-// ATM offerings only (boolean filter on the events list)
-atms, err := client.DilutionEvents(map[string]string{
-  "ticker": "BBBB",
-  "is_atm": "true",
-})
-
-// Coverage + freshness rollup (no agent shape — already compact)
-coverage, err := client.DilutionCoverage(map[string]string{"ticker": "BBBB"})
+```bash
+go run .
 ```
 
-The full surface — `DilutionEvents`, `DilutionEventDetail`, `DilutionWarrants`, `DilutionConvertibles`, `DilutionRofr`, `DilutionLockups`, `DilutionCashPosition`, `DilutionCorporateActions`, `DilutionNasdaqCompliance`, `DilutionRatings`, `DilutionReverseSplits`, `DilutionScore`, `DilutionShareFloatHistory`, `DilutionCoverage` — mirrors the REST routes 1:1. Pass `"view": "agent"` in any list call (except `DilutionCoverage`) for the compact agent-mode shape.
+Expect the current matching filing's accession number, date, and SEC URL. Those values are live. Store them with any derived work; do not use a latest-filing response as a permanent fixture.
 
-<Prompt>
-Wire the Go SDK into this service. Start with one entity or market calendar call to confirm auth, then add a filing or ownership workflow that preserves requestId and freshness metadata in structured logs.
-</Prompt>
+## Errors, retries, and limits
 
-## Read next
+The client returns an `APIError` for API failures. Capture its HTTP status, error code, and request ID in application logs. Its retry layer honors `Retry-After`; a `429` can be retried even when it follows a mutating request, while treatment of other failures depends on the HTTP method.
 
-<CardGroup cols={2}>
-  <Card title="API Reference" icon="square-terminal" href="/api-reference">
-    Check the literal calls behind the Go helpers.
-  </Card>
-  <Card title="Audit & delivery" icon="shield-check" href="/audit-logs">
-    Delivery audit, event export, and usage tracking for backend integrations.
-  </Card>
-</CardGroup>
+Before a mutation whose replay is unsafe, disable client retries with `client.RetryConfig.MaxRetries = 0` or ensure the operation is idempotent. Keep one bounded retry owner in the service.
+
+Typed request helpers cover common paths, but the map-based methods remain the direct path to the REST contract. Check the relevant API reference for accepted parameters and response fields before adding a query parameter.
+
+## Production notes
+
+- Create the client with a key from a server-side secret source; do not ship it in a binary or frontend.
+- Use contexts, timeouts, and one retry owner in your service.
+- Log request identity and filing provenance separately from business output.
+- Treat agent response helpers as compact endpoint projections. Use the default endpoint shape when your use case needs fields not present in the compact response.
+
+Next: [API conventions](/api-conventions), [SDK reliability](/sdk-reliability), or [API reference](/api-reference).

@@ -1,77 +1,73 @@
 ---
-title: "Choose an SEC API interface"
-description: "Start with REST, then choose an SDK, CLI, or hosted MCP for the workflow you are building"
+title: "Build a first SEC API integration"
+description: "Choose REST, an SDK, or the CLI, make one authenticated request, and preserve the information needed to operate it."
 ---
 
-<Info>
-Start with REST when you need to see the exact request and response. Move to an SDK or CLI when the call belongs in a repeatable workflow. Use hosted MCP when an MCP-aware client should call SEC API tools directly.
-</Info>
+Start with one server-side request. Once it returns a useful result, keep the same endpoint and move it into your preferred client.
 
-## Authentication
+## Prerequisites
 
-Use an API key in `x-api-key` for REST. The SDKs and CLI read the same API-key credential from their client configuration or environment. Keep dashboard sign-in and browser-only account actions separate from machine requests. See [API keys, usage, and billing](/auth-and-pricing) for the credential boundary.
+- An API key from your SEC API account.
+- A server shell, job, or trusted backend. Do not expose an API key in browser code.
+- `curl` for the first request.
 
-## Pick a starting point
+## Make one request
 
-<CardGroup cols={2}>
-  <Card title="REST" icon="braces" href="/getting-started">
-    The shortest path to verify authentication, inspect a response, and learn an endpoint's contract.
-  </Card>
-  <Card title="SDKs and CLI" icon="terminal-square" href="/libraries-and-sdks">
-    Use a typed client or terminal workflow when a request becomes part of application code or research automation.
-  </Card>
-  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
-    Connect an MCP-aware client after verifying a normal API request and understanding the tool boundary.
-  </Card>
-  <Card title="API reference" icon="book-open" href="/api-reference">
-    Check exact parameters, endpoint-specific limits, and response fields before coding against an endpoint.
-  </Card>
-</CardGroup>
+```bash
+export SECAPI_API_KEY="secapi_..."
 
-## Build against the contract
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
 
-<Steps>
-  <Step title="Prove one request first">
-    Follow the <a href="/getting-started">first request</a> before introducing an SDK, an agent, or concurrent traffic.
-  </Step>
-  <Step title="Use the documented parameters">
-    The API reference is authoritative for accepted identifiers, filters, response views, and limits. Do not infer them from a similar endpoint.
-  </Step>
-  <Step title="Keep the identifiers that matter">
-    Retain `Request-Id` for support and, for filing-derived work, the issuer identifier, accession number, filing date, and filing URL.
-  </Step>
-  <Step title="Choose a response view deliberately">
-    Start with the default response when you need context. Use `view=agent` or `view=compact` only where the endpoint documents that projection.
-  </Step>
-  <Step title="Respect pagination and rate limits">
-    Endpoints that return `nextCursor` and `hasMore` use cursor pagination. For `429`, wait for `Retry-After`; endpoint-specific limits belong in the reference.
-  </Step>
-  <Step title="Pin a production integration">
-    Send a documented `secapi-version` when you are ready to pin to a dated contract.
-  </Step>
-</Steps>
+The response identifies the matched issuer. Fields beyond the identity can vary by endpoint and response view, so treat the API reference as the field contract.
 
-## Response metadata
+```json
+{
+  "ticker": "AAPL",
+  "cik": "0000320193"
+}
+```
 
-- `Request-Id` identifies one API request for logs and support.
-- Filing identifiers such as `accessionNumber` and `filingUrl` identify the source filing when present.
-- Some endpoints expose provenance, freshness, materialization, or trace fields. Their availability and shape are endpoint-specific.
+Save the `Request-Id` response header with your application log. It identifies this request when you need help diagnosing a failure.
 
-Preserve the fields your endpoint returns when they support a user-visible result.
+## Choose the interface
 
-## Read next
+| Use this | When it fits | Start here |
+| --- | --- | --- |
+| REST | You need the exact HTTP request, a language not covered by an SDK, or a narrow integration. | [API conventions](/api-conventions) |
+| JavaScript or Python SDK | You want a maintained client for an application, worker, notebook, or script. | [Libraries and SDKs](/libraries-and-sdks) |
+| Go or Rust SDK | You are building a service in that runtime and want its typed helpers. | [Go SDK](/go-sdk) or [Rust SDK](/rust-sdk) |
+| CLI | You need a terminal check, shell automation, or a reproducible local command. | [CLI](/cli) |
 
-<CardGroup cols={2}>
-  <Card title="API conventions" icon="book-text" href="/api-conventions">
-    Read the wire-level defaults and shared rules.
-  </Card>
-  <Card title="Versioning" icon="git-branch" href="/api-versioning">
-    Pin releases, understand aliases, and plan migrations.
-  </Card>
-  <Card title="API Reference" icon="square-terminal" href="/api-reference">
-    Jump to the exact call you need.
-  </Card>
-  <Card title="Freshness and trust" icon="shield-check" href="/freshness-and-trust">
-    See how the source trail and freshness posture stay visible.
-  </Card>
-</CardGroup>
+## Move from the first result to data
+
+Use the resolved ticker or CIK in the endpoint that answers the product question. For example, this request retrieves the current matching annual filing:
+
+```bash
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+Preserve `accessionNumber`, `filingDate`, and `filingUrl` when they are returned. They identify the SEC filing behind a downstream result. A latest-filing request can return a different accession after a new filing; it is not a fixed test fixture.
+
+## Handle the first failure
+
+| Result | Action |
+| --- | --- |
+| `401` with `missing_api_key` | Send a non-empty `x-api-key` header. Mint a key in the dashboard if you do not have one. |
+| `401` with `authentication_failed` | The supplied API key or bearer credential was rejected. Rotate or refresh that credential; adding the same rejected value again will not help. |
+| `404` or an empty result | Verify the endpoint's accepted identifier and availability boundary in its API reference page. |
+| `429` | Wait for the `Retry-After` header before retrying. Do not create parallel retry loops. |
+| `5xx` | Record the status, endpoint, timestamp, and `Request-Id`; retry only according to your client policy. |
+
+## Production notes
+
+- Keep the key in a server-side secret store or runtime environment variable.
+- Pin and log `secapi-version` only after testing the exact endpoint behavior you rely on. The response echoes the resolved value in `SECAPI-Version`.
+- Validate unknown optional fields defensively. Data availability, freshness, and provenance fields are route and view specific.
+- Use cursor pagination where the endpoint returns `nextCursor` and `hasMore`.
+
+Next: [make the same request in JavaScript](/javascript-sdk), [Python](/python-sdk), or read the [API reference](/api-reference).

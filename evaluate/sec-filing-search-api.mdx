@@ -3,9 +3,36 @@ title: "Evaluate Filing Search"
 description: "Run a small, source-linked proof of concept for SEC filing retrieval and content search."
 ---
 
+<CardGroup cols={3}>
+  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
+    Create a key and run the filing-and-content proof against a known issuer.
+  </Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">
+    Inspect filing, full-text, and semantic search response shapes before wiring retrieval.
+  </Card>
+  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">
+    Size filing lookup and content-search usage before expanding beyond the proof.
+  </Card>
+</CardGroup>
+
 Evaluate one issuer and one research question. A useful proof of concept proves that your application can find a filing, preserve its SEC source, and retrieve the exact section it will show a user.
 
-## Run this sequence
+## Run a source-linked proof
+
+<Steps>
+  <Step title="Choose one issuer and one question">
+    Start with a known issuer, filing form, and question that needs a source-backed answer.
+  </Step>
+  <Step title="Find the filing record">
+    Retrieve the filing manifest and retain its accession number before constructing a retrieval URL.
+  </Step>
+  <Step title="Compare literal and related-language search">
+    Run full-text and hybrid semantic search, then inspect the result type and cited section before treating either as evidence.
+  </Step>
+  <Step title="Verify the cited source">
+    Open the returned filing section and keep its identity and request metadata with any conclusion.
+  </Step>
+</Steps>
 
 ```bash
 # Find a recent annual report.
@@ -29,6 +56,10 @@ For each result, retain accession number, form, filing date, source URL, endpoin
 - It distinguishes full-text's filings-and-sections response from semantic and section search result lists.
 - It verifies an excerpt in the source filing before presenting a conclusion.
 - It handles `400`, `429`, and transient server errors as distinct operational states.
+
+<Prompt>
+For AAPL, find the latest 10-K, search it for "material weakness," then run hybrid semantic search for "artificial intelligence regulation." Return the accession number, form, filing date, filing URL, cited section or excerpt, request ID, and any retrieval limitation. Do not summarize a result until its filing identity is present.
+</Prompt>
 
 ## Next steps
 
