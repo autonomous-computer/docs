@@ -1,9 +1,9 @@
 ---
 title: "Freshness and source evidence"
-description: "Evaluate route-specific source, timing, provenance, and degradation information before relying on an SEC API result"
+description: "Use route-specific timing, provenance, and degradation fields to decide whether an SEC API result meets your workflow's evidence policy"
 ---
 
-Start with the source record for the result you need, then preserve the fields that describe how that result was produced. SEC filing publication, API availability, and availability of a derived representation are separate facts.
+An SEC filing being published, an API record being available, and a derived representation being ready are different events. For a material decision, retrieve the specific result you need and retain the source and state fields that describe it.
 
 ```bash
 curl -sS \
@@ -11,37 +11,35 @@ curl -sS \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 ```
 
-## Build an audit record from the response
+## Build a result record
 
-Keep the source filing's accession number, filing date, and filing URL when returned. Alongside them, record the endpoint, parameters, response view, period, units, and route-specific provenance, capability, warning, freshness, or degradation fields. Keep `Request-Id`, `traceparent` when present, the API version when pinned, and the retrieval time in UTC.
+When a route returns them, retain the filing accession number, filing date, and filing URL. Record the endpoint, parameters, response view, period, units, provenance, capability, warning, freshness, and degradation fields alongside the result. Keep the `Request-Id`, `traceparent` when present, pinned API version when used, and retrieval time in UTC.
 
-Field names and field presence vary by endpoint and view. The endpoint reference is the contract. A filing manifest alone does not establish that every section, statement, search result, or trace is available.
+Field names and availability vary by endpoint and response view. The API reference defines the contract for a route. A filing manifest by itself does not establish that its sections, statements, search results, or traces are available.
 
-## Treat freshness as route-specific
+## Read freshness in the context of its route
 
-Only use a freshness status where the route returns one. Depending on the route, status can describe a source, materialized artifact, or other route-specific condition. It is not a platform-wide promise about every SEC API surface.
+Use a freshness status only when that route returns one. Depending on the route, it can describe a source, a materialized artifact, or another route-specific condition. It is not a platform-wide latency commitment.
 
-Where a route documents these statuses, use the returned reason fields with the status:
-
-| Status | Meaning |
+| Status | Practical interpretation |
 | --- | --- |
-| `fresh` | Current under that route's own policy. |
+| `fresh` | Current under the route's documented policy. |
 | `current` | A recently published immutable filing was materialized without a lag indication. |
-| `archival` | A historical immutable filing is available; age alone is not stale. |
+| `archival` | A historical immutable filing is available; its age alone does not make it stale. |
 | `stale` | Outside the route's stated freshness posture. |
-| `degraded` | Available with a freshness or dependency limitation. |
+| `degraded` | Returned with a freshness or dependency limitation. |
 | `unknown` | The route cannot classify the condition from available timing information. |
 
-An endpoint can expose only a subset of these values. Do not infer support for a status, or a universal real-time or minute-level commitment, from another route.
+An endpoint can support only some of these values. Do not infer a status, real-time behavior, or a minute-level target for one route from another route's fields.
 
-## Decide whether the evidence meets your policy
+## Apply an evidence policy
 
-1. Define the event and timing rule your workflow requires.
-2. Retrieve the specific filing, section, fact, or derived output needed for that rule.
-3. Compare returned source dates, periods, and route-specific state with your policy.
-4. Record the request and source identifiers with the decision or downstream model output.
-5. Send missing, stale, degraded, or unknown evidence to a review path rather than presenting it as current.
+1. Define the source event and timing rule your workflow requires.
+2. Retrieve the specific filing, section, fact, or derived output for that rule.
+3. Compare the returned source dates, periods, and route-specific state with your rule.
+4. Store the request and source identifiers with the decision or downstream model output.
+5. Route missing, stale, degraded, or unknown evidence to review instead of displaying it as current.
 
-Facts and statements are normalized from issuer disclosures, but availability depends on what was disclosed and the route's materialization path. Check reporting period, units, `periodBasis` where available, and provenance before comparing values.
+Facts and statements normalize issuer disclosures, but what is available depends on the disclosure and the route's materialization path. Check reporting period, units, `periodBasis` when present, and provenance before comparing values.
 
-Read [Coverage and historical depth](/coverage-and-depth) and [Methodology registry](/methodology-registry) for capability boundaries.
+Continue with [Coverage and historical depth](/coverage-and-depth) for availability boundaries, [Methodology registry](/methodology-registry) for derived-result limits, and [SEC API status](/status) when diagnosing service availability.

@@ -1,29 +1,9 @@
 ---
-title: "Factor Provenance"
-description: "How SEC API represents factor sources, source rights, materialization, and trace metadata."
+title: "Factor provenance"
+description: "Preserve the source, methodology, materialization, and degraded-state metadata needed to interpret SEC API factor results"
 ---
 
-<Info>
-Factor responses are designed to be auditable after they leave the API. Use `include=trust` on compact requests when an agent, workflow, or report needs the provenance and methodology envelope.
-</Info>
-
-SEC API factor data is produced from SecAPI-owned models, public-company data, market-data inputs available to SEC API, and documented proxy or basket definitions. The product goal is FactorsToday-compatible workflows with SecAPI-owned data and methodology, not copying another provider's datasets.
-
-## What To Preserve
-
-Every factor workflow should preserve these fields when they are present:
-
-| Field | Why it matters |
-|-------|----------------|
-| `requestId` | Support can trace the exact API request. |
-| `traceparent` | Distributed traces can connect API, MCP, SDK, and downstream application work. |
-| `freshness` | Tells you whether the response is fresh, stale, degraded, or unknown for the requested clock. |
-| `materialization` | Identifies the parser, model, or read-model version that produced the response. |
-| `methodology` | Identifies the model family, inputs, and construction notes when included. |
-| `sourceRights` | Describes whether the source posture is public-safe, contract-gated, or otherwise restricted. |
-| `degradedState` | Explains partial responses without pretending the workflow is complete. |
-
-Compact factor responses optimize for agent and chart payload size. If your workflow needs trust metadata, request it explicitly:
+Factor results can be small enough for a chart or agent response while still needing an audit trail. When the workflow needs source and methodology context, request `include=trust` with a compact response.
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
@@ -31,7 +11,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/factors/returns?keys=VALUE,MOMENTUM,QUALITY&lookback=6m&response_mode=compact&include=trust"
 ```
 
-For MCP, pass the same include intent:
+For MCP, carry the same intent in the tool arguments:
 
 ```json
 {
@@ -45,49 +25,40 @@ For MCP, pass the same include intent:
 }
 ```
 
-## Source Posture
+## Preserve these fields
 
-| Factor family | Launch posture |
-|---------------|----------------|
-| Market factor | Built from SecAPI market-data inputs and benchmark construction metadata. |
-| Style factors | Built from point-in-time security returns and public-company characteristics such as SEC-derived fundamentals when used by the factor definition. |
-| Sector and industry factors | Built from point-in-time security returns plus public classification mappings such as SIC-derived sector and industry groupings. |
-| Portfolio attribution and hedge | Built from the portfolio holdings submitted by the caller plus SecAPI factor exposure and return read models. |
-| Thematic, country, and macro tracked definitions | Tracked in the catalog or methodology registry, but not all are part of the launch-read default surface or public history claim set. |
+| Field | Why to keep it |
+| --- | --- |
+| `requestId` | Identifies the API request when an outcome needs investigation. |
+| `traceparent` | Connects the API request to downstream tracing when your system uses it. |
+| `freshness` | States whether the result is fresh, stale, degraded, or unknown for its applicable clock. |
+| `materialization` | Identifies the parser, model, or read-model version that produced the result. |
+| `methodology` | Identifies the model family, inputs, and construction notes when included. |
+| `sourceRights` | Describes the source-rights posture returned with the result. |
+| `degradedState` | Explains a partial response, fallback, or unavailable dependency. |
 
-Do not treat a tracked catalog definition as a launch claim by itself. The launch claim boundary is determined by row-level materialization, freshness, model/version metadata, and source-rights posture.
+## Read the source posture by factor family
 
-## Materialization Versions
+| Factor family | Inputs used by the documented model |
+| --- | --- |
+| Market | SEC API market-data inputs and benchmark construction metadata |
+| Style | Point-in-time security returns and public-company characteristics, including SEC-derived fundamentals when the definition uses them |
+| Sector and industry | Point-in-time security returns and public classification mappings, including SIC-derived groupings |
+| Portfolio attribution and hedge | Caller-supplied holdings plus SEC API factor exposure and return read models |
+| Thematic, country, and macro | Catalog or methodology definitions; not every definition is part of the launch-read default surface or public history claim set |
 
-Each result's `materialization` block returns a `materializationVersion` string identifying the read model behind it. Treat the string as opaque — detect when it **changes** (a methodology or data revision that may move your numbers) rather than matching its internal format. The current materializations cover:
+Do not treat a catalog entry as proof that a factor is available for every surface or period. Confirm row-level materialization, freshness, model/version metadata, and returned source-rights posture for the result you use.
 
-| Read model | What it serves |
-|------------|----------------|
-| Stock-basket factor returns | Daily factor returns from the stock-basket model. |
-| Purified factor returns | Daily factor returns from the purified factor-return model. |
-| Latest stock-basket exposures | Latest security-level exposures for stock-basket factors. |
-| Latest purified exposures | Latest security-level exposures for purified factors. |
-| Portfolio factor attribution | Attribution assembled from holdings, exposures, and realized factor returns. |
-| Portfolio factor hedge | Hedge suggestions assembled from factor exposure targets and hedge constraints. |
+## Respond to materialization changes
 
-The version lets you tell whether a result came from a materialized read model, a computed fallback, or an explicit degraded path.
+The `materialization.materializationVersion` value identifies the read model behind a result. Treat it as opaque. Store it and detect when it changes, because a revision to methodology or source data can change historical numbers.
 
-## How Degraded States Work
+Current read models cover stock-basket returns, purified returns, latest stock-basket exposures, latest purified exposures, portfolio attribution, and portfolio hedge results. The version distinguishes a materialized read model, a computed fallback, or an explicit degraded path when the response exposes that distinction.
 
-A degraded response is still a structured response. It should be handled differently from a silent success and differently from a generic error.
+## Do not hide a degraded result
 
-Common examples:
+A degraded response is a structured outcome, not a silent success and not necessarily a generic error. Examples include unavailable factor returns when a required read model is not materialized, partial portfolio attribution when holdings lack sufficient market bars, empty hedge suggestions when exposures are missing or constraints reject all candidates, and stale intraday state when market-data inputs are not current.
 
-- factor returns are unavailable because a required read model is not materialized
-- portfolio attribution is partial because some holdings lack sufficient market bars
-- hedge suggestions are empty because factor exposures are missing or constraints reject all candidates
-- intraday factor state is stale because market-data inputs are not current
+When present, preserve `degradedState.code`, `degradedState.message`, `degradedState.retryable`, `degradedState.missingCapabilities`, and `degradedState.fallbackUsed`. Some materialization errors can also include `operatorAction`; retain it when the API returns it outside the degraded-state envelope.
 
-Preserve `degradedState.code`, `degradedState.message`, `degradedState.retryable`, `degradedState.missingCapabilities`, and `degradedState.fallbackUsed` when present. Some materialization error details may also include `operatorAction`; preserve it when it appears outside the degraded-state envelope.
-
-## Read next
-
-- [Factor Freshness](/factor-freshness)
-- [Factor Model Methodology](/factor-model-methodology)
-- [Factor Quickstart](/factor-quickstart)
-- [Factor Intelligence](/factor-intelligence)
+Use [Factor freshness](/factor-freshness) to decide whether a result is current enough for the workflow, [Factor model methodology](/factor-model-methodology) to understand the calculation, and [Factor quickstart](/factor-quickstart) to make a first request.

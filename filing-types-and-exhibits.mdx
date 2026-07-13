@@ -1,46 +1,42 @@
 ---
-title: "SEC Filing Types and Exhibits"
-description: "Choose the SEC API retrieval or structured workflow that fits a filing family, and understand where exhibit support ends."
+title: "SEC filing types and exhibits"
+description: "Choose the SEC API filing workflow that matches a filing family, and distinguish broad retrieval from structured extraction"
 ---
 
-SEC API can retrieve filing manifests broadly. Purpose-built extraction is narrower: use it only where a public route documents a structured result.
+SEC API can retrieve filing manifests across filing families. Structured extraction is narrower: use a purpose-built workflow only where its public route documents a result. This distinction matters when your application needs a cited disclosure rather than simply a link to a filing.
 
-## Start with filing retrieval
+## Start with the filing
 
-Use [filing search](/api-reference/filings/get-v1-filings), [latest filing](/api-reference/filings/get-v1-filings-latest), or an [accession lookup](/api-reference/filings/get-v1-filings-accession-number) for an unfamiliar form.
+For an unfamiliar form, begin with [filing search](/api-reference/filings/get-v1-filings), [latest filing](/api-reference/filings/get-v1-filings-latest), or an [accession lookup](/api-reference/filings/get-v1-filings-accession-number).
 
 ```bash
 curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&forms=10-K,10-Q,8-K&limit=25"
 ```
 
-The result identifies the SEC filing. It does not promise a normalized parser for every form or exhibit.
+The response identifies an SEC filing. It does not promise a normalized parser for every form, attachment, or exhibit.
 
-## Named workflows
+## Choose a documented workflow
 
-| Filing family                  | Supported use                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `10-K`, `10-Q`                 | Generic retrieval and named-section extraction, including supported keys such as `item_1a`, `item_7`, and `item_8` |
-| `10-K`, `10-Q`, `20-F`, `40-F` | Facts and statements workflows                                                                                     |
-| `8-K`, `6-K`                   | Generic retrieval and persisted filing-event coverage where available                                              |
-| `S-1`, `S-1/A`, `424B*`        | Generic retrieval and offerings workflows                                                                          |
-| `13F-HR`, `13F-HR/A`           | Institutional ownership workflows                                                                                  |
-| `SC 13D`, `SC 13G`, amendments | Beneficial-ownership workflows                                                                                     |
-| Forms `3`, `4`, `5`            | Insider-ownership workflows                                                                                        |
-| `DEF 14A`                      | Board and compensation workflows                                                                                   |
-| `NPORT-P`, `NPORT-EX`          | N-PORT holdings workflows                                                                                          |
+| Filing family | Documented use |
+| --- | --- |
+| `10-K`, `10-Q` | Filing retrieval and named-section extraction for supported keys such as `item_1a`, `item_7`, and `item_8` |
+| `10-K`, `10-Q`, `20-F`, `40-F` | Facts and statements workflows |
+| `8-K`, `6-K` | Filing retrieval and persisted filing-event coverage where available |
+| `S-1`, `S-1/A`, `424B*` | Filing retrieval and offerings workflows |
+| `13F-HR`, `13F-HR/A` | Institutional ownership workflows |
+| `SC 13D`, `SC 13G`, and amendments | Beneficial-ownership workflows |
+| Forms `3`, `4`, `5` | Insider-ownership workflows |
+| `DEF 14A` | Board and compensation workflows |
+| `NPORT-P`, `NPORT-EX` | N-PORT holdings workflows |
 
-## Exhibit boundary
+## Know the exhibit boundary
 
-Workflows can read selected exhibits for a specific purpose. SEC API does not publish a general exhibit-enumeration and normalization API for every filing.
+Some workflows read selected exhibits for a documented purpose. SEC API does not publish a general exhibit-enumeration and normalization API for every filing.
 
-- The 13F information table is read inside institutional-ownership workflows.
-- Selected EX-99 material can support transcript and guidance extraction.
+- Institutional-ownership workflows read the 13F information table.
+- Selected `EX-99` material can support transcript and guidance extraction.
 - XBRL and inline XBRL support facts and statements; this is structured-data extraction, not raw-exhibit delivery.
-- For an exhibit without a named workflow, retrieve the filing and follow its SEC filing URL.
+- For an exhibit without a named workflow, retrieve its filing and follow the SEC filing URL.
 
-## Next steps
-
-- [Find a filing](/products/filing-search)
-- [Extract a known section](/seo/sec-10k-section-extraction-api)
-- [Filings API reference](/api-reference/filings)
+For a production workflow, retain the accession number and filing URL even when a structured result is available. See [Coverage and historical depth](/coverage-and-depth) for availability boundaries, [find a filing](/products/filing-search) for retrieval patterns, and the [Filings API reference](/api-reference/filings) for field-level contracts.

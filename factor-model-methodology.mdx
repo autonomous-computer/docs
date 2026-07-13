@@ -1,159 +1,68 @@
 ---
-title: "Factor Model Methodology"
-description: "Understand how SEC API builds its investor-grade factor catalog, including the hierarchical purification model, history floors, and refresh cadence."
+title: "Factor model methodology"
+description: "Understand factor construction, history boundaries, and the metadata needed to interpret SEC API factor results"
 ---
 
 <Warning>
-The Factor surfaces are in **beta** — this compute methodology is still being validated. All factor responses carry the `SECAPI-Maturity: beta` response header; do not yet treat returned values as production-grade.
+Factor surfaces are in beta. Responses carry the `SECAPI-Maturity: beta` header; do not treat returned values as production-grade without your own validation.
 </Warning>
 
-<Info>
-**Audience:** Allocators, portfolio managers, risk analysts, and compliance teams evaluating SEC API's factor model for research, attribution, and risk-management workflows.
-</Info>
+SEC API tracks more than 230 factor definitions across market, style, macro, sector, industry, country, and thematic categories. The launch API surface is narrower: U.S. market, style, sector, and industry factors target a `2015-01-01` public history floor. Shorter-history, beta, blocked, and deferred factors are labeled in catalog and methodology metadata. Make a history claim only when the returned factor rows and freshness metadata support it.
 
-## Overview
-
-SEC API provides an investor-grade factor research catalog spanning more than 230 tracked factor definitions across market, style, macro, sector, industry, country, and thematic categories. The launch API surface is narrower: U.S. market, style, sector, and industry factors target a `2015-01-01` public history floor, while shorter-history, beta, blocked, or deferred factors are labeled in catalog and methodology metadata. Public history claims should be made only where row-level coverage and freshness proof support the factor. The model follows a hierarchical purification architecture consistent with institutional standards pioneered by MSCI Barra and adopted by Axioma (Qontigo), Bloomberg PORT, and Northfield.
-
-Launch factor return surfaces are refreshed on a market-calendar-aware schedule. Intraday snapshot endpoints expose available in-session factor state when the underlying market-data plane is current; inspect freshness metadata before treating a snapshot as live.
-
-For source posture, source-rights metadata, and response trust fields, see [Factor Provenance](/factor-provenance). For market-calendar SLAs and freshness interpretation, see [Factor Freshness](/factor-freshness).
+For source posture and response evidence, read [Factor provenance](/factor-provenance). For daily, intraday, and portfolio recency rules, read [Factor freshness](/factor-freshness).
 
 ## Factor categories
 
-| Category | Count | Description |
-|----------|-------|-------------|
-| `market` | 1 | Broad US equity risk premium (MKT_US) |
-| `style` | 30 | Cross-sectional return drivers (momentum, value, quality, size, low-volatility, etc.) |
-| `macro` | 17 | Macroeconomic regime factors (rates, credit, commodities, currencies) |
-| `sector` | 26 | GICS sector and sub-sector return attribution |
-| `industry` | 31 | Industry-level return attribution |
-| `country` | 45 | Single-country and regional equity factors |
-| `thematic` | 81 | Named investment themes (nuclear energy, genomics, REITs, etc.) |
+| Category | Tracked definitions | Example use |
+| --- | ---: | --- |
+| `market` | 1 | Broad U.S. equity risk premium (`MKT_US`) |
+| `style` | 30 | Momentum, value, quality, size, and low-volatility signals |
+| `macro` | 17 | Rates, credit, commodities, and currencies |
+| `sector` | 26 | GICS sector and sub-sector attribution |
+| `industry` | 31 | Industry-level attribution |
+| `country` | 45 | Single-country and regional equity premiums |
+| `thematic` | 81 | Named themes such as nuclear energy, genomics, and REITs |
 
-## Factor construction pipeline
+Tracked does not mean available on every read surface. Inspect the catalog, row-level coverage, and returned trust metadata for the factor and period you request.
 
-### Step 1: Universe construction
+## How stock-basket factors are built
 
-U.S. market, style, sector, and industry stock-basket factors are computed over a point-in-time U.S. equity universe refreshed monthly:
+### 1. Define the universe
 
-- Minimum $100M market capitalization
-- Minimum $5M average daily dollar volume
-- Minimum $1.00 share price
-- Excludes warrants, units, rights, ETFs, ETNs, ADR certificates
-- Exchanges: NYSE, NASDAQ, AMEX, ARCA, BATS
+U.S. market, style, sector, and industry stock-basket factors use a point-in-time U.S. equity universe refreshed monthly. It requires at least $100M market capitalization, $5M average daily dollar volume, and a $1.00 share price. It excludes warrants, units, rights, ETFs, ETNs, and ADR certificates, and covers NYSE, NASDAQ, AMEX, ARCA, and BATS. Membership uses historical reference snapshots available on the rebalance date to avoid look-ahead bias. When those snapshots are absent, market capitalization and SIC classification can fall back to the latest reference data; that fallback is approximate and not point-in-time.
 
-Universe membership is determined as of each rebalance date using data available at that time — no look-ahead bias.
+### 2. Select the inputs
 
-### Step 2: Constituent sourcing
+| Input | Used for | Example |
+| --- | --- | --- |
+| Point-in-time fundamentals from SEC XBRL | Style characteristics | Book-to-market from the latest 10-K |
+| SIC classification | Sector and industry membership | SIC 7372 mapped to technology/software |
+| ETF, proxy, and basket metadata | Thematic, macro, and country definitions | URA proxy spread for nuclear energy |
+| Curated constituent lists | Thematic baskets without an ETF proxy | Hotel REIT basket |
+| Single-country ETF | Country premiums | EWJ for Japan equity premium |
 
-Each factor type uses a different data source for membership and characteristic computation:
+### 3. Calculate returns
 
-| Source | Factor types | Example |
-|--------|-------------|---------|
-| Point-in-time fundamentals (SEC XBRL) | Style factors | Book/Market ratio from latest 10-K filing |
-| SIC classification | Sector and industry factors | SIC 7372 → Technology / Software |
-| ETF, proxy, and curated basket metadata | Thematic, macro, and country factors | URA proxy spread → Nuclear Energy basket |
-| Curated constituent lists | Thematic baskets without ETF proxy | Hotel REITs: APLE, HLT, MAR, HST... |
-| Single-country ETF | Country factors | EWJ → Japan equity premium |
+Style factors are cap-weighted long-short decile spreads: securities are ranked on a characteristic, assigned to deciles, and the top-minus-bottom return is rebalanced monthly. ETF-backed thematic baskets use the ETF return less a relevant benchmark. Curated thematic baskets use an equal-weight constituent return less a relevant benchmark. Macro and country factors use an ETF proxy spread against a reference instrument.
 
-### Step 3: Return computation
+### 4. Purify against declared parents
 
-**Style factors:** Long-short decile portfolio sorts. Stocks are ranked by a characteristic (e.g., book-to-market for Value), divided into decile portfolios, and the factor return is the spread between the top decile (long) and bottom decile (short). Portfolios are cap-weighted within each leg and rebalanced monthly.
+Each factor has one to three declared parent factors. SEC API uses a rolling 156-trading-day OLS regression to extract the residual return not explained by those parents. For example, a sector factor is purified against `MKT_US`; an energy theme can be purified against `MKT_US` and `SECTOR_ENERGY`.
 
-**Thematic baskets (ETF-backed, 66 factors):** Factor return is the ETF return minus a relevant benchmark. The ETF provider (Global X, ARK, VanEck, iShares, etc.) handles constituent selection and rebalancing. Example: `THEMATIC_NUCLEAR_ENERGY = R(URA) - R(SPY)`.
+The parent hierarchy is deliberately limited rather than regressing every factor on every other factor. This keeps the relationship visible to users and preserves the defining signal of a thematic basket.
 
-**Thematic baskets (curated, 15 factors):** Factor return is the equal-weight constituent basket return minus a relevant benchmark. Constituents are sourced from public factor composition data and reviewed quarterly. Example: `THEMATIC_CASINO_LEISURE = (1/9) · Σ R(casino stocks) - R(SPY)`.
+### 5. Scale and compare
 
-**Macro and country factors:** ETF proxy spread versus a reference instrument. Example: `RATES = R(TLT) - R(SHV)`.
+The 156 trading-day window is used for the OLS purification. For each residual return, leverage uses the preceding 60 residual returns plus the current residual to estimate sample volatility, annualizes it using 252 trading days, and targets 10% annualized volatility, capped at 3.0. The scaled returns are converted to rolling z-scores for cross-factor comparison. These calculations describe the model output; they do not predict future returns.
 
-### Step 4: Hierarchical purification (orthogonalization)
+## Intraday and history boundaries
 
-Each factor declares 1–3 parent factors and is purified against them using rolling 156-trading-day OLS regression to extract the residual return not explained by parent factors.
+During U.S. market hours, intraday snapshots can include raw, purified, scaled, and z-score returns when the required proxy and constituent inputs are current. A fast response is not proof of a current snapshot: inspect returned freshness and degradation metadata.
 
-```
-Market (MKT_US)
-├── Style factors (SIZE, VALUE, MOMENTUM, ...)
-│   └── purified against: MKT_US
-├── Sector factors (SECTOR_ENERGY, SECTOR_TECH, ...)
-│   └── purified against: MKT_US
-├── Thematic baskets
-│   ├── Energy themes → purified against: MKT_US, SECTOR_ENERGY
-│   ├── Tech themes → purified against: MKT_US, SECTOR_TECH
-│   ├── REIT themes → purified against: MKT_US, THEMATIC_REITS
-│   └── Country themes → purified against: MKT_US, regional parent
-└── Country factors
-    └── purified against: MKT_US, regional parent
-```
+For any historical request, check the returned history start and end dates, observation count, materialization version, and freshness fields. A `range=max` result should only be described to the row-level history floor returned for that factor.
 
-**Why hierarchical purification?**
+## Preserve the interpretation envelope
 
-The choice to purify against a small number of theoretically motivated parent factors — rather than all factors simultaneously — is a deliberate methodological decision supported by decades of factor research:
+When a decision, model, or investor report depends on a factor result, preserve `requestId`, `traceparent`, model and methodology information, source-rights information, freshness, materialization, and degraded-state fields when returned. Compact responses can omit heavier metadata; request `response_mode=compact&include=trust` on REST, or `include: ["trust"]` in an MCP call, when you need that envelope.
 
-- **Parsimony:** Fama & French (2018, *Journal of Financial Economics*) argue that factor models should include only factors that earn their place. Redundant factors should be excluded, not controlled for via regression.
-- **Overfitting resistance:** Harvey, Liu & Zhu (2016, *Review of Financial Studies*) show that including many correlated regressors inflates false discovery. Kozak, Nagel & Santosh (2020, *Journal of Financial Economics*) demonstrate that shrinkage estimators dominate unrestricted high-dimensional OLS.
-- **Institutional alignment:** MSCI Barra's US Equity Model (USE4) uses hierarchical nesting: market → country → industry → style. Axioma and Bloomberg follow similar architectures. No major institutional risk model provider uses unrestricted regression against 100+ factors.
-- **Signal preservation:** Purifying a housing theme against market + real estate sector preserves the thematic signal. Over-purification against all known factors strips out the very characteristics that define the theme.
-
-### Step 5: Dynamic volatility targeting
-
-After purification, each factor's residual return series is dynamically leveraged to target 10% annualized volatility:
-
-- Rolling realized volatility computed over the same 156-day window
-- Leverage = min(target_vol / realized_vol, 3.0)
-- Prevents any single factor from dominating portfolio-level attribution
-- Consistent with standard practice at AQR, MSCI, and major factor ETF providers
-
-### Step 6: Z-score computation
-
-Scaled returns are converted to rolling z-scores for cross-factor comparability. Z-scores are the primary output for dashboards, screening, and signal generation.
-
-## Intraday factor snapshots
-
-During US market hours (9:30-16:00 ET), SEC API exposes intraday factor snapshots when current proxy and constituent inputs are available. Each snapshot can include raw return, purified return, scaled return, z-score, and freshness metadata so consumers can distinguish current, stale, or degraded results.
-
-## Data provenance and traceability
-
-Every factor return observation includes:
-
-- `requestId` and `traceparent` for end-to-end request tracing
-- `modelName` identifying the computation pipeline version
-- `methodology.inputs` listing the data sources consumed
-- `sourceRights.notes` documenting source-rights posture when trust metadata is included
-
-Compact responses may omit heavier trust metadata unless requested. Use `response_mode=compact&include=trust` on REST endpoints or `include: ["trust"]` in MCP tool calls when an agent needs freshness, materialization, methodology, source-rights, and degraded-state metadata alongside the answer.
-
-## Methodology comparison
-
-| Feature | SEC API | MSCI Barra (USE4) |
-|---------|------|-------------------|
-| Purification | Hierarchical, 1–3 declared parents | Hierarchical nesting |
-| Estimation window | Rolling 156-day | Rolling 252-day with exponential decay |
-| Factor hierarchy | Market → Sector → Theme | Market → Country → Industry → Style |
-| Weighting | Cap-weight (style), equal-weight (thematic) | Cap-weight |
-| Volatility targeting | 10% annual, dynamic leverage | Factor-specific |
-| Recomputation | Market-calendar-aware daily refresh plus intraday snapshots when current inputs are available | Daily |
-| Factor count | 230+ tracked definitions, narrower launch API surface | Varies by model |
-
-## Thematic basket methodology
-
-SEC API's 81 thematic baskets cover named investment themes across energy, technology, healthcare, financials, real estate, consumer, transport, ESG, and regional equity.
-
-**Two construction modes:**
-
-1. **ETF-backed** (66 baskets): An institutional ETF provider handles constituent selection and rebalancing. SEC API computes the spread versus a relevant benchmark and applies hierarchical purification. Examples: genomics (ARKG vs XLV), nuclear energy (URA vs SPY), cybersecurity (CIBR vs XLK).
-
-2. **Curated constituent** (15 baskets): Equal-weight portfolio of named constituents versus a benchmark. Constituents reviewed quarterly. Examples: hotel REITs (18 stocks vs VNQ), trucking (16 stocks vs XLI), alternative asset managers (10 stocks vs XLF).
-
-Both modes pass through the same hierarchical purification and volatility-targeting pipeline.
-
-## Academic references
-
-- Ang, A., & Kristensen, D. (2012). Testing conditional factor models. *Journal of Financial Economics*, 106(1), 132–156.
-- Asness, C. S., Moskowitz, T. J., & Pedersen, L. H. (2013). Value and momentum everywhere. *Journal of Finance*, 68(3), 929–985.
-- DeMiguel, V., Garlappi, L., & Uppal, R. (2009). Optimal versus naive diversification. *Review of Financial Studies*, 22(5), 1915–1953.
-- Fama, E. F., & French, K. R. (2018). Choosing factors. *Journal of Financial Economics*, 128(2), 234–252.
-- Harvey, C. R., Liu, Y., & Zhu, H. (2016). ...and the cross-section of expected returns. *Review of Financial Studies*, 29(1), 5–68.
-- Kozak, S., Nagel, S., & Santosh, S. (2020). Shrinking the cross-section. *Journal of Financial Economics*, 135(2), 271–292.
-- Menchero, J., Orr, D. J., & Wang, J. (2011). The Barra US equity model (USE4). *MSCI Barra Research*.
-- Patton, A. J., & Verardo, M. (2012). Does beta move with news? *Review of Financial Studies*, 25(9), 2789–2839.
+The methodology is an explanation of the factor calculation, not a performance claim or investment recommendation. Continue with [Factor provenance](/factor-provenance), [Factor freshness](/factor-freshness), and the [Factor quickstart](/factor-quickstart).

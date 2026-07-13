@@ -1,30 +1,32 @@
 ---
 title: "SEC API status"
-description: "Check service availability and collect the evidence needed to diagnose an API or MCP request"
+description: "Check public service availability and retain the right evidence when an API or MCP request needs diagnosis"
 ---
 
-Start with the public status page and a health request. A healthy service check does not prove that a particular issuer, filing, derived dataset, or upstream SEC source is available.
+Use the public status page and a health request to check the service. Neither check proves that a particular issuer, filing, derived dataset, or upstream SEC source is available for your request.
 
 ```bash
 curl -sS "https://api.secapi.ai/healthz"
 ```
 
-## Public endpoints
+## Public service checks
 
-- Status: [status.secapi.ai](https://status.secapi.ai)
-- API: `https://api.secapi.ai`
-- Hosted MCP: `https://api.secapi.ai/mcp`
-- Health: `https://api.secapi.ai/healthz`
-- Readiness: `https://api.secapi.ai/readyz`
+| Surface | Address |
+| --- | --- |
+| Status | [status.secapi.ai](https://status.secapi.ai) |
+| API | `https://api.secapi.ai` |
+| Hosted MCP | `https://api.secapi.ai/mcp` |
+| Health | `https://api.secapi.ai/healthz` |
+| Readiness | `https://api.secapi.ai/readyz` |
 
-`/healthz` is a service-health check. `/readyz` is a readiness check. Use the response from the endpoint you call as the evidence for that check; neither replaces route-specific source, provenance, freshness, or degradation fields.
+`/healthz` checks service health. `/readyz` checks readiness. Use the response from the check you called as evidence for that check only. Route-level source, provenance, freshness, and degradation fields remain the evidence for a data result.
 
-## When a request fails
+## Diagnose one failed request
 
-1. Check [status.secapi.ai](https://status.secapi.ai) and request `/healthz` once.
+1. Check [status.secapi.ai](https://status.secapi.ai), then call `/healthz` once.
 2. Reproduce the API or MCP request once with the same endpoint and safe, redacted inputs.
-3. For rate limits, honor `Retry-After`; do not loop on quota, billing-cap, or authorization failures.
-4. Keep the endpoint, timestamp, HTTP status, error `code`, `Request-Id`, and `traceparent` when present.
-5. Include route-specific source and state fields for a data-result issue, but never send an API key or private payload.
+3. Honor `Retry-After` for rate limits. Do not loop on quota, billing-cap, or authorization failures.
+4. Retain the endpoint, timestamp, HTTP status, error `code`, `Request-Id`, and `traceparent` when present.
+5. For a data-result issue, retain route-specific source and state fields. Never include an API key or private payload in a support report.
 
-Read [Troubleshooting](/troubleshooting) for status and error-code guidance, and [Freshness and source evidence](/freshness-and-trust) for the distinction between a service check and a data result.
+Read [Request diagnostics](/request-diagnostics) to inspect a retained request ID, [Troubleshooting](/troubleshooting) for error handling, and [Freshness and source evidence](/freshness-and-trust) for the difference between a healthy service and an evidence-ready result.
