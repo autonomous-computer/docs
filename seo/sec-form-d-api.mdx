@@ -1,58 +1,36 @@
 ---
-title: "SEC Form D API: Search Private-Offering Filings and Read Structured Data"
-description: "Search Form D and D/A filings by issuer, CIK, and filing date, then retrieve structured data from a specific Form D filing."
+title: "SEC Form D API"
+description: "Discover Form D and D/A filings by issuer and retrieve structured XML data for a known accession."
 ---
 
-# SEC Form D API
+Form D is a notice filing for certain exempt offerings. `GET /v1/forms/d` is the discovery route for Form D and `D/A` records; `GET /v1/forms/d/{accessionNumber}` retrieves structured data parsed from the known filing's XML. Neither route proves that an offering closed, that all securities were sold, or that every economic term is public.
 
-Form D is a notice filing for certain exempt offerings. It can be useful for spotting a filing, identifying the issuer, and reading the disclosed offering information. It does not prove that an offering closed, that the entire amount was sold, or that every economic term is public.
-
-SEC API provides two Form D routes:
-
-| Route | Use it for |
-| --- | --- |
-| `GET /v1/forms/d` | Finding recent Form D and D/A filings by ticker, CIK, filing date, and page cursor. |
-| `GET /v1/forms/d/{accessionNumber}` | Reading structured Form D data parsed from the XML for one known accession number. |
-
-## Search filings first
+## Find filings, then select one accession
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/forms/d?ticker=EXAMPLE&date_from=2025-01-01&limit=10"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/forms/d?cik=0000000000&date_from=2025-01-01&limit=10"
 ```
 
-The list is a standard JSON envelope with `data`, `hasMore`, `nextCursor`, and `requestId`. Its cursor may be prefixed with `db:` or `sec:` so pagination remains on the source selected for the first page. Pass the returned cursor through unchanged.
+The list route accepts `ticker`, `cik`, `date_from`, `date_to`, `limit`, `cursor`, and `submission_file_limit`. It returns a list envelope with `data`, `hasMore`, `nextCursor`, and `requestId`. A filing row includes identity such as form, filing date, accession number, issuer fields where available, filing URL, provenance, and source/freshness metadata.
 
-Use the `accessionNumber` in a list row to fetch structured data:
+Pass `nextCursor` unchanged. It can be prefixed `db:` or `sec:` to keep pagination on the source selected for the first page; do not strip the prefix or reuse it after filters change.
+
+## Retrieve structured data by accession
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/forms/d/0000000000-00-000000"
 ```
 
-## How to use Form D responsibly
+Use an accession returned from discovery rather than a fabricated placeholder. Retain the original filing URL, accession, form, filing date, and `requestId` with the structured result so the XML filing remains available for review.
 
-1. Treat the list route as discovery, not a private-market transaction feed.
-2. Inspect the filing and its source URL when an offering matters to your diligence.
-3. Keep the accession number with any downstream note or model output so another reader can reproduce the check.
-4. Distinguish original Form D filings from amendments (`D/A`); an amendment can revise a prior notice without creating a new financing event.
+## Evidence limits
 
-## Useful filters
+Treat an amendment (`D/A`) as a revision to a notice, not automatically as a new financing event. An empty list or a missing filter match is a retrieval result, not proof of no offering. Issuer ticker coverage can be incomplete for private issuers; CIK is the stronger identifier when available.
 
-`GET /v1/forms/d` accepts `ticker`, `cik`, `date_from`, `date_to`, `limit`, `cursor`, and `submission_file_limit`.
+Use the filed source to determine offering amount, sales, investors, jurisdictions, and amendment context. Keep those disclosures separate from any underwriting inference.
 
-The API does not claim to infer industry, financing round, total capital raised, or an offering outcome from the filing. Use the source filing and your own underwriting process for those conclusions.
+## Next action
 
-## Continue from here
-
-<CardGroup cols={2}>
-  <Card title="Form D API reference" icon="brackets-curly" href="/api-reference/forms/get-v1-forms-d">
-    Review pagination and list parameters.
-  </Card>
-  <Card title="Structured Form D reference" icon="file-code" href="/api-reference/forms/get-v1-forms-d-accessionNumber">
-    Retrieve one filing by accession number.
-  </Card>
-</CardGroup>
-
-- [Offerings API](/api-reference/offerings)
-- [SEC filing search API](/seo/sec-filing-search-api)
+Search by CIK and date, select the accession you can cite, then retrieve structured XML data and review the linked Form D before escalating it as a transaction signal.

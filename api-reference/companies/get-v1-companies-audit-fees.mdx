@@ -1,0 +1,61 @@
+---
+title: "GET /v1/companies/audit-fees"
+description: "Return principal-accountant fee rows extracted from the latest DEF 14A or 10-K for an issuer"
+---
+
+Return principal-accountant fee rows extracted from the latest `DEF 14A` or `10-K` for an issuer. Provide `ticker` or `cik`; prefer the stable CIK when ticker history matters.
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
+- `lineage`
+
+## Example request
+
+<RequestExample>
+```bash
+curl -X GET \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/companies/audit-fees?ticker=AAPL"
+```
+</RequestExample>
+
+## Example response
+
+<ResponseExample>
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "audit_fee_entry",
+      "category": "Audit Fees",
+      "amount": 25000000,
+      "rawText": "Audit Fees: $25,000,000"
+    }
+  ],
+  "accessionNumber": "0000320193-25-000079",
+  "filingDate": "2025-10-31",
+  "sourceForm": "DEF 14A",
+  "lineage": {
+    "sources": ["sec_edgar"],
+    "canonical": true,
+    "surface": "companies"
+  },
+  "requestId": "req_example_audit_fees",
+  "traceparent": "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
+}
+```
+</ResponseExample>
+
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId`, `traceparent`, and `lineage` in logs and downstream reports
+- an empty `data` array can mean no eligible filing or audit-fee table was found; it does not establish zero fees

@@ -1,114 +1,37 @@
 ---
-title: "SEC Board Members API — Board Composition from Proxy Statements"
-description: "Access structured board of directors data extracted from SEC proxy statements (DEF 14A) via API. Track board composition, independence, committees, and tenure. Get started free at secapi.ai/signup."
+title: "SEC Board Members API"
+description: "Retrieve a board roster parsed from definitive proxy filings, with committee coverage and source evidence."
 ---
 
-Public companies disclose their board of directors in annual proxy statements. SEC API extracts director names, independence status, committee memberships, tenure, and demographic data — giving you a structured view of corporate governance for any SEC filer.
+`GET /v1/board` returns the latest board composition the service can derive from an issuer's definitive proxy (`DEF 14A`). It is a current-proxy extraction for research triage, not a director-network database, a historical board feed, or a governance rating.
 
-## Capabilities
-
-<CardGroup cols={2}>
-  <Card title="Full board composition" icon="users">
-    Director names, titles, independence status, and tenure for every proxy filer.
-  </Card>
-  <Card title="Committee membership" icon="people-group">
-    Audit, compensation, and nominating committee assignments with chair designations.
-  </Card>
-  <Card title="Board diversity data" icon="chart-pie">
-    Gender, ethnicity, and age data where disclosed in the proxy statement.
-  </Card>
-  <Card title="Historical tracking" icon="clock-rotate-left">
-    Track board changes over time — new appointments, departures, and committee rotations.
-  </Card>
-</CardGroup>
-
-## Quick start
-
-Get Tesla's current board of directors:
+## Retrieve a board roster
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/board-members?ticker=TSLA"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/board?cik=0000320193"
 ```
 
-```json
-{
-  "ticker": "TSLA",
-  "company_name": "Tesla, Inc.",
-  "filing_date": "2025-01-15",
-  "directors": [
-    {
-      "name": "Robyn Denholm",
-      "title": "Chair of the Board",
-      "independent": true,
-      "tenure_years": 10,
-      "committees": ["Audit"],
-      "age": 51
-    },
-    {
-      "name": "Elon Musk",
-      "title": "CEO and Director",
-      "independent": false,
-      "tenure_years": 21,
-      "committees": [],
-      "age": 53
-    }
-  ],
-  "board_size": 8,
-  "independent_count": 6
-}
-```
+`ticker` or `cik` is required. The response identifies the source with `form`, `filingDate`, `reportDate`, `accessionNumber`, and `provenance`; it returns `directorCount`, `directors`, `capability`, `committeeCoverage`, and `statusNote`.
 
-Search for boards with specific characteristics:
+Each director row can include `name`, `roleTitle`, `nominationStatus`, `independence`, `committees`, `chairCommittees`, nullable `age`, nullable `directorSince`, and a `biographySnippet`. Treat nullable fields and `unknown` labels as unavailable extraction, not negative facts.
 
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/board-members/search?min_board_size=10&min_independent_pct=0.8"
-```
+## Check capability before using the roster
 
-## Use cases
+`capability` is `supported`, `degraded`, or `unavailable`. `committeeCoverage` is `complete`, `partial`, or `none`. A degraded result may contain a useful roster while missing committee or independence coverage; an unavailable result can still identify the proxy and explain why the parser could not establish a stable roster.
 
-### Corporate governance analysis
+Keep these fields with every downstream record:
 
-Score board quality based on independence ratios, committee structure, director tenure, and diversity metrics across portfolios.
+- `accessionNumber`, `filingDate`, and the returned source URL/provenance
+- `capability`, `committeeCoverage`, and `statusNote`
+- `requestId` and `traceparent` for troubleshooting
 
-### Director network mapping
+## Correct source handling
 
-Identify directors who serve on multiple boards and map the interlocking directorate network across public companies.
+Read the cited `DEF 14A` before making a board, independence, tenure, diversity, or committee conclusion. The endpoint searches recent definitive proxies to find a parsable roster; it does not promise that its result represents a legal board register, every committee assignment, or a board's status after the proxy date.
 
-### ESG and diversity reporting
+For a dated proxy or a manual historical comparison, use [filing search](/seo/sec-filing-search-api) with `form=DEF%2014A`, retain the accession numbers, and compare the source disclosures rather than treating two latest-route calls as a history API.
 
-Track board diversity metrics over time to measure progress on gender and ethnic representation commitments.
+## Next action
 
-### Activism and proxy contest research
-
-Understand current board composition before proxy fights. Track slate changes and director turnover after activist campaigns.
-
-## API endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/companies/board-members` | Current board for a company |
-| `GET /v1/companies/board-members/history` | Historical board composition |
-| `GET /v1/companies/board-members/search` | Search boards by characteristics |
-
-## Why SEC API for board data
-
-| Feature | SEC API | Raw EDGAR | BoardEx | ISS |
-|---------|-----------|-----------|---------|-----|
-| Structured JSON API | Yes | No (HTML) | Yes | Yes |
-| Committee data | Yes | Yes (unstructured) | Yes | Yes |
-| Director network mapping | Yes | Manual | Yes | No |
-| REST API | Yes | No | Partial | Partial |
-| Coverage | All proxy filers | All proxy filers | Global | Global |
-| Pricing | Pay-as-you-go | Free (raw) | $$$$ | $$$$ |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="/getting-started">
-  Start analyzing board composition in under 60 seconds. 150 free API calls (one-time).
-</Card>
-
-- [Executive Compensation API](/seo/executive-compensation-api)
-- [SEC EDGAR API](/seo/sec-edgar-api)
-- [API Reference](/api-reference)
+Use the response as a source-linked roster for a review queue, then open the returned proxy before publishing a governance or investment conclusion.

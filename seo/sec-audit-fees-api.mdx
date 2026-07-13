@@ -1,100 +1,34 @@
 ---
-title: "SEC Audit Fees API — Structured Data from Proxy Statements"
-description: "Access structured audit fee data extracted from SEC proxy statements (DEF 14A) via API. Track audit, audit-related, tax, and all other fees by company. Get started free at secapi.ai/signup."
+title: "SEC Audit Fees API"
+description: "Retrieve the latest parsed principal-accountant fee rows from a DEF 14A or 10-K, with filing identity for source review."
 ---
 
-Every public company discloses fees paid to its external auditor in its annual proxy statement (DEF 14A). SEC API extracts and structures these disclosures — audit fees, audit-related fees, tax fees, and all other fees — so you can analyze auditor economics, independence risks, and cost trends programmatically.
+`GET /v1/companies/audit-fees` extracts disclosed principal-accountant fee rows for one issuer. It first looks for the latest `DEF 14A` and falls back to the latest `10-K`; it is not a peer screener, a fee-history endpoint, or an auditor-independence score.
 
-## Capabilities
-
-<CardGroup cols={2}>
-  <Card title="Four fee categories" icon="money-check-dollar">
-    Audit fees, audit-related fees, tax fees, and all other fees extracted and categorized from proxy statements.
-  </Card>
-  <Card title="Auditor identification" icon="building-columns">
-    Auditing firm name and PCAOB ID included with every record for easy cross-referencing.
-  </Card>
-  <Card title="Historical trends" icon="chart-line">
-    Track how audit fees change over time for a company — or compare fees across an entire industry.
-  </Card>
-  <Card title="Independence analysis" icon="scale-balanced">
-    Compare non-audit fees to audit fees to flag potential auditor independence concerns.
-  </Card>
-</CardGroup>
-
-## Quick start
-
-Get Microsoft's audit fees from the latest proxy:
+## Retrieve the current disclosed table
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/audit-fees?ticker=MSFT&limit=1"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/companies/audit-fees?ticker=AAPL"
 ```
 
-```json
-{
-  "ticker": "MSFT",
-  "company_name": "Microsoft Corporation",
-  "fiscal_year": 2024,
-  "auditor": "Deloitte & Touche LLP",
-  "audit_fees": 42500000,
-  "audit_related_fees": 2100000,
-  "tax_fees": 8300000,
-  "all_other_fees": 500000,
-  "total_fees": 53400000,
-  "non_audit_ratio": 0.204
-}
-```
+Provide `ticker` or `cik`; prefer the stable CIK when ticker history matters. The response is an unpaginated `object: "list"` with `data` rows containing `category`, nullable `amount`, and `rawText`, plus `accessionNumber`, `filingDate`, `sourceForm`, and request metadata. Categories are parser labels for the fee-table rows, so preserve the returned `rawText` when storing a number.
 
-Compare audit fees across a sector:
+The usual evidence is the proxy's principal-accountant fee table. A `10-K` fallback can be relevant when the fee disclosure appears in Item 14, but `sourceForm` tells a reviewer which filing supplied the result.
 
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/audit-fees?sic=7372&limit=20&sort=total_fees:desc"
-```
+## Build a reviewable workflow
 
-## Use cases
+1. Call the route with the issuer's stable CIK when ticker history matters.
+2. Store `accessionNumber`, `filingDate`, `sourceForm`, `requestId`, and each returned row.
+3. Open the source filing before comparing years or interpreting non-audit fees. Confirm the fiscal periods, fee labels, auditor name, and footnotes.
+4. For an earlier period, first find the specific `DEF 14A` or `10-K` with [filing search](/seo/sec-filing-search-api); this route itself always selects the latest eligible filing.
 
-### Auditor independence monitoring
+## Empty results and limits
 
-PCAOB rules limit non-audit services. Track the ratio of non-audit fees to total fees to flag potential independence issues before they become problems.
+An HTTP 200 with empty `data` can carry a note explaining that no eligible filing was found or that a fee table was not extracted. It does not establish zero fees, no auditor, or no disclosure. Amounts may be null when a matching row does not yield a parseable dollar amount.
 
-### Audit fee benchmarking
+Do not call the extracted categories an independence determination. The SEC filing is the source for category definitions, the relevant fiscal years, audit-committee context, and any qualification needed for an investment or compliance conclusion.
 
-Compare audit fees across peers in the same industry and of similar size to identify outliers — either underinvestment in auditing or excessive fees.
+## Next action
 
-### Auditor change detection
-
-Monitor when companies switch auditors by tracking changes in the auditor field year over year. Auditor changes can signal accounting issues.
-
-### Academic research
-
-Study the relationship between audit fees, audit quality, restatement risk, and other corporate governance factors across the full SEC universe.
-
-## API endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/companies/audit-fees` | Audit fee data by company |
-| `GET /v1/companies/audit-fees/history` | Historical audit fees over time |
-
-## Why SEC API for audit fee data
-
-| Feature | SEC API | Raw EDGAR | Audit Analytics | Manual |
-|---------|-----------|-----------|-----------------|--------|
-| Structured JSON API | Yes | No (HTML) | Yes | N/A |
-| All four fee categories | Yes | Yes (unstructured) | Yes | Depends |
-| Auditor identification | Yes | Yes (unstructured) | Yes | Manual |
-| REST API | Yes | No | Partial | No |
-| Historical coverage | 2004+ | 2004+ | 2000+ | Per-project |
-| Pricing | Pay-as-you-go | Free (raw) | $$$ | Labor cost |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="/getting-started">
-  Start pulling audit fee data in under 60 seconds. 150 free API calls (one-time).
-</Card>
-
-- [Executive Compensation API](/seo/executive-compensation-api)
-- [SEC EDGAR API](/seo/sec-edgar-api)
-- [API Reference](/api-reference)
+Use the returned accession to create a source-linked review record, then use [filing search](/seo/sec-filing-search-api) to select and compare explicitly dated disclosures.

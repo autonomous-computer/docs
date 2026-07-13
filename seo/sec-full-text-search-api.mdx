@@ -1,42 +1,34 @@
 ---
 title: "SEC Full-Text Search API"
-description: "Search exact terms across SEC filing records and extracted sections, then inspect the source filing before using a result."
+description: "Search filing manifests and extracted section text with issuer, form, accession, and historical filters."
 ---
 
-Use full-text search when a phrase, policy name, or contract term matters. It searches both filing records and extracted sections, so the response has two lists to review.
+`GET /v1/search/fulltext` runs the same query against filing manifests and extracted filing sections. Use it to locate evidence for an exact term or query, then retrieve or open the returned filing before making a claim. It is not semantic search and an empty response is not proof that an issuer never used a concept.
 
-## Search filing content
+## Run a scoped search
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?q=material%20weakness&ticker=AAPL&form=10-K&limit=5"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/search/fulltext?q=material%20weakness&ticker=AAPL&form=10-K&limit=10"
 ```
 
-`q` is required. Constrain the query with a ticker or CIK, form, accession number, filing year, `fy`, or `date_from` and `date_to`.
+`q` is required. Scope it with `ticker` (or `symbol`), `cik`, `form`, `accession_number`, `filing_year`, issuer fiscal year `fy`/`year`, or `date_from`/`date_to`. `limit` is 1 through 100 and is split between the filing and section search legs, so the result is not a single globally paginated list.
 
-```json
-{
-  "object": "fulltext_search",
-  "query": "material weakness",
-  "filings": { "object": "list", "data": [], "count": 0 },
-  "sections": {
-    "object": "list",
-    "data": [],
-    "count": 0,
-    "degradedState": null
-  },
-  "requestId": "req_example"
-}
-```
+The response has `object: "fulltext_search"`, the echoed `query`, `filings`, `sections`, `requestId`, and `traceparent`. Each leg has `data` and `count`; section results can report `degradedState` when section-search capability is partially unavailable.
 
-The example intentionally shows an empty result: matched fields depend on the filing corpus at request time. In a real response, retain filing identity and source URLs, then open the filing or retrieve its section before drawing a conclusion.
+## Turn a hit into citable evidence
 
-## When to use another path
+Prefer a section hit for a content claim. Retain its filing identity, section key, source URL/provenance, and request ID, then use the accession-specific section route or open the source filing. A filing-manifest hit can be useful for discovery but is not itself the passage that supports a statement.
 
-- Use [semantic search](/seo/sec-semantic-search-api) for related concepts expressed in different language.
-- Use [section search](/api-reference/sections/get-v1-sections-search) when you need a cited extracted passage.
-- Use [filing search](/seo/sec-filing-search-api) when the question is which filings exist, not what they say.
+Use [semantic search](/seo/sec-semantic-search-api) when the question is about related language rather than exact wording. Use [filing search](/seo/sec-filing-search-api) when the task is selecting filings rather than searching their content.
 
-## Production notes
+## Common errors
 
-An empty response is not evidence that the issuer never made a disclosure. Exact wording, form selection, date filters, and search-backend availability all affect the result. Log `requestId` and retry only bounded, retryable server failures.
+- Supplying different `ticker` and `symbol` values; they must agree.
+- Treating a fiscal-year filter as a calendar filing-year filter. With an issuer identifier, `fy` maps to that issuer's fiscal filing window; `filing_year` is a calendar filing-year selector.
+- Ignoring `degradedState` or a non-2xx response when a search backend is unavailable.
+- Quoting a snippet without reading the source filing, table, definitions, and surrounding qualification.
+
+## Next action
+
+Start with a narrow issuer/form/date query, retain the hit's source fields, then retrieve the exact section or filing needed for a source-backed research note.

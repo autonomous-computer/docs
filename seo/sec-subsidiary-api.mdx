@@ -1,104 +1,36 @@
 ---
-title: "SEC Subsidiaries API — Exhibit 21 Extraction for Corporate Structures"
-description: "Access structured subsidiary data extracted from SEC Exhibit 21 filings via API. Map corporate hierarchies, jurisdictions, and ownership structures. Get started free at secapi.ai/signup."
+title: "SEC Subsidiaries API"
+description: "Retrieve subsidiaries parsed from the latest 10-K Exhibit 21, with annual-filing evidence and extraction boundaries."
 ---
 
-Public companies disclose their subsidiary entities in Exhibit 21 of their 10-K filings. SEC API extracts and structures this data — subsidiary names, jurisdictions of incorporation, and ownership percentages — so you can map corporate hierarchies programmatically without parsing HTML tables.
+`GET /v1/companies/subsidiaries` returns a list parsed from the latest available `10-K` Exhibit 21 for one issuer. It is useful for starting a corporate-structure review, but an Exhibit 21 is a disclosure exhibit, not a complete legal-entity graph or a guarantee of current control.
 
-## Capabilities
-
-<CardGroup cols={2}>
-  <Card title="Exhibit 21 extraction" icon="sitemap">
-    Subsidiary names, jurisdictions, and ownership percentages parsed from Exhibit 21 across all SEC filers.
-  </Card>
-  <Card title="Corporate hierarchy mapping" icon="diagram-project">
-    Trace parent-subsidiary relationships to understand the full corporate structure of any public company.
-  </Card>
-  <Card title="Jurisdiction data" icon="earth-americas">
-    See where each subsidiary is incorporated — useful for tax structure analysis and regulatory mapping.
-  </Card>
-  <Card title="Historical tracking" icon="clock-rotate-left">
-    Compare subsidiary lists across years to detect new entities, dissolved entities, and jurisdiction changes.
-  </Card>
-</CardGroup>
-
-## Quick start
-
-Get Apple's subsidiaries from the latest Exhibit 21:
+## Retrieve the latest disclosed list
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/subsidiaries?ticker=AAPL"
+curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  --data-urlencode "ticker=AAPL" --data-urlencode "view=agent" \
+  "https://api.secapi.ai/v1/companies/subsidiaries"
 ```
 
-```json
-{
-  "ticker": "AAPL",
-  "company_name": "Apple Inc",
-  "filing_date": "2024-11-01",
-  "subsidiaries": [
-    {
-      "name": "Apple Operations International Limited",
-      "jurisdiction": "Ireland",
-      "ownership_pct": 100
-    },
-    {
-      "name": "Apple Sales International Limited",
-      "jurisdiction": "Ireland",
-      "ownership_pct": 100
-    },
-    {
-      "name": "Beats Electronics, LLC",
-      "jurisdiction": "Delaware",
-      "ownership_pct": 100
-    }
-  ],
-  "total_subsidiaries": 42
-}
-```
+`ticker` or `cik` is required. In `view=agent`, expect an unpaginated `data` list of `name`, nullable `jurisdiction`, and nullable `ownershipPercent`, with `accessionNumber`, `filingDate`, `filingUrl`, `note`, and `requestId` at the envelope level. The default shape also includes lineage metadata.
 
-## Use cases
+## Use the source correctly
 
-### Tax structure analysis
+The endpoint selects the latest 10-K, finds an `EX-21` document, and parses its HTML. Store the source accession, date, URL, and returned values as a dated snapshot. Read the Exhibit 21 for any material conclusion: omission, jurisdiction wording, and ownership presentation are filing-specific.
 
-Map offshore subsidiaries and holding company structures to understand corporate tax strategies and identify jurisdiction-specific risks.
+An empty `data` list with a note that Exhibit 21 was not found does not prove the issuer has no subsidiaries. A null jurisdiction or ownership percentage is not a zero or an ownership conclusion.
 
-### M&A due diligence
+## Compare periods explicitly
 
-Before an acquisition, pull the target's full subsidiary list to understand the scope of the corporate structure and potential liabilities.
+There is no history parameter. To analyze change, retrieve the current list, use [filing search](/seo/sec-filing-search-api) to choose an earlier 10-K accession, and retain both exhibits as source evidence. Normalize entity names only in a derived field; preserve the returned name and filing identity.
 
-### Sanctions and compliance screening
+## Common errors
 
-Cross-reference subsidiary names and jurisdictions against sanctions lists and restricted jurisdictions for AML/KYC workflows.
+- `400 missing_target`: provide `ticker` or `cik`.
+- A ticker can change over time; prefer CIK for a durable issuer mapping.
+- Do not call the result a tax, sanctions, M&A, or beneficial-ownership determination without reviewing the source and relevant external records.
 
-### Competitive intelligence
+## Next action
 
-Track when competitors create new subsidiaries, which can signal expansion into new markets or product areas.
-
-## API endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /v1/companies/subsidiaries` | Subsidiaries for a company |
-| `GET /v1/companies/subsidiaries/history` | Historical subsidiary lists |
-
-## Why SEC API for subsidiary data
-
-| Feature | SEC API | Raw EDGAR | Bureau van Dijk | Manual research |
-|---------|-----------|-----------|-----------------|-----------------|
-| Structured JSON API | Yes | No (HTML tables) | Yes | N/A |
-| Automatic extraction | Yes | No | Yes | No |
-| Historical comparison | Yes | Manual | Yes | Manual |
-| REST API access | Yes | No | Partial | No |
-| Coverage | All 10-K filers | All 10-K filers | Global | Per-project |
-| Pricing | Pay-as-you-go | Free (raw) | $$$$ | Labor cost |
-
-## Get started
-
-<Card title="Get your API key" icon="key" href="/getting-started">
-  Start mapping corporate structures in under 60 seconds. 150 free API calls (one-time).
-</Card>
-
-- [SEC EDGAR API](/seo/sec-edgar-api)
-- [Company Search API](/seo/sec-company-search-api)
-- [API Reference](/api-reference)
+Create an accession-keyed snapshot table, then open the cited Exhibit 21 before escalating a structural change for legal, compliance, or investment review.

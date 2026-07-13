@@ -1,56 +1,39 @@
 ---
-title: "13F holdings comparison API"
-description: "Compare the latest two parsable 13F reports for one manager and keep the dates and filing evidence that bound the result"
+title: "13F Holdings Comparison API"
+description: "Compare the latest two parsable 13F reports for one manager CIK, with filing dates and source provenance."
 ---
 
-Use `POST /v1/owners/13f/compare` to identify differences between the latest two parsable 13F reports available for a manager CIK. The route is useful for building a review queue; it is not a way to select two arbitrary quarters or infer a manager's current book.
+`POST /v1/owners/13f/compare` compares the latest two parsable 13F reports found for an institutional manager. The input CIK belongs to the **manager/filer**, not the issuer whose security appears in a holding. The route is a disclosed-holdings comparison, not a current portfolio, trade blotter, or two-period query API.
 
-## Get a comparison
+## Make a manager-level comparison
 
 ```bash
-curl -X POST \
+curl --fail-with-body -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
   -d '{"cik":"0001350694","limit":50}' \
   "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 
-The response identifies the current and previous filing dates and returns position rows with a status and reported share/value differences. Keep `managerName`, both filing dates, the row `cusip`, the status, `provenance`, and `requestId` in a downstream report.
+The JSON body requires `cik`; `limit` is 1 through 50 and bounds the parsed holdings considered per report. The response includes `managerName`, `currentFilingDate`, `previousFilingDate`, `rows`, `provenance`, freshness metadata, and `requestId`.
 
-## Read the result correctly
+Each row identifies `issuer`, nullable `cusip`, `status` (`added`, `removed`, `changed`, or `unchanged`), current and previous `valueUsdThousands`, current and previous shares, and deltas. Reported value fields are in thousands of USD. Retain both filing dates and provenance when ranking a change.
 
-| Response field | Use it for | Do not use it for |
-| --- | --- | --- |
-| `currentFilingDate` and `previousFilingDate` | Identifying the two disclosed reports | Inferring trade dates |
-| `status` | Grouping added, removed, changed, and unchanged rows | Explaining manager intent |
-| `currentShares` and `previousShares` | Measuring disclosed share-count change | Measuring complete exposure |
-| reported value fields | Ranking rows for review | Current mark-to-market value |
-| `provenance.filingUrl` | Opening the source filing | Replacing a review of the source filing |
+## Select historical periods yourself
 
-## Retrieve a specific period instead
-
-For a selected period, list available filings and request the reports separately:
+The comparison route has no `period_a` or `period_b` inputs. To compare selected reporting dates, first use:
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f/filings?cik=0001350694&limit=8"
 ```
 
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f?cik=0001350694&reportDate=2024-12-31&limit=50"
-```
+Then retrieve the relevant reports with `GET /v1/owners/13f` and compare the source-labelled outputs in your own application.
 
-The compare endpoint has no `period_a` or `period_b` query parameters. Build a custom selected-period comparison only after retrieving and labeling the two source reports yourself.
+## Interpretation limits
 
-## Failure and interpretation limits
+The service needs two parsable reports. A failure or non-2xx response is not an unchanged portfolio; handle it as an unavailable comparison and log `requestId`. 13F disclosures are delayed and do not reveal all positions, derivatives, short exposure, cash, or transactions after the report date. An added/removed row is a difference in reported filing data, not an explanation of manager intent.
 
-The request requires a CIK and accepts a body `limit` from 1 through 50. A comparison can fail when the service cannot produce the two parsable reports; handle the non-2xx response, keep its request metadata, and avoid treating a failed comparison as an unchanged portfolio.
+## Next action
 
-13F reports are delayed, limited disclosures. They do not reveal every position, hedge, cash balance, derivative, or trade after the report date.
-
-## Continue
-
-- [13F API for institutional holdings](/seo/13f-data-api)
-- [Ownership workflows](/ownership-workflows)
-- [Ownership API reference](/api-reference/owners)
+Use the manager CIK, retain filing dates and provenance for each change, and open the underlying 13F before treating a reported position change as an investment signal.

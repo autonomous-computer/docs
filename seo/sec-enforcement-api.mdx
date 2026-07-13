@@ -1,54 +1,32 @@
 ---
-title: "SEC Enforcement Actions API: Search Releases, Respondents, and Penalties"
-description: "Use a structured SEC enforcement API to search litigation releases, administrative proceedings, and AAERs with source links for review."
+title: "SEC Enforcement Actions API"
+description: "Search SEC litigation releases, administrative proceedings, and AAERs with source-linked filters for research and screening."
 ---
 
-# SEC Enforcement Actions API
+`GET /v1/events/enforcement` searches three official SEC source families: litigation releases, administrative proceedings, and Accounting and Auditing Enforcement Releases (AAERs). It helps locate source material; it does not establish liability, identify every related entity, or replace review of the SEC release and any underlying order or complaint.
 
-SEC enforcement material is published across litigation releases, administrative proceedings, and Accounting and Auditing Enforcement Releases. `GET /v1/events/enforcement` gives developers one API surface for searching those public sources by respondent, issuer, date, normalized category, and disclosed penalty amount.
-
-It is designed for evidence discovery. The returned record helps a researcher find and organize the relevant SEC release; it does not replace the release or establish liability for a person, company, or security mentioned in it.
-
-## Search an enforcement category
+## Search a bounded evidence set
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/enforcement?violation_type=fraud&date_from=2025-01-01&limit=25"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/events/enforcement?source_type=litigation_release&violation_type=fraud&date_from=2025-01-01&limit=25"
 ```
 
-Use `source_type=aaer` when the accounting and auditing release stream is specifically relevant. Use `respondent`, `ticker`, or `cik` to focus a search, but verify the match against the source document because names and issuer references are not unique identifiers.
+Use `query` for title/excerpt/release-number/document-URL text. Add `respondent`, `ticker`, or `cik` to narrow candidates; verify names against the returned release because a name or issuer reference is not a unique legal identity.
 
-## What the API returns
+The route accepts `source_type` (`litigation_release`, `administrative_proceeding`, or `aaer`), normalized `violation_type`, date and penalty ranges, `limit` (1-50), `cursor`, and `view`. The list response supplies `data`, `hasMore`, `nextCursor`, and `requestId`. Rows can include publication date, release number, title, excerpt, respondents, normalized category, reported penalty amount, and SEC document URLs.
 
-The list response contains `data`, `hasMore`, `nextCursor`, and `requestId`. An enforcement row can include:
+## Preserve the source, not just the label
 
-- `sourceType`, `publishedAt`, `releaseNumber`, `title`, and `excerpt`
-- `respondents`, with any resolved `ticker` or `cik` exposed as an aid rather than a legal conclusion
-- `violationType`, a normalized retrieval label derived from release language
-- `penaltyAmount` and `relatedReleaseNumber` where the release makes those values available
-- `documentUrl`, the SEC release to review, and `htmlUrl` when a rendered SEC page was found
+Store `documentUrl`, `htmlUrl` where present, `releaseNumber`, `publishedAt`, `provenance`, and `requestId`. `violationType` is a retrieval classifier, not the SEC's complete legal theory; a missing `penaltyAmount` is not zero. Read the release before describing allegations, respondents, remedies, a disposition, or a company-level regulatory history.
 
-## Supported normalized categories
+## Common mistakes
 
-`fraud`, `insider_trading`, `reporting_violation`, `market_manipulation`, `registration_violation`, `investment_adviser`, `broker_dealer`, `municipal_securities`, and `other`.
+- Treating an empty result as proof that the SEC has never acted against a person or issuer.
+- Reusing `nextCursor` after changing filters; retain it only with the exact query that produced it.
+- Conflating a respondent text match with a confirmed issuer identity.
+- Calling source publication date a conduct date, filing date, or final-resolution date.
 
-These categories make a broad release set easier to search. They are not a substitute for the SEC's allegations, legal theories, or final disposition.
+## Next action
 
-## Common uses
-
-**Research and diligence:** screen a watchlist or counterparty list, then link the relevant releases into a research record.
-
-**Compliance triage:** find potentially relevant source material by respondent and date before a human review.
-
-**Regulatory trend work:** group releases by source type or normalized category, while preserving the underlying source URLs for a reproducible study.
-
-## Start building
-
-<CardGroup cols={2}>
-  <Card title="Read the API reference" icon="brackets-curly" href="/api-reference/events/get-v1-events-enforcement">
-    Parameters, pagination, and the list response contract.
-  </Card>
-  <Card title="Follow the tutorial" icon="graduation-cap" href="/tutorials/search-enforcement-actions">
-    Build a small, source-aware enforcement search.
-  </Card>
-</CardGroup>
+Use a narrow source-family/date query, retain the release URL and identifiers, and open the SEC document before adding a finding to diligence or compliance output.

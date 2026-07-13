@@ -8289,6 +8289,203 @@
         "x-secapi-anonymous-read": true
       }
     },
+    "/v1/companies/audit-fees": {
+      "get": {
+        "summary": "Return principal-accountant fee rows extracted from the latest DEF 14A or 10-K for an issuer",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Provide ticker or cik; cik is preferable when ticker history matters."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Provide ticker or cik; cik is preferable when ticker history matters."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit-fee rows with the selected filing identity and SEC EDGAR lineage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": [
+                    "object",
+                    "data",
+                    "accessionNumber",
+                    "filingDate",
+                    "sourceForm",
+                    "lineage",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "description": "Parsed fee rows. Empty when no eligible filing or fee table is found.",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "object",
+                          "category",
+                          "amount",
+                          "rawText"
+                        ],
+                        "properties": {
+                          "object": {
+                            "type": "string",
+                            "const": "audit_fee_entry"
+                          },
+                          "category": {
+                            "type": "string",
+                            "description": "Parser-assigned fee category from the filing table."
+                          },
+                          "amount": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "description": "First parseable dollar amount for the category, when available."
+                          },
+                          "rawText": {
+                            "type": "string",
+                            "description": "Source table text used to derive the category and amount."
+                          }
+                        }
+                      }
+                    },
+                    "accessionNumber": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Accession number of the filing selected for extraction."
+                    },
+                    "filingDate": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Filing date of the filing selected for extraction."
+                    },
+                    "sourceForm": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "DEF 14A when available; otherwise the latest 10-K."
+                    },
+                    "note": {
+                      "type": "string",
+                      "description": "Explanation when no eligible filing or audit-fee table is found."
+                    },
+                    "lineage": {
+                      "type": "object",
+                      "required": [
+                        "sources",
+                        "canonical",
+                        "surface"
+                      ],
+                      "properties": {
+                        "sources": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": [
+                            "sec_edgar"
+                          ]
+                        },
+                        "canonical": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "surface": {
+                          "type": "string",
+                          "const": "companies"
+                        }
+                      }
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "traceparent": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "list",
+                      "data": [
+                        {
+                          "object": "audit_fee_entry",
+                          "category": "Audit Fees",
+                          "amount": 25000000,
+                          "rawText": "Audit Fees: $25,000,000"
+                        }
+                      ],
+                      "accessionNumber": "0000320193-25-000079",
+                      "filingDate": "2025-10-31",
+                      "sourceForm": "DEF 14A",
+                      "lineage": {
+                        "sources": [
+                          "sec_edgar"
+                        ],
+                        "canonical": true,
+                        "surface": "companies"
+                      },
+                      "requestId": "req_example_audit_fees",
+                      "traceparent": "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "companies.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local",
+        "x-secapi-anonymous-read": true
+      }
+    },
     "/v1/events/ma": {
       "get": {
         "summary": "Return SEC-native M&A events inferred from public-company filings and relevant exhibits",
