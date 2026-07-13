@@ -1,24 +1,47 @@
 ---
 title: "GET /v1/embed/situations/{id}"
-description: "Return public detail and events for a recent SEC-derived situation"
+description: "Public redacted situation detail used by secapi.ai situation permalinks and embeddable discovery surfaces"
 ---
 
-Return public detail and its event timeline for one recent SEC-derived situation; no API key is required.
+Public redacted situation detail used by secapi.ai situation permalinks and embeddable discovery surfaces
+
+<Info>
+Audience: application and coding agent.
+</Info>
+
+## Canonical metadata
+
+- `requestId`
+- `traceparent`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl "https://api.secapi.ai/v1/embed/situations/sit_example"
+curl -X GET \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/embed/situations/sit_0123456789abcdef0123"
 ```
 </RequestExample>
 
-## Public provenance
+## Example response
 
-When present, `publicProvenance` identifies source filing accessions and may include public SEC document links or citation spans. It never includes internal telemetry, storage keys, extraction traces, model metadata, or confidence signals.
+<ResponseExample>
+```json
+{
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+}
+```
+</ResponseExample>
 
-## Response and failures
+## Give this prompt to your agent
 
-Returns a JSON situation object with public events. Event records may include an `accessionNumber` and public SEC `documentUrl`.
+<Prompt>
+Use SEC API GET /v1/embed/situations/{id} to public redacted situation detail used by secapi.ai situation permalinks and embeddable discovery surfaces. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
 
-A missing identifier returns `400`; an unknown, non-public, or no-longer-recent situation returns `404`; unexpected failures return `500`.
+## Failure posture
+
+- treat non-2xx responses as contract-aware failures, not free-form errors
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

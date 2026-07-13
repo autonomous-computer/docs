@@ -2956,6 +2956,103 @@
         "x-secapi-smoke": "post_deploy"
       }
     },
+    "/v1/embed/situations/issues": {
+      "get": {
+        "tags": [
+          "Embed"
+        ],
+        "summary": "Public capped Special Situations Digest issue archive",
+        "description": "Anonymous, cacheable archive index for published Special Situations Digest issues. The index omits member situation rows while preserving issue metadata, source ids, and publication dates.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 24,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituationWeeklyIssueList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.situations_issues",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
+    "/v1/embed/situations/issues/{issue}": {
+      "get": {
+        "tags": [
+          "Embed"
+        ],
+        "summary": "Public Special Situations Digest issue detail by number or slug",
+        "description": "Anonymous, cacheable detail for one published Special Situations Digest issue. The response is the frozen public issue snapshot with provider-owned and market-plane internals omitted by the route projection.",
+        "parameters": [
+          {
+            "name": "issue",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituationWeeklyIssue"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.situations_issue",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
     "/v1/embed/situations/{id}": {
       "get": {
         "tags": [

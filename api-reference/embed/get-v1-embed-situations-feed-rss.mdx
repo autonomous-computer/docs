@@ -1,18 +1,55 @@
 ---
 title: "GET /v1/embed/situations/feed.rss"
-description: "Return a public RSS feed of recent situation events"
+description: "Public RSS feed of recent Special Situations events"
 ---
 
-Return a public RSS feed of recent SEC-derived situation events without an API key.
+Public RSS feed of recent Special Situations events
+
+<Info>
+Audience: application and coding agent. This is an anonymous public route. The response is RSS XML, not a JSON envelope.
+</Info>
+
+## Canonical metadata
+
+- `Content-Type: application/rss+xml; charset=utf-8`
+- `Cache-Control: public, max-age=120`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl "https://api.secapi.ai/v1/embed/situations/feed.rss"
+curl -X GET \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/embed/situations/feed.rss"
 ```
 </RequestExample>
 
-## Response and failures
+## Example response
 
-Returns RSS XML with the `application/rss+xml` content type. Use `types`, `categories`, and `tickers` to filter the recent public feed. A disabled public embed surface returns `404`; unexpected failures return `500`.
+<ResponseExample>
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>SEC API Special Situations</title>
+    <item>
+      <title>Example Corp announces definitive merger</title>
+      <link>https://secapi.ai/situations/sit_0123456789abcdef0123</link>
+      <guid>sit_0123456789abcdef0123</guid>
+    </item>
+  </channel>
+</rss>
+```
+</ResponseExample>
+
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/embed/situations/feed.rss to consume the anonymous, recent-window Special Situations feed in an RSS-compatible workflow. Parse the XML body as RSS; do not parse it as a JSON envelope. Treat it as the capped public embed surface, not the authenticated full API feed.
+</Prompt>
+
+## Failure posture
+
+- treat `404` as an unavailable public embed surface; do not silently substitute the authenticated API feed
+- parse successful responses as RSS XML, not JSON
+- retry `429` and `5xx` responses with bounded backoff

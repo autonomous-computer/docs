@@ -1,24 +1,52 @@
 ---
-title: "GET /v1/embed/situations/{id}/export"
-description: "Return a public Markdown export for a recent SEC-derived situation"
+title: "GET /v1/embed/situations/{situation_id}/export"
+description: "Public Markdown Copy-for-LLM brief for one recent Special Situation"
 ---
 
-Return a public Markdown export of one recent SEC-derived situation and its filing timeline; no API key is required.
+Public Markdown Copy-for-LLM brief for one recent Special Situation
+
+<Info>
+Audience: application and coding agent. This is an anonymous public route. The response is Markdown, not a JSON envelope.
+</Info>
+
+## Canonical metadata
+
+- `Content-Type: text/markdown; charset=utf-8`
+- `Cache-Control: public, max-age=120`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl "https://api.secapi.ai/v1/embed/situations/sit_example/export"
+curl -X GET \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/embed/situations/sit_0123456789abcdef0123/export"
 ```
 </RequestExample>
 
-## Public provenance
+## Example response
 
-The export cites source filing accessions and includes public SEC links when available. It does not expose internal telemetry, storage keys, extraction traces, model metadata, confidence signals, or private citation data.
+<ResponseExample>
+```markdown
+# Example Corp (EXMP) - merger/definitive [pending]
 
-## Response and failures
+## Timeline
+- 2026-07-08 - 8-K (0001193125-26-000001): Definitive merger agreement filed
+  https://www.sec.gov/Archives/edgar/data/1234567/000119312526000001/doc.htm
 
-Returns `text/markdown` containing the situation summary, timeline, and available source citations.
+## Citations
+- 0001193125-26-000001 - https://www.sec.gov/Archives/edgar/data/1234567/000119312526000001/doc.htm
+```
+</ResponseExample>
 
-A missing identifier returns `400`; an unknown, non-public, or no-longer-recent situation returns `404`; unexpected failures return `500`.
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/embed/situations/{situation_id}/export to retrieve the anonymous, recent-window Copy-for-LLM brief. Preserve the Markdown body and its cited filing links; do not parse it as a JSON envelope or fill missing facts with guesses.
+</Prompt>
+
+## Failure posture
+
+- treat `404` as an unknown, unavailable, or no-longer-recent public situation; do not invent a brief
+- preserve successful response bodies as Markdown, not JSON
+- retry `429` and `5xx` responses with bounded backoff
