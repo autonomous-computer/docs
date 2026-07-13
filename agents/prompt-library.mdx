@@ -1,62 +1,36 @@
 ---
-title: "Agent Prompt Library"
-description: "Copy-paste, production-grade prompts for SEC research across five customer personas, wired to the live SEC API MCP server."
+title: "Agent prompt library"
+description: "Source-backed SEC research prompts for investment, legal, insurance, communications, and independent-investor work"
 ---
 
-{/* DO NOT HAND-EDIT — generated from the agent-prompts contract. */}
+Use these prompts with the hosted [SEC API MCP server](/mcp-install). Supply the bracketed inputs, let the agent inspect the relevant tool schemas, and retain filing links and accession numbers in the output.
 
+<Note>SEC API returns public filing and market-derived data. A prompt can organize evidence; it cannot determine legal liability, suitability, underwriting terms, or investment merit.</Note>
 
-<Info>50 production-grade prompts across 5 customer personas, wired to the live SEC API MCP server at `https://api.secapi.ai/mcp`. Copy any prompt into Claude Desktop, Claude Code, or Cursor — or use the `secapi` CLI.</Info>
-
-Each prompt names the exact MCP tools it expects to call, the output artifact (memo, table, JSON export, scorecard), and any known caveats. Every entry is structurally validated against the live MCP server contract on every PR.
-
-## Personas
+## Pick a working style
 
 <CardGroup cols={2}>
-  <Card title="Law firm" icon="scale" href="/agents/prompt-library/law-firm">
-    12 prompts. Disclosure forensics, deal diligence, enforcement research, and litigation binder workflows for legal teams advising on public-company matters.
-  </Card>
-  <Card title="Investment manager" icon="trending-up" href="/agents/prompt-library/investment-manager">
-    12 prompts. Quant research, factor decomposition, 13F-vs-insider divergence, and earnings-context workflows for portfolio managers and analysts.
-  </Card>
-  <Card title="Sophisticated investor" icon="microscope" href="/agents/prompt-library/sophisticated-investor">
-    8 prompts. Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows.
-  </Card>
-  <Card title="Insurance & risk" icon="shield-alert" href="/agents/prompt-library/insurance">
-    6 prompts. D&O underwriting profile, auditor-change detection, material-weakness scans, and renewal-book monitoring for risk and underwriting teams.
-  </Card>
-  <Card title="PR firm" icon="megaphone" href="/agents/prompt-library/pr-firm">
-    12 prompts. Proxy-season narrative, 8-K material event monitoring, executive transition tracking, and peer benchmarking for IR and crisis-comms teams.
-  </Card>
+  <Card title="Law firm" icon="scale" href="/agents/prompt-library/law-firm">12 prompts. Disclosure forensics, deal diligence, enforcement research, and litigation binder workflows for legal teams advising on public-company matters.</Card>
+  <Card title="Investment manager" icon="trending-up" href="/agents/prompt-library/investment-manager">12 prompts. Quant research, factor decomposition, 13F-vs-insider divergence, and earnings-context workflows for portfolio managers and analysts.</Card>
+  <Card title="Sophisticated investor" icon="microscope" href="/agents/prompt-library/sophisticated-investor">8 prompts. Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows.</Card>
+  <Card title="Insurance and risk" icon="shield-alert" href="/agents/prompt-library/insurance">6 prompts. D&O underwriting profile, auditor-change detection, material-weakness scans, and renewal-book monitoring for risk and underwriting teams.</Card>
+  <Card title="PR firm" icon="megaphone" href="/agents/prompt-library/pr-firm">12 prompts. Proxy-season narrative, 8-K material event monitoring, executive transition tracking, and peer benchmarking for IR and crisis-comms teams.</Card>
 </CardGroup>
 
-## How to use
+## Use a prompt well
 
-1. **Install SEC API MCP** in Claude Desktop, Claude Code, or Cursor — see [MCP install](/mcp-install).
-2. **Copy any prompt** from a persona page (or via `secapi agents prompts copy <id>`).
-3. **Paste into a fresh chat** with the MCP server enabled. The agent will call the tools listed in the prompt's expected tool chain.
+1. Replace every bracketed input, including dates and the issuer list.
+2. Ask the agent to call `tools.describe` first if your client has not loaded the relevant schemas.
+3. Treat the cited filing, section, accession number, and period as the evidence. Re-open the filing before publishing or acting on a material conclusion.
+
+The prompts favor `entities.resolve`, `filings.search`, `sections.get`, and `sections.search` for primary-source work. Tools such as `intelligence.query`, factor analytics, and 13F data are useful leads or context, not substitutes for the underlying filing.
+
+See [MCP workflows](/mcp-workflows) for the retrieval pattern and [API conventions](/api-conventions) when you need a repeatable REST or SDK workflow.
 
 ## CLI access
 
 ```bash
-# List the 5 personas
 secapi agents personas
-
-# List all prompts (or filter by persona)
-secapi agents prompts list
 secapi agents prompts list --persona law-firm
-secapi agents prompts list --persona investment-manager --json
-
-# Read a specific prompt with full metadata
 secapi agents prompts read law-firm-enforcement-history
-
-# Copy a prompt body to clipboard for paste-into-Claude-Desktop
-secapi agents prompts copy investment-manager-factor-decomposition | pbcopy
 ```
-
-## See also
-
-- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — the persona-agnostic onramp
-- [Agent operating layer](/agent-operating-layer) — billing guardrails + policy bundles
-- [Custom skills](/custom-skills) — Claude Code skills for the investment-manager workflows
-- [Build Your First SEC Agent tutorials](/tutorials/build-sec-filing-monitor-agent) — 5 long-form how-tos

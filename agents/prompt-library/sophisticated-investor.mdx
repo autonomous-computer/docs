@@ -1,206 +1,74 @@
 ---
-title: "Sophisticated investor — Agent Prompt Library"
+title: "Sophisticated investor prompt library"
 description: "Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows."
 ---
 
-{/* DO NOT HAND-EDIT — generated from the agent-prompts contract. */}
+These prompts help pressure-test a thesis against filings and reported market context. They do not establish fraud, manipulation, or an investment conclusion.
 
+### 1. Equity-compensation dilution review
 
-<Info>8 ready-to-run prompts live on `api.secapi.ai/mcp` today.</Info>
+**Prompt id:** `sophisticated-investor-equity-comp-burn-rate`
 
-Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows.
-
-<Note>Forensic accounting workflows: footnote forensics, insider/13F divergence, and cash-flow stress.</Note>
-
-Run any prompt by pasting it into Claude Desktop, Claude Code, or Cursor with the SEC API MCP server installed. Or use the CLI:
-
-```bash
-secapi agents prompts read sophisticated-investor-equity-comp-burn-rate
-secapi agents prompts copy sophisticated-investor-equity-comp-burn-rate | pbcopy
+```text
+Test the equity-compensation dilution hypothesis for [TICKER] across fiscal years [FY FROM]-[FY TO]. Retrieve cash-flow statements, income statements, the latest proxy compensation disclosures, and XBRL facts for share-based compensation and weighted-average shares when available. Show the reported values by period, define every calculation, and distinguish expense, grants, and share count. Cite form, fiscal period, accession, and fact tag. Do not invent a burn-rate denominator when the facts are not comparable or treat accounting expense as cash dilution. Use companies.cash_flow_statements, companies.income_statements, comp.list, facts.get, and sections.get. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
----
+### 2. Covenant and liquidity reading
 
-## Headline workflow
+**Prompt id:** `sophisticated-investor-debt-covenant-headroom`
 
-### 1. Equity comp burn-rate forensics
-
-*Walk equity comp grants vs cash flow vs shares outstanding to surface dilution-via-comp risk.*
-
-**Category:** Equity comp forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-equity-comp-burn-rate`
-
-**Prompt**
-
-```
-For a high-growth issuer with heavy equity-comp use (e.g., SNOW), pull the latest named-executive comp, the trailing 5 years of cash flow statements (focus on share-based compensation), the income statement (for share-based-comp expense line), and the relevant XBRL fact (ShareBasedCompensation tag). Compute equity-comp burn rate as a fraction of revenue and as shares-issued-as-comp / shares-outstanding. Output a forensic memo.
+```text
+For [TICKER] and its latest [10-K OR 10-Q], retrieve debt-covenant footnotes, the balance sheet, cash-flow statement, and MD&A. Extract only disclosed covenant tests, thresholds, amendments, waivers, and stated compliance status. Build a liquidity table from reported cash, debt, and operating cash flow, with period labels. If a covenant ratio cannot be reconstructed from disclosed definitions, say so rather than estimating headroom. Cite each result to its filing source. Use intelligence.footnotes, companies.balance_sheets, companies.cash_flow_statements, sections.get, and companies.ratios.
 ```
 
-**Expected tool chain**
+### 3. Tax-position sensitivity
 
-1. `comp.list` — Named-executive comp baseline
-2. `companies.cash_flow_statements` — 5-year share-based comp cash flow line
-3. `facts.get` — ShareBasedCompensation XBRL fact
-4. `companies.income_statements` — Revenue context for burn rate
+**Prompt id:** `sophisticated-investor-tax-position-stress`
 
-**Expected output:** Forensic memo + burn-rate table (% revenue, % shares-out).
-
----
-
-## All workflows
-
-### 2. Debt covenant headroom check
-
-*Pull debt-covenant footnote + balance sheet to estimate covenant headroom.*
-
-**Category:** Credit forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-debt-covenant-headroom`
-
-**Prompt**
-
-```
-For a leveraged issuer (e.g., HTZ), pull the debt-covenant footnote (intelligence.footnotes topic=debt_covenant), the latest balance sheet (focus on debt + cash), and the latest ratios (leverage, interest coverage). Cross-reference with the MD&A (Item 7) for any covenant-relief or amendment language. Output a covenant headroom estimate (% of trigger) + 3-paragraph risk summary.
+```text
+Review [TICKER]'s tax disclosures for fiscal years [FY FROM]-[FY TO]. Retrieve the tax footnote, relevant deferred-tax XBRL facts, income statements, and MD&A. List the reported uncertain-tax-position and valuation-allowance disclosures separately. Model [25/50/100]% changes only as an explicitly hypothetical sensitivity, using the reported base amount and showing the arithmetic. Do not present a scenario as a forecast or assume a tax asset is collectible. Cite form, period, accession, footnote topic, and fact tag. Use intelligence.footnotes, facts.get, companies.income_statements, and sections.get. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 4. Revenue-quality cross-check
 
-1. `intelligence.footnotes` — Debt-covenant footnote text
-2. `companies.balance_sheets` — Debt + cash snapshot
-3. `companies.ratios` — Leverage + interest coverage
-4. `sections.get` — MD&A covenant amendment language
+**Prompt id:** `sophisticated-investor-revenue-recognition-forensics`
 
-**Expected output:** Covenant headroom % + 3-paragraph risk summary.
-
-### 3. Stress-test uncertain tax positions
-
-*Surface uncertain tax positions and stress-test against income statement.*
-
-**Category:** Tax forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-tax-position-stress`
-
-**Prompt**
-
-```
-For a multinational (e.g., GOOGL), pull the tax footnote (intelligence.footnotes topic=tax), the deferred-tax-asset XBRL fact, the trailing 3 years of income statement (focus on effective tax rate), and the relevant 10-K MD&A passages. Stress-test scenarios where deferred-tax assets are written down by 25/50/100%. Output a tax forensics memo + scenario impact table.
+```text
+For [TICKER], compare reported revenue, deferred-revenue facts, and the revenue-recognition footnote over [FY FROM]-[FY TO]. Retrieve MD&A passages that explain material period changes. Produce a period-aligned table and identify disclosed changes in contract timing, performance obligations, or policy. Mark any ratio as a researcher-created diagnostic, not a GAAP metric. Do not call a divergence aggressive accounting without a source-supported explanation. Cite each number and excerpt to the underlying filing. Use intelligence.footnotes, facts.get, companies.income_statements, sections.get, and filings.search. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 5. Ownership disagreement map
 
-1. `intelligence.footnotes` — Tax footnote text
-2. `facts.get` — DeferredTaxAssetsNet XBRL fact
-3. `companies.income_statements` — Effective-tax-rate trajectory
-4. `sections.get` — MD&A tax discussion
+**Prompt id:** `sophisticated-investor-13f-divergence-thesis`
 
-**Expected output:** Tax forensics memo + 25/50/100% write-down scenario table.
-
-### 4. Revenue-recognition forensics on growth narratives
-
-*Compare deferred revenue + revenue footnote + income statement for revenue-recognition aggression.*
-
-**Category:** Revenue forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-revenue-recognition-forensics`
-
-**Prompt**
-
-```
-For a high-growth SaaS issuer (e.g., NOW), pull the revenue-recognition footnote (intelligence.footnotes topic=revenue), the deferred-revenue XBRL fact across 5 years, the trailing 5-year income statement, and the MD&A passages. Surface any divergence between billings growth, deferred revenue, and recognized revenue. Output a forensic memo with a billings-vs-revenue ratio table.
+```text
+For [TICKER], first use `owners.institutional_holders` to identify reported institutional holders, then compare the latest two 13F reporting periods only for selected managers [13F MANAGER CIK LIST]. `owners.get_13f` and `owners.compare_13f` require a manager CIK, not the issuer ticker or issuer CIK. Name the largest reported increases and decreases, their reporting dates, and the insiders' transaction codes and values. Keep institutional holdings and insider activity in separate columns; they have different reporting timing and do not show intent. Return a hypothesis ledger with evidence for, evidence against, and unresolved questions. Use owners.institutional_holders, owners.get_13f, owners.compare_13f, insiders.list, entities.resolve, and comp.compare.
 ```
 
-**Expected tool chain**
+### 6. Going-concern research queue
 
-1. `intelligence.footnotes` — Revenue-recognition footnote text
-2. `facts.get` — DeferredRevenue XBRL fact 5-year
-3. `companies.income_statements` — 5-year revenue trajectory
-4. `sections.get` — MD&A revenue discussion
+**Prompt id:** `sophisticated-investor-going-concern-sweep`
 
-**Expected output:** Revenue forensic memo + billings-vs-revenue ratio table.
-
-### 5. Spot smart-money divergence for thesis validation
-
-*Surface 13F filers diverging on a name and cross-reference with insider trades + comp.*
-
-**Category:** Smart-money signals  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-13f-divergence-thesis`
-
-**Prompt**
-
-```
-For a contested name (e.g., GME), pull the latest 13F snapshot for the top 20 institutional holders, compare quarter-over-quarter, identify the 5 holders making the largest position increases AND the 5 making the largest decreases, then pull insider Form 4 history and comp comparison. Output a divergence memo for short/long thesis validation.
+```text
+For [TICKER LIST] in [DATE RANGE], search 10-K and 10-Q sections for "going concern" and "substantial doubt." Retrieve the matching disclosure, current balance sheet, and recent cash-flow statements. Make a source queue showing reported cash, recent operating cash flow, and management's stated plan. If you calculate a simple runway proxy, label assumptions and do not treat it as liquidity guidance. Cite form, period, accession, and section. Use sections.search, sections.get, companies.balance_sheets, companies.cash_flow_statements, and filings.search. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 7. Lease-adjusted leverage worksheet
 
-1. `owners.get_13f` — Top-20 institutional snapshot
-2. `owners.compare_13f` — Q-over-Q rotation
-3. `insiders.list` — Insider Form 4 history
-4. `comp.compare` — Comp comparison for executive alignment
+**Prompt id:** `sophisticated-investor-lease-obligations-forensics`
 
-**Expected output:** Divergence memo + long/short thesis validation table.
-
-### 6. Sweep small-cap watchlist for going-concern language
-
-*Find substantial-doubt and going-concern language across small caps and estimate runway.*
-
-**Category:** Solvency forensics  ·  **Difficulty:** intermediate  ·  **Prompt id:** `sophisticated-investor-going-concern-sweep`
-
-**Prompt**
-
-```
-For a watchlist of 100 US micro-caps, search 10-K and 10-Q filings for 'going concern' or 'substantial doubt' language. For each match, pull Item 9A (Controls), the latest balance sheet, and the cash flow statement to estimate runway. Output a runway-ranked alert table with one-line risk summary per name.
+```text
+For [TICKER], retrieve lease footnotes, lease-liability facts, the latest balance sheet, and cash-flow statement. Reconcile the reported lease liability to the disclosure before calculating any researcher-defined adjusted leverage measure. State the capitalization multiple [MULTIPLE] and why it is an assumption; provide reported leverage beside the adjusted view. Do not imply that the issuer reports the adjusted result. Cite all inputs to form, period, accession, footnote, or fact tag. Use intelligence.footnotes, facts.get, companies.balance_sheets, companies.cash_flow_statements, and companies.ratios.
 ```
 
-**Expected tool chain**
+### 8. Segment-disclosure challenge
 
-1. `sections.search` — Going-concern keyword sweep
-2. `sections.get` — Item 9A internal-controls text
-3. `companies.balance_sheets` — Latest balance sheet for runway
-4. `companies.cash_flow_statements` — Burn-rate context
+**Prompt id:** `sophisticated-investor-segment-aggregation-forensics`
 
-**Expected output:** Runway-ranked alert table + 1-line risk summary per name.
-
-### 7. Lease-obligation off-balance-sheet forensics
-
-*Walk lease footnote + balance sheet + XBRL lease tags to estimate true leverage.*
-
-**Category:** Off-balance-sheet  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-lease-obligations-forensics`
-
-**Prompt**
-
-```
-For a lease-heavy retailer (e.g., M), pull the lease footnote (intelligence.footnotes topic=lease), the operating-lease-liability XBRL fact, the latest balance sheet, and the cash flow statement. Compute adjusted leverage including capitalized operating leases at 8x rent. Output a lease-adjusted leverage memo + comparison table vs reported leverage.
+```text
+For [TICKER], retrieve the latest segment footnote, income statement, and financial-statement section. Propose up to [10] factor-similar peers, then compare only their disclosed segment count, revenue concentration, and stated reporting structure. Separate reported segments from an analyst's preferred disaggregation. Output a citation table and a list of questions the filing does and does not answer. Do not assert concealment from aggregation alone. Use intelligence.footnotes, companies.income_statements, sections.get, factors.related_stocks, and entities.resolve.
 ```
 
-**Expected tool chain**
+## Evidence standard
 
-1. `intelligence.footnotes` — Lease footnote text
-2. `facts.get` — OperatingLeaseLiability XBRL fact
-3. `companies.balance_sheets` — Reported balance sheet
-4. `companies.cash_flow_statements` — Lease cash flows
-
-**Expected output:** Lease-adjusted leverage memo + reported-vs-adjusted comparison table.
-
-### 8. Segment-disclosure forensics on diversified issuers
-
-*Surface segment-aggregation choices and compare to peer disclosure granularity.*
-
-**Category:** Segment forensics  ·  **Difficulty:** advanced  ·  **Prompt id:** `sophisticated-investor-segment-aggregation-forensics`
-
-**Prompt**
-
-```
-For a diversified issuer (e.g., GE), pull the segment-disclosure footnote and segment income statement. Compare segment count and revenue concentration to factor-similar peers. Identify any segment that contributes more than 50% of revenue but less than 30% of segment-level disclosure. Output a segment-aggregation forensic memo.
-```
-
-**Expected tool chain**
-
-1. `intelligence.footnotes` — Segment-disclosure footnote
-2. `companies.income_statements` — Segmented income
-3. `sections.get` — Item 8 financial-statement segment narrative
-4. `factors.related_stocks` — Peer-set comparison
-
-**Expected output:** Segment-aggregation forensic memo + peer disclosure granularity comparison.
-
-
----
-
-## See also
-
-- [Agent prompt library index](/agents/prompt-library)
-- [Install MCP for Claude Desktop / Claude Code / Cursor](/mcp-install)
-- [Agent operating layer](/agent-operating-layer)
-- [SEC API CLI workflows](/javascript-sdk)
+Use the source filing as the record. Preserve fiscal period, filing date, accession, section, and any stated assumptions beside calculated views.

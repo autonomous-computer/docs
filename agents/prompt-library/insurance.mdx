@@ -1,172 +1,60 @@
 ---
-title: "Insurance & risk — Agent Prompt Library"
+title: "Insurance and risk prompt library"
 description: "D&O underwriting profile, auditor-change detection, material-weakness scans, and renewal-book monitoring for risk and underwriting teams."
 ---
 
-{/* DO NOT HAND-EDIT — generated from the agent-prompts contract. */}
+These prompts help an underwriting or claims team turn public disclosures into a reviewable research packet. They do not score a risk, establish coverage, or predict a claim.
 
+<Tip>For a book review, use no more than 50 tickers per batched company call. For every alert, keep the accession number, filing date, and exact disclosure excerpt.</Tip>
 
-<Info>6 ready-to-run prompts live on `api.secapi.ai/mcp` today.</Info>
+### 1. D&O renewal profile
 
-D&O underwriting profile, auditor-change detection, material-weakness scans, and renewal-book monitoring for risk and underwriting teams.
+**Prompt id:** `insurance-d-and-o-underwriting-profile`
 
-<Note>D&O risk workflows: D&O profile via comp/13F/insider stack, keyword-search auditor changes, and semantic material-weakness detection.</Note>
-
-Run any prompt by pasting it into Claude Desktop, Claude Code, or Cursor with the SEC API MCP server installed. Or use the CLI:
-
-```bash
-secapi agents prompts read insurance-d-and-o-underwriting-profile
-secapi agents prompts copy insurance-d-and-o-underwriting-profile | pbcopy
+```text
+Build a D&O renewal research note for [TICKER] as of [DATE]. Resolve the issuer, retrieve its latest 10-K and relevant 8-Ks, then read Item 1A risk factors and Item 7 MD&A. Add current named-executive compensation, recent Form 4 activity, and the latest available institutional-holder context. Use `owners.institutional_holders` with the issuer ticker or issuer CIK; the manager-specific 13F holdings tool requires a named manager CIK. Separate facts from underwriting interpretation. Cite each finding with form, filing date, accession number, and section or transaction reference. Flag only disclosed auditor changes, restatement language, control weaknesses, executive departures, or unusually concentrated ownership; do not infer fraud, claim likelihood, or coverage. Use entities.resolve, filings.search, sections.get, comp.list, insiders.list, and owners.institutional_holders.
 ```
 
----
+### 2. Auditor-change review
 
-## Headline workflow
+**Prompt id:** `insurance-auditor-change-keyword-scan`
 
-The headliner for this persona is also rendered in the [vertical solutions page](/for-insurance).
-
-### 1. Build a D&O underwriting profile for a renewal candidate
-
-*Compile board comp, ownership concentration, and insider activity for D&O risk pricing.*
-
-**Category:** D&O underwriting  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-d-and-o-underwriting-profile`
-
-**Prompt**
-
-```
-You are a risk assessment agent with access to SEC API. For any company under review, check enforcement history, pull the company intelligence bundle for financial health, review executive compensation structures, and extract auditor opinion and risk-factor sections from the latest 10-K. Flag restatements, auditor changes, and enforcement actions as high-priority findings. Always include requestId references for compliance documentation.
+```text
+For [TICKER LIST] during [START DATE] through [END DATE], search 8-K sections for Item 4.01 and phrases such as "certifying accountant." For each candidate, retrieve the issuer's Item 4.01 section and report the predecessor, successor, stated reason, disagreements if disclosed, and filing accession. Search the same issuer's latest 10-K and 10-K/A for material-weakness language. Deliver a triage table with a direct filing link or accession for every row. This is a keyword-led disclosure review: absence of a result is not proof that no auditor event occurred. Use sections.search, sections.get, filings.search, and intelligence.query only as a secondary lead. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 3. Internal-control disclosure sweep
 
-1. `comp.list` — Named-executive comp baseline
-2. `owners.get_13f` — Ownership-concentration snapshot
-3. `insiders.list` — Officer/director Form 4 history
-4. `comp.compare` — Year-over-year comp comparison
+**Prompt id:** `insurance-material-weakness-semantic-scan`
 
-**Expected output:** D&O underwriting memo + scorecard + requestId citations.
-
-**Caveats**
-- AAER (Accounting and Auditing Enforcement Releases) enrichment is keyword-search based.
-
----
-
-## All workflows
-
-### 2. Scan watchlist for auditor changes via Item 4.01 keyword search
-
-*Detect auditor changes by keyword-searching 8-K Item 4.01 disclosures.*
-
-**Category:** Auditor monitoring  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-auditor-change-keyword-scan`
-
-**Prompt**
-
-```
-For a watchlist of 50 insureds, search the past 90 days of 8-K filings for any 'Item 4.01' or 'Changes in Registrant's Certifying Accountant' language. For each match, extract the Item 4.01 text, identify the predecessor and successor auditor, and run a semantic intelligence query for any related material-weakness disclosures. Output a watchlist alert ranked by claim-trigger likelihood.
+```text
+Review [TICKER LIST] for disclosures filed in the last [12 MONTHS]. Search 10-K and 10-Q sections for "material weakness" and "internal control over financial reporting," then retrieve the applicable control discussion from the source filing. Check for amended annual reports and summarize remediation language, affected period, and whether management states the weakness remains open. Output a source table followed by a short issuer-by-issuer note. Quote only the minimum necessary text and attach form, fiscal period, filing date, accession, and section key. Do not convert disclosure language into a severity score or an audit opinion. Use sections.search, sections.get, filings.search, and companies.overview. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 4. Restatement disclosure review
 
-1. `sections.search` — Item 4.01 keyword search
-2. `sections.get` — Item 4.01 text per match
-3. `filings.search` — Recent 8-K filings
-4. `intelligence.query` — Material-weakness corroboration
+**Prompt id:** `insurance-restatement-detection-renewal-book`
 
-**Expected output:** Watchlist alert table ranked by claim-trigger likelihood.
-
-**Caveats**
-- Keyword-search-based auditor-change detection.
-
-### 3. Semantic scan for material-weakness disclosures
-
-*Use semantic intelligence query to find material-weakness language across recent filings.*
-
-**Category:** Internal-control risk  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-material-weakness-semantic-scan`
-
-**Prompt**
-
-```
-For a renewal book of insureds, run a semantic intelligence query for 'material weakness internal control' language in the past 12 months of 10-K filings. For each match, search for related sections, extract Item 9A (Controls and Procedures), and pull the latest 10-K/A filings (amended annual reports). Output a material-weakness watchlist with severity ranking.
+```text
+For [TICKER LIST] and the last [24 MONTHS], locate 10-K/A and 10-Q/A filings, then search those filings and the related original reports for "restatement," "revision," and "non-reliance." For every match, identify the financial periods affected, the issuer's stated reason, any Item 4.02 or Item 9A disclosure, and the accession numbers for both original and amendment where available. Produce a review queue sorted by filing date, not an actuarial or claims ranking. State clearly when an amendment does not itself establish a restatement. Use filings.search, sections.search, sections.get, and companies.financials. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 5. Executive-transition alert
 
-1. `intelligence.query` — Semantic material-weakness signal
-2. `sections.search` — Find Item 9A disclosures
-3. `sections.get` — Item 9A text per match
-4. `filings.search` — 10-K/A inventory
+**Prompt id:** `insurance-officer-departure-claims-trigger`
 
-**Expected output:** Material-weakness watchlist with severity ranking.
-
-### 4. Detect restatements across renewal book
-
-*Sweep renewal book for 10-K/A restatement filings + supporting context.*
-
-**Category:** Restatement risk  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-restatement-detection-renewal-book`
-
-**Prompt**
-
-```
-For a renewal book of 100 insureds, sweep for any 10-K/A (amended annual report) filed in the past 24 months. For each match, search for 'restatement' language in the underlying 10-K, pull Item 9A (Controls), and run an intelligence query for any analyst commentary in the same window. Output a restatement-risk ranked alert table for the renewal pricing committee.
+```text
+Monitor [TICKER LIST] for [DATE RANGE]. Find 8-K Item 5.02 disclosures, retrieve the full section for each event, and classify the disclosed event as appointment, retirement, resignation, termination, board change, or other. Add the latest proxy compensation record and the reporting person's Form 4 activity only when the identity can be matched confidently. Provide an alert digest with exact filing evidence and a separate "questions for review" column. Do not label a routine transition a claims trigger or speculate about undisclosed reasons. Use filings.search, sections.search, sections.get, comp.list, and insiders.list. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 6. Peer context for renewal discussion
 
-1. `filings.search` — 10-K/A inventory
-2. `sections.search` — Restatement language search
-3. `intelligence.query` — Analyst commentary signal
-4. `sections.get` — Item 9A text per match
+**Prompt id:** `insurance-peer-benchmark-renewal-pricing`
 
-**Expected output:** Restatement-risk ranked alert table for renewal pricing.
-
-### 5. Track officer departures as potential claims triggers
-
-*Surface 8-K Item 5.02 officer departures for D&O claims-trigger alerts.*
-
-**Category:** Claims monitoring  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-officer-departure-claims-trigger`
-
-**Prompt**
-
-```
-For an insured book of 100 public companies, sweep the past 30 days of 8-K filings for any Item 5.02 (officer/director departure) disclosure. For each match, extract the Item 5.02 text, pull the executive's most recent comp comparison, and check Form 4 trading activity in the past 60 days. Output a claims-trigger alert digest.
+```text
+For [TICKER], create a public-disclosure peer context note. Use factors.related_stocks to propose up to [10] comparable names, then retrieve each company's latest annual financial statements and named-executive compensation. For the subject and peers, identify disclosed control weaknesses, restatements, or auditor-change filings in [LOOKBACK]. Present the raw measures and citations; explain why a factor-similar peer is only a screening cohort, not an underwriting comparable. Do not recommend premium, retention, limits, or terms. Use factors.related_stocks, companies.financials, comp.list, filings.search, and sections.search. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+## Evidence standard
 
-1. `filings.search` — Recent 8-K filings
-2. `sections.get` — Item 5.02 text per match
-3. `comp.compare` — Departing officer's comp history
-4. `insiders.list` — Recent Form 4 trades
-
-**Expected output:** Claims-trigger alert digest with departure profile per match.
-
-### 6. Peer-benchmark for renewal pricing context
-
-*Build a factor-similar peer set for renewal pricing context.*
-
-**Category:** Pricing benchmarking  ·  **Difficulty:** intermediate  ·  **Prompt id:** `insurance-peer-benchmark-renewal-pricing`
-
-**Prompt**
-
-```
-For an insured renewal candidate, generate the top 10 factor-similar peer companies, pull each peer's most recent annual financials and named-executive comp, and run an intelligence query for any peer-specific risk events in the past 12 months. Output a renewal pricing context table.
-```
-
-**Expected tool chain**
-
-1. `factors.related_stocks` — Factor-similar peer cohort
-2. `companies.financials` — Peer fundamentals
-3. `comp.list` — Peer named-executive comp
-4. `intelligence.query` — Peer-specific risk events
-
-**Expected output:** Renewal pricing context table.
-
-
----
-
-## See also
-
-- [Agent prompt library index](/agents/prompt-library)
-- [Install MCP for Claude Desktop / Claude Code / Cursor](/mcp-install)
-- [Agent operating layer](/agent-operating-layer)
-- [SEC API CLI workflows](/javascript-sdk)
+Use SEC filings as the record. 13F reports are delayed institutional disclosures, Form 4 transactions have transaction-code context, and analytics outputs may change with revised data.

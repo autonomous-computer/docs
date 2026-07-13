@@ -1,290 +1,106 @@
 ---
-title: "Investment manager — Agent Prompt Library"
+title: "Investment manager prompt library"
 description: "Quant research, factor decomposition, 13F-vs-insider divergence, and earnings-context workflows for portfolio managers and analysts."
 ---
 
-{/* DO NOT HAND-EDIT — generated from the agent-prompts contract. */}
+Use these prompts to prepare an investment-committee input, not an investment recommendation. Specify the evaluation date: SEC filings, 13F reports, and factor data have different reporting and update schedules.
 
+### 1. Portfolio factor and filing brief
 
-<Info>12 ready-to-run prompts live on `api.secapi.ai/mcp` today.</Info>
+**Prompt id:** `investment-manager-factor-decomposition`
 
-Quant research, factor decomposition, 13F-vs-insider divergence, and earnings-context workflows for portfolio managers and analysts.
-
-Run any prompt by pasting it into Claude Desktop, Claude Code, or Cursor with the SEC API MCP server installed. Or use the CLI:
-
-```bash
-secapi agents prompts read investment-manager-factor-decomposition
-secapi agents prompts copy investment-manager-factor-decomposition | pbcopy
+```text
+For holdings [TICKER: WEIGHT] as of [DATE], calculate portfolio and security factor context, then retrieve each issuer's latest material filing and recent Form 4 activity. Return factor outputs separately from filing facts, with accession numbers and transaction dates. Factor exposure is descriptive, not a forecast; 13F and Form 4 activity do not establish conviction. Use portfolio.analyze, factors.decomposition, companies.overview, filings.search, and insiders.list.
 ```
 
----
+### 2. 13F rotation ledger
 
-## Headline workflow
+**Prompt id:** `investment-manager-13f-quarterly-rotation`
 
-The headliner for this persona is also rendered in the [vertical solutions page](/for-investment-managers).
-
-### 1. Decompose portfolio factor exposures with intelligence overlay
-
-*Pull factor exposures and overlay security intelligence for a portfolio or watchlist.*
-
-**Category:** Factor research  ·  **Difficulty:** advanced  ·  **Prompt id:** `investment-manager-factor-decomposition`
-
-**Prompt**
-
-```
-You are an investment research agent with access to SEC API. For any portfolio or watchlist of US equities, pull a security-intelligence bundle for each name, run factor exposure decomposition (momentum, value, quality, low-volatility, size), compare quarter-over-quarter 13F ownership changes for key institutional holders, and flag material insider transactions from the past 90 days. Output a per-name memo with factor weights, top three institutional rotations, top three insider clusters, and one paragraph of analyst commentary. Always cite requestId and provenance for every figure.
+```text
+For 13F manager [13F MANAGER CIK], compare the latest two reported quarters. List additions, exits, and largest changes with the report period, filing date, shares, and reported value; then add recent issuer Form 4 activity as a separate context column for [TOP N] names. A manager CIK is required for `owners.get_13f` and `owners.compare_13f`; do not pass an issuer ticker or issuer CIK. Do not describe a quarterly filing as real-time positioning or infer motive. Use entities.resolve, owners.get_13f, owners.compare_13f, insiders.list, and filings.search.
 ```
 
-**Expected tool chain**
+### 3. Comparable-screen review
 
-1. `portfolio.analyze` — Compute portfolio-level factor weights and country exposure
-2. `factors.decomposition` — Decompose per-security factor loadings
-3. `owners.compare_13f` — Quarter-over-quarter institutional rotation per name
-4. `insiders.list` — Recent Form 4 insider transactions per name
+**Prompt id:** `investment-manager-related-stocks-screen`
 
-**Expected output:** Per-name research memo (markdown) with factor weights, institutional rotations, insider clusters, and requestId citations.
-
----
-
-## All workflows
-
-### 2. Compare 13F holdings quarter-over-quarter for smart-money rotation
-
-*Identify quarter-over-quarter institutional rotation across an institutional holder's portfolio.*
-
-**Category:** Ownership intelligence  ·  **Difficulty:** intermediate  ·  **Prompt id:** `investment-manager-13f-quarterly-rotation`
-
-**Prompt**
-
-```
-For Berkshire Hathaway (CIK 0001067983), pull the latest 13F holdings, compare against the previous quarter, surface the top ten new positions, top ten exits, and top ten size changes. For each surfaced ticker, fetch the latest insider transactions to triangulate manager conviction. Output a markdown table with ticker, position delta (shares + dollars), insider-buy ratio, and a one-line interpretation per row.
+```text
+For [TICKER], request up to [N] factor-similar securities and retrieve their latest reported ratios and annual financial statements. Produce a screened peer table with the factor method, fiscal period, and missing-data flags. Similar factor profiles are not business comparability or a valuation conclusion. Use entities.resolve, factors.related_stocks, factors.decomposition, companies.ratios, and companies.financials.
 ```
 
-**Expected tool chain**
+### 4. Regime-aware watchlist note
 
-1. `entities.resolve` — Resolve the holder identifier to a best-match entity
-2. `owners.get_13f` — Latest holdings snapshot
-3. `owners.compare_13f` — Quarter-over-quarter delta
-4. `insiders.list` — Cross-validate with insider activity per surfaced ticker
+**Prompt id:** `investment-manager-regime-aware-screen`
 
-**Expected output:** Markdown table of top 30 rotations with insider-buy ratio and one-line interpretation each.
-
-### 3. Build a factor-similar peer set with momentum and quality overlays
-
-*Generate a factor-similar peer set and rank by momentum/quality overlay.*
-
-**Category:** Screening  ·  **Difficulty:** intermediate  ·  **Prompt id:** `investment-manager-related-stocks-screen`
-
-**Prompt**
-
-```
-For NVDA, generate the closest 25 factor-similar US tickers, decompose each candidate's factor exposure, and rank by composite momentum + quality score. Pull each candidate's trailing-twelve-month financial ratios for valuation context. Output a ranked table with ticker, momentum score, quality score, P/E, ROIC, and a one-line thesis on why the peer is worth tracking.
+```text
+For [TICKER LIST] and country [COUNTRY], retrieve the current macro regime, high-signal macro pack, factor dashboard, and each security's factor decomposition. Write a dated watchlist note that separates observed macro data from factor analytics and calls out data freshness. Do not turn a regime classification into a timing recommendation. Use macro.regimes, macro.high_signal_pack, factors.dashboard, factors.decomposition, and portfolio.analyze.
 ```
 
-**Expected tool chain**
+### 5. Earnings-context pack
 
-1. `entities.resolve` — Resolve the seed symbol
-2. `factors.related_stocks` — Factor-similar peer set
-3. `factors.decomposition` — Per-candidate factor weights
-4. `companies.ratios` — TTM valuation/quality ratios per candidate
+**Prompt id:** `investment-manager-earnings-context-pack`
 
-**Expected output:** Ranked markdown table of 25 candidates with factor scores, valuation ratios, and one-line thesis per row.
-
-### 4. Run a macro-regime-aware factor alignment review
-
-*Pick factors aligned with the current macro regime and rank a watchlist accordingly.*
-
-**Category:** Macro overlay  ·  **Difficulty:** advanced  ·  **Prompt id:** `investment-manager-regime-aware-screen`
-
-**Prompt**
-
-```
-Pull the current US macro regime classification, surface the top three factor returns trailing 90 days, then rank my watchlist of large-cap US tech names against the regime-favored factors. Output a ranked list of names that align with the regime, including factor weights and a one-paragraph regime-context narrative for the brief.
+```text
+For [TICKER] before [EVENT DATE], retrieve the last four reported quarters of income statements, the latest 10-Q MD&A, and recent 8-K filings. Identify reported sequential changes and link each explanation to the filing section; label open questions rather than predicting the print. Use entities.resolve, companies.income_statements, sections.get, filings.search, and filings.latest.
 ```
 
-**Expected tool chain**
+### 6. Multi-year fundamentals table
 
-1. `macro.regimes` — Current regime classification
-2. `macro.high_signal_pack` — Top macro indicator pack for regime context
-3. `factors.dashboard` — Factor returns aligned with regime
-4. `portfolio.analyze` — Apply factor weights to candidate portfolio
+**Prompt id:** `investment-manager-multi-period-fundamental-trend`
 
-**Expected output:** Ranked screen of regime-aligned names + 1-paragraph regime narrative.
-
-### 5. Build an earnings-preview context pack
-
-*Compile recent fundamentals, management guidance, and the latest MD&A excerpt before an earnings print.*
-
-**Category:** Earnings prep  ·  **Difficulty:** starter  ·  **Prompt id:** `investment-manager-earnings-context-pack`
-
-**Prompt**
-
-```
-For AAPL ahead of next earnings, pull the trailing four quarters of income statement, the most recent MD&A section from the last 10-Q, and recent earnings-related 8-K disclosures. Identify the largest sequential changes in revenue, margins, and cash generation, then surface MD&A passages and company guidance that explain them. Output a one-page brief with bullets for setup, key debate, and watch-points.
+```text
+For [TICKER] across [FY FROM]-[FY TO], retrieve annual income, balance-sheet, cash-flow, and ratio data. Create a period-aligned table of reported revenue, margins, cash flow, debt, and documented inflections, with fiscal-year labels. Do not compare non-comparable periods or attribute a change without a cited filing discussion. Use entities.resolve, companies.income_statements, companies.balance_sheets, companies.cash_flow_statements, and companies.ratios. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 7. Filing-grounded issuer brief
 
-1. `entities.resolve` — Resolve to best-match CIK
-2. `companies.income_statements` — Trailing four quarters
-3. `sections.get` — Latest MD&A from 10-Q
-4. `filings.search` — Recent earnings-related 8-K disclosures
+**Prompt id:** `investment-manager-intelligence-bundle-grounded`
 
-**Expected output:** 1-page earnings brief with setup, debate, watch-points.
-
-### 6. Pull 5-year fundamental trends for thesis validation
-
-*Walk five years of revenue, margins, cash conversion, and ratios for a name.*
-
-**Category:** Fundamentals  ·  **Difficulty:** starter  ·  **Prompt id:** `investment-manager-multi-period-fundamental-trend`
-
-**Prompt**
-
-```
-For MSFT, pull five years of annual income statement, balance sheet, cash flow statement, and key ratios. Surface a year-over-year delta table for revenue, gross margin, operating margin, free cash flow, ROIC, and net debt/EBITDA. Highlight any year where two or more metrics inflected by more than 20 percent and ask the agent to hypothesize the driver.
+```text
+For [TICKER], use intelligence.query only to identify research leads, then retrieve the current balance sheet, relevant footnotes, and MD&A from the underlying filing. Deliver a three-part brief: reported facts, source excerpts, and questions. Every claim needs a form, period, accession, and section or footnote; an intelligence response alone is not a citation. Use intelligence.query, intelligence.footnotes, sections.get, companies.balance_sheets, and filings.search.
 ```
 
-**Expected tool chain**
+### 8. Portfolio scenario stress
 
-1. `entities.resolve` — Resolve to best-match CIK
-2. `companies.income_statements` — 5-year income trend
-3. `companies.cash_flow_statements` — 5-year cash flow trend
-4. `companies.ratios` — 5-year ratios trend
+**Prompt id:** `investment-manager-portfolio-stress-test`
 
-**Expected output:** Year-over-year delta table + hypothesized drivers for inflection years.
-
-### 7. Generate a security intelligence bundle with footnote citations
-
-*Produce a citation-grounded company intelligence bundle for an allocator brief.*
-
-**Category:** Issuer brief  ·  **Difficulty:** intermediate  ·  **Prompt id:** `investment-manager-intelligence-bundle-grounded`
-
-**Prompt**
-
-```
-For TSLA, build a company intelligence brief that combines the latest semantic intelligence query (covering valuation, governance, and risk), the most recent debt-covenant footnote, the latest segment-revenue footnote, and the latest balance sheet snapshot. Output a markdown brief with three sections (signal, balance-sheet posture, footnote red-flags) and inline citations to filing URLs.
+```text
+For holdings [TICKER: WEIGHT], first list available scenarios, then run [SCENARIO KEY] and summarize factor exposures and scenario results. State the valuation date, assumptions, and residual exposures. Treat this as a model scenario, not realized-return history or a hedge instruction. Use portfolio.stress_scenarios, portfolio.stress_test, portfolio.analyze, factors.dashboard, and macro.regimes.
 ```
 
-**Expected tool chain**
+### 9. Insider versus 13F review
 
-1. `intelligence.query` — Top-of-funnel semantic signal
-2. `intelligence.footnotes` — Debt-covenant + segment footnotes
-3. `sections.get` — Item 7 MD&A passages for context
-4. `companies.balance_sheets` — Most recent balance sheet snapshot
+**Prompt id:** `investment-manager-insider-13f-divergence`
 
-**Expected output:** Markdown brief with 3 sections + inline filing URL citations.
-
-### 8. Stress-test portfolio against macro regimes
-
-*Project portfolio factor returns across alternative macro regimes.*
-
-**Category:** Risk  ·  **Difficulty:** advanced  ·  **Prompt id:** `investment-manager-portfolio-stress-test`
-
-**Prompt**
-
-```
-Take my current portfolio (NVDA 30%, AAPL 25%, MSFT 25%, GOOGL 20%), run portfolio.analyze for current factor exposures, then pull factor returns under the prevailing regime AND the prior 12-month regime. Build a stress table comparing realized portfolio returns under each regime and surface the two factors with the largest swing. Output a one-page risk note for the IC.
+```text
+For [TICKER LIST], compare recent Form 4 transactions with the latest two 13F periods for named managers [13F MANAGER CIK LIST]. Keep issuer insiders, transaction codes, and 13F holdings in separate fields with dates. `owners.get_13f` and `owners.compare_13f` require each manager CIK, not the issuer ticker or issuer CIK. Rank only by clearly defined reported measures; do not characterize the combination as a buy or sell signal. Use entities.resolve, insiders.list, owners.get_13f, owners.compare_13f, and filings.search.
 ```
 
-**Expected tool chain**
+### 10. Executive-pay context review
 
-1. `portfolio.analyze` — Current portfolio factor exposures
-2. `macro.regimes` — Current and prior regimes
-3. `factors.returns` — Factor returns under each regime
-4. `factors.dashboard` — Cross-regime factor comparison
+**Prompt id:** `investment-manager-comp-aligned-incentives`
 
-**Expected output:** 1-page IC risk note with stress table + 2-factor swing commentary.
-
-### 9. Spot insider buying that contradicts institutional rotation
-
-*Find names where insiders are buying while institutions are selling.*
-
-**Category:** Smart-money signals  ·  **Difficulty:** intermediate  ·  **Prompt id:** `investment-manager-insider-13f-divergence`
-
-**Prompt**
-
-```
-For my watchlist of small-cap US healthcare names, identify any tickers where insiders have been net buyers in the past 90 days while one or more 13F filers have been net sellers in the latest quarter. For each match, surface the top insider buyers (Form 4) and the top institutional sellers, plus the latest 90-day insider net-buy dollar volume and the institutional position delta in shares. Output a table ranked by signal strength.
+```text
+For [TICKER], retrieve the latest and prior proxy compensation disclosures, current financial statements, and factor-similar peers' compensation records. Compare reported pay components and performance measures with fiscal periods shown. Do not assign a pay-for-performance score unless its formula and missing inputs are explicit. Use entities.resolve, comp.list, comp.compare, companies.ratios, and factors.related_stocks.
 ```
 
-**Expected tool chain**
+### 11. Segment trajectory reading
 
-1. `entities.resolve` — Resolve each ticker
-2. `insiders.list` — 90-day insider transaction history
-3. `owners.get_13f` — Latest institutional snapshot per ticker
-4. `owners.compare_13f` — Quarter-over-quarter institutional delta
+**Prompt id:** `investment-manager-segment-revenue-forensics`
 
-**Expected output:** Ranked table of divergence candidates with insider $ + institutional Δshares.
-
-### 10. Audit executive compensation alignment with shareholder returns
-
-*Compare named-executive compensation against SEC-derived financial context.*
-
-**Category:** Governance  ·  **Difficulty:** intermediate  ·  **Prompt id:** `investment-manager-comp-aligned-incentives`
-
-**Prompt**
-
-```
-For META, pull the latest named-executive compensation disclosures and the prior year's compensation, compare year-over-year base + equity + total, then overlay the latest SEC-derived income statement and ratio context. Output an alignment scorecard (0-10) with bullets on (a) pay-for-performance context, (b) equity grant timing relative to reported financial trends, (c) any outlier comp items vs peers.
+```text
+For [TICKER] across [FY FROM]-[FY TO], retrieve segment footnotes, annual income statements, and Item 8 financial-statement sections. Build a segment table from reported disclosures and identify changes management discusses. Do not manufacture segment margins or reconcile segments beyond disclosed data. Use entities.resolve, intelligence.footnotes, companies.income_statements, sections.get, and filings.search. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+### 12. Cross-country macro tilt memo
 
-1. `entities.resolve` — Resolve to best-match CIK
-2. `comp.list` — Latest named-executive comp
-3. `comp.compare` — Year-over-year comp comparison
-4. `companies.ratios` — SEC-derived financial ratio context
+**Prompt id:** `investment-manager-macro-tilt-recommendation`
 
-**Expected output:** Alignment scorecard 0-10 with 3 bullets and supporting figures.
-
-### 11. Decompose segment revenue trajectories
-
-*Walk segment revenue + segment-disclosure footnotes for a diversified issuer.*
-
-**Category:** Fundamentals  ·  **Difficulty:** advanced  ·  **Prompt id:** `investment-manager-segment-revenue-forensics`
-
-**Prompt**
-
-```
-For AMZN, pull the segment-revenue disclosure footnote (intelligence.footnotes topic=segment), align with the latest annual income statement segment columns, and walk five years of segment-mix shift. Surface the segment with the largest absolute growth, the segment with the largest margin compression, and the latest 10-K Item 8 segment table excerpt. Output a markdown narrative + segment-mix waterfall.
+```text
+Compare countries [COUNTRY LIST] using macro regimes, high-signal packs, and factor dashboards for [LOOKBACK]. Produce dated scenarios for a portfolio [HOLDINGS], stating source freshness and what would falsify each scenario. Do not recommend allocation changes or present modeled relationships as forecasts. Use macro.regimes, macro.high_signal_pack, macro.country_report, factors.dashboard, and portfolio.analyze. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
 ```
 
-**Expected tool chain**
+## Evidence standard
 
-1. `entities.resolve` — Resolve to best-match CIK
-2. `intelligence.footnotes` — Segment-disclosure footnotes
-3. `companies.income_statements` — 5-year segmented income
-4. `sections.get` — Item 8 financial-statement segment narrative
-
-**Expected output:** Markdown narrative + segment-mix waterfall covering 5 years.
-
-### 12. Draft macro tilt scenarios based on cross-country regime divergence
-
-*Compare regimes across major markets and draft country/factor tilt research scenarios.*
-
-**Category:** Macro overlay  ·  **Difficulty:** advanced  ·  **Prompt id:** `investment-manager-macro-tilt-recommendation`
-
-**Prompt**
-
-```
-Compare current macro regime classifications across US, Eurozone, Japan, and emerging markets. For each market, pull the latest high-signal indicator pack and the prevailing-regime factor returns. Draft a country/factor tilt research scenario with one paragraph of evidence per market. Output a tilt table + 4-paragraph rationale.
-```
-
-**Expected tool chain**
-
-1. `macro.regimes` — Per-country regime classifications
-2. `macro.indicators` — Recent indicator history per country
-3. `macro.high_signal_pack` — Top-of-stack indicators per country
-4. `portfolio.analyze` — Apply tilts to a baseline portfolio
-
-**Expected output:** Country/factor tilt table + 4-paragraph rationale.
-
-
----
-
-## See also
-
-- [Agent prompt library index](/agents/prompt-library)
-- [Install MCP for Claude Desktop / Claude Code / Cursor](/mcp-install)
-- [Agent operating layer](/agent-operating-layer)
-- [SEC API CLI workflows](/javascript-sdk)
+Keep reported filing facts, delayed ownership reports, and model outputs separate. Neither a 13F filing nor Form 4 activity establishes conviction or intent.
