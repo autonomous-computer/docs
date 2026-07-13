@@ -1,79 +1,89 @@
 ---
-title: "Install SEC API in LangChain"
-description: "Wire SEC API into a LangChain agent in Python or JavaScript using langchain-mcp-adapters — copy-paste-able snippets for both runtimes."
+title: "Connect SEC API to LangChain"
+description: "Discover SEC API MCP tools in a server-side LangChain application, verify one filing call, and preserve its source record."
 ---
 
-LangChain has first-party MCP support via `langchain-mcp-adapters` (Python) and `@langchain/mcp-adapters` (JS). Both speak streamable HTTP and pass headers verbatim, so wiring up SEC API is one config block.
+Use LangChain's MCP adapters when the agent runs in your application. The
+adapter loads SEC API's remote tool definitions over streamable HTTP and returns
+LangChain tools. Unlike an IDE configuration, this is the right place to keep a
+production key: in the server runtime's secret manager, never in a browser
+bundle or client-side route.
 
-## Prerequisites
+## First viable path
 
-- SEC API key (free — 150 calls, one-time). Create an account at [secapi.ai/signup](https://secapi.ai/signup). Set `SECAPI_API_KEY`.
-- Python: `langchain-mcp-adapters` ≥ 0.2 with `langchain` ≥ 1.0 and `langgraph`.
-- JavaScript / TypeScript (Node only): `@langchain/mcp-adapters` ≥ 1.1 with `@langchain/core` ≥ 0.3.
-
-## Python
+Install the adapter and your chosen model integration:
 
 ```bash
-pip install langchain-mcp-adapters langchain langgraph langchain-anthropic
+pip install langchain-mcp-adapters langchain
 ```
 
-```python
-import asyncio, os
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain.agents import create_agent
+Then verify tool discovery and a single filing call before constructing an
+agent:
 
-async def main():
-    client = MultiServerMCPClient({
-        "secapi": {
-            "transport": "streamable_http",
-            "url": "https://api.secapi.ai/mcp",
-            "headers": {"x-api-key": os.environ["SECAPI_API_KEY"]},
+```python
+import asyncio
+import os
+
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+
+async def main() -> None:
+    client = MultiServerMCPClient(
+        {
+            "secapi": {
+                "transport": "http",
+                "url": "https://api.secapi.ai/mcp",
+                "headers": {"x-api-key": os.environ["SECAPI_API_KEY"]},
+            }
         }
-    })
+    )
     tools = await client.get_tools()
-    agent = create_agent("anthropic:claude-sonnet-4-5", tools)
-    result = await agent.ainvoke({"messages": [("user", "Show me Apple's latest 8-K filing.")]})
-    print(result["messages"][-1].content)
+    latest_filing = next(tool for tool in tools if tool.name == "filings.latest")
+    result = await latest_filing.ainvoke({"ticker": "AAPL", "form": "10-K"})
+    print(result)
+
 
 asyncio.run(main())
 ```
 
-## JavaScript / TypeScript
+LangChain documents `http` as the streamable HTTP transport and supports custom
+headers in the connection configuration. Load `SECAPI_API_KEY` only in the
+process that invokes this code. For a web application, call this from a server
+route, worker, or backend service; do not return the key or a reusable MCP
+client configuration to the browser.
 
-```bash
-npm install @langchain/mcp-adapters @langchain/core @langchain/anthropic @langchain/langgraph langchain
-```
+## Turn tools into an agent
 
-```typescript
-import { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
+After the direct call succeeds, pass the discovered `tools` to your LangChain
+agent. Keep the tool loading near the agent lifecycle: rebuild or refresh it on
+process startup and after a deliberate integration upgrade, rather than
+serializing an old copied schema into your application. Give the agent narrow
+defaults for issuer, form, date range, and list limits before allowing it to
+plan multi-tool work.
 
-const client = new MultiServerMCPClient({
-  "secapi": {
-    transport: "streamable_http",
-    url: "https://api.secapi.ai/mcp",
-    headers: { "x-api-key": process.env.SECAPI_API_KEY! },
-  },
-});
-const tools = await client.getTools();
-const agent = createReactAgent({ llm: new ChatAnthropic({ model: "claude-sonnet-4-5" }), tools });
-const result = await agent.invoke({ messages: [{ role: "user", content: "Show me Apple's latest 8-K filing." }] });
-console.log(result.messages.at(-1)?.content);
-```
+## Preserve the evidence
 
-## Verify
+`filings.latest` returns a filing record with `accessionNumber`, `filingDate`,
+and `filingUrl`; the MCP response envelope carries `requestId` and
+`traceparent`. Store those with the answer. Search, section, and analytical
+tools may include provenance, freshness, or source fields: carry them through
+your agent state and final output. A model's prose is not a substitute for the
+source filing identity.
 
-Run either snippet. The agent should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and print the filing URL plus a short summary.
+## Errors and bounded retries
 
-## Troubleshooting
+Handle tool errors before model-level retry loops:
 
-- **`401 Unauthorized`** — `x-api-key` is missing or wrong. Sanity check: `curl https://api.secapi.ai/v1/limits -H "x-api-key: $SECAPI_API_KEY"`.
-- **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
-- **No tools returned** — confirm the URL ends in `/mcp` (not `/sse`); the SSE transport is deprecated as of MCP 2025-03-26.
-- **JS only: streaming notifications missing** — `@langchain/mcp-adapters` does not yet propagate real-time MCP notifications over streamable HTTP. Tool calls and results work; long-running progress events do not.
+- `401`: repair or rotate the server-side key.
+- `402`: resolve plan, credit, billing, or budget state; do not retry unchanged.
+- `429` and temporary `503`: honor `Retry-After`, reduce concurrency, and retry
+  a bounded number of times.
+- `mcp_tool_timeout`: reduce filters or result limits before retrying.
 
-## Next
+Record the JSON-RPC error, SEC API `error.data.code`, and request ID. Read the
+[Error code catalog](/error-code-catalog) before turning retries on globally.
 
-- [Available tools](/mcp-install#available-tools) — SEC + market data tools
-- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
+## Next step
+
+Add the verified tool set to your LangChain agent, then require every filing
+answer to include accession number, filing URL, and request metadata.

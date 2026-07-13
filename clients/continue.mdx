@@ -1,18 +1,19 @@
 ---
-title: "Install SEC API in Continue"
-description: "Add SEC API as an MCP server in Continue's config.yaml — supports streamable HTTP transport with header-based authentication."
+title: "Connect SEC API to Continue"
+description: "Add SEC API as a streamable HTTP MCP server in Continue and verify a filing lookup before using it in an agent workflow."
 ---
 
-Continue (continue.dev) has native MCP support via `~/.continue/config.yaml`. Headers go under `requestOptions.headers`, and YAML configs can pull secrets from Continue's secrets store with `${{ secrets.NAME }}`.
+Use Continue's remote MCP configuration for a developer-owned IDE workflow.
+Continue connects to SEC API over streamable HTTP, discovers the available
+tools, and makes them available in agent mode. This is not a deployment secret
+boundary: use a development key in a local secret store and keep production
+agent credentials in the server that runs the agent.
 
-## Prerequisites
+## First viable path
 
-- SEC API key (free — 150 calls, one-time). Create an account at [secapi.ai/signup](https://secapi.ai/signup).
-- Continue installed in your IDE (VS Code, JetBrains, or CLI). Latest stable release supports MCP `streamable-http`.
-
-## Install
-
-Open (or create) `~/.continue/config.yaml`. Add an `mcpServers` entry; this example merges with any existing config:
+Create a Continue secret named `SECAPI_API_KEY`, then add this server to
+`~/.continue/config.yaml` or to a standalone configuration in
+`.continue/mcpServers/`:
 
 ```yaml
 name: My Config
@@ -24,46 +25,50 @@ mcpServers:
     type: streamable-http
     url: https://api.secapi.ai/mcp
     requestOptions:
-      timeout: 30000
       headers:
         x-api-key: ${{ secrets.SECAPI_API_KEY }}
 ```
 
-Save your key in Continue Hub secrets as `SECAPI_API_KEY`, or replace the `${{ … }}` expression with the literal key for a quick test.
+Continue supports `streamable-http` remote servers and custom request headers.
+Use Continue's locally stored secrets instead of committing a key in the YAML.
+If your installation centrally manages Continue configuration, place the key in
+that managed secret store rather than embedding it in the shared configuration.
 
-If you're still on `config.json` (legacy), the same entry looks like:
+## Verify one source-backed result
 
-```json
-{
-  "mcpServers": [
-    {
-      "name": "SEC API",
-      "type": "streamable-http",
-      "url": "https://api.secapi.ai/mcp",
-      "requestOptions": {
-        "headers": { "x-api-key": "<your-api-key>" }
-      }
-    }
-  ]
-}
-```
+Start an agent-mode chat and ask:
 
-## Verify
+> Call `filings.latest` with `ticker: AAPL` and `form: 10-K`. Return the
+> accession number, filing date, filing URL, `requestId`, and `traceparent`.
 
-In the Continue chat, ask:
+Check that the reply names the filing and carries those fields forward. The
+filing URL and accession number identify the source filing; `requestId` and
+`traceparent` make the call diagnosable. Do not accept a generated summary that
+omits the source identity.
 
-> Show me Apple's latest 8-K filing.
+## Use it deliberately
 
-Continue should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and return the filing URL plus a short summary.
+Continue discovers the MCP tools at connection time. Refresh or reconnect after
+changing this configuration, and review the exposed tool list before giving an
+agent a broad task. Start with a constrained issuer, form, date range, and
+limit. Use source and provenance fields returned by search or extraction tools
+in the final answer.
 
-## Troubleshooting
+## Failures and limits
 
-- **`type` rejected** — must be `streamable-http` (hyphenated). Valid types are `stdio`, `sse`, `streamable-http`.
-- **`mcpServers` shape error** — Continue expects a list, not a name-keyed map. Each entry has its own `name` field.
-- **Secrets aren't substituted** — `${{ secrets.NAME }}` works in `config.yaml` only. In `config.json`, paste the key literally or use a shell-exported env var via your IDE's launch config.
-- **`401 Unauthorized`** — the secret didn't resolve. Check `Continue → Settings → Hub Secrets` and confirm the secret is named `SECAPI_API_KEY`.
+- `401`: the key did not resolve or was rejected. Check the Continue secret
+  name and rotate the key if needed.
+- `402`: plan, credit, billing, or budget state blocks the request. Resolve it;
+  do not retry unchanged work.
+- `429` or `503`: honor `Retry-After`, reduce concurrent agent work, then make
+  a bounded retry.
+- `mcp_tool_timeout`: narrow the query or lower result limits before retrying.
 
-## Next
+Capture the JSON-RPC error, its SEC API `error.data.code`, and the request ID
+for a repeated failure. The [Error code catalog](/error-code-catalog) explains
+the common actions.
 
-- [Available tools](/mcp-install#available-tools) — SEC + market data tools
-- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
+## Next step
+
+Use the verified filing lookup as a rule in your Continue prompt: preserve the
+accession number, filing URL, and request metadata with every conclusion.

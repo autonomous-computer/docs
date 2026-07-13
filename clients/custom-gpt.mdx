@@ -1,51 +1,86 @@
 ---
-title: "Install SEC API in Custom GPT"
-description: "Connect SEC API to a Custom GPT — native MCP via ChatGPT Apps Developer Mode, or an OpenAPI Action fallback for any tier."
+title: "Connect SEC API to a Custom GPT"
+description: "Choose a ChatGPT MCP app or OpenAPI Action for SEC API, use a private credential boundary, and verify a source-backed filing lookup."
 ---
 
-Two install paths depending on your ChatGPT plan. Path 1 gives a Custom GPT (or any chat) the full MCP toolset via ChatGPT Apps. Path 2 wraps the REST API as an OpenAPI Action so a Custom GPT on any tier can still call SEC API.
+ChatGPT offers two distinct integration paths. Choose one for a GPT: an MCP app
+for tool discovery through `https://api.secapi.ai/mcp`, or an OpenAPI Action
+for REST operations defined by the public schema. ChatGPT does not allow a GPT
+to use apps and actions together.
 
-## Prerequisites
+Use either path only when the credential boundary is appropriate. A key stored
+in an app or Action configuration is a service credential for that configured
+experience, not a per-user SEC API key. Do not put a broadly privileged
+organization key into a public GPT. For a multi-user or public product, put
+your own server-side policy and credential handling in front of the integration.
 
-- SEC API key (free — 150 calls, one-time). Create an account at [secapi.ai/signup](https://secapi.ai/signup).
-- For Path 1: ChatGPT Pro, Plus, Business, Enterprise, or Edu with a workspace admin who can enable Developer Mode.
-- For Path 2: any ChatGPT tier with access to the GPT Builder.
+## First viable path: workspace MCP app
 
-## Path 1 — ChatGPT Apps + Developer Mode (native MCP)
+This path gives ChatGPT the current SEC API MCP tool list. It is intended for a
+workspace that can enable custom apps and developer mode.
 
-1. Workspace admin: `Settings → Apps & Connectors → Advanced → Developer Mode → On`.
-2. `Settings → Apps & Connectors → Create`.
-3. **MCP Server URL**: `https://api.secapi.ai/mcp`
-4. **Authentication**: API Key.
-5. **Header name**: `x-api-key`. **Header value**: your SEC API key.
-6. Save. Enable the connector in any chat; the SEC API MCP tools are now available.
+1. Have a workspace admin or authorized developer enable developer mode in
+   ChatGPT's Apps settings.
+2. In **Settings or Workspace settings > Apps > Create**, add a custom app.
+3. Set the MCP endpoint to `https://api.secapi.ai/mcp`.
+4. Choose the API-key authentication option and configure the `x-api-key`
+   header with a key held by the approved workspace secret boundary.
+5. Scan tools, create the draft app, and test it in a private chat before any
+   workspace publication.
 
-## Path 2 — Classic Custom GPT + OpenAPI Action (any tier)
+ChatGPT's developer-mode availability, tool scanning, approval controls, and
+plan support change independently of SEC API. Follow the current ChatGPT Apps
+settings if the labels differ. Do not claim an app is available to a user until
+an administrator has enabled and approved it.
 
-This calls the REST API directly. Tool calls work, but you skip MCP's auto-discovery — your GPT instructions need to spell out which endpoints to use.
+## Alternative: Custom GPT OpenAPI Action
 
-1. In GPT Builder: `Configure → Actions → Create new action`.
-2. **Schema**: paste the URL `https://docs.secapi.ai/openapi/sec-api.v1.json` and import.
-3. **Authentication**: API Key → **Auth Type**: Custom → **Custom Header Name**: `x-api-key` → paste your SEC API key as the value.
-4. **Privacy policy**: `https://secapi.ai/privacy-policy` (required by the GPT Store).
-5. Save and test in the playground.
+An Action calls SEC API's REST endpoints rather than discovering MCP tools. Use
+it when a Custom GPT needs a deliberately reviewed endpoint set and your GPT
+editor supports Actions.
 
-## Verify
+1. Open the GPT editor, then **Actions > Create new action**.
+2. Import `https://docs.secapi.ai/openapi/sec-api.v1.json`.
+3. Select API-key authentication with a custom header named `x-api-key`.
+4. Test a single read operation in Preview before adding instructions that call
+   more than one endpoint.
 
-In a chat with the connector (or Custom GPT) enabled, ask:
+Actions need an OpenAPI JSON or YAML schema and support API-key authentication
+with a custom header. Workspace domain restrictions can prevent an Action from
+running. A public GPT with an Action also needs the applicable privacy-policy
+configuration in ChatGPT; review ChatGPT's current publication requirements.
 
-> Show me Apple's latest 8-K filing.
+## Verify the source record
 
-The agent should call `filings.latest` (Path 1) or `GET /v1/filings/latest?ticker=AAPL&form=8-K` (Path 2) and return the filing URL plus a short summary.
+In a private test chat, ask:
 
-## Troubleshooting
+> Retrieve Apple's latest 10-K. Include the accession number, filing date,
+> filing URL, `requestId`, and `traceparent`. State which tool or endpoint you
+> used, and do not summarize a filing without its source URL.
 
-- **"Action returned 401"** — `x-api-key` not configured or wrong. Re-enter the value in the connector / action auth settings.
-- **"Server URL invalid" (Path 1)** — must be the literal `https://api.secapi.ai/mcp` (note `/mcp` suffix, no trailing slash).
-- **"Schema import failed" (Path 2)** — verify the schema URL returns JSON with `curl https://docs.secapi.ai/openapi/sec-api.v1.json | head`.
-- **429 rate limit** — check `GET https://api.secapi.ai/v1/billing` for your monthly cap; upgrade at [secapi.ai/pricing](https://secapi.ai/pricing).
+For an MCP app, the expected tool is `filings.latest` with `ticker: AAPL` and
+`form: 10-K`. For an Action, the equivalent REST route is
+`GET /v1/filings/latest?ticker=AAPL&form=10-K`. Preserve the returned accession
+number and filing URL as the source identity, and retain request metadata with
+any generated analysis. Search and extraction results should keep their
+provenance and freshness fields when present.
 
-## Next
+## Lifecycle, failures, and limits
 
-- [Available tools](/mcp-install#available-tools) — the SEC + market data tools exposed via MCP
-- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — a canonical briefing block for richer agent workflows
+MCP apps scan a tool snapshot; refresh and review the tools when SEC API's
+surface changes rather than assuming a new server tool is automatically usable.
+Actions are schema-bound; re-import and test after an intentional API schema
+update. In both cases, start with read-only, constrained calls and require user
+review before any workflow with wider scope.
+
+For `401`, fix the configured credential. For `402`, resolve account, credit,
+or budget state rather than looping. For `429` or temporary `503`, respect
+`Retry-After` and reduce the work requested. For an MCP `mcp_tool_timeout`,
+narrow the request before a bounded retry. Keep the error code and request ID
+when support needs to trace a failure.
+
+## Next step
+
+After the private filing test succeeds, add GPT instructions that require a
+source URL, accession number, and request metadata for every SEC API-backed
+conclusion.

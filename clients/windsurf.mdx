@@ -1,18 +1,23 @@
 ---
-title: "Install SEC API in Windsurf"
-description: "Connect SEC API to Windsurf's Cascade agent by editing one JSON config file — full MCP support with environment-variable auth interpolation."
+title: "Connect SEC API to Windsurf"
+description: "Add the SEC API streamable HTTP MCP server to Windsurf Cascade, keep the key out of the JSON file, and verify a cited filing lookup."
 ---
 
-Windsurf's Cascade agent has native MCP support over streamable HTTP. Auth headers can pull values from environment variables, so you don't have to hard-code your key into the config file.
+Windsurf Cascade reads remote MCP servers from its global JSON configuration.
+It supports streamable HTTP, custom headers, and environment-variable
+interpolation in the header. This suits a developer's local setup; it is not a
+way to distribute a production credential to a team or an application.
 
-## Prerequisites
+## First viable path
 
-- SEC API key (free — 150 calls, one-time). Create an account at [secapi.ai/signup](https://secapi.ai/signup). Export `SECAPI_API_KEY` in your shell.
-- Windsurf installed and signed in.
+Export a development key before launching Windsurf:
 
-## Install
+```bash
+export SECAPI_API_KEY="your-development-key"
+```
 
-Open (or create) `~/.codeium/windsurf/mcp_config.json` on macOS/Linux, or `%USERPROFILE%\.codeium\windsurf\mcp_config.json` on Windows:
+Open **Windsurf Settings > Cascade > MCP Servers**, choose **View Raw Config**,
+and add SEC API to `~/.codeium/windsurf/mcp_config.json`:
 
 ```json
 {
@@ -27,24 +32,47 @@ Open (or create) `~/.codeium/windsurf/mcp_config.json` on macOS/Linux, or `%USER
 }
 ```
 
-Open the Cascade chat, click the MCP icon, and hit **Refresh** — Windsurf does not auto-watch the config file. The SEC API MCP tools should appear in the tool list.
+Keep an existing `mcpServers` object and add only the `secapi` entry. Windsurf
+supports both `serverUrl` and `url` for a remote HTTP MCP; this example uses the
+documented `serverUrl` form. Restart Windsurf if its process cannot see the
+exported variable, then refresh the MCP list in Cascade.
 
-## Verify
+## Verify one source-backed result
 
-In a Cascade chat, ask:
+In Cascade, ask:
 
-> Show me Apple's latest 8-K filing.
+> Call `filings.latest` with `ticker: AAPL` and `form: 10-K`. Return the
+> accession number, filing date, filing URL, `requestId`, and `traceparent`.
 
-Cascade should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and return the filing URL plus a short summary.
+The filing URL and accession number are the evidence trail for the response.
+Preserve them, along with request metadata, in generated code, a research note,
+or a handoff. For search and extraction tools, preserve returned provenance and
+freshness fields rather than reporting an uncited conclusion.
 
-## Troubleshooting
+## Lifecycle and scope
 
-- **Server doesn't appear in the MCP panel** — click **Refresh** in the panel; Windsurf reads the config on demand, not on save.
-- **`401 Unauthorized`** — environment variable is unset or unreadable from Windsurf's process. Start Windsurf from the same terminal after `export SECAPI_API_KEY=…`, or configure your desktop/IDE launcher to provide that environment variable.
-- **Old config path doesn't work** — older guides reference `~/.codeium/mcp_config.json` (without `windsurf/`). The current canonical path includes the `windsurf/` segment.
-- **`url` vs `serverUrl`** — both keys are accepted, but `serverUrl` is canonical in current Windsurf docs.
+Windsurf loads MCP tools from the configured server; refresh the MCP panel after
+editing the file and review which tools are enabled before a broad task. Cascade
+has a finite available-tool budget, so enable the SEC API tools needed for the
+workflow and constrain early calls by issuer, form, date, and result count.
 
-## Next
+For a deployed service, do not copy this JSON into the application or expose its
+key to a web client. Make the MCP connection from server-side code and load the
+key from that runtime's secret manager.
 
-- [Available tools](/mcp-install#available-tools) — SEC + market data tools
-- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
+## Failures and limits
+
+- `401` normally means the environment variable was unavailable to Windsurf or
+  the key was rejected.
+- `402` requires an account, credit, or budget action rather than a retry.
+- On `429` or temporary `503`, follow `Retry-After` and lower parallel work.
+- On `mcp_tool_timeout`, reduce the query scope before one bounded retry.
+
+Keep the JSON-RPC error, `error.data.code`, and `requestId` for repeated
+failures. See [Request diagnostics](/request-diagnostics) for a safe support
+record.
+
+## Next step
+
+After the filing lookup works, ask Cascade to use the filing URL and accession
+number as required output fields for every SEC API-backed conclusion.

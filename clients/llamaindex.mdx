@@ -1,59 +1,80 @@
 ---
-title: "Install SEC API in LlamaIndex"
-description: "Add SEC API as a tool spec in LlamaIndex using llama-index-tools-mcp and a custom httpx client for x-api-key auth."
+title: "Connect SEC API to LlamaIndex"
+description: "Adapt SEC API MCP tools into LlamaIndex FunctionTool objects, verify a filing call, and keep credentials in the server runtime."
 ---
 
-LlamaIndex ships first-party MCP support via `llama-index-tools-mcp`. The `BasicMCPClient` constructor doesn't take a `headers=` kwarg directly, so we pass auth through a custom `httpx.AsyncClient`.
+LlamaIndex's MCP tool package turns a remote MCP client's tool list into
+`FunctionTool` objects. Its `BasicMCPClient` uses streamable HTTP for an `/mcp`
+URL and accepts a custom `httpx.AsyncClient`, which makes the SEC API header
+explicit. Run this integration in your backend or worker; do not expose the
+key through a browser-facing LlamaIndex application.
 
-## Prerequisites
-
-- SEC API key (free — 150 calls, one-time). Create an account at [secapi.ai/signup](https://secapi.ai/signup). Set `SECAPI_API_KEY`.
-- `llama-index-tools-mcp` ≥ 0.4 with `llama-index-core` ≥ 0.13 and `llama-index-llms-anthropic`.
-
-## Install
+## First viable path
 
 ```bash
-pip install llama-index-tools-mcp llama-index-core llama-index-llms-anthropic httpx
+pip install llama-index-tools-mcp httpx
 ```
 
+Use a process environment variable supplied by your deployment secret manager:
+
 ```python
-import asyncio, os
+import asyncio
+import os
+
 import httpx
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
-from llama_index.core.agent.workflow import FunctionAgent
-from llama_index.llms.anthropic import Anthropic
 
-async def main():
-    http = httpx.AsyncClient(headers={"x-api-key": os.environ["SECAPI_API_KEY"]})
-    try:
-        mcp = BasicMCPClient("https://api.secapi.ai/mcp", http_client=http)
-        tools = await McpToolSpec(client=mcp).to_tool_list_async()
 
-        agent = FunctionAgent(tools=tools, llm=Anthropic(model="claude-sonnet-4-5"))
-        response = await agent.run("Show me Apple's latest 8-K filing.")
-        print(response)
-    finally:
-        await http.aclose()
+async def main() -> None:
+    async with httpx.AsyncClient(
+        headers={"x-api-key": os.environ["SECAPI_API_KEY"]}
+    ) as http:
+        client = BasicMCPClient("https://api.secapi.ai/mcp", http_client=http)
+
+        # Verify the remote server before giving the tools to an agent.
+        result = await client.call_tool(
+            "filings.latest", {"ticker": "AAPL", "form": "10-K"}
+        )
+        print(result)
+
+        tools = await McpToolSpec(client=client).to_tool_list_async()
+        print([tool.metadata.name for tool in tools])
+
 
 asyncio.run(main())
 ```
 
-## Verify
+The custom `httpx` client is specific to this integration: it supplies the
+`x-api-key` header to the streamable HTTP transport. The package also supports
+OAuth clients, but an API key is the direct machine-authentication path for the
+SEC API endpoint. Do not use its default in-memory OAuth token storage for a
+production credential lifecycle.
 
-Run the snippet. The agent should call the `filings.latest` tool with `ticker: AAPL, form: 8-K` and print the filing URL plus a short summary.
+## Add the tools to a workflow
 
-## Troubleshooting
+Pass `tools` to a LlamaIndex `FunctionAgent` or workflow only after the direct
+call returns the expected filing. Build the tool list during application startup
+or another controlled lifecycle boundary; refresh it after an integration
+upgrade instead of relying on a stale local schema. Limit the agent's first
+calls by issuer, filing form, period, and result count.
 
-- **`401 Unauthorized`** — the `httpx.AsyncClient` headers didn't reach the server. Verify the env var is set in the same shell that runs Python: `echo $SECAPI_API_KEY`.
-- **`429 Too Many Requests`** — rate limit hit. See `GET https://api.secapi.ai/v1/billing` for your plan's cap.
-- **`AttributeError: BasicMCPClient` has no attribute `headers`** — you're passing `headers=` to the constructor; that kwarg doesn't exist. Always wrap auth in a custom `httpx.AsyncClient` as shown above.
-- **Connection timeout** — verify the URL ends in `/mcp` (note the `/mcp` suffix, not `/sse`).
+## Preserve source and provenance
 
-## OAuth alternative
+The filing result identifies the underlying record with `accessionNumber`,
+`filingDate`, and `filingUrl`, plus `requestId` and `traceparent` for request
+diagnostics. Save those fields in the workflow state and user-visible answer.
+When other tools return provenance, freshness, or source data, retain it with
+the conclusion so a reader can inspect the filing rather than trust a generated
+summary alone.
 
-For longer-lived workflows that need rotating credentials, swap `BasicMCPClient(...)` for `BasicMCPClient.with_oauth(...)` and follow the OAuth-protected-resource metadata at `https://api.secapi.ai/.well-known/oauth-protected-resource`.
+## Errors and limits
 
-## Next
+Treat SEC API failures as tool results to classify, not as a reason for an
+unbounded agent loop. Fix `401`; resolve `402`; honor `Retry-After` on `429` or
+a temporary `503`; and narrow a request after `mcp_tool_timeout`. Keep the
+JSON-RPC error, `error.data.code`, and request ID for repeatable failures.
 
-- [Available tools](/mcp-install#available-tools) — SEC + market data tools
-- [Give this prompt to your agent](/give-this-prompt-to-your-agent) — canonical agent briefing for richer workflows
+## Next step
+
+Connect the verified `FunctionTool` list to your agent and make accession
+number, filing URL, and request metadata required output for filing analysis.

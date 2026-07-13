@@ -1,37 +1,80 @@
 ---
-title: "Connect SEC API to an MCP client"
-description: "Add the hosted SEC API MCP server to your IDE, agent framework, or assistant and verify one source-backed filing workflow."
+title: "Connect SEC API to your MCP client"
+description: "Choose the SEC API integration for an IDE, agent framework, or ChatGPT, then verify a source-backed filing lookup."
 ---
 
-SEC API's hosted MCP server uses streamable HTTP. Give your client the endpoint and an API key, then verify that it can resolve an issuer and retrieve a filing before you rely on it for an agent workflow.
+SEC API exposes its tools through a hosted MCP endpoint. Start with one narrow
+read: load the tools, call `filings.latest` for a known issuer, and retain the
+returned filing identity before you give an agent wider instructions.
 
 ```text
-URL:    https://api.secapi.ai/mcp
-Header: x-api-key: $SECAPI_API_KEY
+Endpoint: https://api.secapi.ai/mcp
+Header:   x-api-key: $SECAPI_API_KEY
 ```
 
-Pick your client below. Each install page includes a verification prompt so you can confirm the server is connected before an agent starts making broader requests.
+Create an API key in the SEC API dashboard and keep it in the secret store that
+actually runs the client. Do not put a production key in browser code, a
+repository, an agent prompt, or a shared desktop configuration. A desktop IDE
+configuration is appropriate for a developer-owned development key; a deployed
+agent should read its key from the server-side runtime.
 
-## IDE-native MCP clients
+## Choose a path
 
-- [Claude Desktop](/mcp-install#claude-desktop) — config in `claude_desktop_config.json`
-- [Claude Code](/mcp-install#claude-code) — single `claude mcp add` command
-- [Cursor](/mcp-install#cursor) — config in `.cursor/mcp.json`
-- [Windsurf](/clients/windsurf) — config in `~/.codeium/windsurf/mcp_config.json`
-- [Continue](/clients/continue) — config in `~/.continue/config.yaml`
+### IDE clients
 
-## Agent frameworks
+- [Continue](/clients/continue) keeps a remote MCP server in its YAML or MCP
+  server configuration. Use it for an interactive, developer-owned workflow.
+- [Windsurf](/clients/windsurf) reads a global JSON MCP configuration and can
+  interpolate an environment variable into the request header.
+- [Claude Desktop, Claude Code, and Cursor](/mcp-install) have their own
+  installation instructions.
 
-- [LangChain](/clients/langchain) — Python and JavaScript via `langchain-mcp-adapters`
-- [LlamaIndex](/clients/llamaindex) — Python via `llama-index-tools-mcp`
-- [Vercel AI SDK](/clients/vercel-ai-sdk) — TypeScript via `@ai-sdk/mcp`
+### Application frameworks
 
-## Hosted assistants
+- [LangChain](/clients/langchain) discovers remote MCP tools and supplies them
+  to a Python or TypeScript agent.
+- [LlamaIndex](/clients/llamaindex) adapts an MCP client into LlamaIndex
+  `FunctionTool` objects.
+- [Vercel AI SDK](/clients/vercel-ai-sdk) converts remote MCP tools to an AI SDK
+  tool set. Keep this code on the server, not in a client component or route
+  response.
 
-- [Custom GPT](/clients/custom-gpt) — ChatGPT Apps (Developer Mode) plus a classic OpenAPI Action fallback for free-tier users
+### ChatGPT
 
-## Don't see your client?
+- [Custom GPT](/clients/custom-gpt) covers two separate hosted paths: a
+  workspace MCP app or a classic OpenAPI Action. A GPT can use apps or actions,
+  not both at once.
 
-Any client that speaks MCP `2025-06-18` over streamable HTTP can use `https://api.secapi.ai/mcp` with the `x-api-key` header from `SECAPI_API_KEY`. The full reference configuration is in [MCP Server Installation](/mcp-install).
+## Verify the data, not only the connection
 
-Create an account at secapi.ai/signup to get an API key, or use your existing SEC API key with these clients.
+Use this as the first prompt after your client shows SEC API tools:
+
+> Use `filings.latest` with `ticker: AAPL` and `form: 10-K`. Return the company
+> name, form, filing date, accession number, filing URL, `requestId`, and
+> `traceparent`. Do not infer a filing from a ticker alone.
+
+The tool schema defines `accessionNumber`, `filingDate`, and `filingUrl` for
+this response; `requestId` and `traceparent` are part of the MCP output
+envelope. Keep those fields with a cached answer, a generated report, or a
+human review record. For extraction or search tools, retain their provenance,
+freshness, and source fields when returned rather than replacing them with an
+uncited model summary.
+
+## Production behavior
+
+Tool discovery and tool calls are separate lifecycle steps. Refresh the tool
+list when you deploy or when a tool schema changes; do not hard-code a copied
+tool definition indefinitely. Bound the work an agent can request with issuer,
+form, date, and result limits before it fans out.
+
+For failures, inspect the MCP JSON-RPC error and `error.data.code`. Correct
+validation errors, rotate or fix a rejected key on `401`, resolve billing or
+quota state on `402`, and honor `Retry-After` on `429` or a temporary `503`.
+For `mcp_tool_timeout`, reduce the request scope before one bounded retry. Keep
+the request ID when escalating a repeated failure. See the [Error code
+catalog](/error-code-catalog) and [Request diagnostics](/request-diagnostics).
+
+## Next step
+
+Open the page for the client you are using, complete its first filing lookup,
+then turn that verified call into the smallest useful agent workflow.
