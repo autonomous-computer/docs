@@ -2956,6 +2956,55 @@
         "x-secapi-smoke": "post_deploy"
       }
     },
+    "/v1/embed/situations/{id}": {
+      "get": {
+        "tags": [
+          "Embed"
+        ],
+        "summary": "Public redacted situation detail used by secapi.ai situation permalinks and embeddable discovery surfaces",
+        "description": "Anonymous, cacheable detail surface for recent public situations. The response matches the implementation's public projection: provider-owned keys are omitted and verification internals are redacted.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^sit_[a-f0-9]{20}$"
+            },
+            "description": "Canonical public situation id."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbedSituationDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-secapi-route-id": "embed.situations_member",
+        "x-secapi-access": "public",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "post_deploy"
+      }
+    },
     "/v1/embed/widget.js": {
       "get": {
         "summary": "Public embeddable feed widget script that renders the situations feed into a host element",
@@ -36998,6 +37047,433 @@
       "DilutionShareFloatHistoryList": {},
       "SituationList": {},
       "SituationDetail": {},
+      "EmbedSituationDetail": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "updatedAt",
+          "livemode",
+          "type",
+          "subtype",
+          "status",
+          "statusUpdatedAt",
+          "ticker",
+          "cik",
+          "entityName",
+          "headline",
+          "summaryMd",
+          "businessProfile",
+          "terms",
+          "keyDates",
+          "market",
+          "sourceAccessions",
+          "eventCount",
+          "latestEventAt",
+          "verification",
+          "events"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "situation"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^sit_[a-f0-9]{20}$"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "statusUpdatedAt": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cik": {
+            "type": "string"
+          },
+          "entityName": {
+            "type": "string"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "headline": {
+            "type": "string"
+          },
+          "summaryMd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "businessProfile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "keyDates": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "market": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "sourceAccessions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "eventCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "latestEventAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verification": {
+            "type": "object",
+            "required": [
+              "sourceSpan",
+              "extractionTraceId",
+              "confidence",
+              "crossValidations",
+              "modelVersion",
+              "verifiedAt"
+            ],
+            "properties": {
+              "sourceSpan": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "extractionTraceId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "confidence": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "crossValidations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "modelVersion": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "verifiedAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "object",
+                "id",
+                "createdAt",
+                "livemode",
+                "situationId",
+                "occurredAt",
+                "accessionNumber",
+                "formType",
+                "eightKItems",
+                "category",
+                "title",
+                "summaryMd",
+                "statusBefore",
+                "statusAfter",
+                "documentUrl",
+                "verification"
+              ],
+              "properties": {
+                "object": {
+                  "type": "string",
+                  "enum": [
+                    "situation_event"
+                  ]
+                },
+                "id": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "livemode": {
+                  "type": "boolean"
+                },
+                "situationId": {
+                  "type": "string",
+                  "pattern": "^sit_[a-f0-9]{20}$"
+                },
+                "occurredAt": {
+                  "type": "string"
+                },
+                "accessionNumber": {
+                  "type": "string"
+                },
+                "formType": {
+                  "type": "string"
+                },
+                "eightKItems": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "category": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "summaryMd": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "statusBefore": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "statusAfter": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "documentUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "verification": {
+                  "type": "object",
+                  "required": [
+                    "sourceSpan",
+                    "extractionTraceId",
+                    "confidence",
+                    "crossValidations",
+                    "modelVersion",
+                    "verifiedAt"
+                  ],
+                  "properties": {
+                    "sourceSpan": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "extractionTraceId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "confidence": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "crossValidations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    },
+                    "modelVersion": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "verifiedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "SituationEventList": {},
       "SituationFeedItemList": {},
       "SituationCalendarEntryList": {},
