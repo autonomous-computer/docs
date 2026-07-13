@@ -1,9 +1,9 @@
 ---
 title: "Troubleshooting"
-description: "Resolve SEC API authentication, billing, rate-limit, and request failures from the response status and error code"
+description: "Resolve SEC API authentication, billing, rate-limit, and request failures from the HTTP status and error code"
 ---
 
-Start with the failed response, not the symptom in your application. Keep its status, error `code`, `Request-Id`, and `traceparent` when present while you work through the appropriate path below.
+Start with the failed response. Record its HTTP status, error `code`, `Request-Id`, and `traceparent` when present. Then reproduce the request once with safe, redacted inputs.
 
 ```bash
 curl -i -sS \
@@ -11,66 +11,39 @@ curl -i -sS \
   "https://api.secapi.ai/v1/limits"
 ```
 
-If this request fails, resolve the credential or account state before debugging a filing, statement, SDK, or MCP workflow. Machine requests use `x-api-key`; dashboard actions use a signed-in browser session.
+If this request fails, resolve the credential or organization condition before debugging a filing, statement, SDK, or MCP workflow. Machine requests use `x-api-key`; browser account actions use a signed-in browser session.
 
-## Read the status first
+## Use the HTTP status and code together
 
-| Status | What to check | Next action |
+| Status or code | Meaning | First action |
 | --- | --- | --- |
-| `400` | Invalid query, path value, or JSON body | Compare the request with the endpoint reference and remove unknown fields |
-| `401 missing_api_key` | No API key reached the API | Export the key in the calling environment and send `x-api-key` |
-| `401 authentication_failed` | The key is invalid, revoked, or belongs to a different organization | Create a replacement key in the dashboard and update the caller |
-| `401 missing_browser_session` | A dashboard action was called as a machine request | Complete the action in the signed-in dashboard |
-| `402` | Billing, plan, credit, or budget state blocks the request | Inspect billing and limits, then resolve the stated condition |
-| `403` | The key is valid but not authorized for this resource or plan feature | Check the plan's included features on [Plans and pricing](/plans-and-pricing) |
-| `429` | A rate or quota limit applies | Wait for `Retry-After`; do not fan out retries |
-| `5xx` | The request could not complete | Retry once with bounded backoff, then retain the request ID |
-
-A `401` is always an authentication failure, a `403` an authorization one — a valid key without access to the requested resource or feature.
-
-Common billing and quota `code` values on a `402`/`429` are `billing_required` (the route, plan, grant, or current billing state does not permit the request), `billing_budget_approval_required` and `billing_budget_hard_cap_exceeded` (a spend guardrail stopped the request), and `ai_query_quota_exceeded` (the AI-query allowance is used up). Resolve account state on [Auth and pricing](/auth-and-pricing) and [Plans and pricing](/plans-and-pricing); to trace one specific failure end to end, see [Request diagnostics](/request-diagnostics).
+| `400`, `invalid_query_parameter`, or `validation_error` | The path, query, or body does not match the route contract. | Compare the request with the endpoint reference and remove unsupported fields. |
+| `401 missing_api_key` | No API key reached the API. | Send `x-api-key` from the process making the request. |
+| `401 authentication_failed` | The credential is invalid, revoked, or belongs to another organization. | Replace the key through the appropriate signed-in flow. |
+| `401 missing_browser_session` | A browser-only action was called as a machine request. | Complete it in the signed-in dashboard. |
+| `402` or `billing_required` | Billing, plan, grant, or budget state blocks the request. | Inspect billing and limits with the same credential; resolve the stated condition before retrying. |
+| `403` | A valid credential lacks authorization for the resource or feature. | Check the credential's access and the plan feature. |
+| `429` or `rate_limit_exceeded` | A rate or quota window applies. | Honor `Retry-After`, reduce fan-out, and retry only after the indicated interval. |
+| `5xx` | The request could not complete. | Retry once with bounded backoff, then retain the request context. |
 
 Read the [error code catalog](/error-code-catalog) for code-specific guidance.
 
-## Check billing and limits
+## Resolve billing and quota stops
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/billing"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" "https://api.secapi.ai/v1/billing"
 
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/limits"
+curl -sS -H "x-api-key: $SECAPI_API_KEY" "https://api.secapi.ai/v1/limits"
 ```
 
-Do not keep retrying a billing, budget, or quota stop. Resolve the account condition, then retry the original request. Limits and entitlements are specific to the authenticated organization and route.
+`billing_budget_approval_required` means a configured approval threshold stopped the request. `billing_budget_hard_cap_exceeded` means the configured hard cap stopped it. `ai_query_quota_exceeded` means the applicable AI-query allowance is exhausted. Stop rather than repeatedly retrying these outcomes. See [Agent billing](/agent-billing), [GET /v1/limits](/api-reference/platform/get-v1-limits), [API keys, usage, and billing](/auth-and-pricing), and [Plans and pricing](/plans-and-pricing).
 
-| Code | What it means | Safe next action |
-| --- | --- | --- |
-| `billing_required` | The route, plan, grant, or current billing state does not permit the request. | Inspect the same credential's billing and limits responses, then resolve the billing state or choose a plan that includes the route. |
-| `billing_budget_approval_required` | This request would cross the organization's configured approval threshold. | Stop the workflow and ask an organization billing admin to approve the spend or adjust the threshold. |
-| `billing_budget_hard_cap_exceeded` | This request would exceed the organization's configured hard spend cap. | Stop the workflow; a billing admin can raise the cap, or wait for the next invoice period. |
-| `ai_query_quota_exceeded` | A capped organization has exhausted its AI-query allowance. | Do not retry until reset; reduce AI-query work, wait for the quota reset, or upgrade. Honor `Retry-After` when present. |
+## Diagnose a partial data result
 
-Use [API keys, usage, and billing](/auth-and-pricing) to separate machine authentication from browser-only billing changes. Review [plans, usage, and commercial rights](/plans-and-pricing) before increasing sustained traffic or changing the account's plan.
+A partial or degraded result is not necessarily a transport failure. Inspect the returned capability, warning, provenance, period, freshness, or status-note fields for that route. Preserve usable source evidence and make the limitation visible to your caller; do not silently substitute a different issuer, period, or data surface.
 
-## Fix common integration mistakes
+## Diagnose hosted MCP calls
 
-| Symptom | Likely cause | Fix |
-| --- | --- | --- |
-| `missing_api_key` | The header did not reach the API | Set `x-api-key` in the server, worker, terminal, SDK, CLI, or MCP client that makes the request |
-| `authentication_failed` | The credential or token was rejected | Verify the credential type and replace or refresh it through the appropriate signed-in flow |
-| `invalid_query_parameter` or `validation_error` | A parameter or body field is unsupported | Use the endpoint's documented schema and accepted values |
-| `rate_limit_exceeded` | The route or plan window is full | Honor `Retry-After`, lower fanout, and retry after the indicated interval |
-| A partial or degraded result | A source or derived sub-workflow is not fully available | Inspect returned warnings and capability fields; preserve the usable source evidence and route the exception explicitly |
+Confirm that the client connects to `https://api.secapi.ai/mcp`, sends the configured API key when using API-key authentication, and has refreshed its tool list. JSON-RPC `-32004` indicates a tool execution-budget stop, `-32005` an AI-query or MCP quota stop, and `-32006` a tool-level protection stop. Narrow the request or wait for the applicable limit instead of retrying blindly.
 
-## Fix MCP calls
-
-Confirm that your client connects to `https://api.secapi.ai/mcp`, sends `x-api-key` when configured for API-key authentication, and refreshes the tool list before calling a tool.
-
-- JSON-RPC `-32004` means a tool exceeded its execution budget. Retry with narrower arguments or a smaller limit.
-- JSON-RPC `-32005` means an AI-query quota or MCP quota window is exhausted. Wait for reset or change the account's quota posture.
-- JSON-RPC `-32006` means tool-level protection is active. Back off before retrying.
-
-For a reproducible escalation, include the method or tool name, redacted request, HTTP status, error code, `Request-Id`, trace context, and the outcome of `GET /v1/limits` with the same credential. Do not include an API key.
-
-Read next: [Request diagnostics](/request-diagnostics), [Error code catalog](/error-code-catalog), and [MCP installation](/mcp-install).
+For support, include the method or tool name, redacted request, HTTP status, error code, `Request-Id`, trace context, and the outcome of `GET /v1/limits` with the same credential. Never include an API key.

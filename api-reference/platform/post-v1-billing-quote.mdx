@@ -13,6 +13,11 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
+- `planKey`
+- `meterClass`
+- `units`
+- `budget`
+- `budgetGate`
 
 ## Example request
 
@@ -22,7 +27,7 @@ curl -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{"path":"/v1/facts","method":"GET","units":1}' \
   "https://api.secapi.ai/v1/billing/quote"
 ```
 </RequestExample>
@@ -32,15 +37,30 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "billing_quote",
+  "planKey": "personal",
+  "meterClass": "fact_lookup",
+  "meterFamily": "standard_read",
+  "units": 1,
+  "unitAmountUsd": 0,
+  "amountUsd": 0,
+  "amountCents": 0,
+  "currency": "usd",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "budget": {},
+  "budgetGate": null
 }
 ```
 </ResponseExample>
 
+## Request body
+
+Provide meterClass or path. method is used with path and defaults to GET; planKey and positive units are optional. The quote reflects the current plan and budget gate. It does not reserve usage or guarantee a later request's billing state.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/billing/quote to quote a billable workflow or meter class against the current billing plan and budget gates. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API POST /v1/billing/quote to quote a billable workflow or meter class against the current billing plan and budget gates. Preserve `requestId`, `traceparent`, `planKey`, `meterClass`, `units`, `budget`, `budgetGate` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

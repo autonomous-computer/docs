@@ -1,48 +1,45 @@
 ---
-title: "Give an Agent Read-Only SEC API Access"
-description: "Issue a short-lived sponsor token from a signed-in session, exchange it once for an agent API key, and keep control-plane changes human-owned."
+title: "Building SEC API agents"
+description: "Build a bounded SEC API agent workflow with source evidence, billing checks, and explicit failure handling"
 ---
 
-Use agent bootstrap when a human operator needs to give an ephemeral agent runtime its own SEC API credential. The credential is limited to the self-serve read scope. It can retrieve data through REST or hosted MCP; it cannot configure billing, monitors, webhook destinations, or stream subscriptions.
+Build an SEC API agent as a small, inspectable workflow: resolve the source record, request only the derived surface needed, preserve response evidence, and stop when the API reports an authorization, billing, quota, or capability boundary.
 
-## Choose the right credential
+## Start with one bounded request
 
-Use a normal API key for a service you operate. Use an agent bootstrap token when a signed-in organization member is sponsoring a separate runtime and does not want to place a long-lived key in that runtime.
-
-The sponsor-token request requires a WorkOS-authenticated organization session. The exchange is intentionally one-time; keep both the token and the resulting API key out of prompts, browser code, logs, and source control.
-
-## Sponsor a bounded agent job
-
-From your authenticated server or dashboard-backed session, create a short-lived token for one concrete job. The current contract accepts only the self-serve read scope.
+Give the agent a specific issuer, filing family, date range, or question. Begin with the route that returns the source record, then make a second request only when the source response supports it.
 
 ```bash
-curl --fail-with-body -X POST "https://api.secapi.ai/v1/agent/bootstrap_tokens" \
-  -H "Authorization: Bearer $SECAPI_BEARER_TOKEN" \
-  -H "content-type: application/json" \
-  -d '{"label":"daily-10-k-research","ttlSeconds":900,"scopes":["read:sec"]}'
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-The response is an `agent_bootstrap_token`. Pass its secret directly to the worker through its secret channel. Do not print the response in a build log.
+The `agent` view is route-specific and can omit fields from the default response. Check the endpoint reference before relying on a field, and retain the accession number, filing URL, period, provenance, warnings, and route-specific capability or freshness fields that are returned.
 
-## Exchange it once in the worker
+## Give the agent a failure policy
 
-```bash
-curl --fail-with-body -X POST "https://api.secapi.ai/v1/agent/bootstrap" \
-  -H "content-type: application/json" \
-  -d '{"token":"'$SECAPI_BOOTSTRAP_TOKEN'","label":"daily-10-k-research","scopes":["read:sec"]}' \
-  | jq '{object, requestId, organization: .organization.id, apiKey: .apiKey.id, sponsorToken}'
-```
+An agent should expose rather than hide these conditions:
 
-Expect `201` and `object: "agent_bootstrap"`. Store the returned API-key secret only in the running worker, then use it as `x-api-key` for REST or the hosted [MCP server](/mcp-install). Retain `requestId`, the token id, and the job label with your run record; never retain either secret.
+| Condition | Required behavior |
+| --- | --- |
+| `not_disclosed`, `unavailable`, `degraded`, or route-specific missing evidence | Return the condition and usable source evidence; do not invent a substitute. |
+| `400` | Correct the endpoint parameters or body from the reference. |
+| `401` or `403` | Stop and repair the credential or authorization. |
+| `402` | Stop and resolve the stated billing or entitlement condition. |
+| `429` | Honor `Retry-After` when present; use bounded backoff without retry fan-out. |
+| `5xx` | Retry once with bounded backoff, then retain the request ID. |
 
-## Handle failure deliberately
+Keep the endpoint, parameters, `Request-Id`, `traceparent` when present, retrieval time, and returned source evidence in the agent's output. See [API conventions](/api-conventions) and [Freshness and source evidence](/freshness-and-trust).
 
-- `404 bootstrap_token_invalid`: the token is malformed or unavailable. Request a new token; do not guess or retry a different scope.
-- `409 bootstrap_token_already_used`: another worker consumed it. Stop the duplicate worker and issue a new token only for the intended job.
-- `410 bootstrap_token_expired`: sponsor a new short-lived token after checking the queue delay.
-- `400 bootstrap_token_scope_invalid`: the requested scope is outside the read-only contract.
-- `402 api_key_limit_reached`: revoke or rotate an unused key from the signed-in dashboard before retrying the exchange.
+## Control repeated work
 
-## Production boundary
+Before a repeated or billable step, call `GET /v1/billing` and [GET /v1/limits](/api-reference/platform/get-v1-limits) with the agent's API key. Use [POST /v1/billing/quote](/api-reference/platform/post-v1-billing-quote) before repeating a billable workflow. A quote reflects the current plan and budget gate; it does not reserve usage or override later limits.
 
-Treat the bootstrap exchange as credential provisioning, not as agent authorization to change your organization. A person must configure [monitors](/monitors), [webhooks](/webhook-stream-workflows), streams, billing, and key lifecycle in the signed-in dashboard. For each agent run, log the job input, route/tool names, `requestId`, `traceparent` when returned, and filing identifiers used in its answer.
+Stop on `billing_budget_approval_required`, `billing_budget_hard_cap_exceeded`, or `ai_query_quota_exceeded`. Do not ask an agent to bypass organization billing controls. Read [Agent billing](/agent-billing) for the public contract and next actions.
+
+## Bootstrap an agent credential safely
+
+A human organization member can create a short-lived, single-use sponsor token with a bearer-authenticated request to `POST /v1/agent/bootstrap_tokens`. The agent submits the token to `POST /v1/agent/bootstrap` and receives the response contract's API key, organization, billing, limits, and installation metadata.
+
+The self-serve flow is limited to the documented `read:sec` scope. A token can be invalid, expired, already used, scope-invalid, or blocked by the active API-key limit; surface that error to the operator without logging the token or issued key. See [agent bootstrap tokens](/api-reference/agent/post-v1-agent-bootstrap-tokens) and [agent bootstrap](/api-reference/agent/post-v1-agent-bootstrap).

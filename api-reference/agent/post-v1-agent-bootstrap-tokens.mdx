@@ -12,7 +12,11 @@ Audience: application and coding agent.
 ## Canonical metadata
 
 - `requestId`
-- `traceparent`
+- `id`
+- `tokenPrefix`
+- `scopes`
+- `expiresAt`
+- `usedAt`
 
 ## Example request
 
@@ -22,7 +26,7 @@ curl -X POST \
   -H "Authorization: Bearer $SECAPI_BEARER_TOKEN" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{"label":"research-agent","scopes":["read:sec"],"ttlSeconds":900}' \
   "https://api.secapi.ai/v1/agent/bootstrap_tokens"
 ```
 </RequestExample>
@@ -32,15 +36,33 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
+  "object": "agent_bootstrap_token",
+  "id": "agtok_example",
+  "orgId": "org_example",
+  "actorPrincipalId": "user_example",
+  "label": "research-agent",
+  "tokenPrefix": "agtok_example",
+  "scopes": ["read:sec"],
+  "livemode": false,
+  "expiresAt": "2026-03-19T12:15:00.000Z",
+  "usedAt": null,
+  "usedByPrincipalId": null,
+  "createdAt": "2026-03-19T12:00:00.000Z",
+  "updatedAt": "2026-03-19T12:00:00.000Z",
+  "secret": "agtok_example_secret_returned_once",
   "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Authentication
+
+This is a human organization action. Send a bearer token for a signed-in organization member. API keys are rejected. The sponsor-token secret is returned once; do not log it.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/agent/bootstrap_tokens to issue a short-lived, single-use sponsor token for agent bootstrap under the current organization. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API POST /v1/agent/bootstrap_tokens to issue a short-lived, single-use sponsor token for agent bootstrap under the current organization. Preserve `requestId`, `id`, `tokenPrefix`, `scopes`, `expiresAt`, `usedAt` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

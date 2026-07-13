@@ -121,6 +121,139 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/limits": {
+      "get": {
+        "summary": "Return the current organization's effective plan, billing state, and route quota windows",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "orgId",
+                    "requestId",
+                    "recordedAt",
+                    "effectivePlanKey",
+                    "billingState",
+                    "quotas"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "limits"
+                    },
+                    "orgId": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "recordedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "effectivePlanKey": {
+                      "type": "string"
+                    },
+                    "billingState": {
+                      "type": "string"
+                    },
+                    "quotas": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "meterClass",
+                          "limit",
+                          "period",
+                          "allowed",
+                          "planKey",
+                          "billingState"
+                        ],
+                        "properties": {
+                          "meterClass": {
+                            "type": "string"
+                          },
+                          "limit": {
+                            "type": "integer"
+                          },
+                          "period": {
+                            "type": "string",
+                            "enum": [
+                              "minute",
+                              "hour",
+                              "day"
+                            ]
+                          },
+                          "allowed": {
+                            "type": "boolean"
+                          },
+                          "planKey": {
+                            "type": "string"
+                          },
+                          "billingState": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "limits",
+                      "orgId": "org_example",
+                      "requestId": "req_example_123",
+                      "recordedAt": "2026-03-19T12:00:00.000Z",
+                      "effectivePlanKey": "personal",
+                      "billingState": "active",
+                      "quotas": [
+                        {
+                          "meterClass": "standard_read",
+                          "limit": 600,
+                          "period": "minute",
+                          "allowed": true,
+                          "planKey": "personal",
+                          "billingState": "active"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "limits.current",
+        "x-secapi-access": "org",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/org": {
       "get": {
         "summary": "Return the current organization profile",
@@ -1021,6 +1154,65 @@
     "/v1/billing/quote": {
       "post": {
         "summary": "Quote a billable workflow or meter class against the current billing plan and budget gates",
+        "requestBody": {
+          "required": true,
+          "description": "Provide meterClass or path. planKey and units are optional.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "planKey": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Optional public plan key to quote instead of the organization's current plan."
+                  },
+                  "meterClass": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Optional meter class. Provide this or a path."
+                  },
+                  "path": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Optional API path used to derive the meter class. Provide this or meterClass."
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "HTTP method used with path; defaults to GET when path is supplied."
+                  },
+                  "units": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "description": "Optional positive number of units to quote."
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "path": "/v1/facts",
+                    "method": "GET",
+                    "units": 1
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",
@@ -1028,7 +1220,82 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "required": [
+                    "object",
+                    "planKey",
+                    "meterClass",
+                    "meterFamily",
+                    "units",
+                    "unitAmountUsd",
+                    "amountUsd",
+                    "amountCents",
+                    "currency",
+                    "requestId",
+                    "budget",
+                    "budgetGate"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "billing_quote"
+                    },
+                    "planKey": {
+                      "type": "string"
+                    },
+                    "meterClass": {
+                      "type": "string"
+                    },
+                    "meterFamily": {
+                      "type": "string"
+                    },
+                    "units": {
+                      "type": "integer"
+                    },
+                    "unitAmountUsd": {
+                      "type": "number"
+                    },
+                    "amountUsd": {
+                      "type": "number"
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "const": "usd"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "budget": {
+                      "type": "object"
+                    },
+                    "budgetGate": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "billing_quote",
+                      "planKey": "personal",
+                      "meterClass": "fact_lookup",
+                      "meterFamily": "standard_read",
+                      "units": 1,
+                      "unitAmountUsd": 0,
+                      "amountUsd": 0,
+                      "amountCents": 0,
+                      "currency": "usd",
+                      "requestId": "req_example_123",
+                      "budget": {},
+                      "budgetGate": null
+                    }
+                  }
                 }
               }
             }
@@ -1360,14 +1627,165 @@
     "/v1/agent/bootstrap_tokens": {
       "post": {
         "summary": "Issue a short-lived, single-use sponsor token for agent bootstrap under the current organization",
+        "requestBody": {
+          "required": true,
+          "description": "Requires a human organization member authenticated with a bearer token. API keys cannot create sponsor tokens.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Optional label carried into the issued agent API key."
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional requested scopes; self-serve sponsor tokens are limited to read:sec."
+                  },
+                  "ttlSeconds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 86400,
+                    "description": "Optional lifetime in seconds. The service clamps the effective value to 60 through 86,400 seconds."
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "label": "research-agent",
+                    "scopes": [
+                      "read:sec"
+                    ],
+                    "ttlSeconds": 900
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "201": {
+            "description": "Sponsor token issued. The secret is returned once.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "required": [
+                    "object",
+                    "id",
+                    "orgId",
+                    "actorPrincipalId",
+                    "label",
+                    "tokenPrefix",
+                    "scopes",
+                    "livemode",
+                    "expiresAt",
+                    "usedAt",
+                    "usedByPrincipalId",
+                    "createdAt",
+                    "updatedAt",
+                    "secret",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "agent_bootstrap_token"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "orgId": {
+                      "type": "string"
+                    },
+                    "actorPrincipalId": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tokenPrefix": {
+                      "type": "string"
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "livemode": {
+                      "type": "boolean"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "usedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "usedByPrincipalId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "secret": {
+                      "type": "string",
+                      "description": "One-time sponsor-token secret. Store only long enough to send it to the bootstrap agent."
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "agent_bootstrap_token",
+                      "id": "agtok_example",
+                      "orgId": "org_example",
+                      "actorPrincipalId": "user_example",
+                      "label": "research-agent",
+                      "tokenPrefix": "agtok_example",
+                      "scopes": [
+                        "read:sec"
+                      ],
+                      "livemode": false,
+                      "expiresAt": "2026-03-19T12:15:00.000Z",
+                      "usedAt": null,
+                      "usedByPrincipalId": null,
+                      "createdAt": "2026-03-19T12:00:00.000Z",
+                      "updatedAt": "2026-03-19T12:00:00.000Z",
+                      "secret": "agtok_example_secret_returned_once",
+                      "requestId": "req_example_123"
+                    }
+                  }
                 }
               }
             }
@@ -1398,14 +1816,113 @@
     "/v1/agent/bootstrap": {
       "post": {
         "summary": "Exchange a sponsor token for the first org-scoped API key, billing snapshot, limits, and MCP install metadata",
+        "requestBody": {
+          "required": true,
+          "description": "This exchange is intentionally pre-auth. Do not send an API key or bearer token; submit the sponsor token in the JSON body.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Short-lived, single-use sponsor token returned by POST /v1/agent/bootstrap_tokens."
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Optional label for the issued API key."
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional requested scopes; the self-serve exchange is limited to read:sec."
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "summary": "Copy-pasteable request",
+                  "value": {
+                    "token": "agtok_example_sponsor_token",
+                    "label": "research-agent",
+                    "scopes": [
+                      "read:sec"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "201": {
+            "description": "Sponsor token exchanged and API key issued.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "required": [
+                    "object",
+                    "requestId",
+                    "organization",
+                    "apiKey",
+                    "billing",
+                    "limits",
+                    "distribution",
+                    "sponsorToken"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "agent_bootstrap"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "organization": {
+                      "type": "object"
+                    },
+                    "apiKey": {
+                      "type": "object"
+                    },
+                    "billing": {
+                      "type": "object"
+                    },
+                    "limits": {
+                      "type": "object"
+                    },
+                    "distribution": {
+                      "type": "object"
+                    },
+                    "sponsorToken": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "agent_bootstrap",
+                      "requestId": "req_example_123",
+                      "organization": {},
+                      "apiKey": {},
+                      "billing": {},
+                      "limits": {},
+                      "distribution": {},
+                      "sponsorToken": {}
+                    }
+                  }
                 }
               }
             }

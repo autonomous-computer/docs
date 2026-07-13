@@ -1,37 +1,47 @@
 ---
-title: "Agent Billing"
-description: "Patterns for agents to inspect billing posture, quote expensive steps, and behave safely before running repeated or heavy SEC API workflows."
+title: "Agent billing"
+description: "Use billing, limits, quotes, and budget gates safely in an SEC API agent workflow"
 ---
 
-## Principle
+Before an agent starts a repeated or potentially billable workflow, inspect the organization's current billing posture and [limits](/api-reference/platform/get-v1-limits) with the same credential that will make the requests.
 
-Agents should not treat billing as an afterthought. They should inspect billing posture before expensive loops, preserve billing metadata in outputs, and warn before they cross from cheap reads into repeated or heavy workflows.
+```bash
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/billing"
 
-## Required checks
-
-Before a multi-step workflow:
-
-- `GET /v1/billing`
-- `GET /v1/limits`
-- `POST /v1/billing/quote` for the expensive step you are about to repeat
-
-## Agent-safe behavior
-
-- prefer one targeted request over a wide fan-out
-- keep `Request-Id`, `traceparent`, `SECAPI-Meter-Class`, `SECAPI-Plan-Key`, `SECAPI-Billing-State`, `SECAPI-Free-Grant-Remaining`, `SECAPI-Token-Count`, and `SECAPI-Estimated-Cost`
-- warn before repeated section extraction, compare workflows, or artifact generation
-- stop and ask for card attachment if the org is in `payg_pending_card`
-- stop and ask for admin approval if the server returns `billing_budget_approval_required`
-- stop immediately if the server returns `billing_budget_hard_cap_exceeded`
-
-## Sponsored bootstrap
-
-- administrators create sponsor tokens with `POST /v1/agent/bootstrap_tokens`
-- agents exchange those tokens exactly once with `POST /v1/agent/bootstrap`
-- the bootstrap response returns the first API key, billing posture, limits, and MCP install metadata in one payload
-
-## Good pattern
-
-```text
-Check billing posture first. Quote the expensive step before repeating it. If the org is still on the starter grant, use the smallest high-signal request sequence possible. If the org is in payg_pending_card, stop and ask an administrator to activate PAYG before continuing. If the server requires approval or reports a hard cap, stop instead of retrying blindly.
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
 ```
+
+## Quote a step before repeating it
+
+Use [POST /v1/billing/quote](/api-reference/platform/post-v1-billing-quote) before repeating a billable workflow or meter class. The quote uses the organization's current billing plan and evaluates its current budget gate; it is not a reservation or a guarantee that a later request will have the same billing state.
+
+```bash
+curl -sS -X POST \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"path":"/v1/filings/latest","method":"GET"}' \
+  "https://api.secapi.ai/v1/billing/quote"
+```
+
+Keep the quote response, `requestId`, `traceparent` when present, and returned budget gate with the agent's decision. Use the request reference for accepted quote fields and response shape.
+
+## Behavior at billing and quota stops
+
+Do not retry these conditions in a loop:
+
+| Response code | Agent action |
+| --- | --- |
+| `billing_required` | Stop and resolve the route, plan, grant, or billing condition. |
+| `billing_budget_approval_required` | Stop and obtain the required organization approval. |
+| `billing_budget_hard_cap_exceeded` | Stop; an authorized billing administrator must change the cap or the workflow must wait for the next billing period. |
+| `ai_query_quota_exceeded` | Stop until the quota resets or the organization changes its quota posture. Honor `Retry-After` when present. |
+
+For `429`, honor `Retry-After` when supplied and reduce fan-out. For every non-2xx response, preserve the returned request context and follow [Troubleshooting](/troubleshooting).
+
+## Separate machine work from account changes
+
+An API key can inspect billing and limits and make machine requests. Budget changes are organization-level billing actions; use the documented [budget endpoint](/api-reference/platform/put-v1-billing-budget) with the required human authorization. Do not give an agent a human bearer token merely to change its own budget.
+
+For an agent that needs its first scoped API key, a human organization member can issue a short-lived, single-use sponsor token through [agent bootstrap tokens](/api-reference/agent/post-v1-agent-bootstrap-tokens). The agent exchanges that token through [agent bootstrap](/api-reference/agent/post-v1-agent-bootstrap). Sponsor and exchange scopes are limited to the documented self-serve read scope; expired, used, invalid, or over-scoped tokens fail explicitly.

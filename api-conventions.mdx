@@ -1,13 +1,9 @@
 ---
 title: "API conventions"
-description: "Authenticate requests, interpret response metadata, and handle common API errors"
+description: "Make authenticated SEC API requests, interpret response context, and handle failures predictably"
 ---
 
-Use these conventions in every SEC API integration. They make a request reproducible when you need to inspect a result, retry a failure, or ask for help.
-
-## Authenticate requests
-
-Send your API key in `x-api-key`. Do not send an API key as an `Authorization: Bearer` token.
+Start by sending an API key in `x-api-key`. Use the endpoint reference for the request shape and response fields of the route you call.
 
 ```bash
 curl -sS \
@@ -16,70 +12,49 @@ curl -sS \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
 ```
 
-You can pin a dated API version with `secapi-version`. Requests without that header use the current published version; the response includes the resolved version in `SECAPI-Version`. A pinned version can gain additive fields, so parse the fields you use and allow additional fields in the response.
+## Authenticate and version requests
 
-## Keep the request context
+Machine requests use `x-api-key`; do not put an API key in `Authorization: Bearer`. Browser-only account actions require a signed-in browser session. A human bearer credential is required only where the endpoint reference says so.
 
-Record these values with any result you rely on:
+Use `secapi-version` to request a dated API version. When it is omitted, SEC API resolves the current published version and returns it in `SECAPI-Version`. A pinned version can receive additive fields, so parse the fields your application uses and tolerate additional fields.
 
-| Value | Use it for |
+## Keep the evidence that identifies a result
+
+For a material response, store the returned `Request-Id`, `traceparent` when present, endpoint, parameters, and retrieval time. For filing-backed results, also retain the accession number, filing URL, period, units, and any route-specific provenance, freshness, warning, or capability fields.
+
+You may send `x-request-id` to correlate a request with your own logs. Keep the returned `Request-Id` too: it identifies the API request if you need to diagnose it.
+
+## Request only the response view you use
+
+Some endpoints support `view=default`, `view=compact`, or `view=agent`.
+
+- `default` is the full documented response.
+- `compact` is a smaller endpoint-specific projection.
+- `agent` is an endpoint-specific projection for retrieval and citation-oriented workflows.
+
+Views and projected fields vary by route. Confirm support in that route's reference before depending on a field, and do not assume a compact or agent view includes the metadata in the default view.
+
+## Continue list results correctly
+
+When a response returns `hasMore` and `nextCursor`, use `nextCursor` as the next request's `cursor`; stop when `hasMore` is `false`. Some list endpoints do not paginate. Their reference defines their `limit` and pagination contract.
+
+## Handle failures by status and code
+
+Error responses provide a machine-readable `code`, message, and request ID. Read them before retrying.
+
+| Status | First action |
 | --- | --- |
-| `Request-Id` and `requestId` | Identifying one request in logs, troubleshooting, or support |
-| `traceparent`, when present | Connecting the request to trace context |
-| `accessionNumber` and `filingUrl` | Identifying the SEC filing behind a result |
-| Freshness and provenance fields | Understanding the source and currentness of a derived result |
-| `SECAPI-Estimated-Cost` and `SECAPI-Token-Count` | Tracking per-call usage |
+| `400` | Correct the request using the endpoint reference. |
+| `401` | Confirm a valid `x-api-key` reached the API. |
+| `402` | Resolve the billing, entitlement, or budget condition in the response. |
+| `403` | Check that the credential and plan are authorized for the resource. |
+| `429` | Honor `Retry-After` when present; use bounded backoff without concurrent retry fan-out. |
+| `5xx` | Retry once with bounded backoff, then retain the request ID for support. |
 
-You can send `x-request-id` with your own correlation ID. Keep the returned `Request-Id` as well.
+Do not retry a billing, budget, quota, or authorization stop until its stated condition changes. See [Troubleshooting](/troubleshooting) for code-specific next actions.
 
-## Select a response view
+## Interpret financial periods before comparing values
 
-Many endpoints support `view=default`, `view=compact`, or `view=agent`.
+Check `periodBasis` where an endpoint provides it. Balance-sheet values are point-in-time; quarterly income-statement and cash-flow values can be year-to-date as filed. Also compare units, reporting periods, and source context before treating values as comparable.
 
-- `default` returns the full documented response.
-- `compact` returns a smaller projection for focused displays or follow-on processing.
-- `agent` returns the identifiers, citation pointers, and retrieval fields useful to an agent or downstream model.
-
-View support and projected fields vary by endpoint. Check its reference before relying on a view, and do not treat `compact` and `agent` as interchangeable.
-
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
-```
-
-## Page through list results
-
-When a response includes `hasMore` and `nextCursor`, send `nextCursor` as the next request's `cursor`. Stop when `hasMore` is `false`.
-
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings?ticker=AAPL&limit=25"
-```
-
-Some list-shaped responses return the complete set without cursor fields. Use the endpoint reference for its supported `limit` values and pagination behavior.
-
-## Handle errors deliberately
-
-Error responses include a machine-readable `code`, a message, and a request ID. Read the response before retrying.
-
-| Status | What to do |
-| --- | --- |
-| `400` | Correct the path, query, or JSON body using the endpoint reference. |
-| `401` | Confirm that a valid key is sent in `x-api-key`; use the signed-in dashboard for browser-only actions. |
-| `402` | Resolve the billing or entitlement condition in the response before retrying. |
-| `429` | Wait for `Retry-After` when present; otherwise use bounded exponential backoff and do not send concurrent retries. |
-| `5xx` | Retry once with bounded backoff, then retain the request ID. |
-
-Read [Troubleshooting](/troubleshooting) for error-specific guidance. Read [SDK reliability](/sdk-reliability) before adding retries around an SDK.
-
-## Read statement periods correctly
-
-Statement periods include `periodBasis`. Balance-sheet values are point-in-time. Quarterly income-statement and cash-flow values can be year-to-date as filed. Check `periodBasis` before comparing a quarterly value with a discrete quarter.
-
-## Choose REST or MCP
-
-Use REST or an SDK when your application needs direct control over the HTTP request and response. Use hosted MCP when an MCP-aware client needs SEC API tools in a research workflow. MCP uses JSON-RPC and has its own quota and error envelopes.
-
-Start with [your first request](/getting-started), then read [MCP installation](/mcp-install) when you are connecting an MCP client.
+Use REST or an SDK when you need direct control of the request and response. Use [hosted MCP](/mcp-install) when an MCP-aware client needs SEC API tools. Begin with [your first request](/getting-started).

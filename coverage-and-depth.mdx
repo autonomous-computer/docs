@@ -1,9 +1,9 @@
 ---
 title: "Coverage and historical depth"
-description: "Plan filing, section, and derived-data workflows around SEC API's documented history floor and availability boundaries"
+description: "Plan filing and derived-data workflows around documented history and route-specific availability"
 ---
 
-Use this page to decide whether a response is sufficient for a production workflow. A filing can be discoverable while its rendered text, extracted section, XBRL-derived value, or specialized analysis is unavailable. Treat each surface as its own capability.
+Start by retrieving the source filing for the issuer, form, and date range your workflow needs. Then request the particular section, fact, statement, or derived surface; filing discovery does not guarantee that a derived representation is available.
 
 ```bash
 curl -sS \
@@ -11,38 +11,30 @@ curl -sS \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=25"
 ```
 
-## The public history boundary
+## Public history boundary
 
-SEC API documents a nine-year searchable floor for filing and section workflows. Release-blocking completeness checks cover the two most recent completed years for the required filing forms. The current year has an availability floor, not a completed-year completeness guarantee.
+SEC API documents a nine-year searchable floor for filing and section workflows. Release-blocking completeness checks cover the two most recent completed years for required filing forms. The current year has an availability floor, not a completed-year completeness guarantee.
 
-An inventory target of 20 years does not extend the public guarantee. Older records can be useful, but their density and derived representations can vary by issuer, form, and filing format.
+Older records can be available, but their density and derived representations vary by issuer, form, and filing format. An inventory target is not an extension of the public history boundary.
 
-| Need | Start with | Check before relying on it |
+| Need | First request | Confirm before use |
 | --- | --- | --- |
-| Find a source filing | [Filings](/api-reference/filings/get-v1-filings) or [latest filing](/api-reference/filings/get-v1-filings-latest) | issuer identity, form, filing date, accession number, and source URL |
-| Read a filing or section | filing render or section endpoint | whether the requested filing and section key return content |
-| Use a normalized fact or statement | facts or statements endpoint | period, units, source/provenance fields, and disclosed field availability |
-| Build an event or ownership workflow | the relevant event or ownership endpoint | date range, form family, and response-level capability or warning fields |
+| Identify a source filing | [Filings](/api-reference/filings/get-v1-filings) or [latest filing](/api-reference/filings/get-v1-filings-latest) | issuer, form, filing date, accession number, and source URL |
+| Read filing text or a section | the applicable render or section route | that the filing and requested section return content |
+| Use a normalized fact or statement | the applicable facts or statements route | period, units, provenance, and disclosed field availability |
+| Build an event or ownership workflow | the relevant event or ownership route | date range, form family, and response capability or warnings |
 
-## Availability is not equivalence
+## Do not equate related surfaces
 
-Do not infer one of these properties from another:
+- A filing manifest does not mean every section or derived output is ready.
+- A source document does not mean every fact is normalized or comparable across issuers.
+- A result for one issuer, form, or year does not establish coverage for another.
+- A successful response does not establish that it is current enough for your decision.
 
-- A filing manifest does not mean every section or derived representation is ready.
-- A source document does not mean every reported fact is normalized or comparable across issuers.
-- A result returned for one issuer, form, or year does not establish coverage for another.
-- A response without an error does not establish that it is current enough for your decision.
+For market calendars, use returned `coverage`, `confidence`, and `statusNote`. `XNYS` and `XNAS` have configured holiday coverage; other documented markets can report weekend-only or tentative coverage. See [Methodology registry](/methodology-registry).
 
-For market calendars, read the response's `coverage`, `confidence`, and `statusNote` fields. `XNYS` and `XNAS` have configured holiday coverage; other documented markets can report weekend-only or tentative coverage. See [Methodology registry](/methodology-registry).
+## Make partial availability explicit
 
-## Build for partial results
+Preserve the source accession number and URL, then store any returned period, provenance, capability, warning, or degradation fields. Return unavailable or partial results to your caller explicitly instead of substituting unrelated data. Retain `Request-Id` for unexpected results.
 
-1. Start with the source record and preserve its accession number and source URL.
-2. Request the particular derived surface you need; do not assume it follows from filing discovery.
-3. Store response-level provenance, period, capability, warning, or degradation fields when the endpoint returns them.
-4. Make an unavailable or partial result visible to your caller instead of silently substituting unrelated data.
-5. Keep `Request-Id` with material results so you can diagnose an unexpected response.
-
-SEC API does not publish a universal real-time lag, equal-density guarantee beyond the stated floor, or a promise to normalize every EDGAR exhibit and filing family.
-
-Read next: [Freshness and source evidence](/freshness-and-trust), [Methodology registry](/methodology-registry), and [API conventions](/api-conventions).
+SEC API does not publish an equal-density guarantee beyond the stated history floor, a universal real-time lag, or a promise to normalize every EDGAR exhibit and filing family. Read [Freshness and source evidence](/freshness-and-trust) before applying an output to a time-sensitive workflow.

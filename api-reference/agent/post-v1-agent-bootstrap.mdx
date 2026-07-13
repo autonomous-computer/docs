@@ -12,17 +12,21 @@ Audience: application and coding agent.
 ## Canonical metadata
 
 - `requestId`
-- `traceparent`
+- `organization`
+- `apiKey`
+- `billing`
+- `limits`
+- `distribution`
+- `sponsorToken`
 
 ## Example request
 
 <RequestExample>
 ```bash
 curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{"token":"agtok_example_sponsor_token","label":"research-agent","scopes":["read:sec"]}' \
   "https://api.secapi.ai/v1/agent/bootstrap"
 ```
 </RequestExample>
@@ -32,19 +36,32 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "agent_bootstrap",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "organization": { "id": "org_example" },
+  "apiKey": { "secret": "returned_once" },
+  "billing": { "object": "billing_account" },
+  "limits": { "object": "limits" },
+  "distribution": {},
+  "sponsorToken": { "id": "agtok_example", "scopes": ["read:sec"] }
 }
 ```
 </ResponseExample>
 
+## Authentication
+
+This exchange is intentionally pre-auth. Do not send x-api-key or Authorization; submit the short-lived, single-use sponsor token in the JSON body. A human organization member creates that sponsor token through [POST /v1/agent/bootstrap_tokens](/api-reference/agent/post-v1-agent-bootstrap-tokens). The issued API-key secret is returned once and must not be logged.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/agent/bootstrap to exchange a sponsor token for the first org-scoped API key, billing snapshot, limits, and MCP install metadata. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API POST /v1/agent/bootstrap to exchange a sponsor token for the first org-scoped API key, billing snapshot, limits, and MCP install metadata. Preserve `requestId`, `organization`, `apiKey`, `billing`, `limits`, `distribution`, `sponsorToken` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- bootstrap_token_invalid returns 404; obtain a valid sponsor token
+- bootstrap_token_expired returns 410; request a new sponsor token
+- bootstrap_token_already_used returns 409; sponsor tokens are single-use
+- bootstrap_token_scope_invalid returns 400; self-serve exchange scopes are limited to read:sec
+- api_key_limit_reached returns 402; resolve the organization's active API-key limit before retrying
