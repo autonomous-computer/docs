@@ -1,197 +1,68 @@
 ---
 title: "Extract Subsidiaries from 10-K Exhibit 21"
-description: "Retrieve structured subsidiary data from SEC 10-K Exhibit 21 filings using the SEC API. Includes curl, Python, and JavaScript examples."
+description: "Retrieve a company's latest structured Exhibit 21 subsidiary list and retain the annual-filing evidence behind a corporate-structure review."
 ---
 
-Public companies list their significant subsidiaries in Exhibit 21 of their 10-K annual filings. This data is useful for understanding corporate structure, mapping jurisdictional risk, and identifying undisclosed relationships. The API extracts and structures this data so you do not need to parse the raw exhibit.
+Use this journey to start a corporate-structure or coverage-scope review from the latest 10-K Exhibit 21. The list contains significant subsidiaries disclosed by the filer; it is not a complete legal-entity graph, proof of control, or a substitute for legal diligence.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- Basic familiarity with REST APIs
-- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
-
-## Step 1 — Retrieve subsidiaries for a company
-
-Use `/v1/companies/subsidiaries` to get the structured subsidiary list from the most recent 10-K Exhibit 21.
-
-### curl
+- `SECAPI_API_KEY`, `curl`, and `jq`, or the SEC API CLI.
+- A ticker or CIK. This example uses `AAPL`.
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/subsidiaries?ticker=AAPL"
+export SECAPI_API_KEY="your_api_key"
 ```
 
-### Python
+## 1. Retrieve the latest disclosed list
 
-```python
-import os
-
-from secapi_client import SecApiClient
-
-client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
-
-subs = client.company_subsidiaries(ticker="AAPL")
-
-print(f"Apple Inc — {len(subs['data'])} subsidiaries")
-print()
-
-for sub in subs["data"][:10]:
-    print(f"  {sub['name']} — {sub['jurisdiction']}")
+```bash
+curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  --data-urlencode "ticker=AAPL" --data-urlencode "view=agent" \
+  "https://api.secapi.ai/v1/companies/subsidiaries" \
+  | jq '{accessionNumber, filingDate, filingUrl, data, note, requestId}'
 ```
 
-### JavaScript
+Or use the CLI:
 
-```ts
-import { SecApiClient } from "@secapi/sdk-js";
+```bash
+secapi companies subsidiaries --ticker AAPL --view agent
+```
 
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
+The expected result is one unpaginated list from the latest available 10-K Exhibit 21, with `name`, nullable `jurisdiction`, nullable `ownershipPercent`, and the source filing identity. Retain the accession, filing date, URL, and request ID with any aggregation.
+
+## 2. Produce a jurisdiction review queue
+
+```js
+const response = await fetch("https://api.secapi.ai/v1/companies/subsidiaries?ticker=AAPL&view=agent", {
+  headers: { "x-api-key": process.env.SECAPI_API_KEY ?? "" },
 });
-
-const subs = await client.companySubsidiaries({ ticker: "AAPL" });
-
-console.log(`Apple Inc — ${subs.data.length} subsidiaries`);
-console.log();
-
-for (const sub of subs.data.slice(0, 10)) {
-  console.log(`  ${sub.name} — ${sub.jurisdiction}`);
+if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
+const payload = await response.json();
+const counts = new Map();
+for (const subsidiary of payload.data ?? []) {
+  const jurisdiction = subsidiary.jurisdiction ?? "not disclosed";
+  counts.set(jurisdiction, (counts.get(jurisdiction) ?? 0) + 1);
 }
+console.log(JSON.stringify({ source: { accessionNumber: payload.accessionNumber,
+  filingDate: payload.filingDate, filingUrl: payload.filingUrl, requestId: payload.requestId },
+  subsidiaries: payload.data?.length ?? 0,
+  jurisdictions: [...counts.entries()].sort((a, b) => b[1] - a[1]) }, null, 2));
 ```
 
-### Expected output
+Run `node subsidiaries.mjs`. The output is a documented starting point for a reviewer to inspect the Exhibit 21, not a tax, sanctions, ownership, or supply-chain conclusion.
 
-```
-Apple Inc — 87 subsidiaries
-Source: 0000320193-24-000081 (filed 2024-11-01)
+## Common errors and false positives
 
-  Apple Asia LLC — Delaware
-  Apple Asia Limited — Hong Kong
-  Apple Canada Inc. — Canada
-  Apple Distribution International Ltd. — Ireland
-  Apple Insurance Company, Inc. — Arizona
-  Apple Japan, Inc. — Japan
-  Apple Korea Ltd. — Republic of Korea
-  Apple Operations International Limited — Ireland
-  Apple Pty Limited — Australia
-  Apple Sales International Limited — Ireland
-```
+- `401` or `403`: the runtime key is absent or not entitled.
+- An empty list or note can mean an Exhibit 21 could not be extracted; it does not prove the issuer has no subsidiaries.
+- Missing jurisdiction and ownership percentage are disclosure/extraction gaps, not zeros.
+- The endpoint uses the latest annual exhibit. Do not describe it as year-over-year change unless you have separately retained the earlier filing.
 
-## Step 2 — Analyze jurisdictional distribution
+## Production considerations
 
-Map subsidiary counts by jurisdiction to understand geographic exposure and tax structure.
+Store each run by source accession and do not overwrite historical lists. Normalize jurisdiction labels only in a derived field, preserve original returned values, and send changes to a human reviewer who can examine the filing exhibit. Use a CIK when your entity mapping must not change with a ticker.
 
-### Python
+## Next action
 
-```python
-from collections import Counter
-
-subs = client.company_subsidiaries(ticker="AAPL")
-
-jurisdictions = Counter(sub["jurisdiction"] for sub in subs["data"])
-
-print("Subsidiary Jurisdiction Breakdown:")
-print("-" * 40)
-for jurisdiction, count in jurisdictions.most_common(10):
-    bar = "#" * count
-    print(f"  {jurisdiction:<25} {count:>3}  {bar}")
-```
-
-### JavaScript
-
-```ts
-const subs = await client.companySubsidiaries({ ticker: "AAPL" });
-
-const jurisdictions: Record<string, number> = {};
-for (const sub of subs.data) {
-  jurisdictions[sub.jurisdiction] = (jurisdictions[sub.jurisdiction] || 0) + 1;
-}
-
-const sorted = Object.entries(jurisdictions).sort((a, b) => b[1] - a[1]);
-
-console.log("Subsidiary Jurisdiction Breakdown:");
-console.log("-".repeat(40));
-for (const [jurisdiction, count] of sorted.slice(0, 10)) {
-  const bar = "#".repeat(count);
-  console.log(`  ${jurisdiction.padEnd(25)} ${String(count).padStart(3)}  ${bar}`);
-}
-```
-
-### Expected output
-
-```
-Subsidiary Jurisdiction Breakdown:
-----------------------------------------
-  Ireland                    12  ############
-  Delaware                    9  #########
-  California                  7  #######
-  United Kingdom              6  ######
-  Japan                       5  #####
-  China                       5  #####
-  Germany                     4  ####
-  Singapore                   3  ###
-  Australia                   3  ###
-  Hong Kong                   3  ###
-```
-
-## Step 3 — Compare subsidiary structures across peers
-
-Pull subsidiary data for multiple companies to compare corporate complexity.
-
-### Python
-
-```python
-TICKERS = ["AAPL", "MSFT", "GOOG", "AMZN", "META"]
-
-print(f"{'Company':<10} {'Subsidiaries':>14} {'Jurisdictions':>15}")
-print("-" * 42)
-
-for ticker in TICKERS:
-    subs = client.company_subsidiaries(ticker=ticker)
-    jurisdictions = set(sub["jurisdiction"] for sub in subs["data"])
-    print(f"{ticker:<10} {len(subs['data']):>14} {len(jurisdictions):>15}")
-```
-
-### Expected output
-
-```
-Company    Subsidiaries  Jurisdictions
-------------------------------------------
-AAPL               87              32
-MSFT              214              48
-GOOG              156              41
-AMZN              312              55
-META               78              29
-```
-
-## Step 4 — Search subsidiaries by jurisdiction
-
-Filter subsidiary data to find entities in a specific jurisdiction.
-
-### curl
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/companies/subsidiaries?ticker=GOOG&jurisdiction=Ireland"
-```
-
-### Python
-
-```python
-subs = client.company_subsidiaries(ticker="GOOG")
-
-ireland_subs = [s for s in subs["data"] if "Ireland" in s["jurisdiction"]]
-
-print(f"Google subsidiaries in Ireland: {len(ireland_subs)}")
-for sub in ireland_subs:
-    print(f"  {sub['name']}")
-```
-
-## Next steps
-
-- **Map supply chain risk**: Combine subsidiary jurisdiction data with geopolitical risk indices.
-- **Tax structure analysis**: Identify companies with high concentrations of subsidiaries in low-tax jurisdictions.
-- **Track changes year over year**: Compare Exhibit 21 across multiple filing years to detect new or dissolved entities.
-- **Corporate hierarchy**: Cross-reference subsidiary names with the `/v1/entities/resolve` endpoint to find publicly traded subsidiaries.
-
-See the [API Reference](/api-reference/companies) for the full subsidiaries endpoint specification.
+Create a dated snapshot table keyed by accession number, then compare two explicitly sourced annual filings before reporting a structural change.

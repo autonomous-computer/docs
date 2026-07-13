@@ -1,91 +1,64 @@
 ---
 title: "Find Risk Factors with Semantic Search"
-description: "Search SEC filing passages by meaning, preserve citation metadata, and use the results as a research queue rather than a conclusion engine."
+description: "Search filing passages by meaning, keep citation fields, and turn results into a reviewable risk-disclosure research queue."
 ---
 
-Semantic search can surface related language that a literal keyword search misses. It does not establish materiality or completeness. Treat the response as a ranked route into the underlying filing and retain the returned citation fields with every excerpt.
+Use semantic search when a literal phrase is too narrow for a disclosure question, such as supply-chain exposure across a company's 10-Ks. Search rank is a navigation aid, not a finding of materiality, completeness, or legal risk.
 
 ## Prerequisites
 
-- An API key exported as `SECAPI_API_KEY`.
-- `curl` and `jq`, or Node.js 18+.
-- A natural-language research question. This example searches semiconductor supply-chain risk.
+- `SECAPI_API_KEY`, `curl`, and `jq`, or Node.js 18+.
+- A question with a company and filing scope. This example examines NVIDIA 10-K risk language.
 
 ```bash
 export SECAPI_API_KEY="your_api_key"
 ```
 
-## 1. Run a scoped hybrid search
-
-`GET /v1/search/semantic` requires `q`. The `mode` parameter accepts `keyword`, `semantic`, or `hybrid`; hybrid is a practical starting point when you want both terminology and conceptual relevance. Scope by `ticker`, `cik`, `form`, and `filing_year` when the question calls for it.
+## 1. Run a bounded hybrid search
 
 ```bash
-curl --get --fail-with-body \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   --data-urlencode "q=supply chain disruption risk" \
-  --data-urlencode "ticker=NVDA" \
-  --data-urlencode "form=10-K" \
-  --data-urlencode "mode=hybrid" \
-  --data-urlencode "limit=10" \
+  --data-urlencode "ticker=NVDA" --data-urlencode "form=10-K" \
+  --data-urlencode "mode=hybrid" --data-urlencode "view=agent" --data-urlencode "limit=10" \
   "https://api.secapi.ai/v1/search/semantic" \
-  | jq '{sections, requestId, traceparent}'
+  | jq '{query, mode, sections, requestId, traceparent}'
 ```
 
-**Result:** ranked matching passages in the search response. Before publishing or scoring a result, retain `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet`; open the cited filing to review the passage in context.
+The expected result is a ranked `sections.data` list with citation-preserving fields such as accession, source URL, section key, character offsets, and highlighted snippet. Open the cited filing before quoting or scoring it.
 
-## 2. Compare a question across annual filings
+## 2. Compare the same question across annual filings
 
-Use the same query and issuer scope for each filing year. A changed rank or a new match is a research lead, not proof that the risk changed.
+Create `compare-risk-factors.mjs` to keep filters and evidence consistent.
 
 ```js
-const base = "https://api.secapi.ai/v1/search/semantic";
 const headers = { "x-api-key": process.env.SECAPI_API_KEY ?? "" };
-
+if (!headers["x-api-key"]) throw new Error("SECAPI_API_KEY is required");
 for (const filingYear of [2023, 2024, 2025]) {
-  const query = new URLSearchParams({
-    q: "artificial intelligence regulatory risk",
-    ticker: "MSFT",
-    form: "10-K",
-    filing_year: String(filingYear),
-    mode: "hybrid",
-    limit: "5",
-  });
-  const response = await fetch(`${base}?${query}`, { headers });
-  if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
-
+  const query = new URLSearchParams({ q: "artificial intelligence regulatory risk", ticker: "MSFT",
+    form: "10-K", filing_year: String(filingYear), mode: "hybrid", view: "agent", limit: "5" });
+  const response = await fetch(`https://api.secapi.ai/v1/search/semantic?${query}`, { headers });
+  if (!response.ok) throw new Error(`${response.status}: ${await response.text()}`);
   const payload = await response.json();
-  const hits = payload.sections?.data ?? payload.data ?? [];
-  console.log(JSON.stringify({
-    filingYear,
-    requestId: payload.requestId,
-    hits: hits.map((hit) => ({
-      companyName: hit.companyName ?? null,
-      form: hit.form ?? null,
-      filingDate: hit.filingDate ?? null,
-      accession: hit.accession,
-      source_url: hit.source_url,
-      section_key: hit.section_key,
-      char_start: hit.char_start,
-      char_end: hit.char_end,
-      highlighted_snippet: hit.highlighted_snippet,
-    })),
-  }, null, 2));
+  console.log(JSON.stringify({ filingYear, requestId: payload.requestId,
+    citations: (payload.sections?.data ?? []).map(({ accession, source_url, section_key, char_start, char_end, highlighted_snippet }) =>
+      ({ accession, source_url, section_key, char_start, char_end, highlighted_snippet })) }, null, 2));
 }
 ```
 
-## Common failure modes
+Run `node compare-risk-factors.mjs`. The output is a cited research queue for each filing year, not a change score.
 
-- `400`: `q` is required; confirm `mode` is `keyword`, `semantic`, or `hybrid` and `limit` is 1-100.
-- Empty or weak matches: narrow by issuer, form, or filing year, then try both a concrete phrase and a business question. Do not compensate by inventing a relevance threshold.
-- Lost evidence: a result without `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet` cannot be independently reviewed.
-- Unstable comparisons: compare like with like, including form type and reporting period; an annual report and an interim report answer different questions.
+## Common errors and false positives
 
-## Production notes
+- `q` is required; valid modes are `keyword`, `semantic`, and `hybrid`, while `limit` is 1-100.
+- Empty results may reflect a too-narrow issuer/form/year scope or sparse indexed language, not the absence of a risk.
+- A changed rank, snippet, or wording is a lead. Compare like-for-like reporting periods and read the full cited section.
+- Do not drop accession, URL, section key, offsets, or request ID; without them a reviewer cannot reproduce the result.
 
-Store the query, filters, retrieval mode, request ID, and every citation field. Cache repeated research queries, bound the number of results you present to a reviewer, and retrieve the cited filing section before using an excerpt in a report. Model outputs or search ranks should never be represented as legal, accounting, or investment advice.
+## Production considerations
 
-## Next actions
+Store the query, mode, filters, response timestamp, request metadata, and every citation field. Cache recurring searches, cap the number of results sent to reviewers, and keep model-generated interpretation clearly separate from cited disclosure text.
 
-- Pair search results with [filing sections](/api-reference/filings) to retrieve and review the cited text.
-- Run the same saved query after new annual or quarterly filings arrive, then compare evidence records rather than raw snippets.
-- Read the [search reference](/api-reference/search) for all supported filters and response views.
+## Next action
+
+Retrieve the cited filing section and build a reviewer decision record that explains whether the disclosure changed in substance.

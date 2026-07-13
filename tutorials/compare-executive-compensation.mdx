@@ -1,175 +1,69 @@
 ---
 title: "Compare Executive Compensation"
-description: "Compare executive compensation disclosures using the SEC API. Pull salary, bonus, stock awards, and total comp data. Includes curl, Python, and JavaScript examples."
+description: "Compare the two latest normalized DEF 14A compensation disclosures while keeping executive, period, and filing provenance visible."
 ---
 
-Proxy statements (DEF 14A) contain detailed executive compensation tables. This tutorial shows how to retrieve structured compensation data and compare the latest two disclosures for an issuer without manually reading proxy filings.
+Use this workflow to prepare a board-governance or pay-for-performance review. It compares reported compensation rows; it does not determine whether pay is appropriate, comparable across companies, or aligned with performance.
 
 ## Prerequisites
 
-- An SEC API key (set as `SECAPI_API_KEY`)
-- Basic familiarity with REST APIs
-- (Optional) Python 3.8+ or Node.js 18+ for SDK examples
-
-## Step 1 — Retrieve compensation for a single company
-
-Use `/v1/compensation` to get the latest executive compensation data for a company.
-
-### curl
+- `SECAPI_API_KEY`, `curl`, and `jq`, or Node.js 18+.
+- A ticker or CIK. This example uses `AAPL`.
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/compensation?ticker=AAPL"
+export SECAPI_API_KEY="your_api_key"
 ```
 
-### Python
+## 1. Retrieve the latest disclosed compensation table
 
-```python
-import os
-
-from secapi_client import SecApiClient
-
-client = SecApiClient(api_key=os.environ["SECAPI_API_KEY"])
-
-comp = client.compensation(ticker="AAPL")
-
-for executive in comp["data"]:
-    print(f"{executive['executiveName']} ({executive['roleTitle']})")
-    print(f"  Salary:       ${executive['salaryUsd'] or 0:>14,.0f}")
-    print(f"  Bonus:        ${executive['bonusUsd'] or 0:>14,.0f}")
-    print(f"  Stock Awards: ${executive['stockAwardsUsd'] or 0:>14,.0f}")
-    print(f"  Total:        ${executive['totalUsd'] or 0:>14,.0f}")
-    print()
+```bash
+curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  --data-urlencode "ticker=AAPL" --data-urlencode "limit=25" --data-urlencode "view=agent" \
+  "https://api.secapi.ai/v1/compensation" \
+  | jq '{data, requestId, traceparent}'
 ```
 
-### JavaScript
+The result is normalized executive rows derived from the latest DEF 14A. Each record can include executive name, role, compensation components, year, accession number, and provenance. Null is a missing/not-applicable component, not zero.
 
-```ts
-import { SecApiClient } from "@secapi/sdk-js";
+## 2. Compare the latest two disclosures
 
-const client = new SecApiClient({
-  apiKey: process.env.SECAPI_API_KEY!,
+```bash
+curl --fail-with-body -X POST -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" --data '{"ticker":"AAPL","limit":25}' \
+  "https://api.secapi.ai/v1/compensation/compare" \
+  | jq '{companyName, currentFilingDate, previousFilingDate, rows, provenance, requestId, traceparent}'
+```
+
+The expected result identifies the two filing dates and emits one row per executive with ` status `, current/previous total compensation, delta, and disclosed years. Preserve the comparison provenance and source filings before writing commentary.
+
+## 3. Generate a reviewer-ready table
+
+```js
+const response = await fetch("https://api.secapi.ai/v1/compensation/compare", {
+  method: "POST", headers: { "x-api-key": process.env.SECAPI_API_KEY ?? "", "content-type": "application/json" },
+  body: JSON.stringify({ ticker: "AAPL", limit: 25 }),
 });
-
-const comp = await client.compensation({ ticker: "AAPL" });
-
-for (const exec of comp.data) {
-  console.log(`${exec.executiveName} (${exec.roleTitle})`);
-  console.log(`  Salary:       $${(exec.salaryUsd ?? 0).toLocaleString()}`);
-  console.log(`  Bonus:        $${(exec.bonusUsd ?? 0).toLocaleString()}`);
-  console.log(`  Stock Awards: $${(exec.stockAwardsUsd ?? 0).toLocaleString()}`);
-  console.log(`  Total:        $${(exec.totalUsd ?? 0).toLocaleString()}`);
-  console.log();
-}
+if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
+const comparison = await response.json();
+console.table((comparison.rows ?? []).map((row) => ({ executive: row.executiveName, status: row.status,
+  currentYear: row.currentYear, previousYear: row.previousYear, currentTotalUsd: row.currentTotalUsd,
+  previousTotalUsd: row.previousTotalUsd, deltaTotalUsd: row.deltaTotalUsd })));
+console.log(JSON.stringify({ currentFilingDate: comparison.currentFilingDate,
+  previousFilingDate: comparison.previousFilingDate, provenance: comparison.provenance,
+  requestId: comparison.requestId, traceparent: comparison.traceparent }, null, 2));
 ```
 
-### Expected output
+## Common errors and false positives
 
-```
-Tim Cook (Chief Executive Officer)
-  Salary:       $    3,000,000
-  Bonus:        $            0
-  Stock Awards: $   40,000,000
-  Total:        $   63,209,000
+- A comparison requires two available disclosures. Do not treat an unavailable comparison as no pay change.
+- `added` or `removed` often reflects a changed named-executive roster, not a compensation event.
+- A total-compensation delta can be driven by grant-date equity valuation and reporting-period changes; inspect the proxy table and compensation discussion.
+- Do not coerce null salary, bonus, or awards to zero when calculating a mix.
 
-Luca Maestri (SVP, Chief Financial Officer)
-  Salary:       $    1,000,000
-  Bonus:        $            0
-  Stock Awards: $   20,000,000
-  Total:        $   26,900,000
-```
+## Production considerations
 
-## Step 2 — Compare the latest two disclosures
+Key snapshots by filing accession and executive identity, retain all component fields and source provenance, and have governance specialists review material commentary. Apply peer comparisons only after explicitly defining period, peer group, role, and valuation treatment.
 
-The `/v1/compensation/compare` endpoint compares the latest two executive compensation disclosures for one issuer.
+## Next action
 
-### curl
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  -H "content-type: application/json" \
-  -X POST \
-  -d '{"ticker":"AAPL","limit":10}' \
-  "https://api.secapi.ai/v1/compensation/compare"
-```
-
-### Python
-
-```python
-comparison = client.compare_compensation(ticker="AAPL", limit=10)
-
-print(f"{'Executive':<25} {'Latest':>15} {'Prior':>15}")
-print("-" * 55)
-
-for entry in comparison["rows"]:
-    print(f"{entry['executiveName']:<25} ${entry['currentTotalUsd'] or 0:>14,.0f} ${entry['previousTotalUsd'] or 0:>14,.0f}")
-```
-
-### JavaScript
-
-```ts
-const comparison = await client.compareCompensation({ ticker: "AAPL", limit: 10 });
-
-console.log("Executive                 Latest          Prior");
-console.log("-".repeat(55));
-
-for (const entry of comparison.rows) {
-  console.log(
-    `${entry.executiveName.padEnd(25)} $${(entry.currentTotalUsd ?? 0).toLocaleString().padStart(14)} $${(entry.previousTotalUsd ?? 0).toLocaleString().padStart(14)}`
-  );
-}
-```
-
-### Expected output
-
-```
-Executive                 Latest          Prior
--------------------------------------------------------
-Tim Cook                  $   63,209,000 $   49,000,000
-Luca Maestri              $   26,900,000 $   26,100,000
-```
-
-## Step 3 — Analyze compensation composition
-
-Break down the mix of salary, equity, and performance-based pay to understand how compensation is structured.
-
-### Python
-
-```python
-comp = client.compensation(ticker="MSFT")
-
-for executive in comp["data"][:3]:  # top 3 executives
-    total = executive["totalUsd"] or 1
-    salary_pct = ((executive["salaryUsd"] or 0) / total) * 100
-    equity_pct = ((executive["stockAwardsUsd"] or 0) / total) * 100
-    other_pct = 100 - salary_pct - equity_pct
-
-    print(f"{executive['executiveName']} ({executive['roleTitle']})")
-    print(f"  Total: ${executive['totalUsd'] or 0:,.0f}")
-    print(f"  Salary:  {salary_pct:5.1f}%  |  Equity: {equity_pct:5.1f}%  |  Other: {other_pct:5.1f}%")
-    print()
-```
-
-### Expected output
-
-```
-Satya Nadella (Chairman and Chief Executive Officer)
-  Total: $48,500,000
-  Salary:    5.2%  |  Equity:  82.5%  |  Other:  12.3%
-
-Amy Hood (EVP, Chief Financial Officer)
-  Total: $25,300,000
-  Salary:    3.9%  |  Equity:  79.1%  |  Other:  17.0%
-
-Bradford Smith (Vice Chair and President)
-  Total: $22,100,000
-  Salary:    4.5%  |  Equity:  77.3%  |  Other:  18.2%
-```
-
-## Next steps
-
-- **Track compensation trends**: Pull historical data to see how executive pay has changed year over year.
-- **Screen by pay ratio**: Combine compensation data with employee count from 10-K filings to calculate CEO-to-median-worker pay ratios.
-- **Build peer benchmarks**: Group companies by sector and market cap to create meaningful compensation benchmarks.
-
-See the [Compensation Workflows](/compensation-workflows) guide for additional patterns.
+Use the source proxy filings to add a reviewer-approved explanation for changed rows, then join financial performance metrics only with clearly labeled methodology.

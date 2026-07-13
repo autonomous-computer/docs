@@ -1,138 +1,84 @@
 ---
 title: "Build an SEC Filing Monitor"
-description: "Poll supported filing search endpoints, send idempotent alerts, and retain the filing provenance an analyst needs to investigate each event."
+description: "Poll filing search on a schedule, de-duplicate new accessions, and hand an evidence-linked queue to an analyst or agent."
 ---
 
-This monitor polls for new 8-K and 8-K/A filings for a watchlist. It uses the public HTTP API and Node.js 18+ only, so it can run in cron, a container scheduler, or a serverless job without an agent runtime. It is a bounded polling job; use [Build a filing monitor](/tutorials/build-filing-monitor) when you need signed `monitor.match` webhooks.
+This is the right journey when your scheduler needs checkpoints and you do not want an inbound webhook receiver. It polls recent 8-Ks, stores accession numbers, and optionally posts a compact review queue. It does not decide whether a filing is material.
 
 ## Prerequisites
 
-- Node.js 18+ and an API key exposed to the job as `SECAPI_API_KEY`.
-- A durable store for seen accession numbers. The local JSON file below is a development example, not a multi-worker database.
-- An optional Slack incoming-webhook URL in `SLACK_WEBHOOK_URL`.
+- Node.js 18+ and `SECAPI_API_KEY` in your scheduler secret store.
+- A durable database for production. The JSON state file below is only for one local worker.
 
 ```bash
 export SECAPI_API_KEY="your_api_key"
-export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/your/webhook/url"
-mkdir sec-filing-monitor && cd sec-filing-monitor
+mkdir filing-monitor && cd filing-monitor
 printf '{"seen":[]}' > state.json
 ```
 
-## 1. Use the supported filings query
+## 1. Check the query manually
 
-`GET /v1/filings` supports `ticker`, `form` or comma-separated `forms`, `date_from`, `date_to`, `limit`, `cursor`, and `sort=filing_date_desc|filing_date_asc`. This request is a useful manual smoke test.
+`GET /v1/filings` supports ticker, `forms`, filing-date filters, cursor pagination, and filing-date sort.
 
 ```bash
-curl --get --fail-with-body \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  --data-urlencode "ticker=AAPL" \
-  --data-urlencode "forms=8-K,8-K/A" \
-  --data-urlencode "limit=10" \
-  --data-urlencode "sort=filing_date_desc" \
+curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  --data-urlencode "ticker=AAPL" --data-urlencode "forms=8-K,8-K/A" \
+  --data-urlencode "limit=10" --data-urlencode "sort=filing_date_desc" \
   "https://api.secapi.ai/v1/filings" \
   | jq '{data, hasMore, nextCursor, requestId, traceparent}'
 ```
 
-## 2. Run an idempotent monitor
+The result is a paginated filing list. Confirm the form and company scope before automating it.
 
-Create `monitor.mjs`. The script records accession numbers only after it has successfully handled an item; replace the JSON state with a transactional store before running more than one worker.
+## 2. Run an idempotent polling job
+
+Create `monitor.mjs`. It records an accession only after it has constructed the evidence record.
 
 ```js
 import { readFile, writeFile } from "node:fs/promises";
 
-const tickers = ["AAPL", "MSFT", "NVDA"];
-const forms = "8-K,8-K/A";
 const statePath = new URL("./state.json", import.meta.url);
 const apiKey = process.env.SECAPI_API_KEY;
 if (!apiKey) throw new Error("SECAPI_API_KEY is required");
-
 const state = JSON.parse(await readFile(statePath, "utf8"));
 const seen = new Set(state.seen ?? []);
 const alerts = [];
 
-for (const ticker of tickers) {
-  const query = new URLSearchParams({
-    ticker,
-    forms,
-    limit: "50",
-    sort: "filing_date_desc",
-  });
-  const response = await fetch(`https://api.secapi.ai/v1/filings?${query}`, {
-    headers: { "x-api-key": apiKey },
-  });
-  if (!response.ok)
-    throw new Error(`${ticker}: ${response.status} ${await response.text()}`);
-
-  const payload = await response.json();
-  for (const filing of payload.data ?? []) {
-    const accessionNumber = filing.accessionNumber ?? filing.accession_number;
+for (const ticker of ["AAPL", "MSFT", "NVDA"]) {
+  const query = new URLSearchParams({ ticker, forms: "8-K,8-K/A", limit: "50", sort: "filing_date_desc" });
+  const response = await fetch(`https://api.secapi.ai/v1/filings?${query}`, { headers: { "x-api-key": apiKey } });
+  if (!response.ok) throw new Error(`${ticker}: ${response.status} ${await response.text()}`);
+  const page = await response.json();
+  for (const filing of page.data ?? []) {
+    const accessionNumber = filing.accessionNumber;
     if (!accessionNumber || seen.has(accessionNumber)) continue;
-    alerts.push({
-      ticker,
-      form: filing.form,
-      filingDate: filing.filingDate ?? filing.filedAt ?? null,
-      accessionNumber,
-      filingUrl: filing.filingUrl ?? filing.provenance?.filingUrl ?? null,
-      requestId: payload.requestId,
-    });
+    alerts.push({ ticker, form: filing.form, filingDate: filing.filingDate,
+      accessionNumber, filingUrl: filing.filingUrl ?? filing.provenance?.filingUrl ?? null,
+      requestId: page.requestId, traceparent: page.traceparent });
     seen.add(accessionNumber);
   }
 }
-
-if (process.env.SLACK_WEBHOOK_URL && alerts.length) {
-  const text = alerts
-    .map((item) =>
-      `${item.ticker} ${item.form} ${item.filingDate ?? ""} ${item.accessionNumber} ${item.filingUrl ?? ""}`.trim(),
-    )
-    .join("\n");
-  const slack = await fetch(process.env.SLACK_WEBHOOK_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
-  if (!slack.ok)
-    throw new Error(`Slack ${slack.status}: ${await slack.text()}`);
-}
-
-await writeFile(
-  statePath,
-  JSON.stringify({ seen: [...seen].slice(-5_000) }, null, 2),
-);
-console.log(
-  JSON.stringify(
-    { checked: tickers.length, newFilings: alerts.length, alerts },
-    null,
-    2,
-  ),
-);
+await writeFile(statePath, JSON.stringify({ seen: [...seen].slice(-5000) }, null, 2));
+console.log(JSON.stringify({ checked: 3, newFilings: alerts.length, alerts }, null, 2));
 ```
 
-Run it once with `node monitor.mjs`. A successful result reports the number of issuers checked and new filing records with their accession numbers and source URLs. The first run may alert on existing filings because the state starts empty; seed or backfill the state intentionally.
+Run `node monitor.mjs`. The first run seeds the state and may report existing records. Treat that as an intentional backfill, not a production alert.
 
-## Give the result to an agent without losing evidence
+## Expected result and provenance
 
-After the script writes its JSON result, an agent can summarize only the new records:
+Every new queue record contains an accession number, filing date, source URL when returned, `requestId`, and `traceparent`. Give an agent only that evidence-linked queue, for example: “Summarize each filing's disclosed facts. Do not infer materiality from its form or title. Cite the accession number and filing URL.” Keep its output separate from the source record.
 
-<Prompt>
-Read this monitor result. For each new filing, return ticker, form, filing date, accession number, filing URL, and requestId. Retrieve a filing section only when the result includes its accession number. Label any interpretation as analysis and do not classify materiality from a filing title alone.
-</Prompt>
+## Common errors and false positives
 
-The expected output is a review queue with its source trail, not an autonomous trading, legal, or compliance decision. Keep the JSON result and the prompt version with the downstream summary.
+- `401` or `403`: the scheduler did not receive an entitled key.
+- Missing records: follow `nextCursor` while `hasMore` is true and run a short overlapping date-window reconciliation.
+- Duplicates: accession number is the filing identity; make it a unique key in the production store.
+- A new 8-K is not automatically a material event, and an amendment can change the prior interpretation.
 
-## Common failure modes
+## Production considerations
 
-- `401` or `403`: the scheduler did not receive a valid API key or route entitlement.
-- Invalid results: use `forms`, not `form_type`, and `filing_date_desc`, not an unsupported sort token.
-- Duplicate alerts: use the accession number as the durable idempotency key; store alert delivery separately if sending can fail after state changes.
-- Missed events: paginate with `nextCursor` when `hasMore` is true, overlap polling windows, and reconcile against a recent date range.
-- Time-zone mistakes: schedule by a named time zone where your scheduler supports it; do not assume a fixed UTC offset for US market time.
+Use a transaction that records the accession and enqueues the alert together. Store a high-water mark plus a reconciliation window, apply bounded retry/backoff, and measure polls, pages, new filings, and alert failures. Never put an API key in the job command line or repository.
 
-## Production notes
+## Next action
 
-Keep secrets in the scheduler's secret store, retry transient HTTP failures with bounded exponential backoff, and emit metrics for polls, pages, new filings, and delivery failures. Retain `requestId`, `traceparent`, accession number, filing URL, query filters, and alert status. Alerting identifies new disclosures; it does not classify their materiality or replace analyst review.
-
-## Next actions
-
-- Add `date_from` plus cursor pagination for a bounded reconciliation job.
-- Retrieve specific filing content from the [filings reference](/api-reference/filings) before sending a research summary.
-- Use your queue or database's unique constraint on accession number when you run multiple workers.
+Add cursor pagination and a reviewer-status column, then retrieve only the filing sections needed for each evidence-linked investigation.

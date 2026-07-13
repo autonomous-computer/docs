@@ -1,98 +1,66 @@
 ---
 title: "Extract Revenue from a 10-K"
-description: "Retrieve annual revenue facts from SEC filings, retain filing provenance, and make the result usable in a production research workflow."
+description: "Retrieve annual SEC revenue facts, preserve the selected concept and filing provenance, and produce a reproducible financial-research record."
 ---
 
-Use the filings endpoint to identify the annual report, then use company facts for a revenue series. This avoids treating a displayed number as self-authenticating: keep the returned accession number and filing URL with every downstream value.
+Use this journey when you need annual reported revenue for a model, diligence memo, or data pipeline. The returned number is only useful when its unit, reporting period, selected XBRL concept, and filing provenance travel with it.
 
 ## Prerequisites
 
-- An API key with access to `https://api.secapi.ai`, exported as `SECAPI_API_KEY`.
-- `curl` and `jq`, or Node.js 18+ for the programmatic example.
-- A ticker, CIK, or symbol. This example uses `AAPL`; use a CIK when your issuer mapping is fixed.
+- `SECAPI_API_KEY`, `curl`, and `jq`, or Node.js 18+.
+- A stable issuer identifier. This example uses `AAPL`.
 
 ```bash
 export SECAPI_API_KEY="your_api_key"
 ```
 
-Never put the key in a browser bundle, repository, or scheduled-job command line. Load it from your runtime's secret store.
-
 ## 1. Identify the annual filing
 
-`GET /v1/filings/latest` accepts `ticker`, `symbol`, or `cik`; `form=10-K` restricts the lookup to an annual report.
-
 ```bash
-curl --fail-with-body \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K" \
   | jq '{accessionNumber, filingDate, form, companyName, filingUrl, requestId, provenance}'
 ```
 
-**Result:** one latest matching filing. Persist its `accessionNumber`, `filingUrl` (or `provenance.filingUrl` when supplied), filing date, and `requestId` beside the metric.
+Save the accession number, filing URL, filing date, and request ID. This is the source document you will use to investigate a surprising number.
 
-## 2. Retrieve the annual revenue series
-
-`GET /v1/facts` returns normalized SEC company facts. `tag=Revenues`, `form=10-K`, and `limit=4` request up to four annual observations; `resolvedTag` tells you which concept was actually used.
+## 2. Retrieve annual revenue facts
 
 ```bash
-curl --fail-with-body \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4" \
   | jq '{requestedTag, resolvedTag, aliasStrategy, data: [.data[] | {value, unit, periodEnd, fy, fp, form, filedAt, provenance}], requestId, traceparent}'
 ```
 
-The `data` array contains fact points, including `value`, `unit`, `periodEnd`, fiscal labels, the filing date, and per-point provenance. Values are raw units, not display-formatted dollars.
+The expected result is up to four annual fact observations. `resolvedTag` records the concept actually selected; values are raw units, not display-formatted dollars.
 
-## Node.js implementation
-
-This example validates the HTTP result and writes a compact, provenance-preserving record. It deliberately does not assume a specific annual value or filing date.
+## 3. Write a provenance-preserving result
 
 ```js
-const base = "https://api.secapi.ai";
-const headers = { "x-api-key": process.env.SECAPI_API_KEY ?? "" };
-
-if (!headers["x-api-key"]) throw new Error("SECAPI_API_KEY is required");
-
-const response = await fetch(
-  `${base}/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4`,
-  { headers },
-);
+const response = await fetch("https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4", {
+  headers: { "x-api-key": process.env.SECAPI_API_KEY ?? "" },
+});
 if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
-
 const payload = await response.json();
-const revenue = payload.data.map((fact) => ({
-  value: fact.value,
-  unit: fact.unit,
-  periodEnd: fact.periodEnd,
-  fiscalYear: fact.fy,
-  form: fact.form,
-  filedAt: fact.filedAt,
-  accessionNumber: fact.provenance?.accessionNumber ?? null,
-  filingUrl: fact.provenance?.filingUrl ?? null,
-}));
-
-console.log(JSON.stringify({
-  requestedTag: payload.requestedTag,
-  resolvedTag: payload.resolvedTag,
-  revenue,
-  requestId: payload.requestId,
-  traceparent: payload.traceparent,
-}, null, 2));
+console.log(JSON.stringify({ requestedTag: payload.requestedTag, resolvedTag: payload.resolvedTag,
+  observations: (payload.data ?? []).map((fact) => ({ value: fact.value, unit: fact.unit,
+    periodEnd: fact.periodEnd, fiscalYear: fact.fy, fiscalPeriod: fact.fp, form: fact.form,
+    filedAt: fact.filedAt, accessionNumber: fact.provenance?.accessionNumber ?? null,
+    filingUrl: fact.provenance?.filingUrl ?? null })), requestId: payload.requestId,
+  traceparent: payload.traceparent }, null, 2));
 ```
 
-## Common failure modes
+## Common errors and false positives
 
-- `401` or `403`: check that the job received `SECAPI_API_KEY` and that its plan permits the route.
-- Empty `data`: confirm the issuer identifier and inspect `resolvedTag`; issuers can use a different valid concept or taxonomy.
-- Unexpected period mix: retain `form`, `fp`, `periodEnd`, and `filedAt`; do not compare annual and quarterly observations as though they were interchangeable.
-- A restated value: treat the filing accession and filing date as part of the metric identity, then decide in your model whether to prefer the latest filing or the originally reported value.
+- `401` or `403`: the job did not receive a valid entitled key.
+- Empty data: confirm the identifier and inspect `resolvedTag`; issuers can report equivalent concepts under different taxonomy tags.
+- Period confusion: do not compare a quarterly fact with an annual fact without retaining `fp`, `periodEnd`, and `filedAt`.
+- Restatements: filing accession and date are part of the metric identity. Decide explicitly whether your model uses the latest restated value or originally reported value.
 
-## Production notes
+## Production considerations
 
-Store values as integers or decimals in their returned unit, preserve source metadata, and log `requestId` and `traceparent` for support. Cache historical results, rate-limit batch work, and make every aggregate link back to its underlying filing evidence. SEC filings are source documents, not investment recommendations.
+Store raw values as decimals or integers in the returned unit, cache historical requests, and attach request/trace metadata to support records. Never expose the key in browser code, and label derived analysis as analysis rather than an SEC statement.
 
-## Next actions
+## Next action
 
-- Use `GET /v1/statements/all?ticker=AAPL&period=annual&limit=1` when you need a normalized bundle of income statement, balance sheet, and cash-flow data.
-- Add a fiscal-year selector (`fy`) when the analysis must be reproducible at a fixed reporting period.
-- Read the [facts reference](/api-reference/facts) and [statements reference](/api-reference/statements) before expanding the metric taxonomy.
+Use [statements](/api-reference/statements) for an annual financial-statement bundle, or add `fy` when a report must reproduce a fixed fiscal year.
