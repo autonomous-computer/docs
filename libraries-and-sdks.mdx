@@ -1,15 +1,15 @@
 ---
-title: "Libraries & SDKs"
-description: "Choose an SEC API integration for your runtime and verify it with a source-backed filing request"
+title: "Libraries and SDKs"
+description: "Choose a SEC API client for your runtime and validate it with a source-backed issuer workflow"
 ---
 
-Use an SDK when SEC API belongs in application code, the CLI for terminal work, and hosted MCP for an MCP-aware client. Whichever surface you choose, begin with a company lookup and one filing request that returns an accession number and SEC URL.
+Choose the narrowest interface that fits your runtime. The SDKs and CLI call the public API; use the API reference when you need exact HTTP behavior. Whichever surface you choose, begin with a company lookup and one filing request that returns an accession number and SEC URL.
 
 ## Choose an integration
 
 <CardGroup cols={2}>
   <Card title="JavaScript SDK" icon="file-code-2" href="/javascript-sdk">
-    TypeScript and JavaScript services, workers, and server-side applications.
+    TypeScript and JavaScript services, workers, server actions, and scripts.
   </Card>
   <Card title="Python SDK" icon="file-code" href="/python-sdk">
     Research scripts, notebooks, data jobs, and Python services.
@@ -23,7 +23,7 @@ Use an SDK when SEC API belongs in application code, the CLI for terminal work, 
   <Card title="SEC API CLI" icon="terminal" href="/cli">
     Shell scripts, local investigation, and terminal-first workflows.
   </Card>
-  <Card title="Hosted MCP" icon="bot" href="/mcp-install">
+  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
     MCP-aware clients that need SEC API tools in a research workflow.
   </Card>
   <Card title="REST API" icon="globe" href="/api-reference">
@@ -31,32 +31,27 @@ Use an SDK when SEC API belongs in application code, the CLI for terminal work, 
   </Card>
 </CardGroup>
 
-## Verify the integration
+## Verify an installation with one workflow
 
-Use the same small workflow in every runtime. It checks authentication, issuer resolution, filing retrieval, and the evidence fields you will need later.
+After installing an SDK or CLI, run these four operations for a known issuer:
 
-1. Export `SECAPI_API_KEY` in the service or shell that makes the request.
-2. Resolve `AAPL` and retain the returned CIK.
-3. Retrieve the latest `10-K` for that issuer.
-4. Retrieve Item `1A`, then retain `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` with the extracted result.
+1. Resolve `AAPL`.
+2. Retrieve its latest `10-K`.
+3. Retrieve Item `item_1a` from that latest filing.
+4. Retrieve one annual all-statements bundle.
 
-The latest filing changes over time. Assert against the response shape and the presence of source identifiers, not against one historical accession number.
+The JavaScript method names are `resolveEntity`, `latestFiling`, `latestSection`, and `allStatements`. The Python equivalents are `resolve_entity`, `latest_filing`, `latest_section`, and `all_statements`. In the CLI, use `entities resolve`, `filings latest`, `sections get`, and `statements get` with `--statement all`.
 
-## Start with JavaScript or Python
+This verifies credentials, package installation, egress, and response shape with data you can recognize. The latest filing, extracted section text, and statement values change over time. Assert against response shape and source identifiers, not against one historical accession number.
 
-The JavaScript and Python SDK guides include install commands and a complete first request. Both clients read `SECAPI_API_KEY` from a trusted server-side environment, so you do not need to pass the key through browser code or a notebook output.
+## Operate the client safely
 
-<CardGroup cols={2}>
-  <Card title="Install the JavaScript SDK" icon="file-code-2" href="/javascript-sdk">
-    Install `@secapi/sdk-js`, resolve a company, and retrieve a filing section.
-  </Card>
-  <Card title="Install the Python SDK" icon="file-code" href="/python-sdk">
-    Install `secapi-client`, resolve a company, and retrieve a cited filing section.
-  </Card>
-</CardGroup>
+Store the API key in the runtime's secret store and expose it as `SECAPI_API_KEY`; do not embed it in frontend code or commit it. Let one layer own retries. On `429`, honor `Retry-After` and reduce concurrency rather than adding parallel retry loops.
 
-## Use the right reliability boundary
+Keep `requestId` with every result. For filing-derived output, retain the accession number, filing date, and source URL when present. Preserve `provenance`, `freshness`, `materialization`, and trace fields when the endpoint returns them.
 
 SDKs handle documented transient failures for safe reads. Your application should still set its own request deadlines, preserve request IDs, and avoid layering unbounded retries around the client. Only retry a write when your application can safely repeat it.
 
-Read [SDK reliability](/sdk-reliability) for the JavaScript and Python retry policy, or [API conventions](/api-conventions) for authentication, versioning, and response metadata.
+## Next step
+
+Run the [first request flow](/first-request-flows), then consult [API overview](/api-overview) before adding pagination, caching, or a background workload. Read [SDK reliability](/sdk-reliability) for the JavaScript and Python retry policy.

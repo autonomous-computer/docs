@@ -1,20 +1,50 @@
 ---
-title: "Build with SEC filings, not around them"
-description: "Choose a concrete SEC research job, make the first source-backed request, then move into filings, facts, ownership, monitors, or agents."
+title: "SEC API overview"
+description: "Find the right SEC research workflow and move from a first request to a production integration"
 ---
 
-<Info>
-SEC API gives your application or research workflow a structured way to retrieve SEC filings, financial facts, ownership data, and source context. Start with one question you need to answer, make a request you can inspect, then choose the integration surface that fits your system.
-</Info>
+Start with a real issuer and a narrow question. SEC API supports filing search, sections, structured statements, ownership data, market utilities, and agent tooling; you do not need to learn every endpoint before shipping a useful result.
 
-## Start from the workflow that matches your job
+## Start with an issuer workflow
+
+For most new integrations, use this order:
+
+1. [Resolve an entity](/api-reference/entities/get-v1-entities-resolve) by ticker, CIK, FIGI, or name.
+2. Retrieve the issuer's [latest filing](/api-reference/filings/get-v1-filings-latest).
+3. Read a filing section or request the [all-statements bundle](/api-reference/statements/get-v1-statements-all).
+4. Keep the filing accession number and request metadata with your result.
+
+This path confirms that authentication, identifiers, filing access, and the response shape work before you add search, pagination, or background jobs.
 
 <CardGroup cols={2}>
-  <Card title="Issuer research" icon="building-2" href="/first-request-flows">
-    Resolve a company, fetch the latest filing, extract the key sections, pull the all-statements bundle, and keep the source trail intact.
+  <Card title="Make the first request" icon="terminal" href="/getting-started">
+    Authenticate with an API key and run the first issuer calls.
   </Card>
-  <Card title="Offerings monitor" icon="briefcase-business" href="/advanced-quickstarts">
-    Track fresh S-1 and 424B4 activity without living inside EDGAR.
+  <Card title="Follow the full flow" icon="route" href="/first-request-flows">
+    Add a filing section and learn which identifiers to retain.
+  </Card>
+</CardGroup>
+
+## Choose the surface, not a different data product
+
+REST is the underlying HTTPS API. The SDKs and CLI package common requests for their native environments. Hosted MCP exposes tools for MCP clients. Choose one surface for your first workflow; the documented REST endpoint remains the best place to verify exact parameters and response fields.
+
+| Surface | Use it when | What to read |
+| --- | --- | --- |
+| REST | You control HTTP requests or use another language | [API overview](/api-overview) |
+| SDK | You use JavaScript, Python, Go, or Rust | [Libraries and SDKs](/libraries-and-sdks) |
+| CLI | You work in a terminal or need a simple smoke check | [CLI](/cli) |
+| MCP | Your client can call hosted MCP tools | [MCP workflows](/mcp-workflows) |
+
+## Keep the evidence that explains a result
+
+For filing-backed output, save the accession number, filing date, and source URL when present. Also retain `requestId`; response-specific `provenance`, `freshness`, `materialization`, and trace fields provide additional context when the endpoint returns them. Not every route or compact view includes every metadata field.
+
+## Continue by workflow
+
+<CardGroup cols={3}>
+  <Card title="Issuer research" icon="building-2" href="/first-request-flows">
+    Resolve a company, fetch the latest filing, extract key sections, pull the all-statements bundle, and keep the source trail intact.
   </Card>
   <Card title="Ownership monitor" icon="users" href="/ownership-workflows">
     Compare manager positions, ticker holder graphs, historical institutional extracts, and quarter-over-quarter changes.
@@ -24,53 +54,22 @@ SEC API gives your application or research workflow a structured way to retrieve
   </Card>
 </CardGroup>
 
-## A practical path through the docs
-
-<Steps>
-  <Step title="Prove the request">
-    Create an API key, resolve an issuer, and retrieve a filing. This verifies your credentials, request format, and the source fields you will retain.
-  </Step>
-  <Step title="Choose the integration surface">
-    Start with REST when you need to understand a response. Move to an SDK, CLI, or MCP when it better fits the application or research environment.
-  </Step>
-  <Step title="Retain the source context">
-    Keep accession numbers, filing URLs, filing dates, and request metadata with any conclusion derived from a response.
-  </Step>
-</Steps>
-
-## Copyable workflow prompts
-
-### Issuer research
+## Give this prompt to your agent
 
 <Prompt>
 Build an issuer research workflow with SEC API. Resolve AAPL, retrieve the latest 10-K, extract Item 1A and Item 7, fetch the all-statements bundle, and return a markdown brief that names the accession number, filing URL, filing date, and request metadata for each cited section.
 </Prompt>
 
-### Ownership monitor
-
-<Prompt>
-Use SEC API to compare a manager portfolio with the latest holder graph for AAPL. Highlight the largest positions and quarter-over-quarter changes, and include the source accession numbers and request metadata behind each result.
-</Prompt>
-
-## Then read these
+## Next steps
 
 <CardGroup cols={3}>
-  <Card title="Advanced quickstarts" icon="rocket" href="/advanced-quickstarts">
-    Slightly deeper workflows once the first request is working.
-  </Card>
-  <Card title="Benchmark workflows" icon="gauge" href="/benchmark-workflows">
-    The benchmark methodology, latest snapshot, and what the numbers do and do not mean.
+  <Card title="Search filings" icon="search" href="/products/filing-search">
+    Find filings and relevant filing text.
   </Card>
   <Card title="Freshness and trust" icon="shield-check" href="/freshness-and-trust">
-    How SEC API measures trust, freshness, and source-backed availability.
+    See how SEC API measures trust, freshness, and source-backed availability.
   </Card>
-  <Card title="Migrate from sec-api.io" icon="git-compare" href="/migrate-from-sec-api">
-    Translate common sec-api.io workflows directly onto the SEC API surface.
-  </Card>
-  <Card title="Migrate from financialdatasets.ai" icon="git-compare-arrows" href="/migrate-from-financialdatasets-ai">
-    Map financial statements, filings, ownership, and insider work onto SEC API.
-  </Card>
-  <Card title="Give this prompt to your agent" icon="bot" href="/give-this-prompt-to-your-agent">
-    Ready-made prompts for faster handoff to coding agents.
+  <Card title="Troubleshoot a request" icon="circle-help" href="/troubleshooting">
+    Diagnose authentication, parameters, and rate limits.
   </Card>
 </CardGroup>

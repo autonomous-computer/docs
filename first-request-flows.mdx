@@ -1,64 +1,88 @@
 ---
-title: "Your first SEC API workflow"
-description: "Resolve an issuer, retrieve a source filing, and choose the right interface for your workflow"
+title: "First request flows"
+description: "Build a verified issuer workflow with entity resolution, a source filing, a filing section, and annual statements"
 ---
 
-Start with a company you recognize, then retrieve one filing you can trace back to the SEC. This verifies more than connectivity: it confirms your key, request format, and source record all work together.
+Use a company you recognize so you can validate the result. This workflow resolves Apple, finds its latest 10-K, retrieves Item 1A, and requests one annual statements bundle. It verifies more than connectivity: it confirms your key, identifiers, filing access, and source fields all work together.
 
-## Make the first two requests
-
-Resolve the issuer first. The response gives you its canonical CIK and identity metadata.
-
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
-```
-
-Then retrieve the issuer's latest annual report.
-
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
-```
-
-The filing changes when Apple submits a newer annual report. Keep the returned `cik`, `form`, `accessionNumber`, `filingDate`, `filingUrl`, and `requestId`; together they identify the request and the filing behind your work.
-
-## Choose an interface
-
-| Interface | Use it when | Start here |
-| --- | --- | --- |
-| REST | You want direct HTTP control in any runtime. | [API reference](/api-reference/entities/get-v1-entities-resolve) |
-| SDK | The request belongs in JavaScript, Python, Go, or Rust application code. | [Libraries and SDKs](/libraries-and-sdks) |
-| CLI | You are working in a terminal or shell script. | [CLI](/cli) |
-| MCP | An MCP-aware client needs SEC API tools for a research workflow. | [Install MCP](/mcp-install) |
-
-Use the same issuer-and-filing check in every interface. Do not move on to filing extraction or analysis until you can preserve the source fields from the filing response.
-
-## Continue from the terminal
-
-The CLI is useful when you want to inspect the same workflow without writing application code.
+## REST
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
-secapi entities resolve --ticker AAPL
-secapi filings latest --ticker AAPL --form 10-K
-secapi sections get --ticker AAPL --form 10-K --section item_1a
+BASE_URL="https://api.secapi.ai"
+
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "$BASE_URL/v1/entities/resolve?ticker=AAPL&view=agent"
+
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "$BASE_URL/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
+
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "$BASE_URL/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent"
+
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "$BASE_URL/v1/statements/all?ticker=AAPL&period=annual&limit=1"
 ```
 
-## Continue from an MCP client
+The calls return an entity match, the latest matching filing, the requested filing section, and a balance-sheet/income-statement/cash-flow bundle. The section and statement content is filing-dependent. `limit` for `/v1/statements/all` accepts 1 through 40.
 
-After you install MCP, ask the client for a bounded, source-backed result instead of a general summary.
+Keep the returned `cik`, `form`, `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` when present; together they identify the request and the filing behind your work.
+
+## SDK
+
+The JavaScript SDK makes the same REST calls from application code:
+
+```ts
+import { SecApiClient } from "@secapi/sdk-js"
+
+const client = new SecApiClient({ apiKey: process.env.SECAPI_API_KEY! })
+
+const entity = await client.resolveEntity({ ticker: "AAPL", view: "agent" })
+const filing = await client.agentLatestFiling({ ticker: "AAPL", form: "10-K" })
+const section = await client.latestSection({
+  ticker: "AAPL",
+  form: "10-K",
+  sectionKey: "item_1a",
+  view: "agent",
+})
+const statements = await client.allStatements({
+  ticker: "AAPL",
+  period: "annual",
+  limit: 1,
+})
+```
+
+Use the [JavaScript SDK](/javascript-sdk) or [Python SDK](/python-sdk) guide for installation and language-specific error handling.
+
+## CLI
+
+The CLI is useful for a terminal smoke check or shell automation. It reads `SECAPI_API_KEY` from the environment.
+
+```bash
+npm install -g @secapi/cli
+
+secapi entities resolve --ticker AAPL
+secapi filings latest --ticker AAPL --form 10-K
+secapi sections get --ticker AAPL --form 10-K --section item_1a --view agent
+secapi statements get --ticker AAPL --statement all --period annual --limit 1
+```
+
+See [CLI](/cli) for JSON output, local command help, and additional workflows.
+
+## Hosted MCP
+
+Use hosted MCP when your coding or research client already supports MCP tools. Configure `https://api.secapi.ai/mcp` with an `x-api-key` header, then ask the client for a bounded, source-backed result.
 
 <Prompt>
-Resolve AAPL, retrieve its latest 10-K, and return the issuer CIK plus the filing form, accession number, filing date, source URL, and request ID. Do not summarize the filing until those fields are present.
+Resolve AAPL, retrieve its latest 10-K, extract Item 1A, request one annual all-statements bundle, and return the issuer CIK plus the filing form, accession number, filing date, source URL, and request ID. Do not summarize the filing until those fields are present.
 </Prompt>
 
-Use the client's tool catalog to discover the current tool names and input schemas. See [MCP workflows](/mcp-workflows) for a source-backed research pattern.
+Use the client's tool catalog to discover the current tool names and input schemas. See [MCP workflows](/mcp-workflows) for configuration examples and the current tool surface.
 
-## If the request fails
+## Make the result reproducible
+
+Keep `requestId` from every response. For filing-backed output, save the accession number, filing date, form, and source URL when present. Preserve response-specific `provenance`, `freshness`, `materialization`, and trace fields when the endpoint returns them. Not every route or compact view includes every metadata field, so consult the endpoint reference before making a caching or audit decision.
 
 For `401`, confirm that your key is exported in the calling environment and sent in `x-api-key`. For `402`, resolve the stated billing or entitlement condition. For `429`, wait for `Retry-After` when present; otherwise use bounded exponential backoff and avoid concurrent retries.
 
-Read [API conventions](/api-conventions) for response metadata and error handling, or [Troubleshooting](/troubleshooting) for error-specific next steps.
+Next, use the [API reference](/api-reference) to add filters or choose an SDK from [Libraries and SDKs](/libraries-and-sdks) for your runtime.

@@ -1,12 +1,12 @@
 ---
-title: "Try it"
-description: "Make a live SEC API request, inspect the issuer response, and continue to a source filing"
+title: "Try SEC API"
+description: "Run authenticated SEC API requests for entity resolution, filings, statements, SDKs, CLI, and MCP"
 ---
 
 Use this page to make a small live request before you build a larger workflow. Resolve a company first, then use the returned identity to choose the filing, statement, or search request you need.
 
 <Warning>
-These examples call the production API and count against your usage quota.
+These examples call the production API and count against your usage quota. Start with the shown low limits while you validate response shapes.
 </Warning>
 
 ## Set your API key
@@ -21,7 +21,7 @@ Send the key in `x-api-key`. Do not put it in browser code, a checked-in file, o
 
 ## Resolve a company
 
-This request resolves Apple and returns its canonical CIK and identity metadata. `id` is SEC API's opaque canonical identifier for the resolved issuer; only `requestId` varies by request.
+This request resolves Apple and returns its canonical CIK and identity metadata. Keep the request ID with your logs.
 
 <CodeGroup>
 ```bash cURL
@@ -36,20 +36,22 @@ const response = await fetch(
   { headers: { "x-api-key": process.env.SECAPI_API_KEY } },
 )
 
+if (!response.ok) throw new Error(`SEC API request failed: ${response.status}`)
 const entity = await response.json()
 console.log(entity.ticker, entity.cik, entity.name, entity.requestId)
 ```
 
 ```python Python
 import os
-
 import requests
 
 response = requests.get(
     "https://api.secapi.ai/v1/entities/resolve",
     params={"ticker": "AAPL", "view": "agent"},
     headers={"x-api-key": os.environ["SECAPI_API_KEY"]},
+    timeout=30,
 )
+response.raise_for_status()
 entity = response.json()
 print(entity["ticker"], entity["cik"], entity["name"], entity["requestId"])
 ```
@@ -59,11 +61,9 @@ secapi entities resolve --ticker AAPL
 ```
 </CodeGroup>
 
-On success, confirm that the result includes `ticker`, `cik`, `name`, and `requestId`. Keep the request ID with your logs. For the complete set of accepted identifiers and response fields, read the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve).
+On success, confirm that the result includes `ticker`, `cik`, `name`, and `requestId`. For the complete set of accepted identifiers and response fields, read the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve).
 
-## Retrieve a filing
-
-Once entity resolution works, retrieve the latest 10-K. The filing can change as new reports arrive, so retain the source fields from the response rather than expecting a fixed accession number.
+## Retrieve the latest 10-K
 
 ```bash
 curl -sS \
@@ -73,17 +73,27 @@ curl -sS \
 
 Keep `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` with any result derived from the filing. The [latest filing reference](/api-reference/filings/get-v1-filings-latest) documents the available filters and response shape.
 
-## Pick the next page
+## Request annual statements
+
+```bash
+curl -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
+```
+
+This returns one normalized annual bundle containing a balance sheet, income statement, and cash flow statement. Set `period=quarterly` for quarterly results. The route accepts `limit` from 1 through 40.
+
+## Explore further
 
 <CardGroup cols={3}>
-  <Card title="Build an application" icon="blocks" href="/libraries-and-sdks">
-    Choose an SDK for JavaScript, Python, Go, or Rust application code.
+  <Card title="First request flows" icon="route" href="/first-request-flows">
+    Add a filing section and compare REST, SDK, CLI, and MCP paths.
   </Card>
-  <Card title="Work from a terminal" icon="terminal" href="/cli">
-    Use the CLI for shell scripts and interactive investigation.
+  <Card title="API playground" icon="square-terminal" href="/api-playground">
+    Browse additional, copyable workflow examples.
   </Card>
-  <Card title="Use an MCP client" icon="bot" href="/mcp-install">
-    Connect hosted MCP for source-backed research workflows.
+  <Card title="API reference" icon="book-open" href="/api-reference">
+    Check exact route requirements before changing an example.
   </Card>
 </CardGroup>
 

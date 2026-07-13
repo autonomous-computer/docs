@@ -1,9 +1,9 @@
 ---
 title: "Run a safe SEC API request"
-description: "Use a small authenticated request to verify credentials, inspect a response, and carry the right identifiers into the next call."
+description: "Use small authenticated requests to verify credentials, inspect responses, and carry the right identifiers into the next call."
 ---
 
-This page is a terminal playground, not an anonymous sandbox. Each call uses your account and can count toward its applicable usage limits.
+This page is a terminal playground, not an anonymous sandbox. Each call uses your account and can count toward its applicable usage limits. Start with the shown low limits while you validate response shapes.
 
 ## Prerequisites
 
@@ -47,6 +47,64 @@ curl --fail-with-body \
 
 `view=agent` is an endpoint-specific projection. It can omit envelope metadata that is present in the default response. Confirm its fields in the operation reference before using it for a citation or audit trail.
 
+## 4. Explore filing workflows
+
+```bash
+# List up to three Apple 10-K filings.
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=3" \
+  -H "x-api-key: $SECAPI_API_KEY"
+
+# Read Item 1A from the latest Apple 10-K.
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+## 5. Search filing text
+
+```bash
+# Search the filing corpus by text and issuer.
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/search/fulltext?q=revenue%20recognition&ticker=AAPL&limit=5" \
+  -H "x-api-key: $SECAPI_API_KEY"
+
+# Search semantically for an issuer-specific question.
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20risk&ticker=AAPL&limit=5" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+Search results and ranking change as filings and indexes change. Preserve the filing identifiers and citations returned by the route when you use a result.
+
+## 6. Try statements and ownership
+
+```bash
+# One annual balance-sheet, income-statement, and cash-flow bundle.
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1" \
+  -H "x-api-key: $SECAPI_API_KEY"
+
+# Recent normalized insider records for NVIDIA.
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/insiders?ticker=NVDA&limit=10" \
+  -H "x-api-key: $SECAPI_API_KEY"
+
+# Institutional holdings for a manager by CIK.
+curl --fail-with-body \
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=10" \
+  -H "x-api-key: $SECAPI_API_KEY"
+```
+
+## Use a different interface
+
+| Interface | Equivalent starting point |
+| --- | --- |
+| JavaScript SDK | `client.resolveEntity`, `client.latestFiling`, and `client.allStatements` |
+| Python SDK | `client.resolve_entity`, `client.latest_filing`, and `client.all_statements` |
+| CLI | `secapi entities resolve`, `secapi filings latest`, and `secapi statements get` |
+| Hosted MCP | `entities.resolve`, `filings.latest`, `sections.get`, and `statements.get` |
+
 ## Expected failures
 
 ```bash
@@ -61,4 +119,4 @@ Without the API-key header, expect `401` and an authentication error. For `429`,
 - Set a client timeout and a bounded retry policy. Do not blindly retry writes.
 - Log the endpoint, status, `Request-Id`, and `SECAPI-Version`; do not log the API key or full sensitive payloads.
 
-Next: [API conventions](/api-conventions) for headers and pagination, or [JavaScript SDK](/javascript-sdk) to put this request in application code.
+Read [Libraries and SDKs](/libraries-and-sdks) for installation or [MCP workflows](/mcp-workflows) for client setup. Use the [API reference](/api-reference) to verify parameters, endpoint-specific limits, and response schemas.

@@ -1,9 +1,9 @@
 ---
 title: "Build a first SEC API integration"
-description: "Choose REST, an SDK, or the CLI, make one authenticated request, and preserve the information needed to operate it."
+description: "Choose REST, an SDK, hosted MCP, or the CLI, make one authenticated request, and preserve the information needed to operate it."
 ---
 
-Start with one server-side request. Once it returns a useful result, keep the same endpoint and move it into your preferred client.
+Start with one trusted server-side request. Once it returns a useful result, keep the same contract and move it into the client, workflow, or agent surface that fits your system.
 
 ## Prerequisites
 
@@ -13,6 +13,8 @@ Start with one server-side request. Once it returns a useful result, keep the sa
 
 ## Make one request
 
+Send the API key in `x-api-key`:
+
 ```bash
 export SECAPI_API_KEY="secapi_..."
 
@@ -20,6 +22,8 @@ curl --fail-with-body \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
   -H "x-api-key: $SECAPI_API_KEY"
 ```
+
+Do not send an API key as `Authorization: Bearer`. Bearer tokens are for configured identity flows, not the default machine API-key path. Keep dashboard sign-in and browser-only account actions separate from machine requests, store keys in a secret store or runtime environment, and rotate a key if it may have been exposed. See [API keys, usage, and billing](/auth-and-pricing) for the credential boundary.
 
 The response identifies the matched issuer. Fields beyond the identity can vary by endpoint and response view, so treat the API reference as the field contract.
 
@@ -34,12 +38,20 @@ Save the `Request-Id` response header with your application log. It identifies t
 
 ## Choose the interface
 
-| Use this | When it fits | Start here |
-| --- | --- | --- |
-| REST | You need the exact HTTP request, a language not covered by an SDK, or a narrow integration. | [API conventions](/api-conventions) |
-| JavaScript or Python SDK | You want a maintained client for an application, worker, notebook, or script. | [Libraries and SDKs](/libraries-and-sdks) |
-| Go or Rust SDK | You are building a service in that runtime and want its typed helpers. | [Go SDK](/go-sdk) or [Rust SDK](/rust-sdk) |
-| CLI | You need a terminal check, shell automation, or a reproducible local command. | [CLI](/cli) |
+<CardGroup cols={2}>
+  <Card title="REST" icon="braces" href="/api-conventions">
+    Use direct HTTPS when you need the exact request, a language not covered by an SDK, or a narrow integration.
+  </Card>
+  <Card title="SDKs" icon="file-code-2" href="/libraries-and-sdks">
+    Use JavaScript, Python, Go, or Rust clients for application code, workers, notebooks, and scripts.
+  </Card>
+  <Card title="CLI" icon="terminal-square" href="/cli">
+    Use terminal commands for local checks, shell automation, and reproducible investigation.
+  </Card>
+  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
+    Connect an MCP-aware client after verifying a normal API request and understanding the tool boundary.
+  </Card>
+</CardGroup>
 
 ## Move from the first result to data
 
@@ -53,6 +65,42 @@ curl --fail-with-body \
 
 Preserve `accessionNumber`, `filingDate`, and `filingUrl` when they are returned. They identify the SEC filing behind a downstream result. A latest-filing request can return a different accession after a new filing; it is not a fixed test fixture.
 
+## Read the data and its context
+
+Responses contain requested domain data plus endpoint-specific metadata.
+
+| Field or data | Why keep it |
+| --- | --- |
+| `Request-Id` response header or `requestId` field | Correlate logs and support requests. |
+| accession number and filing date | Identify the filing behind a filing-derived result. |
+| filing URL or source URL | Link a result back to its public source when returned. |
+| `provenance`, `freshness`, and `materialization` | Understand source, observed time, or derived-output context when present. |
+
+Metadata is not uniform across endpoints or response views. Treat an endpoint's reference schema as authoritative rather than assuming a field is universal.
+
+## Build against the contract
+
+<Steps>
+  <Step title="Prove one request first">
+    Follow the first request before introducing an SDK, an agent, or concurrent traffic.
+  </Step>
+  <Step title="Use documented parameters">
+    Accepted identifiers, filters, response views, and limits differ by endpoint. Do not infer them from a similar route.
+  </Step>
+  <Step title="Handle pagination by route">
+    For a paginated route, pass the returned cursor unchanged back to that same route. Do not construct cursors or reuse them across endpoints.
+  </Step>
+  <Step title="Choose a response view deliberately">
+    Start with the default response when you need context. Use `view=agent`, `view=compact`, or `mode=compact` only where the endpoint documents that projection.
+  </Step>
+  <Step title="Respect limits and retries">
+    On `429`, honor `Retry-After`, reduce concurrency, and avoid synchronized retry bursts. Check the endpoint reference before increasing `limit`.
+  </Step>
+  <Step title="Pin a production integration">
+    Pin and log `secapi-version` only after testing the exact endpoint behavior you rely on. The response echoes the resolved value in `SECAPI-Version`.
+  </Step>
+</Steps>
+
 ## Handle the first failure
 
 | Result | Action |
@@ -63,11 +111,6 @@ Preserve `accessionNumber`, `filingDate`, and `filingUrl` when they are returned
 | `429` | Wait for the `Retry-After` header before retrying. Do not create parallel retry loops. |
 | `5xx` | Record the status, endpoint, timestamp, and `Request-Id`; retry only according to your client policy. |
 
-## Production notes
-
-- Keep the key in a server-side secret store or runtime environment variable.
-- Pin and log `secapi-version` only after testing the exact endpoint behavior you rely on. The response echoes the resolved value in `SECAPI-Version`.
-- Validate unknown optional fields defensively. Data availability, freshness, and provenance fields are route and view specific.
-- Use cursor pagination where the endpoint returns `nextCursor` and `hasMore`.
+Log the HTTP status, error code, and request ID, but never the API key or complete credential-bearing headers. See [Request diagnostics](/request-diagnostics) and [Troubleshooting](/troubleshooting) when a request does not behave as expected.
 
 Next: [make the same request in JavaScript](/javascript-sdk), [Python](/python-sdk), or read the [API reference](/api-reference).
