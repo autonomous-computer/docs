@@ -47,6 +47,32 @@ cargo run
 
 Expect a JSON response that identifies the current matching filing. Preserve its accession number, filing URL, and request ID when present. A response in agent view is intentionally smaller and may not include all default-view metadata.
 
+## Special Situations workflow
+
+The async client has helpers for a current roster and detail, filing-event activity, disclosed calendar dates, aggregate counts, archived weekly issues, Markdown exports, underwriting packs, and monitor creation.
+
+```rust
+use sec_api_sdk_rust::SituationWatchDelivery;
+use serde_json::json;
+
+let roster = client.list_situations(&[("types", "merger"), ("statuses", "pending"), ("limit", "25")]).await?;
+let detail = client.get_situation("sit_abc123", &[]).await?;
+let feed = client.situations_feed(&[("tickers", "ACME")]).await?;
+let calendar = client.situations_calendar(&[("date_types", "vote,expected_close"), ("days", "30")]).await?;
+let stats = client.situations_stats(&[("window", "30d")]).await?;
+let issues = client.situations_issues(&[("limit", "12")]).await?;
+let brief = client.export_situation("sit_abc123", &[]).await?;
+let underwriting = client.underwrite_situation("sit_abc123", &[]).await?;
+let watch = client.watch_situations(
+    &json!({"tickers": ["ACME"]}),
+    SituationWatchDelivery::Email("research@example.com".to_string()),
+    Some("ACME situation updates"),
+    None,
+).await?;
+```
+
+Current detail can change as filings arrive; an issue is an immutable historical publication. Retain source identifiers and request IDs with derived output, and review the underlying filing before relying on a disclosed term or date. See [Special Situations workflows](/special-situations-workflows) for the REST and CLI workflow.
+
 ## Errors and reliability
 
 The SDK defaults to a 30-second request timeout and uses a bounded retry policy that honors `Retry-After`. A `429` can be retried even when it follows a mutating request; treatment of other failures depends on whether the client is issuing a read or mutation.

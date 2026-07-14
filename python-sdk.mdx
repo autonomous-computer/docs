@@ -41,6 +41,28 @@ python first_request.py
 
 Expect a current filing identity and request ID. The values are live; retain the accession number and filing URL if a later process needs to locate the same source filing.
 
+## Special Situations workflow
+
+The client exposes a current roster, current detail, filing-event activity, disclosed calendar dates, aggregate counts, archived weekly issues, a Markdown export, an underwriting pack, and deliberate monitor creation.
+
+```python
+roster = client.list_situations(types=["merger"], statuses=["pending"], limit=25)
+detail = client.get_situation("sit_abc123")
+feed = client.situations_feed(tickers=["ACME"])
+calendar = client.situations_calendar(date_types=["vote", "expected_close"], days=30)
+stats = client.situations_stats(window="30d")
+issues = client.situations_issues(limit=12)
+brief = client.export_situation("sit_abc123")
+underwriting = client.underwrite_situation("sit_abc123")
+watch = client.watch_situations(
+    filters={"tickers": ["ACME"]},
+    delivery={"email": "research@example.com"},
+    name="ACME situation updates",
+)
+```
+
+Current detail can change as filings arrive; an issue is an immutable historical publication. Retain source identifiers and request IDs with derived output, and review the underlying filing before relying on a disclosed term or date. See [Special Situations workflows](/special-situations-workflows) for the REST and CLI workflow.
+
 ## Errors and retry behavior
 
 `SecApiError` exposes an HTTP status, `code`, `request_id`, and any supplied retry details. The client has a bounded retry policy and observes `Retry-After` when present. A `429` can be retried even when it follows a mutating request; treatment of other failures depends on the HTTP method and retry options.
