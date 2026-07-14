@@ -1,82 +1,60 @@
 ---
-title: "Advanced Quickstarts"
-description: "Build real SEC API workflows beyond your first request, with practical end-to-end recipes instead of toy examples."
+title: "Advanced quickstarts"
+description: "Extend a working integration with bounded SEC API workflows and source-aware outputs"
 ---
 
-<Info>
-Use these once your first request works. Each quickstart is a small workflow you can keep in an integration, not a throwaway sample.
-</Info>
+Start here after your first filing request works. Each example is a real API call, but the returned records depend on issuer disclosures and current data. Retain the response identifier and source fields before you compare or summarize results.
 
-## Pick the next job
+## Compare 13F positions
 
-<CardGroup cols={2}>
-  <Card title="Compare 13F positions" icon="users" href="/api-reference/owners">
-    Compare the latest two 13F reports for one institutional manager.
-  </Card>
-  <Card title="Compare executive compensation" icon="wallet-cards" href="/api-reference/compensation">
-    Compare the latest two compensation disclosures for one issuer.
-  </Card>
-  <Card title="Search offerings activity" icon="briefcase-business" href="/api-reference/offerings">
-    Pull recent S-1 and 424B prospectus activity without staying in EDGAR all day.
-  </Card>
-  <Card title="Inspect billing posture" icon="credit-card" href="/auth-and-pricing">
-    Read billing state, public rates, and quote a workflow with an API key.
-  </Card>
-</CardGroup>
-
-### Compare 13F positions
-
-Use this when you know the institutional manager CIK and want the latest quarter-over-quarter position changes.
+Use a manager CIK to compare recent disclosed institutional positions:
 
 ```bash
-curl -X POST \
+curl --fail-with-body -sS -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
-  https://api.secapi.ai/v1/owners/13f/compare \
+  "https://api.secapi.ai/v1/owners/13f/compare" \
   -d '{"cik":"0001067983","limit":25}'
 ```
 
-### Compare executive compensation
+The comparison describes filed reports, not current ownership. Keep the reporting periods and filing references returned for each position.
 
-Use this when you want the latest year-over-year compensation comparison for one issuer.
+## Compare executive compensation
+
+Use an issuer identifier to retrieve the comparison surface:
 
 ```bash
-curl -X POST \
+curl --fail-with-body -sS -X POST \
   -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
-  https://api.secapi.ai/v1/compensation/compare \
+  "https://api.secapi.ai/v1/compensation/compare" \
   -d '{"ticker":"NVDA","limit":10}'
 ```
 
-### Search offerings activity
+Compare disclosed fiscal periods, not labels alone. Preserve the filing and period fields that establish what each value represents.
 
-Use this when you want recent registration statements or prospectus filings as structured rows.
+## Search offerings activity
+
+This returns structured rows for a bounded form query:
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/offerings?forms=S-1,424B4&limit=10"
 ```
 
-### Inspect billing and quote a workflow
+An offering-related form is not, by itself, a conclusion about transaction terms or completion. Follow the returned filing sources before making that claim.
 
-API keys can read billing state and quote usage. They cannot start Checkout, open the Billing Portal, save payment methods, enable PAYG, top up credits, or change budgets.
+## Inspect billing before repeated work
+
+The public rate catalog and organization-specific state are different surfaces. Read your current billing and limits with the same API key that will make requests:
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/billing"
 
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/billing/rates"
-
-curl -X POST \
-  -H "content-type: application/json" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  https://api.secapi.ai/v1/billing/quote \
-  -d '{"path":"/v1/offerings","method":"GET","units":10}'
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
 ```
 
-For browser-session billing changes, sign in at `https://secapi.ai/login` and use the dashboard Billing and Credits area. Checkout, Billing Portal, payment-method setup, PAYG activation, credit top-ups, auto top-up, refunds, and budget changes require a WorkOS browser session with billing permissions.
-
-<Prompt>
-Take the next SEC API workflow after the first request. Choose one of: compare 13F positions, compare executive compensation, search offerings activity, or inspect billing and quote a workflow. Implement it with the exact endpoint, preserve requestId and freshness metadata when present, and summarize the result in markdown. For billing mutations, direct the user to the signed-in dashboard instead of using an API-key curl.
-</Prompt>
+Before a repeated or potentially billable step, use [Agent billing](/agent-billing) to obtain a quote and define a stop condition. Account changes such as budgets, Checkout, and payment methods require a signed-in browser session, not an API key.

@@ -1,99 +1,39 @@
 ---
-title: "Custom Skills"
-description: "Create your own SEC API skills for domain-specific SEC workflows"
+title: "Custom skills"
+description: "Write portable SEC API workflow instructions that produce source-backed results"
 ---
 
-Build custom skills that combine SEC API endpoints into reusable workflows for your team.
+A skill is an instruction file for an agent environment. SEC API does not define a universal skill installer or scheduler: use the file layout and installation mechanism documented by the agent product that will run it. Keep the SEC API portion portable by describing the workflow, its evidence requirements, and its stop conditions.
 
-## Install Published SEC API Skills
+## Start with one bounded job
 
-SEC API's published workflow skills live in [secapi-ai/secapi-skills](https://github.com/secapi-ai/secapi-skills). Install them globally for supported local agent tools:
-
-```bash
-npx skills add secapi-ai/secapi-skills --global
-```
-
-This installs the published SEC API skill collection. It does not create or install a custom local skill; use the format below when your team needs a workflow of its own.
-
-## Skill Format
-
-A skill is a Markdown file with frontmatter that describes the workflow:
+This example is deliberately plain Markdown. Adapt its frontmatter and location to the target agent environment.
 
 ```markdown
 ---
-name: my-custom-skill
-description: What this skill does and when to use it.
+name: filing-risk-review
+description: Retrieve and summarize a single issuer's latest 10-K risk factors with filing citations.
 ---
 
-# My Custom Skill
+# Filing risk review
 
-## Endpoints Used
-- GET /v1/filings?ticker={ticker}&form=10-K
-- GET /v1/intelligence/company?ticker={ticker}
+1. Resolve the issuer with `GET /v1/entities/resolve`.
+2. Retrieve the latest 10-K with `GET /v1/filings/latest`.
+3. Retrieve Item 1A with `GET /v1/filings/latest/sections/item_1a`.
+4. Return the company name, accession number, form, filing date, filing URL, requestId, and a bounded summary of Item 1A.
+5. Mark missing evidence as unavailable. Do not infer facts outside the retrieved source.
 
-## Process
-1. Resolve the entity
-2. Fetch latest filings
-3. Analyze with intelligence bundle
-
-## Example
-\`\`\`bash
-curl "https://api.secapi.ai/v1/intelligence/company?ticker=AAPL" \
-  -H "x-api-key: $SECAPI_API_KEY"
-\`\`\`
+Use `x-api-key` from the runtime environment. Do not place credentials in this file.
 ```
 
-## Install Your Custom Local Skill
+## Design for evidence and change
 
-Save as a `.md` file and install:
+Use exact REST paths only after checking the [API reference](/api-reference), or instruct an MCP client to discover tools with `tools.search` and `tools.describe`. A skill should name the source fields it must retain, especially `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` for filing work.
 
-```bash
-# Claude Code
-cp my-skill.md .claude/skills/my-skill.md
+Keep the scope narrow: one issuer, a filing family, a date range, and a result limit where the route supports one. A current latest filing can change. Do not encode a historical accession number, a fixed rate, or an assumed tool catalog as a success condition.
 
-# Or reference from a repo
-claude skill install ./path/to/my-skill
-```
+## Operate safely
 
-## Skill Components
+Keep `SECAPI_API_KEY` in the agent runtime's secret store. Before repeated work, inspect billing and limits, quote the step when appropriate, and stop on authentication, validation, billing, or quota failures. Account changes and scheduling belong to the product or orchestration system that owns those capabilities; this documentation does not prescribe a client-specific command for either.
 
-| Component | Required | Description |
-|---|---|---|
-| `name` | Yes | Unique identifier for the skill |
-| `description` | Yes | When and how to use the skill |
-| `Endpoints Used` | Recommended | List of API endpoints the skill calls |
-| `Process` | Recommended | Step-by-step workflow |
-| `Example` | Recommended | Working curl or SDK example |
-| `Guidelines` | Optional | Edge cases and best practices |
-
-## Built-in Skills
-
-SEC API ships with 8 canonical skills:
-
-| Skill | Use Case |
-|---|---|
-| `company-due-diligence` | Cited company workup spanning issuer data, segments, factors, ownership, filings, and dilution |
-| `analyze-company-in-context` | Company briefing with intelligence bundles |
-| `decompose-return-and-hedge` | Return attribution and hedge ideas |
-| `investigate-filing-footnotes` | Footnote intelligence (lease, tax, revenue) |
-| `make-portfolio-factor-neutral` | Portfolio neutralization workflows |
-| `track-insiders-and-13fs` | Insider activity and ownership tracking |
-| `use-live-factor-dashboard` | Live intraday factor monitoring |
-| `write-country-regime-report` | Country macro reports |
-
-## Sharing Skills
-
-Skills are portable Markdown files. Share them via:
-- Git repository (recommended)
-- Direct file sharing
-- npm package (for distribution)
-
-## Automation
-
-Combine skills with scheduling for automated workflows:
-
-```bash
-# Run a skill on a schedule (e.g., daily insider monitoring)
-# In Claude Code:
-claude run --skill track-insiders-and-13fs --ticker AAPL --schedule "0 9 * * 1-5"
-```
+Published workflow skills are available in [secapi-ai/secapi-skills](https://github.com/secapi-ai/secapi-skills). Review the skill's instructions and your agent environment's installation documentation before enabling one in a production workflow.

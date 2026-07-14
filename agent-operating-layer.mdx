@@ -1,45 +1,44 @@
 ---
 title: "Building SEC API agents"
-description: "Build a bounded SEC API agent workflow with source evidence, billing checks, and explicit failure handling"
+description: "Design a bounded SEC API agent that retains source evidence and stops at real authorization, billing, and capability boundaries"
 ---
 
-Build an SEC API agent as a small, inspectable workflow: resolve the source record, request only the derived surface needed, preserve response evidence, and stop when the API reports an authorization, billing, quota, or capability boundary.
+An SEC API agent should produce a reviewable trail, not just an answer. Give it a bounded issuer and question, retrieve the source record, preserve the evidence, and make a second call only when the first supports it.
 
-## Start with one bounded request
-
-Give the agent a specific issuer, filing family, date range, or question. Begin with the route that returns the source record, then make a second request only when the source response supports it.
+## Start with a filing, not a conclusion
 
 ```bash
-curl -sS \
+curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-The `agent` view is route-specific and can omit fields from the default response. Check the endpoint reference before relying on a field, and retain the accession number, filing URL, period, provenance, warnings, and route-specific capability or freshness fields that are returned.
+Keep the returned `accessionNumber`, `form`, `filingDate`, `filingUrl`, and `requestId`. Retain route-provided provenance, freshness, materialization, warnings, and trace data when available. Response views are route-specific, so use the endpoint reference before relying on a field for caching or audit policy.
 
-## Give the agent a failure policy
+## Give the agent an explicit policy
 
-An agent should expose rather than hide these conditions:
-
-| Condition | Required behavior |
+| Condition | Agent behavior |
 | --- | --- |
-| `not_disclosed`, `unavailable`, `degraded`, or route-specific missing evidence | Return the condition and usable source evidence; do not invent a substitute. |
-| `400` | Correct the endpoint parameters or body from the reference. |
+| Missing, unavailable, degraded, or route-specific evidence state | Return that state and the usable source record. Do not fabricate a substitute. |
+| `400` | Correct arguments from the documented endpoint or discovered MCP schema. |
 | `401` or `403` | Stop and repair the credential or authorization. |
-| `402` | Stop and resolve the stated billing or entitlement condition. |
-| `429` | Honor `Retry-After` when present; use bounded backoff without retry fan-out. |
-| `5xx` | Retry once with bounded backoff, then retain the request ID. |
+| `402` | Stop and surface the billing or entitlement condition. |
+| `429` | Honor `Retry-After` when present and use bounded backoff without retry fan-out. |
+| `5xx` | Apply the calling surface's bounded transient-failure policy and keep the request ID. |
 
-Keep the endpoint, parameters, `Request-Id`, `traceparent` when present, retrieval time, and returned source evidence in the agent's output. See [API conventions](/api-conventions) and [Freshness and source evidence](/freshness-and-trust).
+Record the endpoint or tool name, arguments, retrieval time, request identifier, and source artifact with the final answer. See [API conventions](/api-conventions) and [Troubleshooting](/troubleshooting).
 
-## Control repeated work
+## Choose the right execution surface
 
-Before a repeated or billable step, call `GET /v1/billing` and [GET /v1/limits](/api-reference/platform/get-v1-limits) with the agent's API key. Use [POST /v1/billing/quote](/api-reference/platform/post-v1-billing-quote) before repeating a billable workflow. A quote reflects the current plan and budget gate; it does not reserve usage or override later limits.
+- REST is the direct HTTP contract when your service owns timeouts and retries.
+- SDKs provide language-native clients over that contract.
+- The CLI is for terminal inspection and scripts.
+- MCP lets an MCP-aware client discover tools and schemas at runtime.
 
-Stop on `billing_budget_approval_required`, `billing_budget_hard_cap_exceeded`, or `ai_query_quota_exceeded`. Do not ask an agent to bypass organization billing controls. Read [Agent billing](/agent-billing) for the public contract and next actions.
+Do not make one surface impersonate another. An MCP client should use `tools.search` and `tools.describe`; an application service should call REST or an SDK; a shell workflow should use CLI commands documented by `secapi <command> --help`.
 
-## Bootstrap an agent credential safely
+## Bound repeated work and credential issuance
 
-A human organization member can create a short-lived, single-use sponsor token with a bearer-authenticated request to `POST /v1/agent/bootstrap_tokens`. The agent submits the token to `POST /v1/agent/bootstrap` and receives the response contract's API key, organization, billing, limits, and installation metadata.
+Read `GET /v1/billing` and `GET /v1/limits` with the agent's API key before repeated work, then use `POST /v1/billing/quote` when a workflow needs a current estimate. Quotes are not reservations. Stop on billing and quota conditions rather than attempting to bypass them; [Agent billing](/agent-billing) describes the boundary.
 
-The self-serve flow is limited to the documented `read:sec` scope. A token can be invalid, expired, already used, scope-invalid, or blocked by the active API-key limit; surface that error to the operator without logging the token or issued key. See [agent bootstrap tokens](/api-reference/agent/post-v1-agent-bootstrap-tokens) and [agent bootstrap](/api-reference/agent/post-v1-agent-bootstrap).
+A human organization member can create a short-lived sponsor token through [agent bootstrap tokens](/api-reference/agent/post-v1-agent-bootstrap-tokens). An agent exchanges that token through [agent bootstrap](/api-reference/agent/post-v1-agent-bootstrap). Do not log the sponsor token or issued API key, and surface token expiry, use, scope, or key-limit failures to the operator.

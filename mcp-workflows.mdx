@@ -1,48 +1,39 @@
 ---
-title: "MCP Workflows for Source-Backed Filing Research"
-description: "Discover hosted SEC API MCP tools, run a bounded filing-research job, and keep the evidence needed to review or reproduce the result."
+title: "MCP workflows for source-backed filing research"
+description: "Discover SEC API MCP tools, retrieve a bounded filing artifact, and preserve the evidence behind an agent result"
 ---
 
-Use SEC API MCP for a bounded research job. The reliable pattern is discover, inspect the schema, retrieve one source record, then summarize only what that record supports. Install the server first: [Install SEC API MCP](/mcp-install).
-
-<CardGroup cols={3}>
-  <Card title="Install MCP" icon="plug" href="/mcp-install">
-    Connect the hosted server with an environment-backed API key.
-  </Card>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">
-    Create the credential used by your MCP client process.
-  </Card>
-  <Card title="Review pricing" icon="credit-card" href="https://secapi.ai/pricing">
-    Check limits before running recurring agent workflows.
-  </Card>
-</CardGroup>
+MCP is useful when a research client can choose tools at runtime. The operating sequence is simple: discover a tool, inspect its schema, retrieve one source record, then summarize only that record. [Install SEC API MCP](/mcp-install) first.
 
 ## A complete first job
 
-Give the client this prompt after it has connected:
+Give the connected client this prompt:
 
 <Prompt>
-Find NVIDIA's latest 10-K. Retrieve Item 1A from that filing. Return: company name, accession number, filing date, filing URL, section title, a five-bullet summary, requestId, traceparent when present, and any truncation or freshness signals. Do not infer facts that are not in the retrieved section.
+Use tools.search to find tools for issuer resolution, latest filing, and filing sections. Use tools.describe before every selected call. Find NVIDIA's latest 10-K and retrieve Item 1A. Return company name, accession number, form, filing date, filing URL, section title, requestId, and a five-bullet summary. Separate retrieved facts from interpretation. Do not infer facts that are not in the filing or section.
 </Prompt>
 
-Expected output is one identified filing plus a bounded summary. A changed accession number on a later run is normal; a summary without its filing identity is not sufficient for a production report.
+A successful job returns a filing identity and a bounded section result. A newer filing on a later run may legitimately have a different accession number; an uncited summary is not a replacement for the source artifact.
 
-## Let the server choose the contract
+## Use discovery as the contract
 
-The tool catalog is the current contract. Ask the client to call `tools.search` with a natural-language job, then call `tools.describe` on the selected tool before it supplies arguments. For the job above, useful searches are `company identity`, `latest filing`, and `filing section`.
+The server owns its current tool names, schemas, annotations, and limits. Start with `tools.search` using a natural-language job, then use `tools.describe` with the exact selected name. `tools/list` is available when a client needs the catalog and can be filtered with `core` or a namespace. Do not hard-code a copied tool catalog into a durable agent workflow.
 
-`tools/list` can be filtered to `core` or a namespace when your client supports that parameter. Do not copy an old tool list into an agent instruction. Tool names, schemas, quotas, and annotations are server-owned and can change.
+`structuredContent` is the canonical typed tool payload. Text content may be useful to the model, but preserve the typed output and returned fields that identify the source.
 
-## Keep a source trail
+## Produce a reviewable result
 
-Persist the returned `accessionNumber`, `filingDate`, `filingUrl`, `requestId`, and `traceparent` with the agent result. Keep route-provided provenance, freshness, pagination, and truncation fields when present. `structuredContent` is the canonical typed payload; compact text formatting is for the human or agent reading it.
+Persist these fields whenever they are returned:
 
-## Limits and state changes
+- issuer identity
+- `accessionNumber`, `form`, `filingDate`, and `filingUrl`
+- `requestId` and `traceparent`
+- provenance, freshness, pagination, truncation, and capability fields
 
-Start with a narrow issuer, form, date range, and result limit. If a tool reports pagination or truncation, inspect the next page or reduce the request before asking the model to draw a conclusion. Do not blindly retry authentication, billing, quota, or validation failures.
+Treat missing evidence as missing. A section can support a claim about the section's text; it does not automatically establish facts outside that scope.
 
-Most MCP tools are read-only. Inspect tool annotations before any stateful call; `situations.watch` and `exports.create` are not safe to parallelize or replay casually. Monitor, webhook, and stream control-plane changes remain human-authenticated dashboard actions.
+## Move from exploration to production
 
-## Production handoff
+Use MCP for interactive research and agent-led discovery. Use REST or an SDK when your application needs a stable request loop, typed application errors, deployment-controlled timeouts, or its own retry policy. In either case, keep work bounded, inspect billing before repeated work, and avoid retrying authentication, validation, billing, or quota failures without a corrective action.
 
-Run the same prompt against a fixture issuer in CI, record the output identifiers, and set a reviewer rule for material conclusions. Use REST or an SDK when your application needs a stable request loop, typed error handling, and its own retry policy. See [API conventions](/api-conventions), [MCP installation](/mcp-install), and [Troubleshooting](/troubleshooting).
+See [Agent operating layer](/agent-operating-layer), [Agent billing](/agent-billing), and [API conventions](/api-conventions).

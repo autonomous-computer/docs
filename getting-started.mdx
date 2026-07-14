@@ -1,84 +1,63 @@
 ---
 title: "Make your first SEC API request"
-description: "Resolve a public company, verify the response, retrieve a source filing, and choose your integration path"
+description: "Authenticate a server-side request, retrieve a filing, and keep a citation-ready source record"
 ---
 
-Make one request you can inspect before building a larger workflow. Entity resolution is a small, read-only call that confirms your key, base URL, and request format before you request filings or statements.
+Your first integration should produce a filing artifact you can inspect and cite. Start with an API key in a server, worker, notebook, or terminal; do not put it in browser code.
 
-## 1. Create and store an API key
+## Create an API key
 
-Create an account at [secapi.ai/signup](https://secapi.ai/signup), then create an API key in the signed-in [dashboard](https://secapi.ai/app). Export it in the server, worker, notebook, or shell that will call the API:
+Create an account at [secapi.ai/signup](https://secapi.ai/signup), create an API key in the signed-in [dashboard](https://secapi.ai/app), and expose it only to the calling process:
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
 ```
 
 <Warning>
-Send machine API keys only in the `x-api-key` header. Keep them out of browser code, URLs, source control, and logs. An API key is not an `Authorization: Bearer` token.
+Machine requests authenticate with `x-api-key`. Do not send an API key as `Authorization: Bearer`, put it in a URL, or commit it to a repository.
 </Warning>
 
-## 2. Resolve a company
+## Retrieve a filing artifact
 
-Resolve Apple before requesting a filing. The response gives you the canonical CIK and identity metadata you can carry into later API calls.
-
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
-```
-
-## Expected response
-
-This shortened, representative excerpt shows the core identity fields. The exact `id` and `requestId` vary. A successful response identifies Apple and includes CIK `0000320193`:
-
-```json
-{
-  "object": "entity",
-  "ticker": "AAPL",
-  "cik": "0000320193",
-  "name": "Apple Inc.",
-  "requestId": "req_..."
-}
-```
-
-The full `view=agent` response can also include fields such as `id`, `primaryIdentifiers`, `matchConfidence`, and `matchBasis`. Use the endpoint's default response when you need its full documented metadata.
-
-## 3. Retrieve a filing you can cite
-
-Once the identity request succeeds, retrieve Apple's latest 10-K:
+Ask for one known issuer and form. This request returns the current latest matching filing, so the accession number can change after a new filing.
 
 ```bash
-curl -sS \
+curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-You can also request one normalized annual statements bundle:
+Before summarizing or storing the result, retain these fields when the response provides them:
+
+- `accessionNumber`
+- `form`
+- `filingDate`
+- `filingUrl`
+- `requestId`
+
+Those fields are the minimum filing citation artifact: identify the source as `Apple Inc. 10-K, filed <filingDate>, accession <accessionNumber>, <filingUrl>`. Keep any returned `provenance`, `freshness`, `materialization`, warning, and trace fields alongside it; availability varies by route and response view.
+
+## Resolve before broader work
+
+For a workflow that starts from a name, ticker, CIK, or identifier, resolve the entity first and carry the returned identity forward:
 
 ```bash
-curl -sS \
+curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
 
-The filing response changes when Apple files a newer annual report. Statement values and available periods change as issuers file. Preserve `requestId` with every result; for filing-derived work, also retain `accessionNumber`, `filingDate`, `form`, and `filingUrl` when returned.
+Then choose an interface based on where the work lives:
 
-For accepted identifiers, filters, response fields, and endpoint-specific limits, use the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve), [latest filing reference](/api-reference/filings/get-v1-filings-latest), and [all statements reference](/api-reference/statements/get-v1-statements-all).
+| Interface | Use it when | Next step |
+| --- | --- | --- |
+| REST | You own HTTP, serialization, retries, and deployment. | [First request flows](/first-request-flows) |
+| SDK | Your application is JavaScript, Python, Go, or Rust. | [Libraries and SDKs](/libraries-and-sdks) |
+| CLI | You need a terminal check or shell automation. | [CLI](/cli) |
+| MCP | An MCP client should discover and call SEC API tools. | [Install MCP](/mcp-install) |
 
-## 4. Choose the next interface
+## When a request fails
 
-| Interface | Start here |
-| --- | --- |
-| REST | [First request flows](/first-request-flows) |
-| JavaScript, Python, Go, or Rust | [Libraries and SDKs](/libraries-and-sdks) |
-| CLI | [CLI](/cli) |
-| Hosted MCP | [MCP workflows](/mcp-workflows) |
+`401 missing_api_key` means the process did not send an API key; `401 authentication_failed` means the key is not accepted. For `402`, stop and resolve the billing or entitlement condition in the response. For `429`, honor `Retry-After` when it is supplied and reduce concurrent work. Preserve the response's request identifier for support or audit work.
 
-## If it does not work
-
-For `401 missing_api_key`, confirm that the key is exported in the current process and sent through `x-api-key`. For `401 authentication_failed`, verify the key in the dashboard and update the calling environment. For `402`, resolve the billing or entitlement condition named in the response. For `429`, wait for `Retry-After` before retrying and avoid concurrent retries.
-
-Read [Troubleshooting](/troubleshooting) for error-specific next steps and [API conventions](/api-conventions) for versioning, pagination, and response metadata.
+See [API conventions](/api-conventions) for request behavior and [Troubleshooting](/troubleshooting) for error-specific guidance.

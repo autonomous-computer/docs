@@ -1,116 +1,42 @@
 ---
 title: "Build a first SEC API integration"
-description: "Choose REST, an SDK, hosted MCP, or the CLI, make one authenticated request, and preserve the information needed to operate it."
+description: "Choose REST, an SDK, the CLI, or MCP and produce a source-cited filing artifact"
 ---
 
-Start with one trusted server-side request. Once it returns a useful result, keep the same contract and move it into the client, workflow, or agent surface that fits your system.
+SEC API provides the same underlying data contract through direct REST, language SDKs, a CLI, and hosted MCP. Choose the interface for your execution environment, but keep the same discipline in each: authenticate server-side, retrieve a source record, and retain its identifiers with every conclusion.
 
-## Prerequisites
+## Authentication
 
-- An API key from your SEC API account.
-- A server shell, job, or trusted backend. Do not expose an API key in browser code.
-- `curl` for the first request.
-
-## Make one request
-
-Send the API key in `x-api-key`:
+Create an API key in the signed-in [dashboard](https://secapi.ai/app) and provide it to the calling process as `SECAPI_API_KEY`.
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
-
-curl --fail-with-body \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
-  -H "x-api-key: $SECAPI_API_KEY"
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-Do not send an API key as `Authorization: Bearer`. Bearer tokens are for configured identity flows, not the default machine API-key path. Keep dashboard sign-in and browser-only account actions separate from machine requests, store keys in a secret store or runtime environment, and rotate a key if it may have been exposed. See [API keys, usage, and billing](/auth-and-pricing) for the credential boundary.
+Normal machine data requests use `x-api-key`. Do not expose a machine key in frontend code or use it as an `Authorization: Bearer` token. Browser-session bearer authorization is for documented signed-in account operations.
 
-The response identifies the matched issuer. Fields beyond the identity can vary by endpoint and response view, so treat the API reference as the field contract.
+## Choose an interface
 
-```json
-{
-  "ticker": "AAPL",
-  "cik": "0000320193"
-}
-```
+| Interface | Contract and ownership | Best fit |
+| --- | --- | --- |
+| REST | Your application owns HTTP, serialization, timeouts, retries, and deployment. | Any runtime or a service that needs direct control. |
+| SDK | A language client wraps public REST endpoints. Your application still owns deployment policy and downstream persistence. | JavaScript, Python, Go, or Rust services. |
+| CLI | A terminal client calls the same service using environment-backed credentials. | Local investigation and shell scripts. |
+| MCP | A compatible client invokes hosted tools through JSON-RPC and can discover schemas at runtime. | Interactive agent or research workflows. |
 
-Save the `Request-Id` response header with your application log. It identifies this request when you need help diagnosing a failure.
+The [First request flows](/first-request-flows) page gives a source-backed example for each path. Use the [API reference](/api-reference) as the authority for REST parameters, response fields, and endpoint-specific limits.
 
-## Choose the interface
+## Preserve provenance
 
-<CardGroup cols={2}>
-  <Card title="REST" icon="braces" href="/api-conventions">
-    Use direct HTTPS when you need the exact request, a language not covered by an SDK, or a narrow integration.
-  </Card>
-  <Card title="SDKs" icon="file-code-2" href="/libraries-and-sdks">
-    Use JavaScript, Python, Go, or Rust clients for application code, workers, notebooks, and scripts.
-  </Card>
-  <Card title="CLI" icon="terminal-square" href="/cli">
-    Use terminal commands for local checks, shell automation, and reproducible investigation.
-  </Card>
-  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
-    Connect an MCP-aware client after verifying a normal API request and understanding the tool boundary.
-  </Card>
-</CardGroup>
+For filing-derived work, persist `accessionNumber`, `form`, `filingDate`, `filingUrl`, and `requestId` when returned. That is the artifact a reviewer needs to find the source again. Also preserve returned `provenance`, `freshness`, `materialization`, pagination, warning, and trace fields when the route supplies them.
 
-## Move from the first result to data
+Do not treat a current latest filing as immutable. Record retrieval time and source identifiers, and distinguish the filing's disclosed facts from your application's or agent's interpretation.
 
-Use the resolved ticker or CIK in the endpoint that answers the product question. For example, this request retrieves the current matching annual filing:
+## Errors, limits, and repeated work
 
-```bash
-curl --fail-with-body \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K" \
-  -H "x-api-key: $SECAPI_API_KEY"
-```
+Correct `400` requests from the reference or discovered MCP schema. Repair credentials for `401` and `403`; stop for `402` billing or entitlement conditions. On `429`, honor `Retry-After` when present and avoid parallel retry loops. Preserve the request identifier from both successes and failures.
 
-Preserve `accessionNumber`, `filingDate`, and `filingUrl` when they are returned. They identify the SEC filing behind a downstream result. A latest-filing request can return a different accession after a new filing; it is not a fixed test fixture.
-
-## Read the data and its context
-
-Responses contain requested domain data plus endpoint-specific metadata.
-
-| Field or data | Why keep it |
-| --- | --- |
-| `Request-Id` response header or `requestId` field | Correlate logs and support requests. |
-| accession number and filing date | Identify the filing behind a filing-derived result. |
-| filing URL or source URL | Link a result back to its public source when returned. |
-| `provenance`, `freshness`, and `materialization` | Understand source, observed time, or derived-output context when present. |
-
-Metadata is not uniform across endpoints or response views. Treat an endpoint's reference schema as authoritative rather than assuming a field is universal.
-
-## Build against the contract
-
-<Steps>
-  <Step title="Prove one request first">
-    Follow the first request before introducing an SDK, an agent, or concurrent traffic.
-  </Step>
-  <Step title="Use documented parameters">
-    Accepted identifiers, filters, response views, and limits differ by endpoint. Do not infer them from a similar route.
-  </Step>
-  <Step title="Handle pagination by route">
-    For a paginated route, pass the returned cursor unchanged back to that same route. Do not construct cursors or reuse them across endpoints.
-  </Step>
-  <Step title="Choose a response view deliberately">
-    Start with the default response when you need context. Use `view=agent`, `view=compact`, or `mode=compact` only where the endpoint documents that projection.
-  </Step>
-  <Step title="Respect limits and retries">
-    On `429`, honor `Retry-After`, reduce concurrency, and avoid synchronized retry bursts. Check the endpoint reference before increasing `limit`.
-  </Step>
-  <Step title="Pin a production integration">
-    Pin and log `secapi-version` only after testing the exact endpoint behavior you rely on. The response echoes the resolved value in `SECAPI-Version`.
-  </Step>
-</Steps>
-
-## Handle the first failure
-
-| Result | Action |
-| --- | --- |
-| `401` with `missing_api_key` | Send a non-empty `x-api-key` header. Mint a key in the dashboard if you do not have one. |
-| `401` with `authentication_failed` | The supplied API key or bearer credential was rejected. Rotate or refresh that credential; adding the same rejected value again will not help. |
-| `404` or an empty result | Verify the endpoint's accepted identifier and availability boundary in its API reference page. |
-| `429` | Wait for the `Retry-After` header before retrying. Do not create parallel retry loops. |
-| `5xx` | Record the status, endpoint, timestamp, and `Request-Id`; retry only according to your client policy. |
-
-Log the HTTP status, error code, and request ID, but never the API key or complete credential-bearing headers. See [Request diagnostics](/request-diagnostics) and [Troubleshooting](/troubleshooting) when a request does not behave as expected.
-
-Next: [make the same request in JavaScript](/javascript-sdk), [Python](/python-sdk), or read the [API reference](/api-reference).
+Before a repeated workflow, read `GET /v1/billing` and `GET /v1/limits` with the same API key, then use `POST /v1/billing/quote` for the current billing decision. Quotes do not reserve usage. Read [Agent billing](/agent-billing) for account-boundary details and [API conventions](/api-conventions) for pagination and response behavior.

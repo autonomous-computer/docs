@@ -1,57 +1,39 @@
 ---
 title: "Libraries and SDKs"
-description: "Choose a SEC API client for your runtime and validate it with a source-backed issuer workflow"
+description: "Choose a SEC API integration surface and verify it with a cited filing artifact"
 ---
 
-Choose the narrowest interface that fits your runtime. The SDKs and CLI call the public API; use the API reference when you need exact HTTP behavior. Whichever surface you choose, begin with a company lookup and one filing request that returns an accession number and SEC URL.
-
-## Choose an integration
+SDKs and the CLI call the public SEC API. Pick the surface that matches where your code runs; use REST when you need direct control of the HTTP exchange, and MCP when a compatible client needs tool discovery rather than an application client.
 
 <CardGroup cols={2}>
-  <Card title="JavaScript SDK" icon="file-code-2" href="/javascript-sdk">
-    TypeScript and JavaScript services, workers, server actions, and scripts.
-  </Card>
-  <Card title="Python SDK" icon="file-code" href="/python-sdk">
-    Research scripts, notebooks, data jobs, and Python services.
-  </Card>
-  <Card title="Go SDK" icon="binary" href="/go-sdk">
-    Go services that need a direct client around the REST API.
-  </Card>
-  <Card title="Rust SDK" icon="cpu" href="/rust-sdk">
-    Async Rust services that need configurable HTTP behavior.
-  </Card>
-  <Card title="SEC API CLI" icon="terminal" href="/cli">
-    Shell scripts, local investigation, and terminal-first workflows.
-  </Card>
-  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">
-    MCP-aware clients that need SEC API tools in a research workflow.
-  </Card>
-  <Card title="REST API" icon="globe" href="/api-reference">
-    Any runtime where you want direct HTTP and response handling.
-  </Card>
+  <Card title="JavaScript SDK" icon="file-code-2" href="/javascript-sdk">TypeScript and JavaScript services, workers, and scripts.</Card>
+  <Card title="Python SDK" icon="file-code" href="/python-sdk">Research scripts, notebooks, jobs, and Python services.</Card>
+  <Card title="Go SDK" icon="binary" href="/go-sdk">Go services calling the REST contract.</Card>
+  <Card title="Rust SDK" icon="cpu" href="/rust-sdk">Async Rust services with configurable HTTP behavior.</Card>
+  <Card title="SEC API CLI" icon="terminal" href="/cli">Terminal inspection and shell automation.</Card>
+  <Card title="Hosted MCP" icon="bot" href="/mcp-workflows">MCP-aware research and coding clients.</Card>
 </CardGroup>
 
-## Verify an installation with one workflow
+## Verify any client with one filing
 
-After installing an SDK or CLI, run these four operations for a known issuer:
+After installation, make a single call for a known issuer and inspect the returned source record. The method and command names below are the supported first steps:
 
-1. Resolve `AAPL`.
-2. Retrieve its latest `10-K`.
-3. Retrieve Item `item_1a` from that latest filing.
-4. Retrieve one annual all-statements bundle.
+| Surface | Filing call |
+| --- | --- |
+| JavaScript | `client.latestFiling({ ticker: "AAPL", form: "10-K" })` |
+| Python | `client.latest_filing(ticker="AAPL", form="10-K")` |
+| Go | `client.LatestFilingAgent(map[string]string{"ticker": "AAPL", "form": "10-K"})` |
+| Rust | `client.latest_filing_with(&LatestFilingRequest::new().ticker("AAPL").form("10-K")).await?` |
+| CLI | `secapi filings latest --ticker AAPL --form 10-K` |
+| REST | `GET /v1/filings/latest?ticker=AAPL&form=10-K` |
+| MCP | Discover the latest-filing tool through `tools.search`, then inspect it with `tools.describe`. |
 
-The JavaScript method names are `resolveEntity`, `latestFiling`, `latestSection`, and `allStatements`. The Python equivalents are `resolve_entity`, `latest_filing`, `latest_section`, and `all_statements`. In the CLI, use `entities resolve`, `filings latest`, `sections get`, and `statements get` with `--statement all`.
+The successful result is not merely an HTTP 200. Preserve the returned accession number, form, filing date, filing URL, and request ID, then use those fields in any downstream citation. A filing's content and accession can change as issuers file.
 
-This verifies credentials, package installation, egress, and response shape with data you can recognize. The latest filing, extracted section text, and statement values change over time. Assert against response shape and source identifiers, not against one historical accession number.
+## Lifecycle and errors
 
-## Operate the client safely
+Set `SECAPI_API_KEY` in your runtime secret store. SDKs and the CLI read it for normal data calls and send it as `x-api-key`; browser-session bearer credentials are for documented signed-in account operations, not routine data access.
 
-Store the API key in the runtime's secret store and expose it as `SECAPI_API_KEY`; do not embed it in frontend code or commit it. Let one layer own retries. On `429`, honor `Retry-After` and reduce concurrency rather than adding parallel retry loops.
+Set application-level deadlines and let one layer own retries. On `429`, honor `Retry-After` when supplied and reduce concurrency. Correct validation errors rather than retrying them, and do not blindly replay a mutation. Preserve `requestId`, source identifiers, and any returned provenance, freshness, materialization, or trace fields with each result.
 
-Keep `requestId` with every result. For filing-derived output, retain the accession number, filing date, and source URL when present. Preserve `provenance`, `freshness`, `materialization`, and trace fields when the endpoint returns them.
-
-SDKs handle documented transient failures for safe reads. Your application should still set its own request deadlines, preserve request IDs, and avoid layering unbounded retries around the client. Only retry a write when your application can safely repeat it.
-
-## Next step
-
-Run the [first request flow](/first-request-flows), then consult [API overview](/api-overview) before adding pagination, caching, or a background workload. Read [SDK reliability](/sdk-reliability) for the JavaScript and Python retry policy.
+Continue with [First request flows](/first-request-flows), then read [API overview](/api-overview) before adding pagination, caching, or background work.

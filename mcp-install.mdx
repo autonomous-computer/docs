@@ -1,21 +1,37 @@
 ---
 title: "Install SEC API MCP"
-description: "Connect an MCP client to the hosted SEC API server, authenticate with an API key, and prove tool discovery with one source-backed filing request."
+description: "Connect an MCP client to the hosted SEC API server and verify one source-backed filing workflow"
 ---
 
-SEC API serves hosted MCP at `https://api.secapi.ai/mcp`. Use an organization API key for a server-to-server client. `GET /mcp` publishes connection metadata; MCP requests are authenticated JSON-RPC `POST /mcp` calls with `x-api-key`.
+SEC API hosts MCP at `https://api.secapi.ai/mcp`. MCP clients make authenticated JSON-RPC requests to that endpoint with an API key in `x-api-key`.
 
-## Add the hosted server
+## Configure the server
 
-Create an API key in the signed-in [dashboard](https://secapi.ai/app), then expose it only to the client process:
+Create an API key in the signed-in [dashboard](https://secapi.ai/app) and keep it in the client process environment:
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
-claude mcp add --transport http secapi https://api.secapi.ai/mcp \
-  --header "x-api-key: $SECAPI_API_KEY"
 ```
 
-For another HTTP MCP client, configure the same URL and header:
+### Claude Code
+
+Run this supported external-user command:
+
+```bash
+claude mcp add --transport http secapi https://api.secapi.ai/mcp --header "x-api-key: $SECAPI_API_KEY"
+```
+
+### Other supported clients
+
+`GET https://api.secapi.ai/mcp` is authenticated and requires the `x-api-key` header; it returns the hosted server's connection metadata, including its client install guidance.
+
+```bash
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" https://api.secapi.ai/mcp
+```
+
+The SEC API CLI can generate the supported per-client configuration: `secapi mcp install --client <claude-code|claude-desktop|cursor|windsurf|project>`. For Claude Code, that command prints the command above; for the other clients, it writes their respective configuration file (or prints it with `--print`).
+
+The portable HTTP-MCP configuration values are:
 
 ```json
 {
@@ -28,23 +44,23 @@ For another HTTP MCP client, configure the same URL and header:
 }
 ```
 
-Use your client's environment-variable syntax. Do not put the key in a repository, a shared prompt, or browser-delivered configuration.
+Use the environment-variable syntax supported by your client. Do not put the key in a repository, prompt, URL, or browser-delivered configuration.
 
-## Verify discovery before research
+## Verify discovery, then retrieve evidence
 
-Restart the client, ask it to list tools, then give it this precise request:
+Restart the client so it reads the new environment, then use this request:
 
 <Prompt>
-Use tools.search to find an issuer-resolution tool and tools.describe before calling it. Resolve AAPL. Return the CIK, company name, requestId, and traceparent if returned. Then explain which tool you would use to retrieve the latest 10-K, but do not make that second call.
+Call tools.search for issuer resolution, latest filing, and filing section. Call tools.describe for each selected tool before invoking it. Resolve AAPL, retrieve its latest 10-K, and retrieve Item 1A. Return the company name, accession number, form, filing date, filing URL, requestId, and a short Item 1A summary. State when a field is absent instead of inventing it.
 </Prompt>
 
-A successful result identifies Apple and shows that the client can discover schemas rather than relying on an embedded catalog. It should not require a particular tool count or a fixed CIK in the prompt.
+`tools.search` and `tools.describe` are SEC API MCP tools; they are not JSON-RPC methods. The client uses the standard `tools/call` method to invoke them. Discovery avoids pinning an old catalog or schema in an agent instruction.
 
-## Connection failures
+## Diagnose a failed connection
 
-- No tools: reload the client configuration and verify `SECAPI_API_KEY` is in that process environment.
-- `401` or `403`: create or rotate the API key in the dashboard; do not substitute a browser bearer token.
-- JSON-RPC validation error: send one object with `jsonrpc: "2.0"`; batch JSON-RPC requests are not supported.
-- Quota, billing, or timeout response: retain the request id, narrow the next call, and follow the response guidance instead of replaying a broad request.
+- No tools: reload the configuration and confirm `SECAPI_API_KEY` is available to the client process.
+- `401` or `403`: repair or rotate the API key; do not substitute a browser bearer token.
+- JSON-RPC validation error: send one JSON-RPC 2.0 request object with the required request ID. Batch requests are not supported.
+- Validation, billing, quota, or timeout result: retain the returned request identifier, narrow the next call, and follow the response instead of replaying a broad job.
 
-The key grants machine data access, not dashboard authority. A person configures [monitors](/monitors), webhook destinations, streams, billing, and key lifecycle in the signed-in dashboard. Continue with [MCP workflows](/mcp-workflows) for a source-backed filing job.
+The API key grants machine data access, not dashboard authority. Continue with [MCP workflows](/mcp-workflows) for evidence retention and production use.

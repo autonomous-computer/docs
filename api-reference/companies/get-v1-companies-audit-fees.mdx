@@ -3,7 +3,7 @@ title: "GET /v1/companies/audit-fees"
 description: "Return principal-accountant fee rows extracted from the latest DEF 14A or 10-K for an issuer"
 ---
 
-Return principal-accountant fee rows extracted from the latest `DEF 14A` or `10-K` for an issuer. Provide `ticker` or `cik`; prefer the stable CIK when ticker history matters.
+Return principal-accountant fee rows extracted from the latest DEF 14A or 10-K for an issuer
 
 <Info>
 Audience: application and coding agent.
@@ -13,7 +13,6 @@ Audience: application and coding agent.
 
 - `requestId`
 - `traceparent`
-- `lineage`
 
 ## Example request
 
@@ -44,18 +43,26 @@ curl -X GET \
   "filingDate": "2025-10-31",
   "sourceForm": "DEF 14A",
   "lineage": {
-    "sources": ["sec_edgar"],
+    "sources": [
+      "sec_edgar"
+    ],
     "canonical": true,
     "surface": "companies"
   },
-  "requestId": "req_example_audit_fees",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
   "traceparent": "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
 }
 ```
 </ResponseExample>
 
+## Give this prompt to your agent
+
+<Prompt>
+Use SEC API GET /v1/companies/audit-fees to return principal-accountant fee rows extracted from the latest DEF 14A or 10-K for an issuer. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+</Prompt>
+
 ## Failure posture
 
 - treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId`, `traceparent`, and `lineage` in logs and downstream reports
-- an empty `data` array can mean no eligible filing or audit-fee table was found; it does not establish zero fees
+- preserve `requestId` and `traceparent` in logs and downstream reports
+- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
