@@ -27335,7 +27335,8 @@
         "tags": [
           "Fund Letters"
         ],
-        "summary": "List letter-publishing managers (firms) with coverage stats: letters, funds, companies, theses, period range, and cadence.",
+        "summary": "Browse the fund directory: managers (firms) with coverage stats, searchable by fund/CIO name, ticker held, theme, strategy, and 13F quarter.",
+        "description": "The Fund Directory expansion (letterless 13F managers, the ticker/cik/theme/min_positions/publishes_letters/period/sort filters, and the theme/publishesLetters/has13F/latest13F/references fields) is flag-gated server-side; while it is disabled this endpoint lists letter-publishing managers with the pre-directory fields only and ignores directory-only parameters. latest13F is a summary — follow crossLinks.holdings13F for full holdings.",
         "parameters": [
           {
             "name": "q",
@@ -27344,7 +27345,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Case-insensitive substring match on the firm name."
+            "description": "Case-insensitive substring match on the firm name (directory also matches founder/CIO names)."
           },
           {
             "name": "strategy",
@@ -27353,7 +27354,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Strategy approach filter (e.g. long_short_equity)."
+            "description": "Strategy approach filter (e.g. long_short_equity); directory also matches styleTags entries."
           },
           {
             "name": "has_13f",
@@ -27377,6 +27378,81 @@
               "minimum": 1,
               "maximum": 100000
             }
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Directory: managers whose LATEST 13F holds this ticker (resolved to issuer match keys)."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Directory: adviser CIK exact match (padded or unpadded)."
+          },
+          {
+            "name": "theme",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Directory: curated theme tag (e.g. value, activist)."
+          },
+          {
+            "name": "min_positions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "description": "Directory: latest-13F position count at least this many."
+          },
+          {
+            "name": "publishes_letters",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "Directory: letter-publishing managers only (true) or directory-only 13F managers (false)."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Directory: managers with a 13F report date inside this YYYYQn quarter (alias: quarter)."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "aum_desc",
+                "positions_desc",
+                "letters_desc",
+                "name_asc"
+              ]
+            },
+            "description": "Directory sort; default preserves the pre-directory order (letters desc, name asc)."
           },
           {
             "name": "cursor",

@@ -295,6 +295,55 @@ How to read it:
 
 The same briefing is available over MCP as `fund_letters.manager_overview` (same `include` argument) and in the SDKs as `getFundManagerOverview(managerId, { include: "positions" })` / `get_fund_manager_overview(manager_id, include="positions")`. The CLI twin is `secapi fund-letters overview --manager-id mgr_... --include positions`.
 
+## Fund Directory
+
+`GET /v1/fund-letters/managers` is the browsable fund directory: every manager record carries coverage stats, and — once the directory expansion is enabled server-side — reference links, a latest-13F summary, and the directory filters below. Browse by fund or CIO name, by a ticker the fund holds, by theme, or by 13F quarter:
+
+```bash
+# By fund or CIO name (q matches firm names and founder/CIO names)
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/managers?q=hollis"
+
+# Funds whose latest 13F holds a ticker, largest reported AUM first
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/managers?ticker=NVDA&sort=aum_desc"
+
+# Value-theme managers with a 13F filed for Q1 2025
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/managers?theme=value&period=2025Q1"
+```
+
+Directory filters: `q` (fund/CIO substring), `ticker` (held in the latest 13F), `cik` (adviser CIK), `theme`, `strategy` (approach or styleTags), `has_13f`, `min_letters`, `min_positions`, `publishes_letters`, `period` (YYYYQn 13F quarter; `quarter` is an alias), and `sort` (`aum_desc` | `positions_desc` | `letters_desc` | `name_asc`).
+
+Each directory record adds these fields to the manager shape:
+
+```json
+{
+  "object": "fund_letter_manager",
+  "id": "mgr_5d2e8f1a3c7b9046",
+  "name": "Hollis Creek Capital Management, L.P.",
+  "theme": "value",
+  "publishesLetters": true,
+  "has13F": true,
+  "latest13F": { "reportDate": "2026-03-31", "period": "2026Q1", "positionsCount": 24, "aumUsd": 1840000000 },
+  "references": {
+    "website": { "url": "https://www.holliscreek.com", "confidence": null },
+    "wikipedia": { "url": "https://en.wikipedia.org/wiki/Hollis_Creek_Capital" },
+    "grokipedia": { "url": "https://grokipedia.com/page/Hollis_Creek_Capital", "confidence": 0.93 }
+  }
+}
+```
+
+Three rules the directory enforces:
+
+- **References are proven or absent.** `references` mirrors resolver-verified links only — a website, Wikipedia, or Grokipedia entry that was not confidently resolved serves `null`, never a guessed URL. `confidence` is the resolver's score; hand-curated entries carry `confidence: null`.
+- **`latest13F` is a summary, not holdings.** It carries the latest report date (with its `YYYYQn` period), position count, and reported AUM. For the full position list, follow the existing 13F cross-link (`crossLinks.holdings13F`) — see the next section.
+- **Letterless managers are labeled.** The expanded universe includes 13F filers that publish no letters; they carry `publishesLetters: false` and zeroed coverage counts. Filter them in or out with `publishes_letters=true|false`.
+
+While the directory expansion is disabled, the endpoint lists letter-publishing managers with the pre-directory fields only, and directory-only parameters are ignored.
+
+The directory is available over MCP as `fund_letters.managers`, in the SDKs as `listFundLetterManagers(params)` / `list_fund_letter_managers(**params)` (with `iter_fund_letter_managers` for auto-pagination), and on the CLI as `secapi fund-letters managers --ticker NVDA --sort aum_desc`.
+
 ## Cross-check a thesis against 13F holdings
 
 Theses carry `crossLinks` into the rest of the SEC API, so a claim in a letter can be checked against what the manager's adviser actually reported:
