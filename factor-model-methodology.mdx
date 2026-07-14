@@ -1,68 +1,36 @@
 ---
 title: "Factor model methodology"
-description: "Understand factor construction, history boundaries, and the metadata needed to interpret SEC API factor results"
+description: "Understand factor construction, model boundaries, and the evidence required to interpret factor output"
 ---
 
 <Warning>
-Factor surfaces are in beta. Responses carry the `SECAPI-Maturity: beta` header; do not treat returned values as production-grade without your own validation.
+Factor surfaces are beta and return the `SECAPI-Maturity: beta` header. Validate them for your use before treating a result as production decision input.
 </Warning>
 
-SEC API tracks more than 230 factor definitions across market, style, macro, sector, industry, country, and thematic categories. The launch API surface is narrower: U.S. market, style, sector, and industry factors target a `2015-01-01` public history floor. Shorter-history, beta, blocked, and deferred factors are labeled in catalog and methodology metadata. Make a history claim only when the returned factor rows and freshness metadata support it.
+SEC API tracks factor definitions across market, style, macro, sector, industry, country, and thematic categories. The public launch surface is narrower: U.S. market, style, sector, and industry factors target a `2015-01-01` history floor. A target is not row-level proof; use the returned history and freshness metadata for the individual factor and period.
 
-For source posture and response evidence, read [Factor provenance](/factor-provenance). For daily, intraday, and portfolio recency rules, read [Factor freshness](/factor-freshness).
+## Construction of stock-basket factors
 
-## Factor categories
+### Universe
 
-| Category | Tracked definitions | Example use |
-| --- | ---: | --- |
-| `market` | 1 | Broad U.S. equity risk premium (`MKT_US`) |
-| `style` | 30 | Momentum, value, quality, size, and low-volatility signals |
-| `macro` | 17 | Rates, credit, commodities, and currencies |
-| `sector` | 26 | GICS sector and sub-sector attribution |
-| `industry` | 31 | Industry-level attribution |
-| `country` | 45 | Single-country and regional equity premiums |
-| `thematic` | 81 | Named themes such as nuclear energy, genomics, and REITs |
+U.S. market, style, sector, and industry baskets use a monthly refreshed, point-in-time U.S. equity universe. The documented screen requires at least $100M market capitalization, $5M average daily dollar volume, and a $1.00 share price. It excludes warrants, units, rights, ETFs, ETNs, and ADR certificates, and includes NYSE, NASDAQ, AMEX, ARCA, and BATS listings.
 
-Tracked does not mean available on every read surface. Inspect the catalog, row-level coverage, and returned trust metadata for the factor and period you request.
+Historical reference snapshots determine membership at rebalance to avoid look-ahead bias. When those snapshots are absent, market capitalization and SIC classification can use the latest reference data. That fallback is approximate rather than point-in-time.
 
-## How stock-basket factors are built
+### Characteristics and returns
 
-### 1. Define the universe
+Style factors are cap-weighted long-short decile spreads: securities are ranked on a characteristic, assigned to deciles, and the top-minus-bottom return is rebalanced monthly. Definitions can use point-in-time SEC XBRL fundamentals, SIC classification, or documented basket and proxy inputs.
 
-U.S. market, style, sector, and industry stock-basket factors use a point-in-time U.S. equity universe refreshed monthly. It requires at least $100M market capitalization, $5M average daily dollar volume, and a $1.00 share price. It excludes warrants, units, rights, ETFs, ETNs, and ADR certificates, and covers NYSE, NASDAQ, AMEX, ARCA, and BATS. Membership uses historical reference snapshots available on the rebalance date to avoid look-ahead bias. When those snapshots are absent, market capitalization and SIC classification can fall back to the latest reference data; that fallback is approximate and not point-in-time.
+ETF-backed thematic factors use the ETF return less a relevant benchmark. Curated thematic baskets use equal-weight constituent returns less a relevant benchmark. Macro and country factors use a documented proxy spread. The catalog and methodology metadata identify what applies to a specific factor; no single construction applies to every category.
 
-### 2. Select the inputs
+### Purification and scaling
 
-| Input | Used for | Example |
-| --- | --- | --- |
-| Point-in-time fundamentals from SEC XBRL | Style characteristics | Book-to-market from the latest 10-K |
-| SIC classification | Sector and industry membership | SIC 7372 mapped to technology/software |
-| ETF, proxy, and basket metadata | Thematic, macro, and country definitions | URA proxy spread for nuclear energy |
-| Curated constituent lists | Thematic baskets without an ETF proxy | Hotel REIT basket |
-| Single-country ETF | Country premiums | EWJ for Japan equity premium |
+Factors have one to three declared parents. SEC API uses a rolling 156-trading-day OLS regression to estimate residual return not explained by those parents. The deliberately limited hierarchy keeps the relationship inspectable and preserves the defining basket signal.
 
-### 3. Calculate returns
+For residual scaling, the model uses the preceding 60 residual returns plus the current residual to estimate sample volatility, annualizes with 252 trading days, targets 10% annualized volatility, and caps leverage at 3.0. Returns are then converted to rolling z-scores for comparison. These are model outputs, not forecasts, performance claims, or investment recommendations.
 
-Style factors are cap-weighted long-short decile spreads: securities are ranked on a characteristic, assigned to deciles, and the top-minus-bottom return is rebalanced monthly. ETF-backed thematic baskets use the ETF return less a relevant benchmark. Curated thematic baskets use an equal-weight constituent return less a relevant benchmark. Macro and country factors use an ETF proxy spread against a reference instrument.
+## Interpretability requirements
 
-### 4. Purify against declared parents
+During U.S. market hours, intraday snapshots can include raw, purified, scaled, and z-score returns only when the required inputs are current. For every result that informs a model, report, or decision, retain request identifiers, methodology, source-rights, freshness, materialization, and degradation metadata when supplied.
 
-Each factor has one to three declared parent factors. SEC API uses a rolling 156-trading-day OLS regression to extract the residual return not explained by those parents. For example, a sector factor is purified against `MKT_US`; an energy theme can be purified against `MKT_US` and `SECTOR_ENERGY`.
-
-The parent hierarchy is deliberately limited rather than regressing every factor on every other factor. This keeps the relationship visible to users and preserves the defining signal of a thematic basket.
-
-### 5. Scale and compare
-
-The 156 trading-day window is used for the OLS purification. For each residual return, leverage uses the preceding 60 residual returns plus the current residual to estimate sample volatility, annualizes it using 252 trading days, and targets 10% annualized volatility, capped at 3.0. The scaled returns are converted to rolling z-scores for cross-factor comparison. These calculations describe the model output; they do not predict future returns.
-
-## Intraday and history boundaries
-
-During U.S. market hours, intraday snapshots can include raw, purified, scaled, and z-score returns when the required proxy and constituent inputs are current. A fast response is not proof of a current snapshot: inspect returned freshness and degradation metadata.
-
-For any historical request, check the returned history start and end dates, observation count, materialization version, and freshness fields. A `range=max` result should only be described to the row-level history floor returned for that factor.
-
-## Preserve the interpretation envelope
-
-When a decision, model, or investor report depends on a factor result, preserve `requestId`, `traceparent`, model and methodology information, source-rights information, freshness, materialization, and degraded-state fields when returned. Compact responses can omit heavier metadata; request `response_mode=compact&include=trust` on REST, or `include: ["trust"]` in an MCP call, when you need that envelope.
-
-The methodology is an explanation of the factor calculation, not a performance claim or investment recommendation. Continue with [Factor provenance](/factor-provenance), [Factor freshness](/factor-freshness), and the [Factor quickstart](/factor-quickstart).
+Read [Factor provenance](/factor-provenance) and [Factor freshness](/factor-freshness) alongside any factor output.

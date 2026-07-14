@@ -1,37 +1,24 @@
 ---
 title: "Factor freshness"
-description: "Interpret daily, intraday, and portfolio factor freshness from the response metadata rather than response speed alone"
+description: "Interpret daily, intraday, exposure, and portfolio factor recency from returned metadata"
 ---
 
-Factor freshness follows the relevant market session and input set. A response is not current merely because it arrived quickly: its source session, materialized rows, and returned metadata need to support the use you plan to make of it.
+Response speed is not factor freshness. Daily and intraday outputs use different clocks and input sets, while portfolio results also depend on what the caller supplied. Evaluate the evidence attached to the specific result.
 
-## Match the clock to the result
+## Match the clock to the surface
 
-| Surface | Freshness is measured against | What to check |
-| --- | --- | --- |
-| Factor catalog | Catalog version and release metadata | Whether the definition changed |
-| Daily factor returns | The last complete U.S. market session for the requested factors | Daily materialization for that session |
-| Factor history and sparklines | Row-level return coverage for the factor and requested range | History start/end dates and observation count |
-| Intraday factor returns | Snapshot timestamp and current market-data inputs | Snapshot freshness during market hours |
-| Factor exposures | Latest exposure-model session and source return session | Both exposure and source-return recency |
-| Valuations and valuation stocks | Factor-return z-score session and latest exposure session | Both factor-side and exposure-side inputs |
-| Portfolio attribution | Submitted holdings, exposures, returns, and holding market bars | Whether any material input is missing or stale |
-| Portfolio hedge | Submitted holdings, exposures, constraints, and candidate mappings | Whether exposure or candidate data is unavailable |
+| Surface | Evaluate against |
+| --- | --- |
+| Catalog | catalog version and release metadata |
+| Daily returns | last complete U.S. market session and daily materialization |
+| History | row-level range, start/end dates, and observation count |
+| Intraday returns | snapshot timestamp and current market-data inputs |
+| Exposures and valuations | exposure-model session and source-return session |
+| Portfolio attribution or hedge | holdings, exposures, returns, bars, mappings, and constraints |
 
-## Use the market calendar correctly
+Weekends and U.S. market holidays do not create missing daily rows. Early closes or delayed jobs should appear as returned stale or degraded evidence, not be rewritten as current data.
 
-Daily factor data is measured against the last complete market session, not wall-clock midnight. Weekends and market holidays do not create missing daily rows. Early closes and delayed jobs should be reflected in stale or degraded metadata rather than being presented as current data.
-
-For a time-sensitive workflow:
-
-- Make a long-history claim only when the factor has row-level proof for that period.
-- Check `historyStartDate`, `historyEndDate`, `observationCount`, and `lastCompleteMarketDate` when the response includes them.
-- Treat stale materialization as evidence that the response does not meet a current-data requirement.
-- Treat intraday data as current only when the snapshot and its market-data inputs are current.
-
-## Request the trust envelope
-
-Compact responses keep charts and agents small. Request trust metadata when a caller needs to evaluate recency or retain an evidence trail.
+## Ask for the evidence envelope
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
@@ -39,38 +26,16 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/factors/history/VALUE?range=1y&response_mode=compact&include=trust"
 ```
 
-```json
-{
-  "name": "factors.history",
-  "arguments": {
-    "factorKey": "VALUE",
-    "range": "1y",
-    "response_mode": "compact",
-    "include": ["trust"]
-  }
-}
-```
+When included, inspect `freshness.status`, `freshness.asOf`, `freshness.sourcePublishedAt`, `freshness.lagMs`, `materialization.materializationVersion`, and `degradedState`. Availability differs by route and response mode; do not assume every field is present or has the same semantics.
 
-## Interpret returned state
+## Decision rules
 
-| Field | Interpretation |
+| Outcome | Appropriate treatment |
 | --- | --- |
-| `freshness.status` | A route-specific state such as fresh, stale, degraded, or unknown |
-| `freshness.asOf` | The timestamp or session represented by the response |
-| `freshness.sourcePublishedAt` | The source-side publish or session time when available |
-| `freshness.lagMs` | Measured source-to-response lag when applicable |
-| `materialization.materializationVersion` | The read-model or computation version |
-| `degradedState` | Structured context for partial, stale, or fallback behavior |
+| Fresh and materially complete | retain the evidence with the workflow result |
+| Fresh but shorter history than required | do not make a long-history or maximum-coverage claim |
+| Stale daily result | wait for current materialization before making a current-data claim |
+| Stale intraday result | avoid live-market language; use a completed daily surface when suitable |
+| Degraded portfolio result | show partial attribution or no-solution context with missing capabilities |
 
-Field availability varies by response type and response mode. Use the returned fields rather than assuming every surface has the same freshness envelope.
-
-| Result state | Caller action |
-| --- | --- |
-| Fresh with expected materialization | Use it for the workflow while retaining the request and evidence metadata. |
-| Fresh but shorter than the needed history floor | Do not describe it as maximum or long-history coverage. |
-| Stale daily return | Show its state and wait for current materialization before making a current-data claim. |
-| Stale intraday snapshot | Avoid live-market language; use the last complete daily surface when it fits the use case. |
-| Degraded portfolio attribution | Present partial attribution and retain the missing capabilities. |
-| Explicit materialization error | Retry only when the returned error says repair or rerun is appropriate. |
-
-Continue with [Factor provenance](/factor-provenance), [Factor model methodology](/factor-model-methodology), and [Freshness and source evidence](/freshness-and-trust).
+For a historical claim, rely on returned row-level proof rather than the requested range name. Continue with [Factor provenance](/factor-provenance) and [Factor model methodology](/factor-model-methodology).

@@ -1,116 +1,30 @@
 ---
-title: "Competitive Benchmarks"
-description: "Latency, payload size, and token efficiency comparisons: SEC API vs sec-api.io, financialdatasets.ai, and edgartools"
+title: "Competitive benchmarks"
+description: "Read SEC API's first-party performance comparisons as reproducible, point-in-time measurements rather than product guarantees"
 ---
 
-SEC API runs a first-party head-to-head benchmark against three peers — sec-api.io and financialdatasets.ai (hosted APIs) and edgartools (open-source Python library) — across core SEC data operations. These are our own measurements, not a third-party study; every run uses the same network location and production endpoints under identical conditions.
-
-<Info>
-Last updated: 2026-03-18 (vs sec-api.io and financialdatasets.ai); 2026-04-23 preliminary (vs edgartools, pending final verification). See the methodology notes on this page for the benchmark setup.
-</Info>
-
-## vs sec-api.io
-
-| Operation | SEC API p50 | sec-api.io p50 | Speedup | SEC API tokens | sec-api.io tokens | Token savings |
-|---|---|---|---|---|---|---|
-| **Entity resolve** | 62ms | 231ms | **3.7x** | 68 | 103 | **34%** |
-| **Filing search** | 64ms | 281ms | **4.4x** | 125 | 198 | **37%** |
-| **Section extract** | 64ms | 348ms | **5.4x** | 450 | 720 | **38%** |
-| **XBRL-to-JSON** | 61ms | 392ms | **6.4x** | 310 | 485 | **36%** |
-
-**Overall: 18 wins, 0 losses, 2 ties.**
-
-<Tip>
-Token estimates are based on payload size ÷ 4 (average characters per token). Smaller payloads mean fewer tokens consumed by AI agents, reducing cost and latency in agent workflows.
-</Tip>
-
-## vs financialdatasets.ai
-
-| Operation | SEC API p50 | FD.ai p50 | Speedup |
-|---|---|---|---|
-| **Income statement** | 57ms | 414ms | **7.3x** |
-| **Balance sheet** | 62ms | 292ms | **4.7x** |
-| **Cash flow statement** | 59ms | 339ms | **5.7x** |
-| **Financial metrics** | 57ms | 1,476ms | **25.9x** |
-
-## vs edgartools (preliminary)
-
 <Warning>
-**Preliminary — pending final verification**. Numbers below will be
-re-verified before the full comparison is linked from the docs sidebar.
+These are first-party measurements, not an independent study. They describe the named operations, comparands, runner configuration, and dates below. They are not service-level objectives or a guarantee of latency, payload size, cost, or agent quality.
 </Warning>
 
-[edgartools](https://github.com/dgunning/edgartools) is a well-designed, MIT-licensed Python library that talks directly to SEC EDGAR. Same four workflows, N=5 iterations, each iteration runs in a fresh subprocess with all caches cleared so every call is a truly cold SEC fetch:
+SEC API benchmarks selected SEC-data operations against sec-api.io, financialdatasets.ai, and edgartools. The hosted comparisons were last updated on 2026-03-18. The edgartools comparison is preliminary as of 2026-04-23 and remains subject to final verification.
 
-| Operation | SEC API p50 | edgartools p50 | Speedup | SEC API wire bytes | edgartools wire bytes |
-|---|---|---|---|---|---|
-| **Entity resolve** | 34ms | 471ms | **13.9x** | 273 | 164,686 |
-| **Filing search** | 38ms | 688ms | **18.1x** | 1,033 | 362,459 |
-| **Section extract** | 34ms | 3,081ms | **90.6x** | 2,954 | 3,053,868 |
-| **XBRL → JSON** | 34ms | 1,508ms | **44.3x** | 1,522 | 1,520,790 |
+## Reported comparisons
 
-<Tip>
-**Wire bytes are measured at the HTTP transport layer for every comparand** — including edgartools, where a monkey-patched `httpx.Client.send` sums real SEC bytes per logical case. This makes payload numbers directly comparable across hosted APIs and client-side libraries. edgartools fetches raw SEC documents client-side (e.g., ~3 MB of 10-K HTML to extract Item 1A text) — that's an architectural choice behind its `pip install, zero API key, SEC direct` posture, not an inefficiency.
-</Tip>
+| Comparison | Operations | Reported p50 range |
+| --- | --- | --- |
+| sec-api.io | entity resolution, filing search, section extraction, XBRL-to-JSON | SEC API 34-38ms; comparand 231-401ms |
+| financialdatasets.ai | income statement, balance sheet, cash flow, metrics | SEC API 55-60ms; comparand 234-375ms |
+| edgartools (preliminary) | entity resolution, filing search, section extraction, XBRL-to-JSON | SEC API 34-38ms; comparand 471-3,081ms |
 
-See [Compare SEC API vs edgartools](/compare-edgartools) for the full feature matrix and positioning, including edgartools' legitimate strengths (it's free, MIT-licensed, and community-supported).
+Token estimates use `ceil(payload_bytes / 4)`. They are an approximation for comparing response size, not a model-specific token bill. The edgartools wire-byte measurements include its direct SEC retrieval; that library's zero-key, client-side approach is a valid architectural choice rather than a defect.
 
-## Why SEC API is faster
+## Method
 
-1. **Purpose-built for the SEC domain.** Dedicated Postgres schema with filing-aware indexes, not a generic data warehouse.
-2. **Edge-cached with tiered storage.** Hot data served from Postgres + full-text search; historical data in tiered storage behind an edge CDN.
-3. **Compact responses by default.** Responses are shaped for AI consumption — no bloated wrappers, no redundant fields.
-4. **Semantic search reduces round-trips.** One hybrid search call returns relevant results that would require multiple keyword queries elsewhere.
+The benchmark uses authenticated production endpoints for hosted APIs and direct SEC EDGAR access for edgartools. It measures wall-clock time from request start to result, including client-side parsing for edgartools. Each operation is run at least five times; p50, p95, and p99 use Hyndman-Fan Type 7 interpolation. The same runner region and machine are used, with concurrent execution.
 
-## Token efficiency for agents
+For edgartools, the persistent cache is cleared between iterations to measure cold fetches. Payload measurement is raw hosted response bytes or the sum of direct SEC HTTP bytes for edgartools. Network conditions, API versions, cache state, rate limits, source availability, request shape, and client behavior all affect a real integration.
 
-A typical "company briefing" workflow requires:
+## Use and limits
 
-| Approach | API calls | Tokens consumed |
-|---|---|---|
-| sec-api.io (manual assembly) | 8-12 calls | ~3,500 tokens |
-| SEC API intelligence bundle | 1 call | ~800 tokens |
-
-The intelligence bundle pre-computes what agents would otherwise assemble from multiple API calls, reducing both latency and token cost by 75%+.
-
-## FinanceBench canary-25 (MCP regression check)
-
-<Warning>
-**Preliminary — MCP data-layer regression check.** Bridge-50 numbers below were produced by an eval harness that instantiates the Anthropic SDK directly and routes tool calls into SEC API's MCP surface. This validates the data layer, not an application runtime.
-</Warning>
-
-[FinanceBench](https://github.com/patronus-ai/financebench) (Patronus AI) is a 150-question benchmark over 10-K / 10-Q / 8-K filings that tests an AI system's ability to answer real financial-analyst questions with citations to source documents.
-
-| Gate | Target | SEC API canary-25 (post-data-drift) | Methodology |
-|---|---|---|---|
-| 25-q canary (MCP, judge-correct) | ≥23/25 (92%) | **18/25 (72%)** | Sonnet-4.5 + extended thinking (10k); reflection disabled; citations active |
-| 25-q canary (MCP, rule-based) | ≥23/25 (92%) | 19/25 (76%) | Same harness; structural API-correctness scoring |
-| 50-q bridge (regression vs 2026-04-02 baseline) | ≥86% | *(not run in this preliminary pass)* | Same harness, expanded suite |
-
-**What the 72% reflects:** SEC API's MCP surface scored 18/25 judge-correct on canary-25 against current production data on 2026-04-25. Compared to the 2026-04-02 baseline (25/25 judge), the gap is dominated by **production data drift** — new 10-Q/8-K filings ingested in the intervening 23 days now return as "latest" for queries that don't pin a fiscal period. The agent's tool-calling strategy and the canonical_calls hint shape don't fully compensate. Five iterations of prompt + thinking + reflection + canonical_calls fixes plateaued at this number.
-
-**What the 72% is NOT:** an end-user runtime benchmark. SEC API measures the data/API/MCP layer here; full-stack application runtime evaluation belongs in the OMNI Apps repository.
-
-**Failure decomposition (5 chronic + 2 reasoning-bound):**
-
-| Pattern | Questions | Investigation |
-|---|---|---|
-| `section_snippets` granularity gap | fb_055, fb_056 (BBY Q2 FY24) | Requires finer section retrieval |
-| Sonnet-4.5 reasoning ceiling | fb_054, fb_141 | Re-test on a stronger reasoning model |
-| Wrong-source (GAAP vs Non-GAAP) | fb_029 | Needs stricter source selection and period pinning in the MCP/data-layer harness |
-| Production data drift | fb_028 | Needs URL-pin diagnostic |
-
-**Cost / latency (improvements vs original harness):** $0.44 / Q (down 41%), p95 latency 88s (down 8%). Cost guard ($20 / run) held throughout the iteration ladder.
-
-## Methodology
-
-- Hosted APIs (SEC API, sec-api.io, financialdatasets.ai) use production endpoints with authenticated API keys
-- edgartools (MIT-licensed Python library) calls SEC EDGAR directly; no API key
-- edgartools' persistent on-disk cache at `~/.edgar/_tcache/` is cleared between iterations so every run is a cold SEC fetch (without this, iteration 2+ would measure disk I/O on the runner rather than SEC latency)
-- Latency measured as wall-clock time from request start to result returned (client-side parsing included for edgartools)
-- Each operation run 5+ times; p50, p95, p99 reported
-- Payload size measured at the HTTP transport layer for every comparand — raw response body bytes for hosted APIs, sum of SEC wire bytes (via monkey-patched `httpx.Client.send`) for edgartools
-- Token estimate = ceil(payload_bytes / 4)
-- Percentiles computed via linear-interpolation (Hyndman-Fan Type 7) for every comparand — all runners share one implementation in our benchmark harness
-- Network: same region, same machine, concurrent execution
-- Each comparand (SEC API, sec-api.io, financialdatasets.ai, edgartools) has a dedicated runner in our benchmark harness, with a shared scorecard step that assembles the multi-way comparison
+Compare the operations that match your own workload, then run an evaluation with your request mix, region, authentication, payload needs, and acceptable evidence policy. A latency result does not establish filing coverage, analytical accuracy, or source freshness. See [FinanceBench evaluation](/financebench-evaluation) for the separate bounded QA evaluation and [Freshness and source evidence](/freshness-and-trust) for result-level evidence.

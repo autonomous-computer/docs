@@ -1,50 +1,42 @@
 ---
 title: "Methodology registry"
-description: "Interpret SEC API derived results by their source scope, calculation boundary, and returned limitation fields"
+description: "Read SEC API calculations, classifications, and normalized views within their source and calculation boundaries"
 ---
 
-Use this page when a route returns a calculation, classification, or normalized view instead of a source document alone. A result can be useful without being universal coverage, real-time delivery, or a cross-issuer comparison. The route reference defines its parameters and response shape; [API conventions](/api-conventions) explains the shared response and error envelope.
+Use this registry when a response is more than a source document. It distinguishes what a derived result describes from what it cannot establish. The route reference defines fields and parameters; this page is an interpretation guide, not a replacement contract.
 
 ```bash
 curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/market/calendar?market=XNYS"
 ```
 
-For a material result, retain the endpoint, parameters, period, source fields, and any `capability`, warning, degradation, or `statusNote` fields.
+For consequential output, retain the route, parameters, period, source fields, methodology version when supplied, and every returned capability, warning, degradation, or `statusNote` field.
 
 ## Shared terms
 
-| Term | What it tells you |
+| Term | Meaning |
 | --- | --- |
-| Source-backed | The result is tied to a disclosed filing, an official public source, or both. |
-| Derived | SEC API has normalized, classified, compared, or calculated from source material. |
-| `capability` | A route-specific state such as `supported`, `not_disclosed`, `degraded`, or `unavailable`; it is not a platform-wide quality grade. |
-| `statusNote` | A nullable explanation for a limited, partial, or unavailable result when the route returns one. |
+| Source-backed | Tied to a disclosed filing, an official public source, or both. |
+| Derived | Normalized, classified, compared, or calculated from source material. |
+| `capability` | A route-specific availability state, not a platform-wide quality grade. |
+| `statusNote` | A nullable explanation for a limited, partial, or unavailable result. |
 
 ## Market schedules and index data
 
-`GET /v1/market/calendar` reports a requested market and date. Read `coverage`, `confidence`, and `statusNote` with `sessionStatus`. `configured_holidays` means the market has configured holiday coverage; `weekend_only` does not establish local-holiday coverage; and `tentative` means the route cannot confirm the day from configured coverage. `XNYS` and `XNAS` have configured holiday coverage.
+For `GET /v1/market/calendar`, read `coverage`, `confidence`, `statusNote`, and `sessionStatus` together. `configured_holidays` means the requested market has configured holiday coverage. `weekend_only` does not establish local-holiday coverage. `tentative` means the route cannot confirm the day from configured coverage. `XNYS` and `XNAS` have configured holiday coverage.
 
-`GET /v1/market/indices` and `GET /v1/market/indices/constituents` return inventory and public constituent surfaces subject to their returned rights posture. `inventory_only` does not make a constituent roster public. Do not infer a weight from a `null` weight or `unpublished` weight method; `positionRank` is roster order, not a portfolio weight. See [market calendar](/api-reference/market/get-v1-market-calendar), [indices](/api-reference/market/get-v1-market-indices), and [index constituents](/api-reference/market/get-v1-market-indices-constituents).
+Index inventory and constituent routes are subject to their returned rights posture. `inventory_only` does not make a constituent roster public. A `null` weight or `unpublished` weight method is not a portfolio weight, and `positionRank` is ordering rather than a weight.
 
-## Filing-backed data
+## Filing-backed and derived results
 
-Filing discovery, rendering, section extraction, and traces begin with SEC filing records. Use an accession number and filing URL to anchor a result. A filing response does not establish that every section, page anchor, or trace region exists.
-
-Facts and statement routes normalize issuer disclosures. Check source, period, unit, and `periodBasis` when returned before comparing values. Segment labels and hierarchies come from issuer disclosures; they are not a universal taxonomy. In company financial balance-sheet records, `commonEquity` uses disclosed common-stockholders' equity where available and can use stockholders' equity less disclosed preferred stock. Evaluate the returned period and source context before comparison.
-
-Trace routes can return filing-backed or source-record evidence. A page-only trace is page-level evidence, not proof of an exact resolved source span. See [filings](/api-reference/filings/get-v1-filings), [sections](/api-reference/filings/get-v1-filings-latest-sections-section-key), [facts](/api-reference/facts/get-v1-facts), [statements](/api-reference/statements/get-v1-statements), and [traces](/api-reference/traces/get-v1-traces).
-
-## Derived event and analysis results
-
-| Surface | Read it as | Do not read it as |
+| Surface | Treat it as | Do not treat it as |
 | --- | --- | --- |
-| M&A events | Filing-derived events with filing date and accession context | A complete deal database or live transaction-status feed |
-| Risk categories | Deterministic coverage for the latest covered Item 1A section, with signals and snippets | A complete issuer risk assessment or probability of loss |
-| Volatility score | A derived SEC-disclosure signal with factor breakdown, methodology version, confidence, and `degradedReasons` | Market data, a forecast, or investment advice |
-| Earnings materials | Usable SEC-furnished material found through the relevant filing path | Transcript completeness outside SEC-furnished content |
-| Enforcement actions | Official SEC litigation releases, administrative proceedings, and AAERs | A substitute for the linked source document in legal or factual conclusions |
+| Facts and statements | normalized issuer disclosures with period and unit context | a universal cross-issuer taxonomy |
+| M&A events | filing-derived event records | a complete deal database or live closing feed |
+| Risk categories | deterministic coverage for the documented section | a complete issuer risk assessment |
+| Volatility score | a disclosure-derived signal with methodology and limitations | a forecast or investment recommendation |
+| Enforcement actions | official SEC release records | a replacement for the linked source in a legal conclusion |
 
-See [M&A events](/api-reference/events/get-v1-events-ma), [risk categories](/api-reference/filings/get-v1-filings-latest-risk-categories), [volatility score](/api-reference/signals/get-v1-signals-volatility), [earnings materials](/api-reference/earnings/get-v1-earnings-transcripts), and [enforcement actions](/api-reference/events/get-v1-events-enforcement).
+Anchor filing-backed results to an accession number and filing URL. A page-level trace is page-level evidence; it does not prove an exact resolved source span. Segment labels and hierarchies retain the issuer's disclosure context.
 
-Make unknown, partial, degraded, and unavailable states visible in your application. Then use [Freshness and source evidence](/freshness-and-trust) and [Coverage and historical depth](/coverage-and-depth) to decide whether the returned evidence fits your workflow.
+Show unknown, partial, degraded, and unavailable states in your application. Pair this page with [Freshness and source evidence](/freshness-and-trust) and [Coverage and historical depth](/coverage-and-depth) before treating a calculation as decision-ready.

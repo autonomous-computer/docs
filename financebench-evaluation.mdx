@@ -1,86 +1,33 @@
 ---
-title: "FinanceBench Evaluation"
-description: "How the SEC API scores on the FinanceBench financial QA benchmark, including the agent harness, tool stack, and per-question results."
+title: "FinanceBench evaluation"
+description: "A point-in-time, first-party evaluation of SEC API on a FinanceBench canary subset"
 ---
 
-<Info>
-SEC API scores **18/25 (72%)** on the FinanceBench canary-25 subset — the public-market financial QA benchmark from PatronusAI — run in agent mode against the live SEC API tool stack (captured 2026-04-25, best stable harness configuration).
-</Info>
+<Warning>
+This is a first-party, point-in-time evaluation, not an independent certification or a product accuracy guarantee. The score applies to the stated canary subset, harness, model, judge, and evaluation date.
+</Warning>
 
-## What is FinanceBench?
+SEC API recorded 18 correct answers out of 25 (72%) on its FinanceBench canary-25 run on 2026-04-25. FinanceBench is PatronusAI's public financial-QA benchmark over 10-K, 10-Q, and 8-K filings. Its full corpus has 150 questions; this report does not claim a full-corpus score.
 
-[FinanceBench](https://huggingface.co/datasets/PatronusAI/financebench) is a 150-question financial question-answering benchmark created by PatronusAI. Each question requires extracting or computing a specific financial fact from real SEC filings (10-K, 10-Q, 8-K). The questions span three categories:
+| Measure | Result |
+| --- | --- |
+| Evaluated subset | 25-question canary slice |
+| Correct | 18 |
+| Score | 72% |
+| Evaluation date | 2026-04-25 |
+| Mode | agent using the SEC API tool surface |
+| Judge | numeric match plus semantic evaluation |
 
-- **Numeric extraction** — pull a specific number from a filing (revenue, EPS, asset totals)
-- **Section evidence** — answer from a specific filing section (risk factors, geographic operations, MD&A)
-- **Multi-hop reasoning** — combine data across periods, compute ratios, or compare segments year-over-year
+The checked-in 2026-04-26 run scored 16/25. The 72% figure is a stable configuration result observed during iteration, not a minimum expected score. Questions whose intended filing is no longer the latest in production can become harder to reproduce without an explicit period or filing pin.
 
-The benchmark covers 45 public companies across diverse industries and filing periods from 2018 to 2023.
+## What the evaluation tests
 
-## Score
+The canary includes numeric extraction, section evidence, and multi-step financial reasoning across real issuer filings. The harness uses structured financial, segment, calculation, filing-section, and earnings-material capabilities. It evaluates whether the agent produces the benchmark answer under that configuration; it does not establish correctness for an arbitrary question, issuer, model, or integration.
 
-The score below is the **canary-25 subset** — a 25-question slice of the full 150-question corpus used for fast, repeatable agent-mode regression runs. It is our best stable agent-mode harness configuration.
+Answers are assessed first by numeric comparison where a numeric reference exists, then by semantic judgment for free text. A pass requires the configured judge to accept the answer above its threshold. Judge behavior, source revisions, and model behavior can affect the result.
 
-| Metric | Value |
-|--------|-------|
-| **Questions (canary subset)** | 25 |
-| **Correct** | 18 |
-| **Score** | **72%** |
-| **Evaluation date** | 2026-04-25 |
-| **Mode** | Agent (live SEC API tool stack) |
-| **Judge** | Anthropic Claude sonnet-4-5 (numeric match + semantic judge) |
+## How to use the result responsibly
 
-The most recent checked-in run (2026-04-26) scored 16/25 (64%); 72% is the stable plateau across iterations, not a guaranteed floor. Several canary questions are time-sensitive (e.g. Best Buy Q2 FY2024, PepsiCo guidance, Amcor Q2 FY2023) and become harder to re-verify as production data moves.
+Use it as a regression signal for a bounded workflow. Pin issuer, filing period, and source identifiers in your own evaluation. Retain the API result's provenance and request metadata. Independently validate calculations, non-GAAP measures, and legal or investment conclusions against the filing.
 
-## How it works
-
-SEC API's agent harness runs each FinanceBench question through the full SEC API tool stack. The agent has access to structured financial tools — not raw filing text — which ensures answers are grounded in XBRL-parsed, provenance-traced data.
-
-### Tool stack
-
-The agent uses these SEC API-backed tools to answer questions:
-
-| Tool | Purpose |
-|------|---------|
-| `omni_api_get_company_financials` | Structured balance sheet, income statement, cash flow with preferred stock deduction |
-| `omni_api_get_revenue_segments` | Geographic and product revenue segmentation from XBRL dimensional members |
-| `omni_api_financial_calculations` | GAAP-aligned ratio and per-share calculations |
-| `omni_api_get_10k_sections` | Filing section extraction (Item 1A, Item 7, footnotes) |
-| `omni_api_get_earnings_materials` | 8-K earnings releases and transcripts |
-
-### Pre-call mechanism
-
-For question types that historically require specific data, the harness automatically pre-fetches structured data before the agent's first reasoning step. This ensures the agent sees XBRL-parsed geographic segments, common equity figures, and YoY comparisons as authoritative context — not as optional tool results it might skip.
-
-### Scoring methodology
-
-Each answer is scored by a two-stage judge:
-
-1. **Numeric match** — for questions with numeric gold answers, the agent's answer is parsed and compared within tolerance
-2. **Semantic judge** — an Anthropic Claude model compares the agent's free-text answer against the gold answer, assessing factual correctness with confidence scoring
-
-A question passes when the judge confirms correctness with confidence above the threshold.
-
-## Key technical capabilities demonstrated
-
-### Geographic segment depth
-SEC API parses XBRL dimensional members to extract granular geographic segments (e.g., EMEA, APAC, LACC for American Express) rather than the two-region narrative split (US / Outside US) that appears in 10-K prose.
-
-### Preferred stock deduction
-For banks and financial institutions that do not file `CommonStockholdersEquity` as a separate XBRL concept, SEC API derives common equity by deducting `PreferredStockValue` from `StockholdersEquity`. This produces correct book-value-per-share figures for companies like JPMorgan.
-
-### Fiscal calendar handling
-Companies with shifted fiscal calendars (e.g., Pfizer's Q2 ending July 2 instead of June 30) are handled through range-based period matching that accommodates up to one month of fiscal shift.
-
-### Non-GAAP reconciliation
-For adjusted EBIT/EBITDA questions, the harness directs the agent to the company's own non-GAAP reconciliation table from earnings releases rather than computing adjusted figures from GAAP inputs.
-
-## Transparency notes
-
-- **1 gold answer corrected**: The original PatronusAI gold answer for question fb_135 (Pfizer geographic revenue) specified "Developed Rest of the World" as the biggest YoY percentage drop. SEC XBRL data shows "Developed Europe" (-54.7%) and "Developed Rest of World" (-54.6%) within 0.15 percentage points. The gold answer was updated to accept both, with the XBRL evidence documented.
-- **Scope**: The headline score above is the canary-25 agent run against the deployed SEC API, scored on the public FinanceBench corpus (PatronusAI) with its published ground truth.
-
-## Source artifacts
-
-- Dataset: [PatronusAI/financebench on HuggingFace](https://huggingface.co/datasets/PatronusAI/financebench)
-- Scored on the canary-25 subset of the public FinanceBench corpus, using its published ground truth.
+One published gold-answer adjustment for `fb_135` accepts both near-equal XBRL-supported geographic-revenue answers after review. The dataset and published ground truth remain the external source: [PatronusAI/financebench](https://huggingface.co/datasets/PatronusAI/financebench).

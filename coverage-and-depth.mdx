@@ -1,40 +1,36 @@
 ---
 title: "Coverage and historical depth"
-description: "Choose an SEC API workflow based on documented history, route-specific availability, and the source evidence you can retain"
+description: "Establish route-specific SEC API coverage from the result and its source evidence"
 ---
 
-Coverage is a property of a particular request, not a property of the whole API. Start with the filing you need, then request the section, fact, statement, or derived result your workflow uses. Finding a filing does not establish that every representation of it is available.
+Coverage belongs to a request, not to the API in the abstract. Begin with the filing and representation you need, then check whether the response supports the use you intend.
 
 ```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=25"
 ```
 
-## Documented history boundary
+## Documented historical boundary
 
-SEC API documents a nine-year searchable floor for filing and section workflows. Completeness checks cover required filing forms for the two most recent completed years. The current year has an availability floor; it is not a completed-year completeness guarantee.
+Filing and section workflows document a nine-year searchable floor. Completeness checks cover required filing forms for the two most recently completed years. The current year has an availability floor, not a completed-year completeness guarantee.
 
-Older filings can be returned, but availability, density, and derived representations vary by issuer, form, and filing format. Treat an inventory target as an internal planning input, not as a public coverage promise.
+Older filings can be returned, but issuer, form, document format, and materialization path determine whether a section, normalized fact, or derived result is present. Treat inventory targets or a successful query for one issuer as planning evidence, not a general coverage promise.
 
-| What you need | Start here | Confirm in the result |
+## Confirm the representation you need
+
+| Requirement | Start with | Confirm in the response |
 | --- | --- | --- |
-| A source filing | [Filings](/api-reference/filings/get-v1-filings) or [latest filing](/api-reference/filings/get-v1-filings-latest) | Issuer, form, filing date, accession number, and filing URL |
-| Filing text or a section | The relevant render or section route | The requested filing and section actually include content |
-| A normalized fact or statement | The relevant facts or statements route | Period, units, provenance, and the disclosed fields returned |
-| An event or ownership result | The relevant event or ownership route | Date range, form family, and any capability or warning fields |
+| Source filing | filing or latest-filing route | issuer, form, filing date, accession number, filing URL |
+| Filing text or section | render or section route | the chosen filing and section contain the requested material |
+| Normalized value | facts or statements route | period, units, provenance, and disclosed fields |
+| Event or ownership result | relevant event or ownership route | date range, form family, and returned limitation fields |
 
-## Keep related surfaces separate
+A source document is not a guarantee that every fact is normalized or comparable across issuers. A response for one year does not prove availability for another. A fast success does not establish timing fitness.
 
-- A filing manifest does not mean every section or derived output is ready.
-- A source document does not mean every fact is normalized or comparable across issuers.
-- A result for one issuer, form, or year does not establish coverage for another.
-- A successful response does not establish that the result is recent enough for your use.
+## Make unavailable evidence visible
 
-Market-calendar results have their own scope. Read returned `coverage`, `confidence`, and `statusNote`: `XNYS` and `XNAS` have configured holiday coverage, while other documented markets can return weekend-only or tentative coverage. See the [Methodology registry](/methodology-registry) for how to interpret those states.
+Store the filing accession number and URL with results. Preserve returned periods, provenance, capabilities, warnings, and degradation fields. Do not silently substitute a different issuer, filing, period, or data type when the requested evidence is unavailable.
 
-## Handle unavailable data deliberately
+Market-calendar results have an independent scope. Read returned `coverage`, `confidence`, and `statusNote`: `configured_holidays` indicates configured holiday coverage, while `weekend_only` and `tentative` do not establish a complete local-holiday calendar.
 
-Store the filing accession number and URL with any result. Preserve returned periods, provenance, capabilities, warnings, and degradation fields, and show partial or unavailable outcomes to the person or system consuming your result. Do not silently substitute a different issuer, filing, or data type. Keep the `Request-Id` when an outcome needs investigation.
-
-SEC API does not publish an equal-density guarantee beyond the stated history floor, a universal real-time lag, or a promise to normalize every EDGAR exhibit and filing family. For timing and source-evidence decisions, read [Freshness and source evidence](/freshness-and-trust). For the filing-family boundary, read [SEC filing types and exhibits](/filing-types-and-exhibits).
+SEC API does not claim equal data density across EDGAR, a universal real-time lag, or normalization for every exhibit and filing family. See [EDGAR coverage and statistics](/edgar-statistics), [Freshness and source evidence](/freshness-and-trust), and [SEC filing types and exhibits](/filing-types-and-exhibits).
