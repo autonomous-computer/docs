@@ -1,112 +1,93 @@
 ---
-title: "Build an Earnings Preview Agent"
-description: "Create a source-preserving pre-earnings research brief from the earnings-preview, filing, and insider-data routes."
+title: "Build an earnings preview agent"
+description: "Create a source-linked earnings brief from the SEC API earnings preview bundle for one issuer"
 ---
 
-This tutorial builds a small Node.js job that produces a pre-earnings review packet for one issuer. It collects an earnings-preview response, the latest annual filing identity, and recent Form 4 rows, then writes the raw evidence and a compact handoff. It is not a forecast, recommendation, or statement that a reported date will occur.
+Use this job to create a compact pre-earnings research brief for one issuer. It saves the returned bundle and renders its disclosed drivers and risks with the source context intact. It does not predict results or recommend a trade.
 
-## Prerequisites
+## Set up a clean environment
 
-- Node.js 18+ and an API key in `SECAPI_API_KEY`.
-- A ticker. This example uses `AAPL`.
-- A local directory where it is appropriate to retain SEC-derived research output.
+You need Python 3.9 or later, `requests`, and an SEC API key. This example uses NVIDIA.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install requests
 export SECAPI_API_KEY="your_api_key"
-mkdir earnings-preview-agent && cd earnings-preview-agent
 ```
 
-## 1. Check the three evidence sources
+## Request and save the preview bundle
 
-```bash
-curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/earnings-preview?ticker=AAPL" \
-  | jq '{requestId, traceparent, provenance, freshness, data}'
+Create `earnings_preview.py`:
 
-curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K" \
-  | jq '{accessionNumber, filingDate, filingUrl, requestId, provenance}'
+```python
+import json
+import os
+from pathlib import Path
 
-curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=20" \
-  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
+import requests
+
+ticker = "NVDA"
+response = requests.get(
+    "https://api.secapi.ai/v1/intelligence/earnings-preview",
+    headers={"x-api-key": os.environ["SECAPI_API_KEY"]},
+    params={"ticker": ticker},
+    timeout=30,
+)
+response.raise_for_status()
+bundle = response.json()
+
+Path("earnings-preview.json").write_text(json.dumps(bundle, indent=2))
+print(json.dumps({
+    "symbol": bundle.get("symbol"),
+    "asOf": bundle.get("asOf"),
+    "drivers": len(bundle.get("keyDrivers", [])),
+    "risks": len(bundle.get("keyRisks", [])),
+    "requestId": bundle.get("requestId"),
+}, indent=2))
 ```
 
-Before automating, inspect the returned shapes and source links. The earnings-preview response is a scoped research input, the 10-K is the annual filing record, and Form 4 rows describe reported transactions. Keep those roles distinct.
+Run `python earnings_preview.py`. The command writes `earnings-preview.json` and prints the issuer, as-of timestamp, counts of returned drivers and risks, and request ID. The exact content varies by issuer and available supporting material.
 
-## 2. Write the preview packet
+## Render a reviewer brief
 
-Create `preview.mjs`:
+Append this code after the request above:
 
-```js
-import { mkdir, writeFile } from "node:fs/promises";
+```python
+def label(item):
+    return item.get("label") or item.get("key") or "Untitled item"
 
-const ticker = (process.argv[2] ?? "AAPL").toUpperCase();
-const apiKey = process.env.SECAPI_API_KEY;
-const baseUrl = "https://api.secapi.ai";
-if (!apiKey) throw new Error("SECAPI_API_KEY is required");
-
-async function get(path) {
-  const response = await fetch(`${baseUrl}${path}`, { headers: { "x-api-key": apiKey } });
-  if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
-  return response.json();
-}
-
-const encodedTicker = encodeURIComponent(ticker);
-const [earnings, annualFiling, insiders] = await Promise.all([
-  get(`/v1/intelligence/earnings-preview?ticker=${encodedTicker}`),
-  get(`/v1/filings/latest?ticker=${encodedTicker}&form=10-K`),
-  get(`/v1/insiders?ticker=${encodedTicker}&forms=4&limit=20`),
-]);
-
-const packet = {
-  generatedAt: new Date().toISOString(), ticker,
-  earningsPreview: earnings,
-  annualFiling: {
-    accessionNumber: annualFiling.accessionNumber,
-    filingDate: annualFiling.filingDate,
-    filingUrl: annualFiling.filingUrl ?? annualFiling.provenance?.filingUrl ?? null,
-    requestId: annualFiling.requestId,
-    provenance: annualFiling.provenance ?? null,
-  },
-  insiderRows: insiders.data ?? [],
-  insiderRequest: { requestId: insiders.requestId, traceparent: insiders.traceparent,
-    hasMore: insiders.hasMore, nextCursor: insiders.nextCursor },
-};
-
-await mkdir("output", { recursive: true });
-await writeFile(`output/${ticker.toLowerCase()}-earnings-packet.json`, JSON.stringify(packet, null, 2));
-console.log(JSON.stringify({ ticker, output: `output/${ticker.toLowerCase()}-earnings-packet.json`,
-  annualFiling: packet.annualFiling, insiderRows: packet.insiderRows.length,
-  earningsPreviewRequestId: earnings.requestId }, null, 2));
+lines = [
+    f"# {bundle.get('symbol', ticker)} earnings preview",
+    f"As of: {bundle.get('asOf', 'not supplied')}",
+    f"Request ID: {bundle.get('requestId', 'not supplied')}",
+    "",
+    "## Summary",
+    bundle.get("summaryMd", "No summary returned."),
+    "",
+    "## Key drivers",
+]
+lines.extend(
+    f"- {label(item)}: {item.get('summary') or item.get('explanation') or 'No explanation returned.'}"
+    for item in bundle.get("keyDrivers", [])
+)
+lines.extend(["", "## Key risks"])
+lines.extend(
+    f"- {label(item)}: {item.get('summary') or item.get('explanation') or 'No explanation returned.'}"
+    for item in bundle.get("keyRisks", [])
+)
+Path("earnings-preview.md").write_text("\n".join(lines) + "\n")
 ```
 
-Run `node preview.mjs AAPL`. The expected result is a JSON packet with the untouched responses and an annual-filing pointer. The console deliberately reports only identifiers and counts; actual values depend on the issuer and when the job runs.
-
-## Source and provenance
-
-The packet preserves three different SEC-derived inputs: the earnings-preview response, the issuer's returned Form 10-K identity, and Form 4 transaction rows. Retain every response's `requestId`, `traceparent` when present, filing accession, filing URL, and generated timestamp. These fields let a reviewer reopen the source material instead of treating the packet as the source.
-
-## 3. Produce a human review brief
-
-Give an analyst or agent the JSON packet with this instruction:
-
-```text
-Summarize the returned earnings-preview fields and recent Form 4 rows for a review
-brief. Cite the annual filing accession and URL, preserve each request ID, and
-separate reported facts from interpretation. Do not create an earnings forecast,
-call a transaction bullish or bearish, or treat absent rows as no activity.
-```
-
-Read the linked filing and every material Form 4 before distributing commentary. Form 4 codes are SEC transaction codes, not investment sentiment labels.
+This adds `earnings-preview.md`. Keep the JSON bundle beside the rendered brief so a reviewer can inspect `trace`, provenance, freshness, or other supporting context returned with an item.
 
 ## Limits and failure modes
 
-- A `401` or `403` means the runtime did not receive a valid entitled key; do not write a partial packet as if it were complete.
-- The three calls have independent availability. If one fails, fail the job or label the packet incomplete rather than silently substituting empty data.
-- Follow `nextCursor` when `hasMore` is true if the insider history must be complete for the chosen window.
-- The latest 10-K may not be the filing most relevant to an imminent report; preserve the filing date and select any additional source deliberately.
+- A non-2xx response is a failed retrieval, not evidence that an issuer has no earnings context. Preserve the response body, `requestId`, and `traceparent` when available.
+- Do not fill an absent field with a third-party value and present it as SEC API output. Keep external data separately labeled and sourced.
+- Drivers and risks are research inputs, not forecasts or materiality determinations. Open the returned trace or source context before quoting one in an investment, compliance, or public-facing brief.
+- Save each run with its `asOf` value. A later run can return a different bundle as filings and supporting material change.
 
 ## Next step
 
-Schedule the job before a manually selected review deadline, retain packets by generated timestamp, and use [Analyze Insider Transactions](/tutorials/analyze-insider-trading) when the Form 4 portion needs a deeper source review.
+Add a review status and a source-link check before distributing the brief. For a broader issuer view, use the [company intelligence endpoint](/api-reference/intelligence/get-v1-intelligence-company) alongside the saved earnings bundle.

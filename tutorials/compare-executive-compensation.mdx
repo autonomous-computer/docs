@@ -1,13 +1,13 @@
 ---
-title: "Compare Executive Compensation"
-description: "Compare the two latest normalized DEF 14A compensation disclosures while keeping executive, period, and filing provenance visible."
+title: "Compare executive compensation"
+description: "Compare the latest two normalized DEF 14A compensation disclosures with executive, period, and filing provenance"
 ---
 
-Use this workflow to prepare a board-governance or pay-for-performance review. It compares reported compensation rows; it does not determine whether pay is appropriate, comparable across companies, or aligned with performance. The review artifact must retain both proxy periods and the filing provenance behind every material statement.
+Use this workflow to prepare a board-governance or pay-for-performance review. It compares reported compensation rows; it does not determine whether pay is appropriate, comparable across companies, or aligned with performance. Keep both proxy periods and filing provenance behind every material statement.
 
 ## Prerequisites
 
-- `SECAPI_API_KEY`, `curl`, and `jq`, or Node.js 18+.
+- An SEC API key, `curl`, and `jq`, or Node.js 18+.
 - A ticker or CIK. This example uses `AAPL`.
 
 ```bash
@@ -61,6 +61,10 @@ Run `node compare-compensation.mjs`. The expected output is a console table of r
 
 The normalized rows and comparison come from the two DEF 14A disclosures selected by the API. Keep each returned accession, filing date, source URL or provenance object, executive identity, and `requestId`. The proxy statement is the source for any explanation of a pay component or a changed named-executive roster.
 
+## Use the same job through MCP
+
+In a connected MCP client, use `tools.search` to locate the live executive-compensation capability and `tools.describe` before calling it. Ask the client to keep the typed comparison result, both filing periods, provenance, `requestId`, and `traceparent` with its written summary. Tool names and arguments can change, so the live MCP contract is the source of truth.
+
 ## Limits and failure modes
 
 - A comparison requires two available disclosures. Do not treat an unavailable comparison as no pay change.
@@ -68,7 +72,7 @@ The normalized rows and comparison come from the two DEF 14A disclosures selecte
 - A total-compensation delta can be driven by grant-date equity valuation and reporting-period changes; inspect the proxy table and compensation discussion.
 - Do not coerce null salary, bonus, or awards to zero when calculating a mix.
 
-## Production considerations
+## Prepare for repeated runs
 
 Key snapshots by filing accession and executive identity, retain all component fields and source provenance, and have governance specialists review material commentary. Apply peer comparisons only after explicitly defining period, peer group, role, and valuation treatment.
 

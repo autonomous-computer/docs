@@ -1,35 +1,36 @@
 ---
-title: "Build a filing risk-review queue"
-description: "Use semantic retrieval to collect cited 10-K passages for review without turning retrieval rank into an automated conclusion"
+title: "Build a filing risk-factor review agent"
+description: "Collect source-linked 10-K risk-factor passages for human review without treating a search result as a conclusion"
 ---
 
-This Python job collects candidate risk-disclosure passages for one issuer and writes a citation queue. It finds evidence by meaning. It does not prove a risk is new, material, complete, or legally significant; a reviewer must read the cited filing section in context.
+Use this job to collect candidate 10-K section passages for one issuer and write a reviewer queue. It searches filing sections and keeps each result tied to its filing. It does not prove a risk is new, material, complete, or legally significant; a reviewer must read the cited section in context.
 
 ## Set up a clean environment
 
-You need Python 3.9 or later, `requests`, and an API key.
+You need Python 3.9 or later, `requests`, and an SEC API key. This example searches NVIDIA 10-K filings.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install requests
 export SECAPI_API_KEY="your_api_key"
 ```
 
 ## Test a bounded question
 
-Use an API key and a question specific enough to inspect. This example asks about a potential supply-chain disclosure in NVIDIA's 10-K.
+Start with one issuer, one form, and one question you can inspect. This example asks about supply-chain disruption language in NVIDIA's 10-K filings.
 
 ```bash
 curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   --data-urlencode "q=supply chain disruption risk" \
   --data-urlencode "ticker=NVDA" \
   --data-urlencode "form=10-K" \
-  --data-urlencode "mode=hybrid" \
   --data-urlencode "limit=10" \
-  "https://api.secapi.ai/v1/search/semantic" \
-  | jq '{query, mode, sections, requestId, traceparent}'
+  "https://api.secapi.ai/v1/sections/search" \
+  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
 ```
 
-The response contains a ranked `sections.data` list. A row can include `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet`. Citation-span fields may be null when validation is degraded; keep the filing identity even in that case.
+The response contains `data`, `hasMore`, and `nextCursor`. A row can include `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet`. Citation-span fields can be null when validation is degraded; keep the filing identity even in that case.
 
 ## Write the review queue
 
@@ -46,9 +47,9 @@ ticker = (sys.argv[1] if len(sys.argv) > 1 else "NVDA").upper()
 query = sys.argv[2] if len(sys.argv) > 2 else "supply chain disruption risk"
 
 response = requests.get(
-    "https://api.secapi.ai/v1/search/semantic",
+    "https://api.secapi.ai/v1/sections/search",
     headers={"x-api-key": os.environ["SECAPI_API_KEY"]},
-    params={"q": query, "ticker": ticker, "form": "10-K", "mode": "hybrid", "limit": 10},
+    params={"q": query, "ticker": ticker, "form": "10-K", "limit": 10},
     timeout=30,
 )
 response.raise_for_status()
@@ -60,26 +61,30 @@ queue = [{
     "section_key": row.get("section_key"), "char_start": row.get("char_start"),
     "char_end": row.get("char_end"), "highlighted_snippet": row.get("highlighted_snippet"),
     "citation_degraded": row.get("_citation_degraded"),
-} for row in payload.get("sections", {}).get("data", [])]
+} for row in payload.get("data", [])]
 
-artifact = {"query": payload.get("query"), "mode": payload.get("mode"),
-            "ticker": ticker, "queue": queue, "requestId": payload.get("requestId"),
-            "traceparent": payload.get("traceparent")}
+artifact = {"query": query, "ticker": ticker, "queue": queue,
+            "hasMore": payload.get("hasMore"), "nextCursor": payload.get("nextCursor"),
+            "requestId": payload.get("requestId"), "traceparent": payload.get("traceparent")}
 Path("risk-review-queue.json").write_text(json.dumps(artifact, indent=2))
 print(json.dumps({"queueItems": len(queue), "requestId": artifact["requestId"]}, indent=2))
 ```
 
-Run `python risk_queue.py NVDA "supply chain disruption risk"`. The output is `risk-review-queue.json`, a list for a reviewer to inspect, not a change score.
+Run `python risk_queue.py NVDA "supply chain disruption risk"`. The output is `risk-review-queue.json`, a list for a reviewer to inspect, not a change score. When `hasMore` is true, run the next page with the returned `nextCursor` before calling the queue complete.
 
 ## Compare years without overstating retrieval
 
-When the question is historical, add a distinct `filing_year` value to each scoped query and save each artifact. Compare cited source passages from comparable forms. A different rank, snippet, or section arrangement does not prove management added, removed, or changed a risk.
+When the question is historical, add a distinct `filing_year` value to each scoped query and save each artifact. Compare cited source passages from comparable forms. A different search result, snippet, or section arrangement does not prove management added, removed, or changed a risk.
 
 ## Source limits and failures
 
-`q` is required; `keyword`, `semantic`, and `hybrid` are the supported modes; `limit` is 1 through 100. An empty result can mean the scope is too narrow or the language is not indexed as expected. It does not establish that no risk disclosure exists.
+Use `q` with one issuer identifier to start, then narrow with `form`, `filing_year`, fiscal-period fields, or a filing ID when needed. `nextCursor` is opaque: replay it unchanged while `hasMore` is true. An empty result can mean the scope is too narrow or the language is not indexed as expected; it does not establish that no risk disclosure exists.
 
-For every queue item, retain accession, source URL, section key, available span, query, mode, `requestId`, and `traceparent`. When `_citation_degraded` is set or citation fields are absent, open the full source using the filing identity rather than treating a truncated snippet as proof.
+For every queue item, retain accession, source URL, section key, available span, query, `requestId`, and `traceparent`. The request scopes to a 10-K but does not restrict results to Item 1A, so inspect `section_key` and the linked filing before classifying a passage as a risk factor. When `_citation_degraded` is set or citation fields are absent, open the full source using the filing identity rather than treating a truncated snippet as proof.
+
+## Use the same job through MCP
+
+In a connected MCP client, use `tools.search` to find the live filing-section capability and `tools.describe` before calling it. Ask the client to preserve the typed result, cursor, citation fields, `requestId`, and `traceparent`; do not use narrative text as a replacement for the returned record.
 
 ## Next action
 

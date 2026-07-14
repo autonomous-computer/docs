@@ -1,15 +1,17 @@
 ---
-title: "Build a 13F change tracker"
-description: "Compare a manager's two latest parsable Form 13F reports and write a report with the underlying reporting evidence"
+title: "Build a 13F change-tracker agent"
+description: "Compare a manager's latest two parsable Form 13F reports and save an evidence-linked change report"
 ---
 
-This small Python job compares the two 13F reports selected by SEC API for one reporting manager. Its output describes reported holdings changes between those filings. It does not establish a manager's current portfolio, trade dates, economic exposure, or investment intent.
+Use this Python job to compare the latest two parsable Form 13F reports for one reporting manager. Its output describes reported holdings changes between those filings. It does not establish a manager's current portfolio, trade dates, economic exposure, or investment intent.
 
 ## Set up the input
 
-You need Python 3.9 or later, `requests`, an API key, and a manager CIK. The example uses Berkshire Hathaway's manager CIK.
+You need Python 3.9 or later, `requests`, an SEC API key, and a manager CIK. The example uses Berkshire Hathaway's manager CIK.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install requests
 export SECAPI_API_KEY="your_api_key"
 ```
@@ -43,7 +45,7 @@ print(json.dumps({
 }, indent=2))
 ```
 
-Run `python tracker.py`. The expected artifact is `13f-comparison.json`: retain it even if a later step creates a reader-friendly report. It is the record that contains the returned rows and request context.
+Run `python tracker.py`. The expected artifact is `13f-comparison.json`: retain it even if a later step creates a reader-friendly report. It contains the returned rows and request context.
 
 ## Render a report without assigning intent
 
@@ -66,11 +68,12 @@ def write_report(comparison: dict) -> str:
     ]
     for status, rows in groups.items():
         lines.append(f"## {status.title()} positions")
-        lines.extend(
-            f"- {row.get('issuer')} ({row.get('cusip')}): "
-            f"{row.get('previousShares')} -> {row.get('currentShares')} shares"
-            for row in rows
-        )
+        for row in rows:
+            identifier = row.get("cusip") or "CUSIP unavailable"
+            lines.append(
+                f"- {row.get('issuer')} ({identifier}): "
+                f"{row.get('previousShares')} -> {row.get('currentShares')} shares"
+            )
         if not rows:
             lines.append("- None returned")
         lines.append("")
@@ -79,6 +82,8 @@ def write_report(comparison: dict) -> str:
 
 Path("13f-comparison.md").write_text(write_report(comparison))
 ```
+
+`cusip` is a licensed identifier and can be `null` when your account is not entitled to receive it. The report uses `CUSIP unavailable` rather than treating a missing identifier as a match failure. Preserve issuer, filing identity, and any returned class information when you need to distinguish similar positions.
 
 ## Source limits and failures
 
@@ -90,6 +95,10 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 ```
 
 Keep the manager CIK, both returned filing dates, provenance with the current and previous accession numbers when available, and `requestId`. `raise_for_status()` ensures an invalid CIK or service error does not become an empty report. Corporate actions, amendments, and reporting conventions can explain a row difference; inspect the linked filings before making a material characterization.
+
+## Use the same job through MCP
+
+In a connected MCP client, use `tools.search` to locate the live 13F comparison capability, then `tools.describe` before running it. Preserve the structured result, manager identity, both filing dates, provenance, `requestId`, and `traceparent`. The live tool contract is authoritative; do not hard-code a copied tool schema into an agent.
 
 ## Next action
 
