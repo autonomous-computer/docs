@@ -1,65 +1,53 @@
 ---
 title: "API keys, usage, and billing"
-description: "Authenticate a machine request, inspect usage and limits, and manage account actions in the dashboard"
+description: "Authenticate machine requests with x-api-key, inspect account-specific limits, and keep dashboard actions separate"
 ---
 
-Use an API key for REST, SDK, CLI, and server-to-server MCP requests. Create and rotate keys in the signed-in [SEC API dashboard](https://secapi.ai/app), store them in server-side environment variables, and send them in `x-api-key`.
+Use an API key for machine access to REST, SDK, CLI, and server-to-server MCP requests. Create, reveal, rotate, and revoke keys in the signed-in [SEC API dashboard](https://secapi.ai/app).
 
-## Use the right credential
-
-| Job | Credential | Where to do it |
-| --- | --- | --- |
-| Read SEC data from code, an SDK, the CLI, or a server-to-server MCP client | API key in `x-api-key` | Your server, worker, terminal, or MCP client |
-| Create, reveal, rotate, or revoke a key | Signed-in browser session | SEC API dashboard |
-| Change billing, payment methods, or budgets | Signed-in browser session with billing access | SEC API dashboard |
+## Send the credential correctly
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
 
-curl -sS \
+curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/limits"
 ```
 
-Do not put an API key in a browser bundle, URL, request body, source repository, log, or screenshot. An API key belongs in `x-api-key`; it is not an `Authorization: Bearer` token.
+The key belongs in `x-api-key`. Do not send it as `Authorization: Bearer`, add it to a URL or request body, put it in browser-delivered code, or commit it to source control. A browser session is for signed-in dashboard actions, not a substitute for an API key on a data request.
 
-## Verify access and limits
+## Use the credential that matches the job
 
-Complete the [first request](/getting-started) before increasing automated traffic. Then inspect the authenticated organization's limits and billing posture before you put a workflow into production:
+| Job | Credential and location |
+| --- | --- |
+| Read SEC data from code, an SDK, CLI, or server-to-server MCP client | API key in `x-api-key`, held by your server, worker, shell, or MCP client |
+| Create, reveal, rotate, or revoke an API key | Signed-in dashboard session |
+| Change billing, payment methods, or budgets | Signed-in dashboard session with the required access |
 
-These read-only endpoints expose plan, usage, and rate context for the authenticated organization:
+## Inspect the account that will run the workload
+
+After the first request succeeds, inspect the authenticated organization's current state with the same API key:
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/billing"
 
-curl -sS -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/billing/rates"
 ```
 
-Exact limits, rates, and entitlements depend on the authenticated organization and endpoint. Check the relevant response and [plans and pricing](/plans-and-pricing) before planning sustained traffic. Checkout, payment methods, credit purchases, budget changes, and key management require the signed-in dashboard.
+Expect organization-specific usage, plan, billing, or rate context where the endpoint exposes it. Limits, rates, and entitlements depend on the authenticated organization and endpoint. Use the response and [plans and pricing](/plans-and-pricing), rather than a copied example, to plan sustained traffic.
 
-## Read response usage metadata
+## Keep the response context that matters
 
-SEC API returns request and usage metadata. Record these values when a request affects a result your users rely on:
+For requests your users depend on, record `Request-Id` and `traceparent` when present. Also retain `SECAPI-Meter-Class`, `SECAPI-Estimated-Cost`, `SECAPI-Token-Count`, and `Retry-After` when supplied. They describe one response; they do not replace checking the account's current billing and limits.
 
-- `Request-Id` and `traceparent` for support and correlation
-- `SECAPI-Meter-Class` for the usage category
-- `SECAPI-Estimated-Cost` for per-call planning
-- `SECAPI-Token-Count` when the response includes token-count metadata
-- `Retry-After` when the service asks a client to wait
-
-Read [API conventions](/api-conventions) for response metadata and [Troubleshooting](/troubleshooting) for billing and quota errors.
-
-## Decide what to do next
-
-Read [API conventions](/api-conventions) for versioning, response metadata, pagination, and `429` handling. Use [plans and pricing](/plans-and-pricing) to compare the current self-serve and commercial options. Use a commercial agreement before redistributing, embedding, white-labeling, or reselling SEC API-derived output.
-
-## Rotate a key safely
+## Rotate without interrupting callers
 
 1. Create a replacement key in the dashboard.
-2. Update the server-side secret where your application runs.
+2. Update the server-side secret where the application runs.
 3. Verify the replacement with `GET /v1/limits`.
-4. Revoke the old key after callers have moved.
+4. Revoke the old key after callers are using the replacement.
 
-For a suspected leak, revoke the affected key first, then create and deploy the replacement.
+For a suspected leak, revoke the exposed key before creating and deploying its replacement. Continue with [API conventions](/api-conventions) for response behavior or [request diagnostics](/request-diagnostics) for a failed request.

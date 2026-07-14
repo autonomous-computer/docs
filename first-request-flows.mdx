@@ -1,53 +1,66 @@
 ---
 title: "First request flows"
-description: "Use REST, an SDK, the CLI, or MCP to produce one cited filing artifact"
+description: "Resolve an issuer, retrieve a current filing, and choose a REST, SDK, CLI, or MCP path"
 ---
 
-Each flow below has the same goal: retrieve one filing, then preserve its accession number, filing date, form, filing URL, and request ID with any conclusion drawn from it. The latest filing is time-dependent; validate the returned source identity rather than expecting a fixed accession number.
+Every first-success path should end with one filing you can identify later. Keep its accession number, form, filing date, filing URL, and request ID when returned. A latest-filing result is time-dependent, so verify the returned filing identity before using it as evidence.
 
-## REST
+## REST: the reference flow
 
-REST is the direct contract. Use it when your application owns request timeouts, retries, and response handling.
+Use REST when your application owns HTTP, retries, and response parsing.
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
-BASE_URL="https://api.secapi.ai"
 
-curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "$BASE_URL/v1/entities/resolve?ticker=AAPL&view=agent"
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 
-curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "$BASE_URL/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
-
-curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "$BASE_URL/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent"
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-The first call establishes issuer identity. The second is the cited filing artifact. The section call is evidence for a bounded question, not a replacement for the filing identity. See the [latest filing reference](/api-reference/filings/get-v1-filings-latest) and [section reference](/api-reference/filings/get-v1-filings-latest-sections-section-key).
+The first call establishes the issuer identity. The second returns the current latest matching filing. Continue with the [latest filing reference](/api-reference/filings/get-v1-filings-latest) when you need the exact parameters and response schema.
+
+To read one section from that current filing, use the documented section key:
+
+```bash
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent"
+```
+
+A section answers a narrower question; it does not replace the filing identity you retained from the preceding call.
 
 ## JavaScript SDK
 
-The SDK wraps the same public API for application code. It reads `SECAPI_API_KEY` by default.
+Install the SDK, then let it read `SECAPI_API_KEY` from the server-side environment.
+
+```bash
+npm install @secapi/sdk-js
+```
 
 ```ts
 import { SecApiClient } from "@secapi/sdk-js"
 
-const client = new SecApiClient()
-const entity = await client.resolveEntity({ ticker: "AAPL", view: "agent" })
-const filing = await client.latestFiling({ ticker: "AAPL", form: "10-K" })
-const section = await client.latestSection({
+const sec = new SecApiClient()
+const entity = await sec.resolveEntity({ ticker: "AAPL", view: "agent" })
+const filing = await sec.agentLatestFiling({ ticker: "AAPL", form: "10-K" })
+const section = await sec.agentSection({
   ticker: "AAPL",
   form: "10-K",
   sectionKey: "item_1a",
-  mode: "compact",
 })
+
+console.log({ entity, filing, section })
 ```
 
-Save the filing identity from `filing`, then connect a statement or section result to that source only when its returned provenance supports the connection. Installation and language-specific errors are covered in [Libraries and SDKs](/libraries-and-sdks).
+Expect the same live entity, filing, and section data exposed by the public API. Keep the filing identity from `filing`; inspect each returned object before assuming optional provenance or freshness fields are available. See [JavaScript SDK](/javascript-sdk) for a runnable error-handling example.
 
 ## CLI
 
-The CLI is a direct client for terminal use and scripts. It reads `SECAPI_API_KEY` from the environment.
+For a terminal workflow, install the CLI and use the same environment variable:
 
 ```bash
 npm install -g @secapi/cli
@@ -57,18 +70,18 @@ secapi filings latest --ticker AAPL --form 10-K
 secapi sections get --ticker AAPL --form 10-K --section item_1a --view agent
 ```
 
-Use `secapi <command> --help` to inspect accepted flags and output options in the installed version. See [CLI](/cli) for the command reference.
+The CLI prints JSON for the current response. Use `secapi <command> --help` for the command version you installed, and continue with the [CLI reference](/cli) for configuration and diagnostic commands.
 
 ## Hosted MCP
 
-MCP is for a client that can discover tools and decide which calls to make. Configure the hosted server, then instruct the client to discover the current schema rather than embedding tool names in an application contract.
+Install the hosted server in your MCP client, then let the client discover its current tool catalog rather than hard-coding tool names into an application contract.
 
 <Prompt>
-Use tools.search to find the issuer-resolution, latest-filing, and filing-section tools. Use tools.describe on each selected tool before calling it. Resolve AAPL, retrieve its latest 10-K, then retrieve Item 1A. Return the company name, accession number, form, filing date, filing URL, requestId, and a short Item 1A summary. Do not make a claim unless it is supported by the retrieved filing or section.
+Use tools.search to find issuer resolution, latest filing, and filing section tools. Use tools.describe on each selected tool before calling it. Resolve AAPL, retrieve its latest 10-K, then retrieve Item 1A. Return the company name, accession number, form, filing date, filing URL, requestId, and a short Item 1A summary. State when a field is absent instead of inferring it.
 </Prompt>
 
-MCP tool output can include structured content and presentation text. Treat the typed source record and its identifiers as the evidence; preserve any route-provided provenance, freshness, truncation, and trace information. Continue with [MCP workflows](/mcp-workflows).
+MCP output can include structured content and presentation text. Preserve the typed source record and identifiers; use any returned provenance, freshness, truncation, or trace information only in the context supplied by that tool. [Install MCP](/mcp-install) to configure the connection.
 
-## Handle failures deliberately
+## When the path does not work
 
-Do not fan out retries. Correct `400` validation errors from the endpoint or tool schema, repair credentials for `401` or `403`, and stop for `402` billing conditions. For `429`, wait for `Retry-After` when present and apply bounded backoff. Keep the API or MCP request identifier with the failed attempt.
+Correct `400` validation errors from the route or tool schema. Repair credentials for `401` or `403`, stop for a `402` billing condition, and honor `Retry-After` on `429` when it is present. Preserve the request ID with the failed attempt, then use [request diagnostics](/request-diagnostics).

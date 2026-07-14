@@ -1,25 +1,25 @@
 ---
 title: "Make your first SEC API request"
-description: "Authenticate a server-side request, retrieve a filing, and keep a citation-ready source record"
+description: "Send one authenticated issuer-resolution request and use its result as the start of a source-backed workflow"
 ---
 
-Your first integration should produce a filing artifact you can inspect and cite. Start with an API key in a server, worker, notebook, or terminal; do not put it in browser code.
+You need an API key and a shell. Keep the key in the process that makes the request; do not put it in browser code, a URL, or a repository.
 
-## Create an API key
+## Create a key and set it once
 
-Create an account at [secapi.ai/signup](https://secapi.ai/signup), create an API key in the signed-in [dashboard](https://secapi.ai/app), and expose it only to the calling process:
+Create an account at [secapi.ai/signup](https://secapi.ai/signup), create an API key in the signed-in [dashboard](https://secapi.ai/app), then set it for your shell:
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
 ```
 
 <Warning>
-Machine requests authenticate with `x-api-key`. Do not send an API key as `Authorization: Bearer`, put it in a URL, or commit it to a repository.
+SEC API machine requests use the `x-api-key` header. An API key is not an `Authorization: Bearer` token.
 </Warning>
 
 ## 1. Resolve the issuer
 
-Resolve the issuer before requesting a filing so the rest of the workflow carries a specific public-company identity.
+Resolve `AAPL` to the API's current entity record before requesting a filing. It is a small request with a response you can inspect before you add filing retrieval, pagination, or automation.
 
 ```bash
 curl --fail-with-body -sS \
@@ -43,9 +43,13 @@ curl --fail-with-body -sS \
 
 Carry the returned CIK, ticker, and company name forward. Do not infer a CIK from a ticker string or from an old filing URL.
 
-## 2. Retrieve a filing you can cite
+Expect a JSON entity-resolution response containing the matched entity identity and `requestId`. `view=agent` is a compact response shape with identifiers and match metadata; it does not promise every field from another response shape.
 
-Ask for one known issuer and form. This request returns the current latest matching filing, so the accession number can change after a new filing.
+If this returns `401 missing_api_key`, the request did not include `x-api-key`. If it returns `401 authentication_failed`, the supplied key was not accepted. Do not switch the key to a bearer header to fix either error.
+
+## 2. Turn success into a filing result
+
+Once entity resolution works, retrieve the issuer's latest 10-K. This request returns the current latest matching filing, so the accession number can change after a new filing.
 
 ```bash
 curl --fail-with-body -sS \
@@ -54,7 +58,7 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-Before summarizing or storing the result, retain these fields when the response provides them:
+Before summarizing or storing the result, preserve these fields when the response includes them:
 
 - `accessionNumber`
 - `form`
@@ -64,21 +68,15 @@ Before summarizing or storing the result, retain these fields when the response 
 
 Those fields are the minimum filing citation artifact: identify the source as `Apple Inc. 10-K, filed <filingDate>, accession <accessionNumber>, <filingUrl>`. Keep any returned `provenance`, `freshness`, `materialization`, warning, and trace fields alongside it; availability varies by route and response view.
 
-## Choose the next interface
+## Choose the next implementation step
 
-Once you have a citation-ready filing artifact, choose an interface based on where the work lives:
-
-| Interface | Use it when | Next step |
-| --- | --- | --- |
-| REST | You own HTTP, serialization, retries, and deployment. | [First request flows](/first-request-flows) |
-| SDK | Your application is JavaScript, Python, Go, or Rust. | [Libraries and SDKs](/libraries-and-sdks) |
-| CLI | You need a terminal check or shell automation. | [CLI](/cli) |
-| MCP | An MCP client should discover and call SEC API tools. | [Install MCP](/mcp-install) |
-
-## When a request fails
-
-`401 missing_api_key` means the process did not send an API key; `401 authentication_failed` means the key is not accepted. For `402`, stop and resolve the billing or entitlement condition in the response. For `429`, honor `Retry-After` when it is supplied and reduce concurrent work. Preserve the response's request identifier for support or audit work.
+| You are building | Go next |
+| --- | --- |
+| An HTTP integration | [First request flows](/first-request-flows) |
+| A JavaScript, Python, Go, or Rust app | [Libraries and SDKs](/libraries-and-sdks) |
+| A shell workflow | [CLI](/cli) |
+| An agent client | [Install MCP](/mcp-install) |
 
 If you need to separate authentication problems from API availability, check `https://api.secapi.ai/healthz` after the failed request and include both response identifiers in the support note.
 
-See [API conventions](/api-conventions) for request behavior and [Troubleshooting](/troubleshooting) for error-specific guidance.
+For response behavior, versions, and retries, read [API conventions](/api-conventions). For a failing request, capture its response and continue with [request diagnostics](/request-diagnostics).

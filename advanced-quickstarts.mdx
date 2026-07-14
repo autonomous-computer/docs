@@ -1,13 +1,13 @@
 ---
 title: "Advanced quickstarts"
-description: "Extend a working integration with bounded SEC API workflows and source-aware outputs"
+description: "Extend a working SEC API integration with small, source-aware research workflows"
 ---
 
-Start here after your first filing request works. Each example is a real API call, but the returned records depend on issuer disclosures and current data. Retain the response identifier and source fields before you compare or summarize results.
+Start here after [your first request](/getting-started) works. Each request is runnable with an API key, but its records depend on current filings and issuer disclosures. Inspect the returned source, period, and request metadata before comparing or summarizing results.
 
-## Compare 13F positions
+## Compare reported 13F positions
 
-Use a manager CIK to compare recent disclosed institutional positions:
+Use a manager CIK to compare disclosed institutional positions:
 
 ```bash
 curl --fail-with-body -sS -X POST \
@@ -17,25 +17,21 @@ curl --fail-with-body -sS -X POST \
   -d '{"cik":"0001067983","limit":25}'
 ```
 
-The comparison describes filed reports, not current ownership. Keep the reporting periods and filing references returned for each position.
+Expect a comparison of filed reports. This is disclosure history, not a live ownership ledger. Preserve the returned reporting periods and filing references for each result you use.
 
-## Compare executive compensation
+## Inspect disclosed executive compensation
 
-Use an issuer identifier to retrieve the comparison surface:
+Retrieve normalized executive-compensation records derived from the latest DEF 14A filing:
 
 ```bash
-curl --fail-with-body -sS -X POST \
-  -H "content-type: application/json" \
+curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/compensation/compare" \
-  -d '{"ticker":"NVDA","limit":10}'
+  "https://api.secapi.ai/v1/compensation?ticker=AAPL"
 ```
 
-Compare disclosed fiscal periods, not labels alone. Preserve the filing and period fields that establish what each value represents.
+Expect normalized records from the latest proxy disclosure. Preserve the filing context and fiscal period returned for each record. Compare those disclosed periods and components, not labels alone.
 
-## Search offerings activity
-
-This returns structured rows for a bounded form query:
+## Find offering-related filings
 
 ```bash
 curl --fail-with-body -sS \
@@ -43,11 +39,9 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/offerings?forms=S-1,424B4&limit=10"
 ```
 
-An offering-related form is not, by itself, a conclusion about transaction terms or completion. Follow the returned filing sources before making that claim.
+Expect structured rows matching the bounded form query. An offering-related form is not, by itself, evidence that a transaction completed or has particular terms; follow the returned filing source before making that conclusion.
 
-## Inspect billing before repeated work
-
-The public rate catalog and organization-specific state are different surfaces. Read your current billing and limits with the same API key that will make requests:
+## Check the account before repeated work
 
 ```bash
 curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
@@ -57,4 +51,6 @@ curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/limits"
 ```
 
-Before a repeated or potentially billable step, use [Agent billing](/agent-billing) to obtain a quote and define a stop condition. Account changes such as budgets, Checkout, and payment methods require a signed-in browser session, not an API key.
+These responses reflect the authenticated organization rather than a universal allowance. Before a repeated or potentially billable workflow, use [Agent billing](/agent-billing) to get a quote and define a stop condition. Account changes such as budgets, Checkout, and payment methods require the signed-in dashboard.
+
+For a failed request, use [request diagnostics](/request-diagnostics). For documented endpoint parameters and fields, use the [API reference](/api-reference).

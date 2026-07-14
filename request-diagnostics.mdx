@@ -1,9 +1,11 @@
 ---
 title: "Request diagnostics"
-description: "Capture a minimal, secret-free request record to diagnose SEC API REST, SDK, CLI, or MCP failures"
+description: "Capture a small, secret-free record for an SEC API REST, SDK, CLI, or MCP failure"
 ---
 
-Capture the response before retrying. A status code alone rarely distinguishes an invalid request, an account limit, a transient failure, and a partial data result.
+Capture the failing response before you retry it. A status code without its response context cannot reliably distinguish a malformed request, rejected credential, billing condition, rate limit, or transient service failure.
+
+## Make one inspectable request
 
 ```bash
 curl -i -sS \
@@ -11,46 +13,47 @@ curl -i -sS \
   "https://api.secapi.ai/v1/limits"
 ```
 
-The `-i` flag prints response headers. Retain the result privately; never include the API key in a ticket, log excerpt, or screenshot.
+`-i` includes response headers. Store the result privately and never include the API key in a ticket, log excerpt, or screenshot.
 
-## Capture this record
+## Capture this minimum record
 
-| Field | Why it matters |
+| Capture | Why |
 | --- | --- |
-| HTTP method and endpoint path | Identifies the route and operation |
-| UTC timestamp | Places the request in time without timezone ambiguity |
-| HTTP status and error `code` | Distinguishes request, authentication, billing, and availability failures |
-| Error `message`, `hint`, and `docsUrl` when returned | Preserves route-specific guidance |
-| `Request-Id` and `traceparent` when present | Correlates the request with SEC API diagnostics |
-| `Retry-After` and any quota or billing headers | Explains when and whether a retry is appropriate |
-| SDK, CLI, MCP client, or HTTP library version | Makes client-specific failures reproducible |
+| HTTP method and endpoint path | Identifies the operation without exposing secrets |
+| UTC timestamp, status, and error `code` | Places the failure and separates major failure classes |
+| Returned `message`, `hint`, and `docsUrl` | Preserves route-specific guidance when supplied |
+| `Request-Id` and `traceparent` | Correlates the request when present |
+| `Retry-After` and returned quota or billing headers | Explains whether and when a retry is appropriate |
+| SDK, CLI, MCP client, or HTTP-library version | Makes a client-specific failure reproducible |
 
-For a request body, retain a redacted version plus the names of relevant headers. Include the response view, pagination cursor, and query parameters when they affect the result.
+For a request body, preserve a redacted copy and the names of relevant headers. Include query parameters, response view, and pagination cursor when they influence the result.
 
-## Check the credential context
+## Classify before retrying
 
-Run these requests with the same API key that made the failing request:
+- `400` or another validation response: correct the request from the endpoint or tool schema.
+- `401` or `403`: verify the credential context. API data requests use `x-api-key`; a dashboard bearer session is not a replacement.
+- `402`: stop and resolve the billing or entitlement condition described by the response.
+- `429`: honor `Retry-After` when returned and reduce concurrency before retrying.
+- `5xx` or transport failure: retry only with bounded backoff and keep the captured request ID.
+
+Do not turn a billing, hard-cap, or validation failure into a tight retry loop.
+
+## Verify the same credential context
+
+Run these with the same key used by the failing workload:
 
 ```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/limits"
 
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/billing"
 ```
 
-For `402` and `429` responses, include the returned billing or quota context and the retry schedule your application used. Do not retry a billing, budget, or hard-cap response in a tight loop. For `429`, honor `Retry-After` when it is returned.
-
-## Correlate requests safely
-
-You can send `x-request-id` to associate an API call with your own job or log record. SEC API returns it as the request correlation ID. It is not a billing idempotency key; do not rely on it to deduplicate work or charges.
+For an MCP failure, include the client name and version, the server URL, the tool or method name, and the returned request identifier. For SDK and CLI failures, include their versions and the smallest redacted reproduction.
 
 ## Redact before sharing
 
-- Remove `x-api-key`, bearer tokens, cookies, and other credentials.
-- Remove customer data, private holdings, unreleased text, and proprietary prompts unless a narrowed reproduction requires them.
-- Keep endpoint paths, status codes, request IDs, error codes, and the smallest useful response excerpt.
+Remove `x-api-key`, bearer tokens, cookies, and other credentials. Remove customer data, private holdings, unreleased text, and proprietary prompts unless a narrowed reproduction needs them. Keep the endpoint path, status, request ID, error code, and the smallest useful response excerpt.
 
-Read next: [Troubleshooting](/troubleshooting), [Error code catalog](/error-code-catalog), and [API conventions](/api-conventions).
+Continue with [Troubleshooting](/troubleshooting), [Error code catalog](/error-code-catalog), or [API conventions](/api-conventions).
