@@ -261,6 +261,7 @@ Three things to know:
 - `canonicalName` is the name people actually say — curated for covered managers ("Oaktree Capital", "GMO"), derived by stripping legal suffixes otherwise. `name` keeps the form the letters and filings use.
 - The overview is deliberately small: `keyTheses` carries at most 5 headline theses (ticker, relationship, stance, one line each), and nothing on the payload inlines page markdown, anchors, or full thesis bodies. Follow `links.letters` and `links.theses` when you need depth.
 - `latestLetter` is `null` for a manager with no processed letters yet — the curated profile (description, founders, website) still serves.
+- When the Fund Directory is enabled, the overview also carries a `references` block — `{ website: { url, confidence }, wikipedia: { url }, grokipedia: { url, confidence } }` — the same proven-or-`null` external links served on the manager list (see the directory section below). Confidence is a verification tier, not a numeric score.
 
 ### Top-10 positions from the latest 13F
 
@@ -336,7 +337,7 @@ Each directory record adds these fields to the manager shape:
 
 Three rules the directory enforces:
 
-- **References are proven or absent.** `references` mirrors resolver-verified links only — a website, Wikipedia, or Grokipedia entry that was not confidently resolved serves `null`, never a guessed URL. `confidence` is the resolver's score; hand-curated entries carry `confidence: null`.
+- **References are proven or absent.** `references` mirrors resolver-verified links only — a website, Wikipedia, or Grokipedia entry that was not confidently resolved serves `null`, never a guessed URL. `confidence` is the resolver's verification tier — `verified_crawl` or `form_adv` for a website, `verified` or `probable` for Grokipedia — and is `null` for hand-curated entries.
 - **`latest13F` is a summary, not holdings.** It carries the latest report date (with its `YYYYQn` period), position count, and reported AUM. For the full position list, follow the existing 13F cross-link (`crossLinks.holdings13F`) — see the next section.
 - **Letterless managers are labeled.** The expanded universe includes 13F filers that publish no letters; they carry `publishesLetters: false` and zeroed coverage counts. Filter them in or out with `publishes_letters=true|false`.
 
