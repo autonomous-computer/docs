@@ -7,17 +7,19 @@ Use Zapier to send saved filing-monitor matches to an existing review workflow. 
 
 ## Prerequisites
 
-- A Zap with **Webhooks by Zapier: Catch Hook** and a copied HTTPS hook URL.
+- A Zap with **Webhooks by Zapier: Catch Hook** for trusted, forwarded events.
+- A public HTTPS receiver you control that can verify the raw webhook body before forwarding an accepted event to Zapier.
 - A signed-in SEC API organization administrator for the [Delivery dashboard](https://secapi.ai/app/webhooks).
-- A trusted server-side verification boundary for the SEC API signing secret. Keep `SECAPI_API_KEY` only in server-side tooling for the match lookup below.
+- The endpoint signing secret in the receiver's server-side secret store. Keep `SECAPI_API_KEY` only in server-side tooling for the match lookup below.
 
 ## 1. Connect the monitor
 
-1. Create the Catch Hook and copy its URL.
-2. In the Delivery dashboard, register the URL as an organization endpoint and subscribe it to `monitor.match`.
-3. Create a focused monitor with a keyword query, a form filter, and a small ticker list, then attach it to that endpoint.
+1. Create the Catch Hook and copy its URL for the receiver to use after it accepts an event.
+2. Build the small verification receiver described in [Build a filing monitor](/tutorials/build-filing-monitor). It must retain the raw request body, verify SEC API's HMAC signature, reject invalid events, and forward only accepted events to the Catch Hook URL.
+3. In the Delivery dashboard, create an organization endpoint with the verification receiver's HTTPS URL and subscribe it to `monitor.match`.
+4. In the same dashboard, create a focused monitor with a keyword query, a form filter, and a small ticker list, then attach it to that endpoint.
 
-Endpoint and monitor changes are human-authenticated dashboard actions. API keys cannot create, update, test, replay, rotate, or delete those resources. SEC API signs the exact body, so verify its HMAC before forwarding a trusted event to Zapier; [Build a filing monitor](/tutorials/build-filing-monitor) contains the receiver pattern.
+Endpoint and monitor changes are human-authenticated dashboard actions. API keys cannot create, update, test, replay, rotate, or delete those resources. Save the dashboard-issued signing secret in the receiver's secret store. SEC API must post to the receiver, not directly to Zapier; Zapier should receive only the receiver's accepted, normalized event.
 
 ## 2. Map a filing review task
 
@@ -43,7 +45,11 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
 
 This returns the current matches for the configured monitor. Retain the source URL and returned `requestId` with every Zapier record so a reviewer can open the cited filing and reproduce the route.
 
-## Failure modes
+## Source and provenance
+
+The verified event supplies delivery identity; the matched filing's `htmlUrl` is the research source. Retain the event id, event `requestId`, monitor name, ticker, form, filing date, and source URL with each Zapier record. Treat the dashboard `webhook.test` as a connectivity check rather than a filing source.
+
+## Limits and failure modes
 
 - A webhook URL alone is not an authenticated integration. Do not send a signing secret into Zapier fields or accept unsigned inbound bodies.
 - Repeated delivery is possible; enforce uniqueness on the event id in the receiving system.

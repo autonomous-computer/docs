@@ -10,6 +10,18 @@ This tutorial builds a small source-aware search over SEC enforcement releases. 
 - An API key in `SECAPI_API_KEY`
 - Node.js 18+ for the JavaScript example, or curl
 
+```bash
+export SECAPI_API_KEY="your_api_key"
+```
+
+To run the SDK examples, create a directory, install the SDK, and save the JavaScript blocks in steps 3 and 4 together as `search-enforcement.mjs`:
+
+```bash
+mkdir secapi-enforcement-search && cd secapi-enforcement-search
+npm init -y
+npm install @secapi/sdk-js
+```
+
 ## 1. Start with a bounded query
 
 ```bash
@@ -34,10 +46,13 @@ You can also pass `ticker` or `cik`, `penalty_min`, `penalty_max`, `date_from`, 
 
 ## 3. Keep the source with the result
 
-```ts
+```js
 import { SecApiClient } from "@secapi/sdk-js";
 
-const client = new SecApiClient({ apiKey: process.env.SECAPI_API_KEY! });
+const apiKey = process.env.SECAPI_API_KEY;
+if (!apiKey) throw new Error("SECAPI_API_KEY is required");
+
+const client = new SecApiClient({ apiKey });
 const result = await client.enforcementActions({
   violation_type: "insider_trading",
   date_from: "2025-01-01",
@@ -54,12 +69,12 @@ for (const action of result.data) {
 }
 ```
 
-When you save a match, retain `documentUrl` and `requestId`. Read the release before assigning a risk label, calculating a penalty total, or joining the record to an issuer.
+Run `node search-enforcement.mjs`. When you save a match, retain `documentUrl` and `requestId`. Read the release before assigning a risk label, calculating a penalty total, or joining the record to an issuer.
 
 ## 4. Page safely
 
-```ts
-let cursor: string | undefined;
+```js
+let cursor;
 
 do {
   const page = await client.enforcementActions({
@@ -77,7 +92,11 @@ do {
 } while (cursor);
 ```
 
-## What still requires judgment
+## Source and provenance
+
+Each row is a pointer to a published SEC litigation release, administrative proceeding, or Accounting and Auditing Enforcement Release. Store the source type, publication date, title, `documentUrl`, normalized retrieval fields, and `requestId`; the linked SEC release is the source for respondent identity, allegations, disposition, and amount.
+
+## Limits and failure modes
 
 - `violationType` is a retrieval label inferred from release language, not the SEC's final legal classification.
 - `penaltyAmount` can be null or can capture only the amount the release made machine-readable.

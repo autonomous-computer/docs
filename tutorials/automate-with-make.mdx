@@ -38,7 +38,11 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
 
 The response is a point-in-time match lookup for the configured monitor. Preserve the returned `requestId` and source URL with any Make-created record so a reviewer can trace the alert.
 
-## Failure modes
+## Source and provenance
+
+The trusted receiver should forward the accepted event id, request ID, monitor name, filing identity, and `htmlUrl` to Make. Keep those values on the destination record so the workflow can be deduplicated and the reviewer can reopen the matched SEC filing. A dashboard `webhook.test` is delivery evidence only.
+
+## Limits and failure modes
 
 - API-key attempts to create, edit, test, replay, rotate, or delete monitor/webhook configuration return `human_auth_required`; use the signed-in dashboard.
 - A scenario that consumes `data.matches[]` without an Iterator may produce one aggregate task rather than one filing task.

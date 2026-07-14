@@ -109,13 +109,13 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=8"
 ```
 
-## Make the result auditable
+## Source and provenance
 
-Keep the comparison's filing dates, `provenance`, and `requestId` in your JSON and markdown outputs. A row change can result from factors that a 13F row cannot explain, and Form 13F does not provide a complete exposure map. Open the source filing before describing a material change to another person.
+The comparison is derived from the reporting manager's two latest parsable Form 13F reports selected by the API. Keep the manager CIK, both report and filing dates, accession numbers or filing URLs returned in `provenance`, and `requestId` in the JSON and markdown outputs. Open the linked SEC report before describing a material change to another person.
 
-## Handle failures
+## Limits and failure modes
 
-The comparison request requires a CIK and accepts a limit from 1 through 50. `requests.raise_for_status()` surfaces invalid requests and service failures rather than writing an empty report. Log the response's request identifier when available, and retry only according to your application's failure policy.
+The comparison request requires a CIK and accepts a limit from 1 through 50. `requests.raise_for_status()` surfaces invalid requests and service failures rather than writing an empty report. A row change can result from corporate actions, amendments, or reporting conventions that a 13F row cannot explain; Form 13F is neither a complete exposure map nor a current portfolio. Log the response's request identifier when available, and retry only according to your application's failure policy.
 
 ## Continue
 

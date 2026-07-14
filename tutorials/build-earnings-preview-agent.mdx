@@ -83,6 +83,10 @@ console.log(JSON.stringify({ ticker, output: `output/${ticker.toLowerCase()}-ear
 
 Run `node preview.mjs AAPL`. The expected result is a JSON packet with the untouched responses and an annual-filing pointer. The console deliberately reports only identifiers and counts; actual values depend on the issuer and when the job runs.
 
+## Source and provenance
+
+The packet preserves three different SEC-derived inputs: the earnings-preview response, the issuer's returned Form 10-K identity, and Form 4 transaction rows. Retain every response's `requestId`, `traceparent` when present, filing accession, filing URL, and generated timestamp. These fields let a reviewer reopen the source material instead of treating the packet as the source.
+
 ## 3. Produce a human review brief
 
 Give an analyst or agent the JSON packet with this instruction:
@@ -96,7 +100,7 @@ call a transaction bullish or bearish, or treat absent rows as no activity.
 
 Read the linked filing and every material Form 4 before distributing commentary. Form 4 codes are SEC transaction codes, not investment sentiment labels.
 
-## Failure modes
+## Limits and failure modes
 
 - A `401` or `403` means the runtime did not receive a valid entitled key; do not write a partial packet as if it were complete.
 - The three calls have independent availability. If one fails, fail the job or label the packet incomplete rather than silently substituting empty data.

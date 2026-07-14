@@ -7,17 +7,18 @@ Use n8n when a filing-monitor match should begin a visible automation. SEC API s
 
 ## Prerequisites
 
-- An active n8n workflow with a production **Webhook** trigger and public HTTPS URL.
+- An active n8n workflow with a production **Webhook** trigger for trusted, forwarded events.
+- A public HTTPS receiver you control that can verify the raw webhook body before forwarding an accepted event to n8n.
 - A signed-in SEC API organization administrator for the [Delivery dashboard](https://secapi.ai/app/webhooks).
-- The endpoint signing secret in a server-side secret store and `SECAPI_API_KEY` for previewing matches.
+- The endpoint signing secret in the receiver's server-side secret store and `SECAPI_API_KEY` for previewing matches.
 
 ## 1. Configure the event source
 
-1. Copy the n8n production webhook URL.
-2. In the Delivery dashboard, create an organization endpoint for that URL and subscribe it to `monitor.match`.
-3. Create a narrow monitor in the same dashboard and attach the endpoint.
+1. Build the small verification receiver described in [Build a filing monitor](/tutorials/build-filing-monitor). It must retain the raw request body, verify SEC API's HMAC signature, reject invalid events, and forward only accepted events to the n8n production **Webhook** URL.
+2. In the Delivery dashboard, create an organization endpoint with the verification receiver's HTTPS URL and subscribe it to `monitor.match`.
+3. In the same dashboard, create a narrow monitor with a query, form filter, and ticker list, then connect it to that endpoint.
 
-Monitor and webhook configuration are human-authenticated organization actions. API keys cannot create or mutate them. Verify SEC API's raw-body signature before a workflow trusts the payload; use the receiver in [Build a filing monitor](/tutorials/build-filing-monitor) as the verification boundary when the n8n trigger cannot preserve and validate the exact raw body.
+Monitor and webhook configuration are human-authenticated organization actions. API keys cannot create or mutate them. Save the dashboard-issued signing secret in the receiver's secret store. SEC API must post to the receiver, not directly to n8n; n8n should receive only the receiver's accepted, normalized event.
 
 ## 2. Turn one event into filing items
 
@@ -52,7 +53,11 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
 
 Use the output to check the source URLs and expected volume. Keep `eventId` as a unique key downstream so retry delivery does not create duplicate review tasks.
 
-## Failure modes
+## Source and provenance
+
+The accepted `monitor.match` event identifies a delivery and its matched filing records. Keep the event `id`, `requestId`, monitor name, form, filing date, ticker, and `htmlUrl` in every n8n item. The linked filing is the source for a review decision; `webhook.test` is only a delivery diagnostic.
+
+## Limits and failure modes
 
 - An API key cannot configure webhook endpoints or monitors; the dashboard requires a WorkOS browser session.
 - Signing parsed JSON instead of the exact received body, using the wrong secret, or accepting a stale timestamp causes signature verification to fail.

@@ -38,6 +38,8 @@ The expected result identifies the two filing dates and emits one row per execut
 
 ## 3. Generate a reviewer-ready table
 
+Save this as `compare-compensation.mjs`:
+
 ```js
 const response = await fetch("https://api.secapi.ai/v1/compensation/compare", {
   method: "POST", headers: { "x-api-key": process.env.SECAPI_API_KEY ?? "", "content-type": "application/json" },
@@ -53,7 +55,13 @@ console.log(JSON.stringify({ currentFilingDate: comparison.currentFilingDate,
   requestId: comparison.requestId, traceparent: comparison.traceparent }, null, 2));
 ```
 
-## Common errors and false positives
+Run `node compare-compensation.mjs`. The expected output is a console table of returned comparison rows followed by the two filing dates, provenance, and request identifiers; amounts and row count vary by issuer and filing availability.
+
+## Source and provenance
+
+The normalized rows and comparison come from the two DEF 14A disclosures selected by the API. Keep each returned accession, filing date, source URL or provenance object, executive identity, and `requestId`. The proxy statement is the source for any explanation of a pay component or a changed named-executive roster.
+
+## Limits and failure modes
 
 - A comparison requires two available disclosures. Do not treat an unavailable comparison as no pay change.
 - `added` or `removed` often reflects a changed named-executive roster, not a compensation event.

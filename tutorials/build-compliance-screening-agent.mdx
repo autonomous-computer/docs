@@ -58,6 +58,10 @@ def receive():
 
 Run it with `pip install flask` and `SECAPI_WEBHOOK_SIGNING_SECRET=whsec_... flask --app receiver run`. Expose the receiver at the HTTPS destination configured in the dashboard. A valid `monitor.match` produces one printed source-linked record per returned match; a valid `webhook.test` is acknowledged as ignored.
 
+## Source and provenance
+
+`monitor.match` is a signed delivery envelope, not the filing itself. Preserve the event id, event `requestId`, monitor name, issuer identity, form, filing date, and `htmlUrl` with the downstream decision record. The linked SEC filing is the source a reviewer must read; the dashboard test event only proves the configured delivery path.
+
 ## Add evidence, then review
 
 For a configured monitor, use an API key to inspect current matches before or after delivery:
@@ -69,7 +73,7 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 Carry the issuer, form, filing date, source URL, monitor name, and SEC API request ID into every downstream record. An LLM can classify or summarize the filing, but the source filing and the human review decision should remain visible.
 
-## Failure modes
+## Limits and failure modes
 
 - `401 invalid_signature` usually means the HMAC used parsed JSON instead of the raw bytes, the secret is wrong, or the timestamp is stale.
 - The example only prints records. In production, write the event id to a durable unique store before enqueueing work so retry delivery cannot create duplicate screenings.

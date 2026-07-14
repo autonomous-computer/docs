@@ -75,7 +75,11 @@ Run `python risk_queue.py NVDA "supply chain disruption risk"`. The expected out
 
 Run the queue separately with `filing_year` when you need a controlled historical comparison. Add `"filing_year": 2024` to the `params` dictionary, store each response separately, and compare only the cited source passages from comparable filings. Do not infer a "new risk" merely because the retrieval rank, snippet, or section arrangement changed.
 
-## Failure modes
+## Source and provenance
+
+Semantic retrieval returns ranked candidate passages from the scoped SEC filing corpus. For every queue item, retain the accession, `source_url`, section key, character span when available, query and mode, plus `requestId` and `traceparent`. The linked filing section, not a snippet or rank, is the provenance for a reviewer conclusion.
+
+## Limits and failure modes
 
 - `q` is required; valid modes are `keyword`, `semantic`, and `hybrid`; `limit` must be between 1 and 100.
 - Empty results can mean the issuer/form/year scope is too narrow or the language is not indexed as expected. It does not establish no risk disclosure.
