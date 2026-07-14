@@ -1,24 +1,11 @@
 ---
 title: "SEC enforcement actions"
-description: "Search official SEC enforcement releases, proceedings, and AAERs with source-linked filters for research and screening workflows."
+description: "Find official SEC enforcement releases and preserve the source record for screening and diligence"
 ---
 
-Use the enforcement endpoint to find official SEC litigation releases, administrative proceedings, and Accounting and Auditing Enforcement Releases (AAERs), then carry the returned release URL into review.
+Screen official SEC litigation releases, administrative proceedings, and Accounting and Auditing Enforcement Releases (AAERs) to build a diligence or monitoring queue. The route answers a narrow question: which published actions match this issuer, respondent, conduct category, date range, or reported penalty range?
 
-## What you can do
-
-- Search release titles, excerpts, release numbers, and document URLs with `query`.
-- Restrict results to an official source family with `source_type`.
-- Filter by a normalized `violation_type`, respondent text, issuer ticker or CIK, publication date, or reported penalty range.
-- Page through a stable filter set with the returned `nextCursor`.
-
-## Endpoint
-
-| Method | Path | What it returns |
-| --- | --- | --- |
-| `GET` | [`/v1/events/enforcement`](/api-reference/platform/get-v1-events-enforcement) | A paginated list of official SEC enforcement actions and their source references. |
-
-## Example
+## Start with a bounded screening query
 
 ```bash
 curl -sS \
@@ -26,16 +13,26 @@ curl -sS \
   "https://api.secapi.ai/v1/events/enforcement?source_type=litigation_release&violation_type=fraud&date_from=2025-01-01&limit=25"
 ```
 
-`publishedAt` is the SEC source publication date. Preserve the release URL, trace reference, provenance, freshness metadata, and `requestId` when they are returned so a reviewer can return to the underlying action.
+The response is a paginated list of action records. Record the release number, release URL, publication date, source family, `requestId`, and any returned trace, provenance, or freshness fields with the review item. Read the release before drawing a conclusion about facts, respondents, remedies, or legal status.
 
-## Boundaries to keep in view
+## Route and inputs
 
-- `violation_type` is a normalized classifier. It is not a legal conclusion; `other` covers supported actions outside the named categories.
-- Extracted penalties are derived fields. A missing penalty is not a zero penalty.
-- Results are limited to the three documented SEC source families. A missing result is not evidence that the SEC has never acted against a person or issuer.
-- Continue pagination only with the exact `nextCursor` returned for unchanged filters.
+| Method | Path | Useful inputs | Output |
+| --- | --- | --- | --- |
+| `GET` | [`/v1/events/enforcement`](/api-reference/platform/get-v1-events-enforcement) | `query`, `source_type`, `violation_type`, respondent text, ticker, CIK, date range, penalty range, `limit`, `cursor` | Official-source action records and pagination metadata. |
 
-## Next steps
+Use `source_type` for one source family and issuer or respondent filters for a known subject. Reuse the returned cursor only while the complete filter set stays unchanged.
+
+## Coverage and evidence boundaries
+
+- Coverage is limited to the three documented SEC source families. No result is not evidence that the SEC has never acted against a person or issuer.
+- `publishedAt` is the publication date from the source record; it is not necessarily the date of the alleged conduct, order, settlement, or payment.
+- `violation_type` is a normalized classifier, not a legal conclusion. `other` can represent supported actions outside the named categories.
+- A reported penalty is extracted data. A missing value does not mean a zero-dollar penalty.
+
+## Next action
+
+Open the returned release, capture the source record with the action ID, and resolve ambiguous issuer or respondent names before linking the result to a filing or ownership workflow.
 
 - [Enforcement API reference](/api-reference/platform/get-v1-events-enforcement)
 - [Entity resolution](/products/entity)

@@ -1,34 +1,11 @@
 ---
 title: "Ownership disclosures"
-description: "Query SEC-derived 13F, 13D/13G, Forms 3/4/5, compensation, and board disclosures through focused REST endpoints."
+description: "Query SEC-derived institutional, insider, beneficial-ownership, compensation, and board disclosures"
 ---
 
-Use ownership endpoints to move from an issuer or manager identifier to the SEC disclosure family that supports a holdings, insider, beneficial-ownership, compensation, or board review.
+Start with the SEC disclosure family that supports the ownership question. Institutional 13F, beneficial ownership, Forms 3/4/5, compensation, and board routes stay distinct because each has a different reporting period, filer, and evidentiary limit.
 
-## What you can do
-
-- Retrieve the latest normalized 13F report for a manager CIK or a quarter-specific institutional ownership extract.
-- View institutional holdings by manager or holders by ticker, and compare the latest two 13F reports for a manager.
-- Search beneficial-ownership reports across the 13D and 13G form families.
-- Search normalized Forms 3, 4, and 5 records with issuer, owner, security-title, transaction-code, and date filters.
-- Retrieve compensation records derived from the latest DEF 14A and board records.
-
-## Endpoints
-
-| Method | Path | What it returns |
-| --- | --- | --- |
-| `GET` | [`/v1/owners/13f`](/api-reference/owners) | The latest normalized 13F report for a manager CIK. |
-| `GET` | [`/v1/owners/13f/filings`](/api-reference/owners) | Recent 13F filings and quarter-end report dates for a manager CIK. |
-| `GET` | [`/v1/owners/institutional/ticker`](/api-reference/owners) | A ticker-centric institutional holder graph. |
-| `GET` | [`/v1/owners/institutional/investor`](/api-reference/owners/get-v1-owners-institutional-investor) | A manager's ranked holdings and quarter-over-quarter changes. |
-| `GET` | [`/v1/owners/institutional/extract`](/api-reference/owners/get-v1-owners-institutional-extract) | A quarter-specific institutional ownership extract for a manager. |
-| `POST` | [`/v1/owners/13f/compare`](/api-reference/owners) | A comparison of the latest two 13F reports for a manager. |
-| `GET` | [`/v1/owners/13d-13g`](/api-reference/owners) | Beneficial-ownership reports in the 13D/13G families. |
-| `GET` | [`/v1/insiders`](/api-reference/insiders) | Normalized Forms 3, 4, and 5 records. |
-| `GET` | [`/v1/compensation`](/api-reference/compensation) | Compensation records derived from the latest DEF 14A. |
-| `GET` | [`/v1/board`](/api-reference/board) | Board records. |
-
-## Example
+## Screen reported insider transactions
 
 ```bash
 curl -sS \
@@ -36,16 +13,32 @@ curl -sS \
   "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&transaction_code=P&limit=25"
 ```
 
-Keep the form, filing date, filer or owner identity, accession, source URL, and response `requestId` with any downstream alert or report.
+Record the form, filing date, filer or owner identity, accession number, source URL, and `requestId` with a selected record. A normalized transaction identifies a disclosure to review; the filed form supplies its context.
 
-## Boundaries to keep in view
+## Choose the disclosure family
 
-- 13F reports are manager disclosures for their reporting period; they are not a real-time ownership ledger.
-- Insider records are derived from Forms 3, 4, and 5. Transaction interpretation requires the underlying filing and its context.
-- Beneficial ownership is limited to the 13D and 13G families, while compensation is derived from the latest DEF 14A.
-- A missing row is not proof of no position, transaction, beneficial owner, compensation arrangement, or board role.
+| Method | Path | Job | Output |
+| --- | --- | --- | --- |
+| `GET` | [`/v1/owners/13f`](/api-reference/owners) | Retrieve the latest normalized 13F report for a manager CIK. | One current normalized report. |
+| `GET` | [`/v1/owners/13f/filings`](/api-reference/owners) | Find a manager's recent 13F filing history. | Filing and report-date records. |
+| `GET` | [`/v1/owners/institutional/ticker`](/api-reference/owners) | Review institutional holders for a ticker. | A ticker-centric holder graph. |
+| `GET` | [`/v1/owners/institutional/investor`](/api-reference/owners/get-v1-owners-institutional-investor) | Review a manager's holdings and reported changes. | Ranked holdings and quarter-over-quarter changes. |
+| `GET` | [`/v1/owners/institutional/extract`](/api-reference/owners/get-v1-owners-institutional-extract) | Retrieve a quarter-specific manager extract. | Institutional ownership records. |
+| `POST` | [`/v1/owners/13f/compare`](/api-reference/owners) | Compare the latest two parsable 13F reports. | A manager-level comparison. |
+| `GET` | [`/v1/owners/13d-13g`](/api-reference/owners) | Find beneficial-ownership reports. | 13D and 13G family records. |
+| `GET` | [`/v1/insiders`](/api-reference/insiders) | Search Forms 3, 4, and 5. | Normalized insider records. |
+| `GET` | [`/v1/compensation`](/api-reference/compensation) | Review compensation disclosures. | Records derived from the latest DEF 14A. |
+| `GET` | [`/v1/board`](/api-reference/board) | Review board disclosures. | Board records. |
 
-## Next steps
+## Reporting-period and source limits
+
+13F reports describe a manager's reported period, not a real-time ownership ledger. Forms 3, 4, and 5 describe filed transactions and holdings; they do not establish motive or current exposure. Beneficial ownership is limited to the 13D and 13G families. Compensation records are derived from the latest DEF 14A.
+
+A missing row is not proof that no position, transaction, beneficial owner, compensation arrangement, or board role exists. Record report date, filing date, accession, source URL, units, and provenance so later comparisons do not collapse reporting periods into a current-state claim.
+
+## Next action
+
+Select the disclosure family, then retrieve the cited filing before presenting a holding, transaction, ownership percentage, award, or board role as a material fact.
 
 - [Ownership API reference](/api-reference/owners)
 - [Insiders API reference](/api-reference/insiders)

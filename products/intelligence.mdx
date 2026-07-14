@@ -1,32 +1,11 @@
 ---
 title: "Intelligence workflows"
-description: "Call company, security, portfolio, watchlist, and research workloads through SEC API intelligence endpoints."
+description: "Run defined company, security, portfolio, macro, and footnote research jobs with source-aware outputs"
 ---
 
-Intelligence endpoints return composed, traceable outputs for a defined research job, from a company or security briefing to a portfolio or filing-footnote investigation.
+Intelligence routes assemble a defined research job into one response or a queued result. Use them for a target or structured request that needs a company brief, security bundle, portfolio analysis, macro exposure, country report, or filing-footnote investigation with its source context intact.
 
-## What you can do
-
-- Request company and security bundles.
-- Submit portfolio, watchlist, country-report, macro-exposure, or footnote investigation requests with their documented JSON bodies.
-- Submit an intelligence query that returns a completed result immediately or a job that can be polled.
-- Preserve traces, source references, freshness metadata, and `requestId` from the response when they are present.
-
-## Endpoints
-
-| Method | Path | What it returns |
-| --- | --- | --- |
-| `GET` | [`/v1/intelligence/company`](/api-reference/intelligence) | Company context across supported data planes. |
-| `GET` | [`/v1/intelligence/security`](/api-reference/intelligence) | A security bundle with snapshot, catalysts, filings, and factor context. |
-| `POST` | [`/v1/intelligence/query`](/api-reference/intelligence) | A completed intelligence result or queued job. |
-| `GET` | [`/v1/intelligence/query/{jobId}`](/api-reference/intelligence) | A completed result or the current job state. |
-| `POST` | [`/v1/intelligence/portfolio`](/api-reference/intelligence) | Portfolio intelligence output. |
-| `POST` | [`/v1/intelligence/watchlist`](/api-reference/intelligence) | A watchlist briefing. |
-| `POST` | [`/v1/intelligence/country-report`](/api-reference/intelligence/post-v1-intelligence-country-report) | A country intelligence bundle with macro history and forward view. |
-| `POST` | [`/v1/intelligence/macro-exposure`](/api-reference/intelligence/post-v1-intelligence-macro-exposure) | Revenue-weighted macro sensitivities for a portfolio. |
-| `POST` | [`/v1/intelligence/footnotes/query`](/api-reference/intelligence) | A filing-footnote investigation result or collection. |
-
-## Example
+## Start with an issuer bundle
 
 ```bash
 curl -sS \
@@ -34,16 +13,31 @@ curl -sS \
   "https://api.secapi.ai/v1/intelligence/company?ticker=AAPL"
 ```
 
-For `POST /v1/intelligence/query`, a `200` is a completed result and a `202` is a queued job. Poll the returned job ID until the request reaches a final result.
+Company and security requests require a ticker or CIK. Record returned traces, source references, freshness metadata, warnings, and `requestId`; an omitted field can reflect available supporting data, not a negative conclusion.
 
-## Boundaries to keep in view
+## Routes by research job
 
-- A bundle is a composed research output, not a substitute for reviewing its supporting filings, traces, or source references.
-- A queued job can remain in progress, fail, or be absent. Handle `202`, `502`, and `404` explicitly rather than treating them as a completed answer.
-- Output coverage depends on the supporting data planes and request body. Do not infer an unavailable signal from an omitted field.
-- Use the endpoint-specific API reference for POST request-body fields; this page intentionally does not duplicate their schemas.
+| Method | Path | Job | Output |
+| --- | --- | --- | --- |
+| `GET` | [`/v1/intelligence/company`](/api-reference/intelligence) | Company context for a ticker or CIK. | A composed company response. |
+| `GET` | [`/v1/intelligence/security`](/api-reference/intelligence) | Security context and catalysts. | A security bundle. |
+| `POST` | [`/v1/intelligence/query`](/api-reference/intelligence) | Submit a documented intelligence request. | A completed result or queued job. |
+| `GET` | [`/v1/intelligence/query/{jobId}`](/api-reference/intelligence) | Poll a queued request. | Current job state or completed result. |
+| `POST` | [`/v1/intelligence/portfolio`](/api-reference/intelligence) | Analyze a documented portfolio body. | Portfolio intelligence output. |
+| `POST` | [`/v1/intelligence/watchlist`](/api-reference/intelligence) | Brief a documented watchlist body. | Watchlist output. |
+| `POST` | [`/v1/intelligence/country-report`](/api-reference/intelligence/post-v1-intelligence-country-report) | Build a country research bundle. | Country report output. |
+| `POST` | [`/v1/intelligence/macro-exposure`](/api-reference/intelligence/post-v1-intelligence-macro-exposure) | Calculate portfolio macro sensitivities. | Macro-exposure output. |
+| `POST` | [`/v1/intelligence/footnotes/query`](/api-reference/intelligence) | Investigate filing footnotes. | A result or collection. |
 
-## Next steps
+For POST routes, use the endpoint reference for the exact JSON body. `POST /v1/intelligence/query` returns `200` for a completed result and `202` for a queued job. Poll the returned job ID to a final state, and handle `202`, `404`, and `502` as distinct outcomes.
+
+## What the response can and cannot prove
+
+An intelligence bundle is a composed research output, not an independent source of record. Coverage and freshness depend on the supporting data planes and supplied body. Follow source references and filing identities for a decision-critical fact, and do not infer an unavailable signal from an omitted field or unfinished job.
+
+## Next action
+
+For a completed result, attach its trace and cited sources to the research record. For a queued result, poll the job endpoint and retain its final response rather than treating the acceptance response as analysis.
 
 - [Intelligence API reference](/api-reference/intelligence)
 - [Filing intelligence](/products/filing-intelligence)

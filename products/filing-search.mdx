@@ -1,28 +1,11 @@
 ---
 title: "SEC filing search"
-description: "Find SEC filing manifests by issuer, form, date, fiscal period, accession number, or indexed text before retrieval and extraction."
+description: "Find a reproducible SEC filing manifest and accession number before retrieval, extraction, or citation"
 ---
 
-Use filing search to identify the exact SEC filing your application will retrieve, extract, or cite. It is for applications that need a filterable manifest and an accession-number handoff, rather than a user manually navigating raw EDGAR or an ungrounded result from a general search tool. Save the accession number as the stable handoff between steps.
+Start filing search when the job is to identify the exact SEC filing behind a workflow. It returns a filterable filing manifest and a stable accession-number handoff; it does not interpret the filing or decide which disclosure is material.
 
-## What you can do
-
-- Find filing manifests by ticker, `symbol`, CIK, form, date range, fiscal period, calendar filing year, or issuer fiscal year.
-- Look up an accession number, search indexed filing-manifest text with `q`, and choose ascending or descending filing-date order.
-- Fetch a selected filing, or extract a named section from that accession.
-- Retrieve the latest filing or latest named section when historical accession selection is not required.
-
-## Endpoints
-
-| Method | Path | What it returns |
-| --- | --- | --- |
-| `GET` | [`/v1/filings`](/api-reference/filings) | A paginated filing-manifest list. |
-| `GET` | [`/v1/filings/{accession_number}`](/api-reference/filings) | One filing manifest. |
-| `GET` | [`/v1/filings/{accession_number}/sections/{section_key}`](/api-reference/filings) | A named section from that filing. |
-| `GET` | [`/v1/filings/latest`](/api-reference/filings/get-v1-filings-latest) | The latest filing matching an issuer and optional form. |
-| `GET` | [`/v1/filings/latest/sections/{section_key}`](/api-reference/filings/get-v1-filings-latest-sections-section-key) | A named section from the latest filing matching an issuer and form. |
-
-## Example
+## Build a filing manifest
 
 ```bash
 curl -sS \
@@ -30,21 +13,29 @@ curl -sS \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&sort=filing_date_desc&limit=5"
 ```
 
-The list response includes the filing identity needed for later calls, including `accessionNumber`, form, filing date, and SEC filing URL. Keep `requestId` and any provenance, freshness, or materialization fields returned with the record.
+Record the returned `accessionNumber`, form, filing date, filing URL, request parameters, `requestId`, and any provenance or freshness fields. The accession number is the handoff for filing-specific retrieval or section requests.
 
-## Choose the retrieval path
+## Routes and selection rules
 
-Use `/v1/filings` when the job starts with an issuer, date, form, or fiscal-period filter and needs a reproducible manifest. Use an accession-specific route when a workflow has already selected its source filing. Use a latest route only when the product genuinely wants the then-latest matching filing; do not substitute it for a historical accession. For language inside a filing, continue to [Filing content search](/products/search) and fetch the returned section before quoting it.
+| Method | Path | When to use it | Output |
+| --- | --- | --- | --- |
+| `GET` | [`/v1/filings`](/api-reference/filings) | Start with issuer, form, date, fiscal-period, accession, or indexed-manifest text filters. | A paginated filing manifest. |
+| `GET` | [`/v1/filings/{accession_number}`](/api-reference/filings) | A workflow already selected a filing. | One filing manifest. |
+| `GET` | [`/v1/filings/{accession_number}/sections/{section_key}`](/api-reference/filings) | Retrieve a named section from that selected filing. | Section content and filing context. |
+| `GET` | [`/v1/filings/latest`](/api-reference/filings/get-v1-filings-latest) | The workflow genuinely needs the current latest matching filing. | One latest filing. |
+| `GET` | [`/v1/filings/latest/sections/{section_key}`](/api-reference/filings/get-v1-filings-latest-sections-section-key) | Read a named section from the current latest matching filing. | One latest section. |
 
-## Boundaries to keep in view
+The list route accepts ticker or `symbol`, CIK, form, filing dates, fiscal period, filing year, issuer fiscal year, accession number, `q`, sort, `limit`, and `cursor`. `limit` is 1 through 50; the cursor is a zero-based offset. Do not reuse a cursor after changing the filters.
 
-- `ticker`, `symbol`, and CIK must not conflict. Resolve ambiguous input before filing-specific use.
-- `limit` is 1 through 50 and `cursor` is a zero-based offset. Do not reuse a cursor after changing filters.
-- Filing availability follows SEC source material. A missing result is a retrieval outcome, not proof that an issuer made no filing.
-- Use the source filing URL and accession number for a conclusion that needs source review; a manifest search result is not the filing text.
-- This surface identifies and retrieves filings; it does not rank legal materiality, interpret disclosures, or guarantee that a general search query has found every relevant filing.
+## Evidence and availability limits
 
-## Next steps
+Ticker, symbol, and CIK must not conflict. Resolve ambiguous issuer input first. Filing availability follows SEC source material, so a missing result is a retrieval outcome, not proof that an issuer made no filing. A manifest is not filing text: use the accession number and source URL for review, and retrieve the selected section before quoting it.
+
+Use a latest route only for a then-current workflow. For historical work, select a concrete accession. For language inside a filing, continue with [Filing content search](/products/search) and verify each returned section against its source.
+
+## Next action
+
+Choose an accession, retrieve the filing or section, and attach its source URL and period to the downstream record.
 
 - [Filings API reference](/api-reference/filings)
 - [Filing content search](/products/search)

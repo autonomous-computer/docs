@@ -1,55 +1,11 @@
 ---
 title: "Special situations"
-description: "Track SEC filing-derived M&A, tender offers, going-private, spin-off, activist, restructuring, and bankruptcy situations by lifecycle and timeline."
+description: "Follow filing-derived corporate events with current detail, filing timelines, calendars, and source-cited research exports"
 ---
 
-Special Situations is a paid, authenticated API for following filing-derived M&A, tender offers, going-private transactions, spin-offs, activist campaigns, restructurings, and bankruptcies. It keeps the current situation record, the filing trail behind it, and historical digest snapshots distinct so applications can choose the right evidence for the question at hand.
+Special Situations is the authenticated API for following filing-derived M&A, tender offers, going-private transactions, spin-offs, activist campaigns, restructurings, and bankruptcies. Use it to monitor the current record and its filing trail while keeping current situations, calendar events, and immutable weekly digest snapshots distinct.
 
-## Discover live and historical situations
-
-- List situations by type, subtype, status, ticker, sector, market-cap bucket, country, announcement date, or update time.
-- Filter with `forms` to expand a supported EDGAR form to the situation types it can open or advance, or query one form directly.
-- Read a reverse-chronological JSON feed or authenticated RSS feed of situation events.
-- Use the calendar for disclosed record dates, votes, expiries, and expected closes; use stats and performance for aggregate counts and closed-situation outcome cohorts.
-- List weekly digest issues or retrieve one by number or slug. Issues are immutable publication-time snapshots, not a substitute for current situation detail.
-- Request `enrich=false` for a minimal projection when scanning a wide result set.
-
-## Review source-backed detail
-
-Retrieve a situation for its current structured detail and filing timeline, or use the paginated filings route when the timeline is the only required object. The compact summary carries the latest timeline event with rendered Markdown and terms.
-
-For a source-cited research handoff, use the export route to produce a Markdown brief with filing links and accession numbers. The underwriting pack combines canonical detail, the filing timeline, and Copy-for-LLM Markdown in one deterministic, source-cited response. These are research aids: retain the cited filing identities and inspect the original SEC filing for a decision-critical fact.
-
-## API surface
-
-| Method | Path | What it returns |
-| --- | --- | --- |
-| `GET` | [`/v1/situations`](/api-reference/situations) | A filtered, paginated situation list. |
-| `GET` | [`/v1/situations/feed`](/api-reference/situations/get-v1-situations-feed) | A reverse-chronological event feed. |
-| `GET` | [`/v1/situations/feed.rss`](/api-reference/situations/get-v1-situations-feed-rss) | An authenticated RSS version of the paid event feed. |
-| `GET` | [`/v1/situations/issues`](/api-reference/situations/get-v1-situations-issues) | Immutable, numbered weekly digest issues. |
-| `GET` | [`/v1/situations/issues/{issue}`](/api-reference/situations/get-v1-situations-issues-issue) | One weekly digest issue by number or slug. |
-| `GET` | [`/v1/situations/calendar`](/api-reference/situations/get-v1-situations-calendar) | Upcoming disclosed situation dates. |
-| `GET` | [`/v1/situations/stats`](/api-reference/situations/get-v1-situations-stats) | Counts by type, status, sector, and market-cap bucket. |
-| `GET` | [`/v1/situations/performance`](/api-reference/situations/get-v1-situations-performance) | Closed-situation outcome cohorts. |
-| `GET` | [`/v1/situations/by-form/{form}`](/api-reference/situations/get-v1-situations-by-form-form) | Situations associated with an EDGAR form. |
-| `GET` | [`/v1/situations/{situation_id}`](/api-reference/situations/get-v1-situations-situation-id) | One situation with its filing timeline. |
-| `GET` | [`/v1/situations/{situation_id}/filings`](/api-reference/situations/get-v1-situations-situation-id-filings) | The paginated filing timeline for one situation. |
-| `GET` | [`/v1/situations/{situation_id}/summary`](/api-reference/situations/get-v1-situations-situation-id-summary) | A compact situation summary. |
-| `GET` | [`/v1/situations/{situation_id}/export`](/api-reference/situations/get-v1-situations-situation-id-export) | A source-cited Markdown brief. |
-| `GET` | [`/v1/situations/{situation_id}/underwriting-pack`](/api-reference/situations/get-v1-situations-situation-id-underwriting-pack) | A source-cited underwriting pack. |
-
-## Monitor a bounded set
-
-The hosted MCP tool `situations.watch` can create a durable situation monitor for exact situation IDs or filters such as type, status, ticker, sector, and subtype. It supports direct email or an explicitly acknowledged organization-level webhook endpoint or stream subscription subscribed to `monitor.match`. Configure and test that organization destination before creating a webhook-backed monitor; the monitor does not set a separate per-monitor destination. An exact watch includes filing provenance in its `monitor.match` events.
-
-The tool does not imply a separate public watchlist API or an alias for one. Use the documented situation IDs and filters, retain delivery IDs and filing provenance, and make webhook receivers idempotent.
-
-## Authentication and billing
-
-Send an organization API key in the `x-api-key` header. Access is subject to the organization's plan, credits, and applicable request or delivery meter. Check [`/v1/limits`](/auth-and-pricing) and [`/v1/billing/rates`](/auth-and-pricing) before a batch or agent loop, and record returned billing and correlation headers instead of embedding pricing or limits in an integration. `401`, `402`, and `403` require credential, billing, or entitlement resolution; `429` should be retried only with bounded backoff.
-
-## Example
+## Find a current event and its filing trail
 
 ```bash
 curl -sS \
@@ -57,20 +13,35 @@ curl -sS \
   "https://api.secapi.ai/v1/situations?types=merger&statuses=pending&limit=25"
 ```
 
-Follow a returned situation ID with its timeline, export, or underwriting endpoint as appropriate. Retain the filing identities and source references from the response, and use the original filing when a fact will support a decision.
+Narrow list results by type, subtype, status, ticker, sector, market-cap bucket, country, announcement date, update time, and supported EDGAR forms. Use the returned situation ID to fetch current detail, its paginated filing timeline, a compact summary, a Markdown export, or an underwriting pack. Record filing identities, source references, update metadata, and `requestId` for a decision-critical record.
 
-## Boundaries to keep in view
+## Routes for discovery, monitoring, and evidence
 
-- The authenticated API is separate from public embed routes. The paid RSS feed is also distinct from the capped anonymous embed RSS surface.
-- Situations are filing-derived. They do not confirm that a transaction will close or that a disclosed date, term, or status remains current.
-- `enrich=false` changes the returned projection, not the billed request class. It is useful for payload size, not quota savings.
-- `limit` is 1 through 100. Keep filters unchanged while advancing the returned cursor; a missing situation or timeline is not proof that no related event exists.
-- The public Special Situations product is limited to SEC filing-derived data. It does not include broader market, fundamentals, estimates, valuation, or symbol-coverage datasets.
+| Method | Path | Job | Output |
+| --- | --- | --- | --- |
+| `GET` | [`/v1/situations`](/api-reference/situations) | Find current situations with filters and pagination. | A filtered situation list. |
+| `GET` | [`/v1/situations/feed`](/api-reference/situations/get-v1-situations-feed) | Read reverse-chronological situation events. | JSON event feed. |
+| `GET` | [`/v1/situations/feed.rss`](/api-reference/situations/get-v1-situations-feed-rss) | Consume the authenticated paid event feed. | RSS feed. |
+| `GET` | [`/v1/situations/calendar`](/api-reference/situations/get-v1-situations-calendar) | Check disclosed record dates, votes, expiries, and expected closes. | Calendar records. |
+| `GET` | [`/v1/situations/issues`](/api-reference/situations/get-v1-situations-issues) | Browse weekly digest snapshots. | Immutable numbered issues. |
+| `GET` | [`/v1/situations/{situation_id}`](/api-reference/situations/get-v1-situations-situation-id) | Inspect one current situation and filing timeline. | Current detail. |
+| `GET` | [`/v1/situations/{situation_id}/filings`](/api-reference/situations/get-v1-situations-situation-id-filings) | Page only the filing timeline. | Filing timeline records. |
+| `GET` | [`/v1/situations/{situation_id}/export`](/api-reference/situations/get-v1-situations-situation-id-export) | Prepare a source-cited Markdown handoff. | Markdown brief. |
+| `GET` | [`/v1/situations/{situation_id}/underwriting-pack`](/api-reference/situations/get-v1-situations-situation-id-underwriting-pack) | Assemble detail, timeline, and copyable source context. | Underwriting pack. |
 
-## Next steps
+Use `enrich=false` to request a smaller list projection when scanning a wide set. It changes the returned projection, not the billed request class. `limit` is 1 through 100; advance pagination only with the returned cursor and unchanged filters.
+
+## Freshness, coverage, and decision boundaries
+
+Situations are filing-derived. They do not confirm that a transaction will close or that a disclosed date, term, or status remains current. Digest issues are immutable publication-time snapshots, while current situation detail can change as new filings arrive. Calendar and performance responses answer different questions and should remain separate from current detail in a research record.
+
+The authenticated API is distinct from public embed routes, and the paid RSS feed is distinct from a capped anonymous embed RSS surface. Coverage is limited to SEC filing-derived situations; it does not include broader market, fundamentals, estimates, valuation, or symbol-coverage datasets. A missing situation or timeline is not proof that no related event exists.
+
+## Next action
+
+Fetch the selected situation's filing timeline and inspect the original SEC filing for each term or date used in a decision. Use the source-cited export to hand the record to an analyst or agent.
 
 - [Special situations API reference](/api-reference/situations)
 - [Special Situations workflows](/special-situations-workflows)
-- [Authentication, billing, and first utility](/auth-and-pricing)
 - [SEC filing search](/products/filing-search)
 - [Ownership disclosures](/products/ownership)

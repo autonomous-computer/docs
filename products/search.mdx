@@ -1,27 +1,11 @@
 ---
 title: "Filing content search"
-description: "Search SEC filing manifests and section text with full-text or semantic retrieval, then verify each result against its cited source."
+description: "Search filing text and sections, then verify each result against the cited filing source"
 ---
 
-Use content search when you need language inside a filing or section. It narrows the corpus; the filing accession and cited section remain the source you should retrieve before quoting or deciding.
+Search filing content when the question is about language inside a filing. It narrows a corpus to candidate passages; the returned accession number and section are an evidence handoff, not a substitute for reading the source.
 
-## What you can do
-
-- Run full-text search across filing manifests and section content with a required `q` query.
-- Scope retrieval by ticker, CIK, form, accession number, filing date, fiscal year, or filing year.
-- Run semantic search in `keyword`, `semantic`, or `hybrid` mode; hybrid is the default.
-- Use returned accession, section key, source URL, and available character spans to retrieve the cited section.
-
-## Endpoints
-
-| Method | Path | What it returns |
-| --- | --- | --- |
-| `GET` | [`/v1/search/fulltext`](/api-reference/search/get-v1-search-fulltext) | Filing and section matches for a text query. |
-| `GET` | [`/v1/search/semantic`](/api-reference/search/get-v1-search-semantic) | Section matches with citation fields for semantic retrieval. |
-| `GET` | [`/v1/sections/search`](/api-reference/filings) | Filing-section and snippet matches with filing-scoped filters. |
-| `GET` | [`/v1/filings/{accession_number}/sections/{section_key}`](/api-reference/filings) | The source section to inspect or cite. |
-
-## Example
+## Search semantically, then fetch the section
 
 ```bash
 curl -sS \
@@ -29,16 +13,28 @@ curl -sS \
   "https://api.secapi.ai/v1/search/semantic?q=supply%20chain%20risk&ticker=AAPL&form=10-K&mode=hybrid&limit=10"
 ```
 
-Semantic rows can include `accession`, `section_key`, `source_url`, `char_start`, `char_end`, and `highlighted_snippet`. Preserve those identifiers and `requestId`, then fetch the selected section before presenting text as a quote.
+Semantic results can include `accession`, `section_key`, `source_url`, `char_start`, `char_end`, and `highlighted_snippet`. Record those fields with `requestId`, then fetch the selected section before quoting or summarizing its language.
 
-## Boundaries to keep in view
+## Retrieval routes
 
-- `q` is required on both routes. Invalid semantic modes are request errors.
-- Citation spans and highlighted snippets can be unavailable. Check `_citation_degraded` when it is present and retain the accession and section identity.
-- Full-text search requires its configured search backend; semantic search also requires vector-search dependencies. An unavailable backend can return `503` rather than an invented match.
-- Search ranking is retrieval assistance, not a statement that the result is complete, material, or legally dispositive.
+| Method | Path | Useful inputs | Output |
+| --- | --- | --- | --- |
+| `GET` | [`/v1/search/fulltext`](/api-reference/search/get-v1-search-fulltext) | Required `q`; issuer, form, accession, date, and fiscal filters. | Filing and section matches for a text query. |
+| `GET` | [`/v1/search/semantic`](/api-reference/search/get-v1-search-semantic) | Required `q`; `mode=keyword`, `semantic`, or `hybrid`; issuer and filing filters. | Section matches with citation fields. |
+| `GET` | [`/v1/sections/search`](/api-reference/filings) | Filing-scoped filters and query inputs. | Section and snippet matches. |
+| `GET` | [`/v1/filings/{accession_number}/sections/{section_key}`](/api-reference/filings) | Selected accession and section key. | The source section to inspect or cite. |
 
-## Next steps
+`hybrid` is the default semantic mode. Scope a query with ticker, CIK, form, accession number, filing date, fiscal year, or filing year when the research needs a bounded corpus.
+
+## Citation quality and availability
+
+Citation spans and highlighted snippets can be unavailable. When `_citation_degraded` is present, keep the accession and section identity and retrieve the source rather than relying on the excerpt. Full-text search requires its configured search capability; semantic search also depends on vector search. An unavailable dependency can return `503`, not an invented match.
+
+Ranking helps retrieval. It does not prove a result is complete, material, legally dispositive, or the best interpretation of a disclosure.
+
+## Next action
+
+Retrieve the selected section, retain its filing URL and period, and compare the original wording before presenting it as evidence.
 
 - [Full-text search API reference](/api-reference/search/get-v1-search-fulltext)
 - [Semantic search API reference](/api-reference/search/get-v1-search-semantic)

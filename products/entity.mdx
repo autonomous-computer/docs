@@ -1,35 +1,11 @@
 ---
 title: "Entity resolution"
-description: "Resolve a ticker, CIK, FIGI-family identifier, ISIN, CUSIP, or name before making issuer-specific SEC API requests."
+description: "Resolve issuer and market identifiers to a canonical entity before issuer-specific SEC API requests"
 ---
 
-Resolve an issuer, manager, fund, or insider identifier to a canonical entity record before you join it to filings, ownership, or market-facing workflows.
+Resolve a ticker, name, or market identifier before an issuer-specific call when it could be ambiguous. The result supplies a canonical entity and match metadata for the filing, ownership, or enforcement request that follows.
 
-## What you can do
-
-- Resolve `ticker` or its `symbol` alias, CIK, FIGI, composite FIGI, share-class FIGI, ISIN, CUSIP, or a name query.
-- Request `view=agent` for primary identifiers and match metadata, or `view=compact` for core identity fields.
-- Search canonical entities by identifier, ticker, CIK, or name with `q` and optionally narrow by `entity_type`.
-- Search the EDGAR entity records separately when that is the dataset your application needs.
-
-## CUSIP / ISIN are licensed
-
-CUSIP (licensed by CUSIP Global Services / the ABA) and ISIN are only returned to
-accounts that hold a CUSIP/ISIN license; otherwise these fields are `null` in
-every response. Resolving *by* CUSIP or ISIN also requires the license — an
-un-licensed request returns `licensed_identifier_required`. Every other
-identifier (ticker, CIK, FIGI) resolves normally without a license. To license
-CUSIP/ISIN, contact [secapi.ai/contact](https://secapi.ai/contact).
-
-## Endpoints
-
-| Method | Path | What it returns |
-| --- | --- | --- |
-| `GET` | [`/v1/entities/resolve`](/api-reference/entities/get-v1-entities-resolve) | One resolved entity with match information. |
-| `GET` | [`/v1/entities`](/api-reference/entities) | A paginated canonical entity search. |
-| `GET` | [`/v1/entities/edgar`](/api-reference/entities) | A paginated EDGAR entity search. |
-
-## Example
+## Resolve first, then carry the CIK
 
 ```bash
 curl -sS \
@@ -37,17 +13,28 @@ curl -sS \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
 
-The agent view includes `primaryIdentifiers`, `matchConfidence`, and `matchBasis`. Store the returned CIK with a downstream filing query when exact issuer identity matters.
+For a high-confidence result, record the returned CIK with the match basis, match confidence, primary identifiers, `requestId`, and retrieval time. Use the CIK in later filing queries when the work must survive ticker changes or similarly named entities.
 
-## Boundaries to keep in view
+## Routes and inputs
 
-- At least one supported identifier is required. An empty request is a request error, not an entity search.
-- A name, ticker, or identifier match is resolution metadata, not proof of a legal or economic relationship.
-- Tickers can be ambiguous or change over time. Use CIK or an accession number for filing-specific work.
-- Entity searches use offset cursors. Keep the same query and filters while paging.
+| Method | Path | Useful inputs | Output |
+| --- | --- | --- | --- |
+| `GET` | [`/v1/entities/resolve`](/api-reference/entities/get-v1-entities-resolve) | `ticker` or `symbol`, CIK, FIGI variants, name, ISIN, CUSIP, `view` | One resolved entity and match metadata. |
+| `GET` | [`/v1/entities`](/api-reference/entities) | `q`, `entity_type`, `limit`, `cursor` | A paginated canonical entity search. |
+| `GET` | [`/v1/entities/edgar`](/api-reference/entities) | `q`, `limit`, `cursor` | A paginated search of EDGAR entity records. |
 
-## Next steps
+`view=agent` is useful when an integration needs identifiers and matching context. `view=compact` keeps the response focused on core identity fields. An empty resolve request is invalid; use an entity-search route when the task begins with a broad name search.
+
+## Licensed identifiers and match limits
+
+CUSIP and ISIN are returned only to accounts licensed for those identifiers. For accounts without that entitlement, those fields are `null`, and resolving by CUSIP or ISIN returns `licensed_identifier_required`. Ticker, CIK, and FIGI-family identifiers remain available without that license.
+
+A match is identity metadata, not proof of a legal relationship, beneficial owner, corporate parent, or security equivalence. Tickers can be reused or changed. Keep the query and filters unchanged while paging an entity list, then inspect the returned entity type and identifiers before joining records.
+
+## Next action
+
+Carry the resolved CIK into a reproducible filing manifest, or retain the canonical identifier before querying holders, insiders, or enforcement actions.
 
 - [Entities API reference](/api-reference/entities)
 - [SEC filing search](/products/filing-search)
-- [API conventions](/api-conventions)
+- [Ownership disclosures](/products/ownership)

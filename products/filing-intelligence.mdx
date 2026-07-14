@@ -1,28 +1,11 @@
 ---
 title: "Filing intelligence"
-description: "Use filing events, diffs, transcripts, and guidance as source-linked signals for an SEC filing review workflow."
+description: "Use derived filing events, comparisons, transcripts, and guidance to prioritize source-document review"
 ---
 
-Filing intelligence provides derived views over SEC filing material to help developers find and prioritize the source filing that deserves review.
+Start here to prioritize a filing for review. These outputs are derived from filing material: useful for comparing disclosure, finding an event, or assembling a coverage check, but not a replacement for the filing or transcript supporting a material statement.
 
-## What you can do
-
-- Compare two filings of the same form, with automatic latest-versus-prior pairing when no selectors are supplied.
-- Query persisted filing events, earnings transcripts, and structured guidance rows by ticker, CIK, date, and documented filters.
-- Obtain a single-issuer coverage report across the persisted filing-intelligence stores when that plane is enabled.
-- Carry each row's filing identity and source URL into a source-document retrieval step.
-
-## Endpoints
-
-| Method | Path | What it returns |
-| --- | --- | --- |
-| `GET` | [`/v1/filings/diff`](/api-reference/filings/get-v1-filings-diff) | A section-level comparison for one issuer and form. |
-| `GET` | [`/v1/filings/events`](/api-reference/filings) | Persisted filing-event rows. |
-| `GET` | [`/v1/filings/transcripts`](/api-reference/filings) | Transcript rows derived from qualifying earnings materials. |
-| `GET` | [`/v1/filings/guidance`](/api-reference/filings) | Structured guidance rows derived from earnings materials and transcripts. |
-| `GET` | [`/v1/intelligence/coverage`](/api-reference/intelligence) | An issuer coverage rollup. |
-
-## Example
+## Compare a defined filing pair
 
 ```bash
 curl -sS \
@@ -30,17 +13,28 @@ curl -sS \
   "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K&sections=item_1a_risk_factors,item_7_mdna"
 ```
 
-`ticker` and `form` are required for a diff. Without `from` and `to`, the API pairs the latest filing with the prior filing of that form. Supply accession numbers or ISO dates when the comparison pair must be explicit.
+`ticker` and `form` are required. When `from` and `to` are omitted, the route compares the latest filing with the prior filing of that form. Supply accession numbers or ISO dates for an explicit pair, and record both filing identities, section keys, source URLs, provenance, and `requestId` with the result.
 
-## Boundaries to keep in view
+## Routes for derived review signals
 
-- Events, transcript rows, guidance rows, and diffs are derived output. They direct attention; they do not establish legal, accounting, or investment conclusions.
-- Transcript coverage is limited to qualifying earnings materials. No transcript or guidance row is not evidence that no call or guidance existed.
-- A diff describes only its selected pair, not every disclosure change by an issuer.
-- These routes can return `404` when the filing-intelligence plane is not enabled. Treat that as availability, not an empty result.
+| Method | Path | Job | Output |
+| --- | --- | --- | --- |
+| `GET` | [`/v1/filings/diff`](/api-reference/filings/get-v1-filings-diff) | Compare sections for one issuer and form. | A section-level filing comparison. |
+| `GET` | [`/v1/filings/events`](/api-reference/filings) | Find persisted filing-event rows. | Filterable derived event records. |
+| `GET` | [`/v1/filings/transcripts`](/api-reference/filings) | Locate qualifying earnings-material transcripts. | Transcript rows with filing identity. |
+| `GET` | [`/v1/filings/guidance`](/api-reference/filings) | Review structured guidance from qualifying earnings material. | Guidance rows with source context. |
+| `GET` | [`/v1/intelligence/coverage`](/api-reference/intelligence) | Check an issuer's persisted filing-intelligence coverage. | An issuer coverage rollup. |
 
-## Next steps
+## Coverage, freshness, and source handling
+
+Events, transcript rows, guidance rows, and diffs point to evidence; they do not establish legal, accounting, or investment conclusions. Transcript and guidance coverage is limited to qualifying earnings materials, so an absent row does not establish that a call or guidance statement did not exist. A diff describes only the selected pair and sections.
+
+These routes can return `404` when the filing-intelligence plane is unavailable. Treat that as availability, not an empty result. Preserve any returned freshness or materialization fields, then retrieve the cited filing before quoting a passage or presenting a conclusion.
+
+## Next action
+
+Fetch the named filing or section for each selected signal and read the source text in its filing-period context.
 
 - [Filings API reference](/api-reference/filings)
 - [SEC filing search](/products/filing-search)
-- [Filing types and exhibits](/filing-types-and-exhibits)
+- [Filing content search](/products/search)
