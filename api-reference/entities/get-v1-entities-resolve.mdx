@@ -1,12 +1,12 @@
 ---
 title: "GET /v1/entities/resolve"
-description: "Resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata"
+description: "Resolve one issuer, manager, insider, or fund from a market or SEC identifier, returning the canonical entity and match confidence"
 ---
 
-Resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata
+Resolve one issuer, manager, insider, or fund from a market or SEC identifier, returning the canonical entity and match confidence
 
 <Info>
-Audience: application and coding agent.
+Audience: engineers and agents normalizing an issuer, fund, manager, or insider before another SEC API call.
 </Info>
 
 ## Agent mode
@@ -15,20 +15,20 @@ Pass `?view=agent` to receive the compact agent shape: entity identifiers (id, t
 
 ## Canonical metadata
 
+- `id`
+- `name`
+- `ticker`
+- `cik`
+- `primaryIdentifiers`
+- `matchConfidence`
+- `matchBasis`
 - `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
 </RequestExample>
 
@@ -38,18 +38,18 @@ curl -X GET \
 ```json
 {
   "object": "entity",
-  "id": "cent_f3913349312cbf5bfd60ecdb",
-  "ticker": "AAPL",
-  "cik": "0000320193",
-  "name": "Apple Inc.",
+  "id": "cent_example",
+  "name": "Example Issuer, Inc.",
+  "ticker": "EXAMPLE",
+  "cik": "0000000000",
   "primaryIdentifiers": [
     {
       "type": "ticker",
-      "value": "AAPL"
+      "value": "EXAMPLE"
     },
     {
       "type": "cik",
-      "value": "0000320193"
+      "value": "0000000000"
     }
   ],
   "matchConfidence": 1,
@@ -59,14 +59,22 @@ curl -X GET \
 ```
 </ResponseExample>
 
+## Resolution and coverage
+
+Send one stable identifier when possible. `ticker` wins over `symbol`; `name`, `query`, and `q` are fallback aliases, not a guarantee of a unique legal entity. Preserve `matchConfidence` and `matchBasis` before joining this result to filings, facts, or ownership data. See [API conventions](/api-conventions) for identity, response-shape, and request-correlation rules.
+
+## Errors
+
+A blank identifier is `400 missing_identifier`; an identifier that cannot be resolved is `404 entity_not_found`. Do not turn either condition into a guessed ticker or CIK.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/entities/resolve to resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/entities/resolve to resolve one issuer, manager, insider, or fund from a market or SEC identifier, returning the canonical entity and match confidence. Preserve `id`, `name`, `ticker`, `cik`, `primaryIdentifiers`, `matchConfidence`, `matchBasis`, `requestId` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- retain `matchConfidence`, `matchBasis`, and `requestId` with the lookup result
+- on `400 missing_identifier`, supply one nonblank identifier
+- on `404 entity_not_found`, request a corrected identifier instead of guessing

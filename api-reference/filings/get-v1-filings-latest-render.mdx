@@ -1,12 +1,12 @@
 ---
 title: "GET /v1/filings/latest/render"
-description: "Render the latest filing into Markdown-like text"
+description: "Render an issuer's latest selected filing as Markdown-like text for reading, extraction, or local indexing"
 ---
 
-Render the latest filing into Markdown-like text
+Render an issuer's latest selected filing as Markdown-like text for reading, extraction, or local indexing
 
 <Info>
-Audience: application and coding agent.
+Audience: engineers and agents that need a readable filing body before local indexing or analysis.
 </Info>
 
 ## Response size
@@ -15,20 +15,18 @@ Rendered filings can exceed typical agent context budgets. Prefer section extrac
 
 ## Canonical metadata
 
+- `filing`
+- `renderedMd`
+- `truncated`
+- `provenance`
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/latest/render"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/filings/latest/render?ticker=AAPL&form=10-K"
 ```
 </RequestExample>
 
@@ -37,37 +35,35 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
+  "object": "rendered_filing",
+  "filing": {
+    "accessionNumber": "0000000000-26-000001",
+    "form": "10-K",
+    "filingDate": "2026-02-20"
   },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "renderedMd": "# Example Issuer, Inc.\n\nIllustrative filing text.",
+  "truncated": false,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Render coverage
+
+This endpoint defaults to `10-K`, unlike the any-form default of [GET /v1/filings/latest](/api-reference/filings/get-v1-filings-latest). `renderedMd` is a readable rendering, not a substitute for preserving the filing accession, source provenance, or truncation state. When `truncated` is true, do not represent the text as the complete filing.
+
+## Errors
+
+Rendering failures return `502 filing_render_failed`. Preserve the request ID and the selected issuer/form/year filters when retrying or escalating.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/latest/render to render the latest filing into Markdown-like text. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/filings/latest/render to render an issuer's latest selected filing as Markdown-like text for reading, extraction, or local indexing. Preserve `filing`, `renderedMd`, `truncated`, `provenance`, `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve filing accession, provenance, and truncated
+- do not quote a truncated rendering as a complete source
+- retry `502 filing_render_failed` with bounded backoff

@@ -1,30 +1,31 @@
 ---
 title: "GET /v1/filings/{accession_number}/sections/{section_key}"
-description: "Extract a filing item or section from a specific accession-number filing"
+description: "Extract one canonical section from a specific SEC accession-number filing with citation and response-mode controls"
 ---
 
-Extract a filing item or section from a specific accession-number filing
+Extract one canonical section from a specific SEC accession-number filing with citation and response-mode controls
 
 <Info>
-Audience: application and coding agent.
+Audience: engineers and agents that need reproducible section extraction from one immutable filing.
 </Info>
 
 ## Canonical metadata
 
+- `object`
+- `ticker`
+- `accessionNumber`
+- `key`
+- `snippet`
+- `accession`
+- `section_key`
+- `source_url`
 - `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/0000320193-25-000079/sections/item_1a"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/filings/0000000000-26-000001/sections/item_7?view=agent"
 ```
 </RequestExample>
 
@@ -33,37 +34,41 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "object": "section",
+  "ticker": "EXAMPLE",
+  "accessionNumber": "0000000000-26-000001",
+  "key": "item_7",
+  "startOffset": 2400,
+  "endOffset": 3120,
+  "snippet": "Illustrative Item 7 management-discussion snippet.",
+  "accession": "0000000000-26-000001",
+  "section_key": "item_7",
+  "char_start": 0,
+  "char_end": 50,
+  "highlighted_snippet": "Illustrative **Item 7** management-discussion snippet.",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0000000/000000000026000001/example-2025-10k.htm",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Reproducible filing coverage
+
+Use this route after saving an accession number from a filing result. The accession number fixes the filing selection; optional ticker, CIK, and form are hints rather than a replacement for it. `submission_file_limit` bounds older-coverage resolution. Preserve provenance with the excerpt so a reader can return to the source filing.
+
+## Errors
+
+Invalid response mode or unsupported request values return a contract-aware `400`. `404 section_lookup_failed` means the requested accession or section could not be resolved; it is not evidence that the section contains no relevant text.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/{accession_number}/sections/{section_key} to extract a filing item or section from a specific accession-number filing. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/filings/{accession_number}/sections/{section_key} to extract one canonical section from a specific SEC accession-number filing with citation and response-mode controls. Preserve `object`, `ticker`, `accessionNumber`, `key`, `snippet`, `accession`, `section_key`, `source_url`, `requestId` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- keep the accessionNumber and section_key as the citation identity
+- preserve source_url and requestId
+- verify the accession and section key before widening a lookup
+- do not silently fall back to a different filing when the requested accession fails

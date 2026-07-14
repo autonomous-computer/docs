@@ -1,30 +1,26 @@
 ---
 title: "GET /v1/filings"
-description: "Search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination"
+description: "Search filing manifests by issuer, form, date, text, or accession number with historical coverage and offset pagination"
 ---
 
-Search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination
+Search filing manifests by issuer, form, date, text, or accession number with historical coverage and offset pagination
 
 <Info>
-Audience: application and coding agent.
+Audience: engineers and agents building bounded filing-history or accession-first workflows.
 </Info>
 
 ## Canonical metadata
 
+- `data`
+- `hasMore`
+- `nextCursor`
 - `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10&view=agent"
 ```
 </RequestExample>
 
@@ -33,37 +29,41 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "object": "list",
+  "data": [
+    {
+      "object": "filing",
+      "ticker": "EXAMPLE",
+      "form": "10-K",
+      "accessionNumber": "0000000000-26-000001",
+      "filingDate": "2026-02-20",
+      "title": "Example Issuer, Inc. 2025 Form 10-K",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/0000000/000000000026000001/example-2025-10k.htm"
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## History, pagination, and freshness
+
+Use `accession_number` for one known filing; otherwise constrain broad searches with issuer, form, date, or text filters. `submission_file_limit` bounds fallback SEC-submission inspection for older coverage. Follow `nextCursor` while `hasMore` is true and retain `queryPath` and `policyYears` when explaining where the result came from. Read [filing and source conventions](/api-conventions) before comparing records across filing periods.
+
+## Errors
+
+Invalid filter combinations and pagination are contract-aware `400` errors. A search-path failure is returned as `502 filing_search_failed`; it is not an empty historical result.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings to search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/filings to search filing manifests by issuer, form, date, text, or accession number with historical coverage and offset pagination. Preserve `data`, `hasMore`, `nextCursor`, `requestId` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve accessionNumber, filingDate, filingUrl, hasMore, nextCursor, and requestId
+- use bounded retries for `502 filing_search_failed`
+- treat an empty page as no match only after its filters are recorded

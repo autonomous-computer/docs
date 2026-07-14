@@ -1,30 +1,31 @@
 ---
 title: "GET /v1/filings/latest/sections/{section_key}"
-description: "Extract a section from the latest filing for an entity and form"
+description: "Extract one canonical section from an issuer's latest selected filing, retaining citation and response-mode controls"
 ---
 
-Extract a section from the latest filing for an entity and form
+Extract one canonical section from an issuer's latest selected filing, retaining citation and response-mode controls
 
 <Info>
-Audience: application and coding agent.
+Audience: engineers and agents extracting a known section from the latest selected filing.
 </Info>
 
 ## Canonical metadata
 
+- `object`
+- `ticker`
+- `accessionNumber`
+- `key`
+- `snippet`
+- `accession`
+- `section_key`
+- `source_url`
 - `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent"
 ```
 </RequestExample>
 
@@ -33,37 +34,40 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "object": "section",
+  "ticker": "EXAMPLE",
+  "accessionNumber": "0000000000-26-000001",
+  "key": "item_1a",
+  "startOffset": 1200,
+  "endOffset": 1840,
+  "snippet": "Illustrative Item 1A risk-factor snippet.",
+  "accession": "0000000000-26-000001",
+  "section_key": "item_1a",
+  "char_start": 0,
+  "char_end": 42,
+  "highlighted_snippet": "Illustrative **Item 1A** risk-factor snippet.",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0000000/000000000026000001/example-2025-10k.htm",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Section selection and evidence
+
+`section_key` must be a supported canonical key such as `item_1a`, `item_7`, or `item_8`; it is not a free-form heading lookup. The route defaults to `10-K`. Preserve the content together with provenance and accession number, and use [section search](/api-reference/sections/get-v1-sections-search) when the heading is unknown or the work begins with a concept.
+
+## Errors
+
+Invalid mode/view or issuer filters are `400` request errors. A `502 section_lookup_failed` can reflect unavailable rendering or section coverage; do not replace it with an invented excerpt.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/latest/sections/{section_key} to extract a section from the latest filing for an entity and form. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/filings/latest/sections/{section_key} to extract one canonical section from an issuer's latest selected filing, retaining citation and response-mode controls. Preserve `object`, `ticker`, `accessionNumber`, `key`, `snippet`, `accession`, `section_key`, `source_url`, `requestId` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- retain accessionNumber, section_key, source_url, and requestId with every excerpt
+- distinguish absent or unavailable coverage from an empty snippet
+- retry `502 section_lookup_failed` with bounded backoff

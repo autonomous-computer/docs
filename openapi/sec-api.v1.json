@@ -4909,7 +4909,7 @@
     },
     "/v1/entities/resolve": {
       "get": {
-        "summary": "Resolve an entity by ticker, symbol, CIK, FIGI-family identifier, ISIN, CUSIP, name, or query with confidence and match-basis metadata",
+        "summary": "Resolve one issuer, manager, insider, or fund from a market or SEC identifier, returning the canonical entity and match confidence",
         "parameters": [
           {
             "name": "ticker",
@@ -4917,7 +4917,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Ticker symbol to resolve, such as AAPL."
+            "description": "Exchange ticker to resolve, such as AAPL. When ticker and symbol are both supplied, ticker takes precedence."
           },
           {
             "name": "symbol",
@@ -4925,7 +4925,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Alias for ticker, accepted for clients that use symbol terminology."
+            "description": "Alias for ticker for market-data clients. It is used when ticker is absent or blank."
           },
           {
             "name": "cik",
@@ -4933,7 +4933,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "SEC CIK to resolve. Leading zeros are accepted."
+            "description": "SEC CIK to resolve; leading zeros are accepted and preserved in the canonical response."
           },
           {
             "name": "figi",
@@ -4981,7 +4981,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Company, fund, manager, or insider name to resolve."
+            "description": "Company, fund, manager, or insider name to resolve. Prefer a stable identifier when one is available."
           },
           {
             "name": "query",
@@ -4989,7 +4989,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Alias for name, useful when resolving a free-form company or manager query."
+            "description": "Alias for name; used when name is absent or blank."
           },
           {
             "name": "q",
@@ -4997,7 +4997,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Short alias for query/name."
+            "description": "Short alias for query/name; used after name and query."
           },
           {
             "name": "view",
@@ -5009,12 +5009,12 @@
                 "compact"
               ]
             },
-            "description": "Use view=agent for a compact agent shape with identifiers and match metadata; view=compact returns core entity identity fields."
+            "description": "Use agent for a citation-ready compact payload with identity and match fields, or compact for core identity fields. Omit for the full canonical record."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response. At least one of ticker, symbol, cik, figi, composite_figi, share_class_figi, isin, cusip, name, query, or q is required.",
+            "description": "Canonical entity record. matchConfidence and matchBasis explain how the supplied identifier resolved; requestId supports support and retry correlation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5050,7 +5050,7 @@
             }
           },
           "default": {
-            "description": "Contract-aware error response",
+            "description": "Contract-aware error response. A missing or blank identifier returns 400 missing_identifier; an unresolved identifier returns 404 entity_not_found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5078,7 +5078,7 @@
     },
     "/v1/entities": {
       "get": {
-        "summary": "Search canonical SEC entities across issuers, managers, insiders, and funds",
+        "summary": "Search canonical SEC entities across issuers, managers, insiders, and funds with offset pagination",
         "parameters": [
           {
             "name": "q",
@@ -5087,7 +5087,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Search text for ticker, CIK, name, or identifier matching."
+            "description": "Ticker, CIK, identifier, or name text. Omit only when browsing a bounded entity-type slice."
           },
           {
             "name": "entity_type",
@@ -5096,7 +5096,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Optional entity type filter, such as issuer, manager, insider, or fund."
+            "description": "Optional canonical type filter, such as issuer, manager, insider, or fund."
           },
           {
             "name": "limit",
@@ -5107,7 +5107,7 @@
               "minimum": 1,
               "maximum": 50
             },
-            "description": "Maximum entities to return."
+            "description": "Page size from 1 through 50; defaults to 25."
           },
           {
             "name": "cursor",
@@ -5117,17 +5117,150 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "Non-negative result offset from a previous page."
+            "description": "Zero-based offset from nextCursor. Continue only while hasMore is true."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Canonical entity search page. The envelope always includes pagination, request correlation, and nullable query-path metadata.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "required": [
+                    "object",
+                    "data",
+                    "hasMore",
+                    "nextCursor",
+                    "queryPath",
+                    "queryPathReason",
+                    "policyYears",
+                    "degradedState",
+                    "requestId",
+                    "traceparent"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "enum": [
+                        "list"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "object": {
+                            "type": "string",
+                            "enum": [
+                              "entity"
+                            ]
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "ticker": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "cik": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "aliases": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "identifiers": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": true
+                            }
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "The next zero-based offset cursor, or null when the current page is terminal."
+                    },
+                    "queryPath": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "queryPathReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "policyYears": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "degradedState": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "traceparent": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid limit or cursor. Both routes require limit from 1 through 50 and a non-negative integer cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The entity source could not complete the search (entity_search_failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -5161,7 +5294,7 @@
     },
     "/v1/entities/edgar": {
       "get": {
-        "summary": "Search SEC EDGAR entity records by name, ticker, CIK, or identifier",
+        "summary": "Search SEC EDGAR entity records by name, ticker, CIK, or identifier with source-oriented pagination",
         "parameters": [
           {
             "name": "q",
@@ -5170,7 +5303,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Search text for EDGAR entity matching."
+            "description": "Name, ticker, CIK, or identifier text matched against SEC EDGAR entity records."
           },
           {
             "name": "limit",
@@ -5181,7 +5314,7 @@
               "minimum": 1,
               "maximum": 50
             },
-            "description": "Maximum EDGAR entities to return."
+            "description": "Page size from 1 through 50; defaults to 25."
           },
           {
             "name": "cursor",
@@ -5191,17 +5324,141 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "Non-negative result offset from a previous page."
+            "description": "Zero-based offset from nextCursor. Continue only while hasMore is true."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "SEC EDGAR entity search page. The envelope always includes pagination, request correlation, and nullable query-path metadata.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "required": [
+                    "object",
+                    "data",
+                    "hasMore",
+                    "nextCursor",
+                    "queryPath",
+                    "queryPathReason",
+                    "policyYears",
+                    "degradedState",
+                    "requestId",
+                    "traceparent"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "enum": [
+                        "list"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "object": {
+                            "type": "string",
+                            "enum": [
+                              "edgar_entity"
+                            ]
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "cik": {
+                            "type": "string"
+                          },
+                          "ticker": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "companyName": {
+                            "type": "string"
+                          },
+                          "companyNameAliases": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "secSubmissionsUrl": {
+                            "type": "string",
+                            "format": "uri"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "The next zero-based offset cursor, or null when the current page is terminal."
+                    },
+                    "queryPath": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "queryPathReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "policyYears": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "degradedState": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "traceparent": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid limit or cursor. Both routes require limit from 1 through 50 and a non-negative integer cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The entity source could not complete the search (edgar_entity_search_failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -5380,7 +5637,7 @@
     },
     "/v1/filings": {
       "get": {
-        "summary": "Search filing manifests with historical filters, accession lookup semantics, sorting, and cursor pagination",
+        "summary": "Search filing manifests by issuer, form, date, text, or accession number with historical coverage and offset pagination",
         "parameters": [
           {
             "name": "ticker",
@@ -5443,7 +5700,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Full-text query for indexed filing manifests."
+            "description": "Full-text query over indexed filing manifests; combine with an issuer or form to keep broad searches bounded."
           },
           {
             "name": "accession_number",
@@ -5452,7 +5709,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "SEC accession number lookup filter."
+            "description": "Exact SEC accession-number filter for a known filing."
           },
           {
             "name": "date_from",
@@ -5542,7 +5799,7 @@
               "minimum": 1,
               "maximum": 50
             },
-            "description": "Maximum SEC submission files to inspect when falling back to SEC submissions."
+            "description": "Bound on SEC submission files inspected during fallback coverage; raise only when older history is required."
           },
           {
             "name": "view",
@@ -5561,12 +5818,110 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful filing search response. Default and compact views return filing-list metadata with full or compact filing records; view=agent returns the runtime agent list envelope with compact filing citation records.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilingList"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "object",
+                        "data",
+                        "hasMore",
+                        "nextCursor",
+                        "requestId"
+                      ],
+                      "properties": {
+                        "object": {
+                          "type": "string",
+                          "const": "list"
+                        },
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "object",
+                              "ticker",
+                              "form",
+                              "accessionNumber",
+                              "filingDate",
+                              "title",
+                              "filingUrl"
+                            ],
+                            "properties": {
+                              "object": {
+                                "type": "string",
+                                "const": "filing"
+                              },
+                              "ticker": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "form": {
+                                "type": "string"
+                              },
+                              "accessionNumber": {
+                                "type": "string"
+                              },
+                              "filingDate": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "filingUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filing search filters, pagination, or response view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The filing search path could not complete (filing_search_failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -5600,7 +5955,7 @@
     },
     "/v1/filings/latest": {
       "get": {
-        "summary": "Retrieve the latest filing for an entity and form",
+        "summary": "Retrieve an issuer's newest filing overall or newest filing for a requested form, with filing provenance",
         "parameters": [
           {
             "name": "ticker",
@@ -5636,7 +5991,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "SEC form type, for example 10-K or 8-K. Omit to retrieve the issuer's latest filing of any type."
+            "description": "SEC form type, such as 10-K or 8-K. Omit it to retrieve the issuer's newest filing of any type, including ownership or insider filings."
           },
           {
             "name": "fp",
@@ -5667,7 +6022,7 @@
               "minimum": 1900,
               "maximum": 2100
             },
-            "description": "Fiscal-year selector."
+            "description": "Fiscal-year selector. With ticker, it maps to that issuer's fiscal filing-date window."
           },
           {
             "name": "view",
@@ -5686,12 +6041,81 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful latest-filing response. Default returns the filing manifest, compact returns the compact filing identity plus requestId, and view=agent returns the runtime agent filing record with lifted filingUrl.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Filing"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "ticker",
+                        "form",
+                        "filingDate",
+                        "accessionNumber",
+                        "requestId"
+                      ],
+                      "properties": {
+                        "ticker": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "form": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "filingDate": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "accessionNumber": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "traceparent": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "$ref": "#/components/schemas/FilingAgentRecord"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or conflicting issuer selector, invalid year selector, or invalid response view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The issuer/form/time slice could not resolve to a filing (filing_not_found).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -5725,7 +6149,7 @@
     },
     "/v1/filings/latest/render": {
       "get": {
-        "summary": "Render the latest filing into Markdown-like text",
+        "summary": "Render an issuer's latest selected filing as Markdown-like text for reading, extraction, or local indexing",
         "parameters": [
           {
             "name": "ticker",
@@ -5761,7 +6185,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "SEC form type. Defaults to 10-K."
+            "description": "SEC form type to render. Defaults to 10-K, unlike GET /v1/filings/latest."
           },
           {
             "name": "filing_year",
@@ -5827,7 +6251,7 @@
     },
     "/v1/filings/latest/sections/{section_key}": {
       "get": {
-        "summary": "Extract a section from the latest filing for an entity and form",
+        "summary": "Extract one canonical section from an issuer's latest selected filing, retaining citation and response-mode controls",
         "parameters": [
           {
             "name": "section_key",
@@ -5836,7 +6260,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Canonical section key, such as item_1a, item_7, or item_8."
+            "description": "Canonical filing section key, such as item_1a, item_7, or item_8; it is not arbitrary heading text."
           },
           {
             "name": "ticker",
@@ -5926,12 +6350,38 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful latest-section response. Default/full and compact modes return section content with provenance; view=agent returns citation fields and snippet metadata without contentMd.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Section"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SectionAgentRecord"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid issuer selector, section mode, year selector, or response view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The latest filing section could not be resolved or rendered (section_lookup_failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -6138,28 +6588,132 @@
     },
     "/v1/filings/{accession_number}": {
       "get": {
-        "summary": "Retrieve a filing manifest by accession number from the materialized filing corpus",
+        "summary": "Retrieve a filing manifest by its immutable SEC accession number from the materialized filing corpus",
+        "parameters": [
+          {
+            "name": "accession_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Immutable SEC accession number for the filing to retrieve."
+          },
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional issuer ticker hint used while resolving the accession."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional issuer CIK hint used while resolving the accession."
+          },
+          {
+            "name": "form",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional SEC form hint used while resolving the accession."
+          },
+          {
+            "name": "submission_file_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Bound on SEC submission files inspected while resolving older filing coverage."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "compact",
+                "agent"
+              ]
+            },
+            "description": "Response shape. compact is equivalent to mode=compact; agent returns citation fields and snippets without the full section body."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Filing manifest for the requested accession. Default returns the filing manifest, compact returns compact filing identity plus requestId, and view=agent returns the runtime agent filing record with lifted filingUrl.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Filing"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "ticker",
+                        "form",
+                        "filingDate",
+                        "accessionNumber",
+                        "requestId"
+                      ],
+                      "properties": {
+                        "ticker": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "form": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "filingDate": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "accessionNumber": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "traceparent": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "$ref": "#/components/schemas/FilingAgentRecord"
+                    }
+                  ]
                 }
               }
             }
           },
           "default": {
-            "description": "Contract-aware error response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+            "description": "Contract-aware error response. An accession that cannot be resolved returns 404 filing_not_found."
           }
         },
         "security": [
@@ -6180,7 +6734,7 @@
     },
     "/v1/filings/{accession_number}/sections/{section_key}": {
       "get": {
-        "summary": "Extract a filing item or section from a specific accession-number filing",
+        "summary": "Extract one canonical section from a specific SEC accession-number filing with citation and response-mode controls",
         "parameters": [
           {
             "name": "accession_number",
@@ -6189,7 +6743,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "SEC accession number."
+            "description": "Immutable SEC accession number for the filing to inspect."
           },
           {
             "name": "section_key",
@@ -6198,7 +6752,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Canonical section key, such as item_1a, item_7, or item_8."
+            "description": "Canonical filing section key, such as item_1a, item_7, or item_8; it is not arbitrary heading text."
           },
           {
             "name": "ticker",
@@ -6235,7 +6789,7 @@
               "type": "integer",
               "minimum": 1
             },
-            "description": "Maximum SEC submission files to inspect while resolving the filing."
+            "description": "Bound on SEC submission files inspected while resolving older filing coverage."
           },
           {
             "name": "mode",
@@ -6267,12 +6821,38 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Extracted section for the requested accession. Default/full and compact modes return section content with provenance; view=agent returns citation fields and snippet metadata without contentMd.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Section"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SectionAgentRecord"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid response mode, section mode, or request values.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested accession or section could not be resolved (section_lookup_failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -27693,6 +28273,279 @@
         },
         "additionalProperties": true
       },
+      "FilingAgentRecord": {
+        "type": "object",
+        "required": [
+          "object",
+          "ticker",
+          "form",
+          "accessionNumber",
+          "filingDate",
+          "title",
+          "filingUrl",
+          "requestId"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "filing"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "form": {
+            "type": "string"
+          },
+          "accessionNumber": {
+            "type": "string"
+          },
+          "filingDate": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "filingUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Section": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "filingId",
+          "key",
+          "title",
+          "contentMd",
+          "provenance"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "section"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "filingId": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "form": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "contentMd": {
+            "type": "string"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/Trace"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          }
+        },
+        "additionalProperties": true
+      },
+      "SectionAgentRecord": {
+        "type": "object",
+        "required": [
+          "object",
+          "ticker",
+          "accessionNumber",
+          "key",
+          "startOffset",
+          "endOffset",
+          "snippet"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "section"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "accessionNumber": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "startOffset": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endOffset": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "accession": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "section_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "char_start": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "char_end": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "highlighted_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "_citation_degraded": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "Statement": {
         "type": "object",
         "required": [
@@ -29096,6 +29949,7 @@
         },
         "additionalProperties": false
       },
+      "FilingList": {},
       "ResponseMetadata": {
         "type": "object",
         "required": [

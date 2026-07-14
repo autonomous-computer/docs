@@ -1,30 +1,31 @@
 ---
 title: "GET /v1/filings/{accession_number}"
-description: "Retrieve a filing manifest by accession number from the materialized filing corpus"
+description: "Retrieve a filing manifest by its immutable SEC accession number from the materialized filing corpus"
 ---
 
-Retrieve a filing manifest by accession number from the materialized filing corpus
+Retrieve a filing manifest by its immutable SEC accession number from the materialized filing corpus
 
 <Info>
-Audience: application and coding agent.
+Audience: engineers and agents that need one reproducible filing manifest before reading or extraction.
 </Info>
 
 ## Canonical metadata
 
+- `accessionNumber`
+- `ticker`
+- `cik`
+- `form`
+- `filingDate`
+- `primaryDocument`
+- `provenance`
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/filings/0000320193-25-000079"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/filings/0000000000-26-000001"
 ```
 </RequestExample>
 
@@ -33,37 +34,42 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "object": "filing",
+  "accessionNumber": "0000000000-26-000001",
+  "ticker": "EXAMPLE",
+  "cik": "0000000000",
+  "form": "10-K",
+  "filingDate": "2026-02-20",
+  "primaryDocument": "example-2025-10k.htm",
   "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
+    "source": "example",
+    "sourceLabel": "Illustrative response - not a live SEC filing",
+    "accessionNumber": null,
+    "filingUrl": "https://example.com/sec-filings/example-2025-10-k",
+    "retrievedAt": "2026-02-20T00:00:00.000Z",
+    "parserVersion": "example"
   },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Accession coverage and provenance
+
+An accession number identifies one SEC filing and is the stable handoff from [filing search](/api-reference/filings/get-v1-filings) or [latest filing](/api-reference/filings/get-v1-filings-latest). Optional ticker, CIK, and form are resolution hints; they do not replace the accession. `submission_file_limit` bounds older-coverage fallback. Preserve the returned provenance before rendering or extracting sections.
+
+## Errors
+
+A `404 filing_not_found` means the requested accession could not be resolved under the supplied constraints. Do not silently substitute the latest filing or a similarly named issuer.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/{accession_number} to retrieve a filing manifest by accession number from the materialized filing corpus. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/filings/{accession_number} to retrieve a filing manifest by its immutable SEC accession number from the materialized filing corpus. Preserve `accessionNumber`, `ticker`, `cik`, `form`, `filingDate`, `primaryDocument`, `provenance`, `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- use accessionNumber as the immutable filing citation
+- retain provenance and requestId with downstream output
+- on `404`, verify the accession and optional hints before widening coverage

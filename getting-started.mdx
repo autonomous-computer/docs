@@ -17,13 +17,40 @@ export SECAPI_API_KEY="secapi_..."
 Machine requests authenticate with `x-api-key`. Do not send an API key as `Authorization: Bearer`, put it in a URL, or commit it to a repository.
 </Warning>
 
-## Retrieve a filing artifact
+## 1. Resolve the issuer
+
+Resolve the issuer before requesting a filing so the rest of the workflow carries a specific public-company identity.
+
+```bash
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
+```
+
+## Expected response
+
+```json
+{
+  "company": {
+    "name": "Apple Inc.",
+    "ticker": "AAPL",
+    "cik": "0000320193"
+  },
+  "requestId": "req_..."
+}
+```
+
+Carry the returned CIK, ticker, and company name forward. Do not infer a CIK from a ticker string or from an old filing URL.
+
+## 2. Retrieve a filing you can cite
 
 Ask for one known issuer and form. This request returns the current latest matching filing, so the accession number can change after a new filing.
 
 ```bash
 curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
+  -H "secapi-version: 2026-03-19" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
@@ -37,17 +64,9 @@ Before summarizing or storing the result, retain these fields when the response 
 
 Those fields are the minimum filing citation artifact: identify the source as `Apple Inc. 10-K, filed <filingDate>, accession <accessionNumber>, <filingUrl>`. Keep any returned `provenance`, `freshness`, `materialization`, warning, and trace fields alongside it; availability varies by route and response view.
 
-## Resolve before broader work
+## Choose the next interface
 
-For a workflow that starts from a name, ticker, CIK, or identifier, resolve the entity first and carry the returned identity forward:
-
-```bash
-curl --fail-with-body -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
-```
-
-Then choose an interface based on where the work lives:
+Once you have a citation-ready filing artifact, choose an interface based on where the work lives:
 
 | Interface | Use it when | Next step |
 | --- | --- | --- |
@@ -59,5 +78,7 @@ Then choose an interface based on where the work lives:
 ## When a request fails
 
 `401 missing_api_key` means the process did not send an API key; `401 authentication_failed` means the key is not accepted. For `402`, stop and resolve the billing or entitlement condition in the response. For `429`, honor `Retry-After` when it is supplied and reduce concurrent work. Preserve the response's request identifier for support or audit work.
+
+If you need to separate authentication problems from API availability, check `https://api.secapi.ai/healthz` after the failed request and include both response identifiers in the support note.
 
 See [API conventions](/api-conventions) for request behavior and [Troubleshooting](/troubleshooting) for error-specific guidance.
