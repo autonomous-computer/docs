@@ -1,39 +1,45 @@
 ---
-title: "Custom skills"
-description: "Write portable SEC API workflow instructions that produce source-backed results"
+title: "Write an SEC API research skill"
+description: "Create portable instructions for a narrow SEC research job with explicit evidence, limits, and stop conditions"
 ---
 
-A skill is an instruction file for an agent environment. SEC API does not define a universal skill installer or scheduler: use the file layout and installation mechanism documented by the agent product that will run it. Keep the SEC API portion portable by describing the workflow, its evidence requirements, and its stop conditions.
+A skill is an instruction file interpreted by an agent environment. SEC API does not prescribe a universal skill format, installer, scheduler, or secret store. Keep the SEC API part portable: state the job, exact retrieval path, evidence to preserve, and the point where the agent must stop.
 
-## Start with one bounded job
+## Start with a single filing question
 
-This example is deliberately plain Markdown. Adapt its frontmatter and location to the target agent environment.
+This plain Markdown example can be adapted to the frontmatter and file location required by the agent product that will run it.
 
 ```markdown
 ---
 name: filing-risk-review
-description: Retrieve and summarize a single issuer's latest 10-K risk factors with filing citations.
+description: Retrieve and summarize one issuer's latest 10-K risk factors with filing citations.
 ---
 
 # Filing risk review
 
-1. Resolve the issuer with `GET /v1/entities/resolve`.
+1. Resolve the issuer with `GET /v1/entities/resolve` when the input is not already a canonical identifier.
 2. Retrieve the latest 10-K with `GET /v1/filings/latest`.
 3. Retrieve Item 1A with `GET /v1/filings/latest/sections/item_1a`.
-4. Return the company name, accession number, form, filing date, filing URL, requestId, and a bounded summary of Item 1A.
-5. Mark missing evidence as unavailable. Do not infer facts outside the retrieved source.
+4. Return company name, accession number, form, filing date, filing URL, requestId, and a bounded summary of the returned section.
+5. Mark unsupported or missing evidence as unavailable. Do not infer facts outside the retrieved filing.
 
-Use `x-api-key` from the runtime environment. Do not place credentials in this file.
+Read `SECAPI_API_KEY` from the runtime secret store. Do not put credentials in this file.
 ```
 
-## Design for evidence and change
+The intended output is an evidence-linked brief, not a general company assessment. A latest-filing rule can yield a different accession after a new filing arrives, so retain the selected filing identity in every run.
 
-Use exact REST paths only after checking the [API reference](/api-reference), or instruct an MCP client to discover tools with `tools.search` and `tools.describe`. A skill should name the source fields it must retain, especially `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` for filing work.
+## Choose the contract at execution time
 
-Keep the scope narrow: one issuer, a filing family, a date range, and a result limit where the route supports one. A current latest filing can change. Do not encode a historical accession number, a fixed rate, or an assumed tool catalog as a success condition.
+For a REST skill, verify paths and arguments in the [API reference](/api-reference) before publishing it. For an MCP skill, direct the client to use `tools.search` and `tools.describe` rather than embedding an assumed tool catalog.
 
-## Operate safely
+Name the source fields the result needs, especially `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` for filing work. Use one issuer, a defined filing family, a date rule, and a result limit where the route supports it.
 
-Keep `SECAPI_API_KEY` in the agent runtime's secret store. Before repeated work, inspect billing and limits, quote the step when appropriate, and stop on authentication, validation, billing, or quota failures. Account changes and scheduling belong to the product or orchestration system that owns those capabilities; this documentation does not prescribe a client-specific command for either.
+## Include failure posture
 
-Published workflow skills are available in [secapi-ai/secapi-skills](https://github.com/secapi-ai/secapi-skills). Review the skill's instructions and your agent environment's installation documentation before enabling one in a production workflow.
+The skill should stop on authentication, authorization, validation, billing, quota, or unsupported-capability responses. It can use a bounded retry policy for transient failures, but it should preserve the request identifier and never retry by multiplying parallel calls. Before repeated work, inspect billing and limits and quote the representative operation when the workflow needs a current cost decision.
+
+An agent environment owns scheduling, state, and secret injection. Do not claim a SEC API skill creates those facilities or grants a key access it does not already have.
+
+## Next action
+
+Run the skill once against a public issuer, inspect the raw response and final brief together, then add one test that fails when the expected filing identity or citation fields are absent.

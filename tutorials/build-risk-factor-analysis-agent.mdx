@@ -1,34 +1,37 @@
 ---
-title: "Build a Risk Factor Analysis Agent"
-description: "Create a citation-preserving 10-K risk-disclosure review queue using semantic retrieval rather than unsupported automated conclusions."
+title: "Build a filing risk-review queue"
+description: "Use semantic retrieval to collect cited 10-K passages for review without turning retrieval rank into an automated conclusion"
 ---
 
-This tutorial creates a small Python job that retrieves risk-disclosure passages for an issuer and writes their citations to a review queue. It finds evidence by meaning; it does not prove a risk is new, material, complete, or legally significant. A person must read the cited filing section before reporting a conclusion.
+This Python job collects candidate risk-disclosure passages for one issuer and writes a citation queue. It finds evidence by meaning. It does not prove a risk is new, material, complete, or legally significant; a reviewer must read the cited filing section in context.
 
-## Prerequisites
+## Set up a clean environment
 
-- Python 3.9+ with `requests` installed.
-- `SECAPI_API_KEY` and a ticker. This example uses `NVDA`.
+You need Python 3.9 or later, `requests`, and an API key.
 
 ```bash
 python -m pip install requests
 export SECAPI_API_KEY="your_api_key"
 ```
 
-## 1. Verify a bounded retrieval query
+## Test a bounded question
+
+Use an API key and a question specific enough to inspect. This example asks about a potential supply-chain disclosure in NVIDIA's 10-K.
 
 ```bash
 curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   --data-urlencode "q=supply chain disruption risk" \
-  --data-urlencode "ticker=NVDA" --data-urlencode "form=10-K" \
-  --data-urlencode "mode=hybrid" --data-urlencode "limit=10" \
+  --data-urlencode "ticker=NVDA" \
+  --data-urlencode "form=10-K" \
+  --data-urlencode "mode=hybrid" \
+  --data-urlencode "limit=10" \
   "https://api.secapi.ai/v1/search/semantic" \
   | jq '{query, mode, sections, requestId, traceparent}'
 ```
 
-The expected result is a ranked `sections.data` list. Each result can carry `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet`; the character fields can be null when citation-span validation is degraded. Retain identity fields even when a span is unavailable.
+The response contains a ranked `sections.data` list. A row can include `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet`. Citation-span fields may be null when validation is degraded; keep the filing identity even in that case.
 
-## 2. Write a source-cited queue
+## Write the review queue
 
 Create `risk_queue.py`:
 
@@ -37,55 +40,47 @@ import json
 import os
 import sys
 from pathlib import Path
-
 import requests
 
 ticker = (sys.argv[1] if len(sys.argv) > 1 else "NVDA").upper()
 query = sys.argv[2] if len(sys.argv) > 2 else "supply chain disruption risk"
-api_key = os.environ["SECAPI_API_KEY"]
 
 response = requests.get(
     "https://api.secapi.ai/v1/search/semantic",
-    headers={"x-api-key": api_key},
+    headers={"x-api-key": os.environ["SECAPI_API_KEY"]},
     params={"q": query, "ticker": ticker, "form": "10-K", "mode": "hybrid", "limit": 10},
     timeout=30,
 )
 response.raise_for_status()
 payload = response.json()
 
-queue = []
-for row in payload.get("sections", {}).get("data", []):
-    queue.append({
-        "ticker": row.get("ticker"), "form": row.get("form"),
-        "accession": row.get("accession"), "source_url": row.get("source_url"),
-        "section_key": row.get("section_key"), "char_start": row.get("char_start"),
-        "char_end": row.get("char_end"), "highlighted_snippet": row.get("highlighted_snippet"),
-        "citation_degraded": row.get("_citation_degraded"),
-    })
+queue = [{
+    "ticker": row.get("ticker"), "form": row.get("form"),
+    "accession": row.get("accession"), "source_url": row.get("source_url"),
+    "section_key": row.get("section_key"), "char_start": row.get("char_start"),
+    "char_end": row.get("char_end"), "highlighted_snippet": row.get("highlighted_snippet"),
+    "citation_degraded": row.get("_citation_degraded"),
+} for row in payload.get("sections", {}).get("data", [])]
 
-artifact = {"query": payload.get("query"), "mode": payload.get("mode"), "ticker": ticker,
-            "queue": queue, "requestId": payload.get("requestId"), "traceparent": payload.get("traceparent")}
+artifact = {"query": payload.get("query"), "mode": payload.get("mode"),
+            "ticker": ticker, "queue": queue, "requestId": payload.get("requestId"),
+            "traceparent": payload.get("traceparent")}
 Path("risk-review-queue.json").write_text(json.dumps(artifact, indent=2))
 print(json.dumps({"queueItems": len(queue), "requestId": artifact["requestId"]}, indent=2))
 ```
 
-Run `python risk_queue.py NVDA "supply chain disruption risk"`. The expected output is `risk-review-queue.json`, not a change score. It records each citation so a reviewer can open the SEC source and judge the disclosure in context.
+Run `python risk_queue.py NVDA "supply chain disruption risk"`. The output is `risk-review-queue.json`, a list for a reviewer to inspect, not a change score.
 
-## 3. Compare a question across filing years
+## Compare years without overstating retrieval
 
-Run the queue separately with `filing_year` when you need a controlled historical comparison. Add `"filing_year": 2024` to the `params` dictionary, store each response separately, and compare only the cited source passages from comparable filings. Do not infer a "new risk" merely because the retrieval rank, snippet, or section arrangement changed.
+When the question is historical, add a distinct `filing_year` value to each scoped query and save each artifact. Compare cited source passages from comparable forms. A different rank, snippet, or section arrangement does not prove management added, removed, or changed a risk.
 
-## Source and provenance
+## Source limits and failures
 
-Semantic retrieval returns ranked candidate passages from the scoped SEC filing corpus. For every queue item, retain the accession, `source_url`, section key, character span when available, query and mode, plus `requestId` and `traceparent`. The linked filing section, not a snippet or rank, is the provenance for a reviewer conclusion.
+`q` is required; `keyword`, `semantic`, and `hybrid` are the supported modes; `limit` is 1 through 100. An empty result can mean the scope is too narrow or the language is not indexed as expected. It does not establish that no risk disclosure exists.
 
-## Limits and failure modes
+For every queue item, retain accession, source URL, section key, available span, query, mode, `requestId`, and `traceparent`. When `_citation_degraded` is set or citation fields are absent, open the full source using the filing identity rather than treating a truncated snippet as proof.
 
-- `q` is required; valid modes are `keyword`, `semantic`, and `hybrid`; `limit` must be between 1 and 100.
-- Empty results can mean the issuer/form/year scope is too narrow or the language is not indexed as expected. It does not establish no risk disclosure.
-- `char_start`, `char_end`, and `highlighted_snippet` may be null with `_citation_degraded`; use the accession, section key, and source URL to inspect the full source.
-- Similarity or text-diff heuristics are analyst aids, not proof that management added, removed, or changed a risk.
+## Next action
 
-## Next step
-
-Create a reviewer decision record keyed by accession and section, then use [Find Risk Factors with Semantic Search](/tutorials/semantic-search-risk-factors) for the equivalent curl and JavaScript workflow.
+Add a reviewer-decision record keyed by accession and section, then require it before any downstream report calls a passage a material risk disclosure.

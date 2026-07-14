@@ -1,84 +1,77 @@
 ---
-title: "Build an SEC Filing Monitor"
-description: "Poll filing search on a schedule, de-duplicate new accessions, and hand an evidence-linked queue to an analyst or agent."
+title: "Build a scheduled filing review queue"
+description: "Poll a bounded SEC filing query, de-duplicate accession numbers, and send evidence-linked items to a reviewer"
 ---
 
-This is the right journey when your scheduler needs checkpoints and you do not want an inbound webhook receiver. It polls recent 8-Ks, stores accession numbers, and writes a compact review queue. It does not decide whether a filing is material. Use it for a bounded watchlist, not as a substitute for a complete EDGAR archive.
+Use this job when your scheduler needs checkpoints and you do not want an inbound webhook receiver. It polls recent filings, records new accession numbers, and emits a review queue. It does not determine whether a filing is material or provide a complete EDGAR archive.
 
-## Prerequisites
+## Prove the query before scheduling it
 
-- Node.js 18+ and `SECAPI_API_KEY` in your scheduler secret store.
-- A durable database for production. The JSON state file below is only for one local worker.
-
-```bash
-export SECAPI_API_KEY="your_api_key"
-mkdir filing-monitor && cd filing-monitor
-printf '{"seen":[]}' > state.json
-```
-
-## 1. Check the query manually
-
-`GET /v1/filings` supports ticker, `forms`, filing-date filters, cursor pagination, and filing-date sort.
+`GET /v1/filings` accepts ticker, `forms`, filing-date filters, cursor pagination, and filing-date sorting. Check a deliberately small result before turning it into a recurring job.
 
 ```bash
 curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  --data-urlencode "ticker=AAPL" --data-urlencode "forms=8-K,8-K/A" \
-  --data-urlencode "limit=10" --data-urlencode "sort=filing_date_desc" \
+  --data-urlencode "ticker=AAPL" \
+  --data-urlencode "forms=8-K,8-K/A" \
+  --data-urlencode "limit=10" \
+  --data-urlencode "sort=filing_date_desc" \
   "https://api.secapi.ai/v1/filings" \
   | jq '{data, hasMore, nextCursor, requestId, traceparent}'
 ```
 
-The result is a paginated filing list. Confirm the form and company scope before automating it.
+Confirm that the company and form scope match the job you intend to run. A broad query creates an expensive and noisy review queue.
 
-## 2. Run an idempotent polling job
+## Poll and de-duplicate
 
-Create `monitor.mjs`. It records an accession only after it has constructed the evidence record.
+Create `monitor.mjs`. The example uses a local JSON file only to show the key; use a durable store in production.
 
 ```js
 import { readFile, writeFile } from "node:fs/promises";
 
-const statePath = new URL("./state.json", import.meta.url);
 const apiKey = process.env.SECAPI_API_KEY;
 if (!apiKey) throw new Error("SECAPI_API_KEY is required");
-const state = JSON.parse(await readFile(statePath, "utf8"));
+const statePath = new URL("./state.json", import.meta.url);
+const state = JSON.parse(await readFile(statePath, "utf8").catch(() => '{"seen":[]}'));
 const seen = new Set(state.seen ?? []);
 const alerts = [];
 
 for (const ticker of ["AAPL", "MSFT", "NVDA"]) {
-  const query = new URLSearchParams({ ticker, forms: "8-K,8-K/A", limit: "50", sort: "filing_date_desc" });
-  const response = await fetch(`https://api.secapi.ai/v1/filings?${query}`, { headers: { "x-api-key": apiKey } });
+  const query = new URLSearchParams({
+    ticker, forms: "8-K,8-K/A", limit: "50", sort: "filing_date_desc",
+  });
+  const response = await fetch(`https://api.secapi.ai/v1/filings?${query}`, {
+    headers: { "x-api-key": apiKey },
+  });
   if (!response.ok) throw new Error(`${ticker}: ${response.status} ${await response.text()}`);
   const page = await response.json();
   for (const filing of page.data ?? []) {
-    const accessionNumber = filing.accessionNumber;
-    if (!accessionNumber || seen.has(accessionNumber)) continue;
-    alerts.push({ ticker, form: filing.form, filingDate: filing.filingDate,
-      accessionNumber, filingUrl: filing.filingUrl ?? filing.provenance?.filingUrl ?? null,
-      requestId: page.requestId, traceparent: page.traceparent });
-    seen.add(accessionNumber);
+    if (!filing.accessionNumber || seen.has(filing.accessionNumber)) continue;
+    alerts.push({
+      ticker, form: filing.form, filingDate: filing.filingDate,
+      accessionNumber: filing.accessionNumber,
+      filingUrl: filing.filingUrl ?? filing.provenance?.filingUrl ?? null,
+      requestId: page.requestId, traceparent: page.traceparent,
+    });
+    seen.add(filing.accessionNumber);
   }
 }
+
 await writeFile(statePath, JSON.stringify({ seen: [...seen].slice(-5000) }, null, 2));
 console.log(JSON.stringify({ checked: 3, newFilings: alerts.length, alerts }, null, 2));
 ```
 
-Run `node monitor.mjs`. The expected result is a JSON object with `checked`, `newFilings`, and source-linked queue records. The first run seeds the state and may report existing records. Treat that as an intentional backfill, not a production alert.
+Run the script with `node monitor.mjs`. The output is a source-linked queue. The first run is a backfill and may report older filings; do not label it as a real-time alert.
 
-## Expected result and provenance
+## Preserve the evidence boundary
 
-Every new queue record contains an accession number, filing date, source URL when returned, `requestId`, and `traceparent`. Give an agent only that evidence-linked queue, for example: “Summarize each filing's disclosed facts. Do not infer materiality from its form or title. Cite the accession number and filing URL.” Keep its output separate from the source record.
+Each queue item should carry accession number, filing date, source URL when returned, `requestId`, and `traceparent`. A downstream agent may summarize the filing's disclosed facts, but it should cite the accession and source URL and must not infer materiality from a form label or title.
 
-## Common errors and false positives
+Follow `nextCursor` while `hasMore` is true whenever the requested window exceeds one page. Run a short overlapping-window reconciliation because late processing or transient failures can otherwise leave a gap.
 
-- `401` or `403`: the scheduler did not receive an entitled key.
-- Missing records: follow `nextCursor` while `hasMore` is true and run a short overlapping date-window reconciliation.
-- Duplicates: accession number is the filing identity; make it a unique key in the production store.
-- A new 8-K is not automatically a material event, and an amendment can change the prior interpretation.
+## Failure posture
 
-## Production considerations
-
-Use a transaction that records the accession and enqueues the alert together. Store a high-water mark plus a reconciliation window, apply bounded retry/backoff, and measure polls, pages, new filings, and alert failures. Never put an API key in the job command line or repository.
+`401` and `403` mean the scheduler lacks a valid entitled key. Treat accession number as the filing identity and enforce it as a unique key to prevent duplicate alerts. In production, write the accession record and enqueue the review in one transaction, use bounded retry/backoff, and measure pages, new records, and failed jobs.
 
 ## Next action
 
-Add cursor pagination and a reviewer-status column, then retrieve only the filing sections needed for each evidence-linked investigation.
+Add cursor pagination, a high-water mark, and a reviewer-status column before connecting the queue to a notification channel.

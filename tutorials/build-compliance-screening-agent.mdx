@@ -1,23 +1,19 @@
 ---
-title: "Build a Compliance Screening Agent"
-description: "Route signed SEC filing-monitor events into a review agent that preserves the issuer, filing, evidence, and decision boundary."
+title: "Build a filing-review intake queue"
+description: "Verify signed SEC API monitor events and create evidence-linked items for a human compliance review"
 ---
 
-This guide builds a small screening service: SEC API sends a signed filing-monitor event, the service extracts the filing facts that matter, and a reviewer receives an evidence-linked queue item. It does not make a legal or investment decision, resolve a name match, or clear a counterparty.
+This guide receives a `monitor.match` event, verifies the signature, and creates a source-linked intake record. It does not decide whether a filing is material, resolve a counterparty, or clear a compliance issue. The filing remains the review source.
 
-## Prerequisites
+## Configure the event source
 
-- Python 3.9+, Flask, and a public HTTPS receiver URL.
-- A signed-in SEC API organization administrator for the [SEC API dashboard](https://secapi.ai/app/webhooks).
-- `SECAPI_WEBHOOK_SIGNING_SECRET` from the configured endpoint and `SECAPI_API_KEY` only for the read-only match lookup.
+An organization administrator creates the webhook endpoint and monitor in the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks). These are browser-session actions; an API key cannot create monitors or webhook endpoints. Use a narrow monitor name, query, form filter, and ticker set. Put the dashboard-provided signing secret in `SECAPI_WEBHOOK_SIGNING_SECRET`.
 
-## Configure the monitor first
+You need Python 3.9+, Flask, a public HTTPS receiver, the signing secret, and an API key only if you later query monitor matches.
 
-In the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks), create an organization webhook endpoint subscribed to `monitor.match`, then create the saved monitor for your client, portfolio, or counterparty set. These configuration actions require a WorkOS browser session. An API key cannot create monitors or webhooks.
+## Verify the raw delivery
 
-Use a narrow monitor name, keyword query, form filter, and ticker list. Save the dashboard-provided signing secret as `SECAPI_WEBHOOK_SIGNING_SECRET`.
-
-## Run the receiver
+Create `receiver.py`:
 
 ```python
 import hashlib
@@ -25,25 +21,24 @@ import hmac
 import json
 import os
 import time
-
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
-SECRET = os.environ["SECAPI_WEBHOOK_SIGNING_SECRET"]
+secret = os.environ["SECAPI_WEBHOOK_SIGNING_SECRET"].encode()
 
 def valid(raw: bytes, header: str) -> bool:
     fields = dict(part.split("=", 1) for part in header.split(",") if "=" in part)
-    timestamp, signature = fields.get("t", ""), fields.get("v1", "")
     try:
-        stale = abs(time.time() - int(timestamp)) > 300
-    except ValueError:
+        timestamp = int(fields["t"])
+    except (KeyError, ValueError):
         return False
-    if not signature or stale:
+    signature = fields.get("v1", "")
+    if not signature or abs(time.time() - timestamp) > 300:
         return False
-    expected = hmac.new(SECRET.encode(), f"{timestamp}.".encode() + raw, hashlib.sha256).hexdigest()
+    expected = hmac.new(secret, f"{timestamp}.".encode() + raw, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
 
-@app.post("/webhooks/secapi/compliance")
+@app.post("/webhooks/secapi/review")
 def receive():
     raw = request.get_data()
     if not valid(raw, request.headers.get("x-secapi-signature", "")):
@@ -52,36 +47,28 @@ def receive():
     if event.get("type") != "monitor.match":
         return jsonify({"status": "ignored"}), 200
     for match in event.get("data", {}).get("matches", []):
-        print({"ticker": match.get("ticker"), "form": match.get("form"), "filedAt": match.get("filingDate"), "sourceUrl": match.get("htmlUrl")})
+        print({"ticker": match.get("ticker"), "form": match.get("form"),
+               "filingDate": match.get("filingDate"), "sourceUrl": match.get("htmlUrl")})
     return jsonify({"received": True}), 200
 ```
 
-Run it with `pip install flask` and `SECAPI_WEBHOOK_SIGNING_SECRET=whsec_... flask --app receiver run`. Expose the receiver at the HTTPS destination configured in the dashboard. A valid `monitor.match` produces one printed source-linked record per returned match; a valid `webhook.test` is acknowledged as ignored.
+Run `pip install flask`, then expose this receiver at the configured HTTPS destination. A valid production event prints one source-linked record for each delivered match. A valid `webhook.test` is acknowledged but ignored; it proves the receiver can verify delivery, not that the monitor query will produce a filing.
 
-## Source and provenance
+## Make the review record durable
 
-`monitor.match` is a signed delivery envelope, not the filing itself. Preserve the event id, event `requestId`, monitor name, issuer identity, form, filing date, and `htmlUrl` with the downstream decision record. The linked SEC filing is the source a reviewer must read; the dashboard test event only proves the configured delivery path.
+Use the event id as an idempotency key before enqueueing work. Retain event `requestId`, monitor name, issuer identity, form, filing date, and `htmlUrl`. The event is a notification envelope, not the filing itself, so give the reviewer the source URL and keep an LLM summary separate from the decision.
 
-## Add evidence, then review
-
-For a configured monitor, use an API key to inspect current matches before or after delivery:
+For a configured monitor, an API key can inspect current matches:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=25"
 ```
 
-Carry the issuer, form, filing date, source URL, monitor name, and SEC API request ID into every downstream record. An LLM can classify or summarize the filing, but the source filing and the human review decision should remain visible.
+## Failure posture
 
-## Limits and failure modes
+`401 invalid_signature` usually means the handler signed parsed JSON instead of raw bytes, used the wrong secret, or received a stale timestamp. Treat duplicate delivery as normal: persist the event id before scheduling the review. A text match or model classification is a lead, not a legal conclusion; require the appropriate reviewer to read the linked source.
 
-- `401 invalid_signature` usually means the HMAC used parsed JSON instead of the raw bytes, the secret is wrong, or the timestamp is stale.
-- The example only prints records. In production, write the event id to a durable unique store before enqueueing work so retry delivery cannot create duplicate screenings.
-- A `webhook.test` proves the destination and signing path, not that the configured query will find a filing.
-- A text match or an LLM classification is a review lead. Preserve the source URL and require the appropriate reviewer to make the decision.
+## Next action
 
-## Read next
-
-- [Monitor SEC filing events](/monitors)
-- [Build a filing monitor](/tutorials/build-filing-monitor)
-- [Search enforcement actions](/tutorials/search-enforcement-actions)
+Replace `print` with one transactional write that stores the event id, source URL, and a pending-review status, then send a dashboard test event to exercise the complete receiver path.

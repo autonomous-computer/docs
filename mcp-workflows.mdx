@@ -1,39 +1,43 @@
 ---
-title: "MCP workflows for source-backed filing research"
-description: "Discover SEC API MCP tools, retrieve a bounded filing artifact, and preserve the evidence behind an agent result"
+title: "MCP workflow: source-backed filing research"
+description: "Discover the live SEC API MCP contract, retrieve one filing section, and return a result a reviewer can trace"
 ---
 
-MCP is useful when a research client can choose tools at runtime. The operating sequence is simple: discover a tool, inspect its schema, retrieve one source record, then summarize only that record. [Install SEC API MCP](/mcp-install) first, then compare usage and limits in [Pricing and limits](/evaluate/pricing-and-limits).
+Use hosted MCP when the client needs to choose an SEC API capability at runtime. The first useful workflow is deliberately small: discover the tools, retrieve one filing and one section, then summarize only the evidence returned. [Install SEC API MCP](/mcp-install) before running this job, then review [pricing and limits](/evaluate/pricing-and-limits) before expanding it into repeated work.
 
-## A complete first job
+## Ask for one bounded result
 
-Give the connected client this prompt:
+Give a connected MCP client this prompt:
 
 <Prompt>
-Use tools.search to find tools for issuer resolution, latest filing, and filing sections. Use tools.describe before every selected call. Find NVIDIA's latest 10-K and retrieve Item 1A. Return company name, accession number, form, filing date, filing URL, section title, requestId, and a five-bullet summary. Separate retrieved facts from interpretation. Do not infer facts that are not in the filing or section.
+Use tools.search to find issuer resolution, latest-filing, and filing-section tools. Use tools.describe before each selected call. Find NVIDIA's latest 10-K and retrieve Item 1A. Return company name, accession number, form, filing date, filing URL, section title, requestId, and a five-bullet summary. Separate retrieved facts from interpretation and say when the filing or section does not support an answer.
 </Prompt>
 
-A successful job returns a filing identity and a bounded section result. A newer filing on a later run may legitimately have a different accession number; an uncited summary is not a replacement for the source artifact.
+A successful run returns a filing identity and a bounded section result. A later run can legitimately select a newer accession number. An uncited summary is not a substitute for the filing artifact.
 
-## Use discovery as the contract
+## Let the server supply the tool contract
 
-The server owns its current tool names, schemas, annotations, and limits. Start with `tools.search` using a natural-language job, then use `tools.describe` with the exact selected name. `tools/list` is available when a client needs the catalog and can be filtered with `core` or a namespace. Do not hard-code a copied tool catalog into a durable agent workflow.
+`tools.search` accepts a natural-language job. `tools.describe` returns the current input schema for an exact selected name. `tools/list` is available for clients that need a catalog and supports `core` or namespace filters.
 
-`structuredContent` is the canonical typed tool payload. Text content may be useful to the model, but preserve the typed output and returned fields that identify the source.
+Do not freeze a copied tool list into a durable agent instruction. Tool names, arguments, annotations, and availability belong to the live server contract. Keep `structuredContent` as the typed result; text content can assist the model but should not replace the returned data.
 
-## Produce a reviewable result
+## Retain the review record
 
-Persist these fields whenever they are returned:
+When available, retain:
 
-- issuer identity
-- `accessionNumber`, `form`, `filingDate`, and `filingUrl`
-- `requestId` and `traceparent`
-- provenance, freshness, pagination, truncation, and capability fields
+- issuer identity;
+- `accessionNumber`, `form`, `filingDate`, and `filingUrl`;
+- `requestId` and `traceparent`; and
+- provenance, freshness, pagination, truncation, and capability fields.
 
-Treat missing evidence as missing. A section can support a claim about the section's text; it does not automatically establish facts outside that scope.
+Search and section retrieval identify evidence within a defined scope. A match, a rank, or an extraction does not by itself establish a fact beyond that record.
 
-## Move from exploration to production
+## Handle failure at the right layer
 
-Use MCP for interactive research and agent-led discovery. Use REST or an SDK when your application needs a stable request loop, typed application errors, deployment-controlled timeouts, or its own retry policy. In either case, keep work bounded, inspect billing before repeated work, and avoid retrying authentication, validation, billing, or quota failures without a corrective action.
+`GET /mcp` is public discovery metadata. Authenticated JSON-RPC calls go to `POST /mcp` with `x-api-key`. Authentication, generic rate-limit, billing, and entitlement failures can occur before JSON-RPC dispatch; dispatched tool, quota, timeout, and resource failures use JSON-RPC error envelopes. Preserve `error.data.requestId` and `error.data.traceparent` when present.
 
-See [Agent operating layer](/agent-operating-layer), [Agent billing](/agent-billing), and [API conventions](/api-conventions).
+Do not retry invalid arguments, missing credentials, billing refusals, or quota exhaustion blindly. Check `Retry-After` for rate limits and correct the cause before another call. Use REST or an SDK when your deployed application needs to own stable request loops, timeout policy, and typed application errors.
+
+## Next action
+
+Run the prompt against one issuer, save the raw typed result beside the rendered brief, and verify that a reviewer can open the cited filing URL without asking the model to reconstruct it.

@@ -1,44 +1,47 @@
 ---
-title: "Building SEC API agents"
-description: "Design a bounded SEC API agent that retains source evidence and stops at real authorization, billing, and capability boundaries"
+title: "Build a reviewable SEC filing research agent"
+description: "Design a bounded research agent that retains source evidence and stops at authorization, billing, and capability boundaries"
 ---
 
-An SEC API agent should produce a reviewable trail, not just an answer. Give it a bounded issuer and question, retrieve the source record, preserve the evidence, and make a second call only when the first supports it.
+An SEC research agent should leave behind a trail someone else can inspect: the question, exact source retrieved, fields carried into the answer, and conditions where it stopped. It should not turn a sparse response or ranked search result into a conclusion.
 
-## Start with a filing, not a conclusion
+## Define one job
+
+Start with one issuer, one filing family, one date or latest-filing rule, and one output artifact. For example: retrieve NVIDIA's latest 10-K, read Item 1A, and produce a five-bullet risk brief with the filing identity.
 
 ```bash
 curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
+  "https://api.secapi.ai/v1/filings/latest?ticker=NVDA&form=10-K&view=agent"
 ```
 
-Keep the returned `accessionNumber`, `form`, `filingDate`, `filingUrl`, and `requestId`. Retain route-provided provenance, freshness, materialization, warnings, and trace data when available. Response views are route-specific, so use the endpoint reference before relying on a field for caching or audit policy.
+The output record should retain `accessionNumber`, `form`, `filingDate`, `filingUrl`, and `requestId` when returned. Preserve route-provided provenance, freshness, materialization, warnings, and trace fields rather than replacing them with a generic confidence score.
 
-## Give the agent an explicit policy
+## Put the operating policy in the task
 
-| Condition | Agent behavior |
+| Observed condition | Required behavior |
 | --- | --- |
-| Missing, unavailable, degraded, or route-specific evidence state | Return that state and the usable source record. Do not fabricate a substitute. |
-| `400` | Correct arguments from the documented endpoint or discovered MCP schema. |
-| `401` or `403` | Stop and repair the credential or authorization. |
-| `402` | Stop and surface the billing or entitlement condition. |
-| `429` | Honor `Retry-After` when present and use bounded backoff without retry fan-out. |
-| `5xx` | Apply the calling surface's bounded transient-failure policy and keep the request ID. |
+| Evidence is missing, unavailable, degraded, or out of scope | Report that state and the source that was available. Do not fill the gap from model memory. |
+| `400` | Correct the arguments from the endpoint reference or discovered MCP schema. |
+| `401` or `403` | Stop and repair the credential or organization authorization. |
+| `402` | Stop and surface the billing or entitlement requirement. |
+| `429` | Honor `Retry-After` when supplied; use bounded backoff without retry fan-out. |
+| `5xx` | Apply the caller's bounded transient-failure policy and keep the request identifier. |
 
-Record the endpoint or tool name, arguments, retrieval time, request identifier, and source artifact with the final answer. See [API conventions](/api-conventions) and [Troubleshooting](/troubleshooting).
+Record the endpoint or tool, arguments, retrieval time, source artifact, and request identifier with the final answer. A filing section supports claims about that section; it does not establish facts outside it.
 
-## Choose the right execution surface
+## Match the execution surface to the owner
 
-- REST is the direct HTTP contract when your service owns timeouts and retries.
-- SDKs provide language-native clients over that contract.
-- The CLI is for terminal inspection and scripts.
-- MCP lets an MCP-aware client discover tools and schemas at runtime.
+- Use REST or an SDK when an application owns retries, timeouts, and persistence.
+- Use the CLI for terminal inspection and scripts.
+- Use hosted MCP when an MCP-aware client must discover tools and schemas during a research session.
 
-Do not make one surface impersonate another. An MCP client should use `tools.search` and `tools.describe`; an application service should call REST or an SDK; a shell workflow should use CLI commands documented by `secapi <command> --help`.
+For MCP, start with `tools.search`, then inspect the selected input with `tools.describe`. For REST, use the endpoint reference rather than copying an old tool schema into a service. The surfaces expose SEC API data through different contracts, so they do not share error handling or lifecycle behavior.
 
-## Bound repeated work and credential issuance
+## Keep repeated runs bounded
 
-Read `GET /v1/billing` and `GET /v1/limits` with the agent's API key before repeated work, then use `POST /v1/billing/quote` when a workflow needs a current estimate. Quotes are not reservations. Stop on billing and quota conditions rather than attempting to bypass them; [Agent billing](/agent-billing) describes the boundary.
+Before a loop, read `GET /v1/billing` and `GET /v1/limits`; use `POST /v1/billing/quote` for a current estimate. Quotes do not reserve usage. [Billing-aware agent runs](/agent-billing) covers the account boundary and sponsored credential flow.
 
-A human organization member can create a short-lived sponsor token through [agent bootstrap tokens](/api-reference/agent/post-v1-agent-bootstrap-tokens). An agent exchanges that token through [agent bootstrap](/api-reference/agent/post-v1-agent-bootstrap). Do not log the sponsor token or issued API key, and surface token expiry, use, scope, or key-limit failures to the operator.
+## Next action
+
+Write the output schema for one narrow research job, including its required filing identifiers and an explicit `insufficient_evidence` outcome, before connecting it to a scheduler or chat workflow.

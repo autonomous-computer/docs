@@ -1,20 +1,17 @@
 ---
-title: "Build a 13F holdings tracker"
-description: "Build a small Python report that compares a manager's latest parsable 13F filings and preserves filing provenance"
+title: "Build a 13F change tracker"
+description: "Compare a manager's two latest parsable Form 13F reports and write a report with the underlying reporting evidence"
 ---
 
-This tutorial builds a Python script that requests the latest two parsable 13F reports for a manager and writes a reviewable change report. The output is a record of reported holdings, not a claim about a manager's current portfolio or intent. The comparison route chooses the two reports; keep its filing dates and provenance so the report can be checked later.
+This small Python job compares the two 13F reports selected by SEC API for one reporting manager. Its output describes reported holdings changes between those filings. It does not establish a manager's current portfolio, trade dates, economic exposure, or investment intent.
 
-## What you need
+## Set up the input
 
-- An SEC API key in `SECAPI_API_KEY`
-- Python 3.9 or later
-- The manager CIK you want to track
-
-Install the only dependency:
+You need Python 3.9 or later, `requests`, an API key, and a manager CIK. The example uses Berkshire Hathaway's manager CIK.
 
 ```bash
 python -m pip install requests
+export SECAPI_API_KEY="your_api_key"
 ```
 
 ## Request the comparison
@@ -28,97 +25,72 @@ from pathlib import Path
 
 import requests
 
-BASE_URL = "https://api.secapi.ai"
-HEADERS = {"x-api-key": os.environ["SECAPI_API_KEY"]}
-MANAGER_CIK = "0001067983"
+response = requests.post(
+    "https://api.secapi.ai/v1/owners/13f/compare",
+    headers={"x-api-key": os.environ["SECAPI_API_KEY"], "content-type": "application/json"},
+    json={"cik": "0001067983", "limit": 50},
+    timeout=30,
+)
+response.raise_for_status()
+comparison = response.json()
 
-
-def get_latest_comparison(cik: str) -> dict:
-    response = requests.post(
-        f"{BASE_URL}/v1/owners/13f/compare",
-        headers={**HEADERS, "content-type": "application/json"},
-        json={"cik": cik, "limit": 50},
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-comparison = get_latest_comparison(MANAGER_CIK)
 Path("13f-comparison.json").write_text(json.dumps(comparison, indent=2))
-
-print(comparison.get("managerName"))
-print("current filing:", comparison.get("currentFilingDate"))
-print("previous filing:", comparison.get("previousFilingDate"))
-print("request ID:", comparison.get("requestId"))
+print(json.dumps({
+    "manager": comparison.get("managerName"),
+    "currentFilingDate": comparison.get("currentFilingDate"),
+    "previousFilingDate": comparison.get("previousFilingDate"),
+    "requestId": comparison.get("requestId"),
+}, indent=2))
 ```
 
-Run it with:
+Run `python tracker.py`. The expected artifact is `13f-comparison.json`: retain it even if a later step creates a reader-friendly report. It is the record that contains the returned rows and request context.
 
-```bash
-SECAPI_API_KEY=secapi_your_key python tracker.py
-```
+## Render a report without assigning intent
 
-The expected console output contains the returned manager name, two filing dates, and a request ID. `13f-comparison.json` retains the full response; do not replace it with the rendered report when a reviewer needs the original row fields.
-
-## Create a review report
-
-Append this function to group the returned rows without inventing a trading interpretation:
+Append the following code to `tracker.py` after the comparison request above defines `comparison`.
 
 ```python
 def write_report(comparison: dict) -> str:
-    rows = comparison.get("rows", [])
-    groups = {"added": [], "removed": [], "changed": [], "unchanged": []}
-    for row in rows:
-        groups.setdefault(row.get("status", "unknown"), []).append(row)
+    groups = {"added": [], "removed": [], "changed": []}
+    for row in comparison.get("rows", []):
+        status = row.get("status")
+        if status in groups:
+            groups[status].append(row)
 
     lines = [
         f"# {comparison.get('managerName', 'Manager')} 13F comparison",
-        "",
         f"Current filing date: {comparison.get('currentFilingDate')}",
         f"Previous filing date: {comparison.get('previousFilingDate')}",
         f"Request ID: {comparison.get('requestId')}",
         "",
     ]
-    for status in ("added", "removed", "changed"):
+    for status, rows in groups.items():
         lines.append(f"## {status.title()} positions")
-        for row in groups[status]:
-            lines.append(
-                f"- {row.get('issuer')} ({row.get('cusip')}): "
-                f"{row.get('previousShares')} -> {row.get('currentShares')} shares"
-            )
-        if not groups[status]:
+        lines.extend(
+            f"- {row.get('issuer')} ({row.get('cusip')}): "
+            f"{row.get('previousShares')} -> {row.get('currentShares')} shares"
+            for row in rows
+        )
+        if not rows:
             lines.append("- None returned")
         lines.append("")
-
-    lines.extend([
-        "## Interpretation limit",
-        "These are differences between two reported 13F filings. They do not show "
-        "the manager's complete or current portfolio, trade dates, or investment intent.",
-    ])
+    lines.append("These are differences between two reported 13F filings, not a current portfolio or trading-intent record.")
     return "\n".join(lines)
-
 
 Path("13f-comparison.md").write_text(write_report(comparison))
 ```
 
-The API selects the latest two parsable reports. It does not accept two arbitrary report periods. If your workflow needs a particular quarter, list the manager's filings and request each report using the returned `reportDate` or `filingDate`.
+## Source limits and failures
+
+The comparison route selects the latest two parsable reports; it does not accept arbitrary report periods. For a particular quarter, first list the manager's 13F filings and use the returned report or filing dates to choose the evidence you need.
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=8"
 ```
 
-## Source and provenance
+Keep the manager CIK, both returned filing dates, provenance with the current and previous accession numbers when available, and `requestId`. `raise_for_status()` ensures an invalid CIK or service error does not become an empty report. Corporate actions, amendments, and reporting conventions can explain a row difference; inspect the linked filings before making a material characterization.
 
-The comparison is derived from the reporting manager's two latest parsable Form 13F reports selected by the API. Keep the manager CIK, both report and filing dates, accession numbers or filing URLs returned in `provenance`, and `requestId` in the JSON and markdown outputs. Open the linked SEC report before describing a material change to another person.
+## Next action
 
-## Limits and failure modes
-
-The comparison request requires a CIK and accepts a limit from 1 through 50. `requests.raise_for_status()` surfaces invalid requests and service failures rather than writing an empty report. A row change can result from corporate actions, amendments, or reporting conventions that a 13F row cannot explain; Form 13F is neither a complete exposure map nor a current portfolio. Log the response's request identifier when available, and retry only according to your application's failure policy.
-
-## Continue
-
-- [13F API for institutional holdings](/seo/13f-data-api)
-- [13F comparison API](/seo/sec-13f-comparison-api)
-- [Ownership workflows](/ownership-workflows)
+Store the manager CIK with both returned filing identities or filing dates as the comparison key, then add a reviewer field before distributing any reported change to an investment or compliance workflow.
