@@ -262,7 +262,38 @@ Three things to know:
 - The overview is deliberately small: `keyTheses` carries at most 5 headline theses (ticker, relationship, stance, one line each), and nothing on the payload inlines page markdown, anchors, or full thesis bodies. Follow `links.letters` and `links.theses` when you need depth.
 - `latestLetter` is `null` for a manager with no processed letters yet — the curated profile (description, founders, website) still serves.
 
-The same briefing is available over MCP as `fund_letters.manager_overview` and in the SDKs as `getFundManagerOverview(managerId)` / `get_fund_manager_overview(manager_id)`.
+### Top-10 positions from the latest 13F
+
+Pass `include=positions` to inline `latest13F` — the manager's latest canonical 13F report with its top 10 positions by reported value:
+
+```bash
+curl -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/fund-letters/managers/mgr_5d2e8f1a3c7b9046/overview?include=positions"
+```
+
+```json
+{
+  "latest13F": {
+    "period": "2026Q1",
+    "reportDate": "2026-03-31",
+    "filedAt": "2026-05-14",
+    "totalPositions": 18,
+    "topPositions": [
+      { "rank": 1, "issuer": "NVIDIA CORP", "ticker": "NVDA", "cusip": "67066G104", "value": 412350000, "shares": 372000, "pctOfPortfolio": 14.62 },
+      { "rank": 2, "issuer": "ASML HOLDING NV", "ticker": "ASML", "cusip": "N07059210", "value": 298400000, "shares": 41200, "pctOfPortfolio": 10.58 }
+    ]
+  }
+}
+```
+
+How to read it:
+
+- Positions come from the materialized 13F holder index with the same amendment/restatement canonicalization as the institutional-holders endpoints, so 13F-HR/A amendments are never double-counted. `value` is USD (13F values are reported in thousands; already scaled), and `pctOfPortfolio` is the position's share of the report's total reported value.
+- `ticker` is resolved from the reported CUSIP where a canonical listing exists, else `null`. `totalPositions` counts the report's distinct issuer positions.
+- **Get more:** the overview inlines at most 10 positions. Follow `links.holdings13F` for the manager's full 13F holdings surface (the same adviser `cik` also works with `/v1/owners/institutional/investor` for the paged portfolio view).
+- Without `include=positions` the `latest13F` key is omitted entirely; with it, a manager with no linked adviser CIK or no indexed 13F serves `latest13F: null`.
+
+The same briefing is available over MCP as `fund_letters.manager_overview` (same `include` argument) and in the SDKs as `getFundManagerOverview(managerId, { include: "positions" })` / `get_fund_manager_overview(manager_id, include="positions")`. The CLI twin is `secapi fund-letters overview --manager-id mgr_... --include positions`.
 
 ## Cross-check a thesis against 13F holdings
 
