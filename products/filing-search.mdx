@@ -3,7 +3,7 @@ title: "SEC filing search"
 description: "Find SEC filing manifests by issuer, form, date, fiscal period, accession number, or indexed text before retrieval and extraction."
 ---
 
-Use filing search to identify the exact SEC filing your application will retrieve, extract, or cite. Save its accession number as the stable handoff between steps.
+Use filing search to identify the exact SEC filing your application will retrieve, extract, or cite. It is for applications that need a filterable manifest and an accession-number handoff, rather than a user manually navigating raw EDGAR or an ungrounded result from a general search tool. Save the accession number as the stable handoff between steps.
 
 ## What you can do
 
@@ -32,12 +32,17 @@ curl -sS \
 
 The list response includes the filing identity needed for later calls, including `accessionNumber`, form, filing date, and SEC filing URL. Keep `requestId` and any provenance, freshness, or materialization fields returned with the record.
 
+## Choose the retrieval path
+
+Use `/v1/filings` when the job starts with an issuer, date, form, or fiscal-period filter and needs a reproducible manifest. Use an accession-specific route when a workflow has already selected its source filing. Use a latest route only when the product genuinely wants the then-latest matching filing; do not substitute it for a historical accession. For language inside a filing, continue to [Filing content search](/products/search) and fetch the returned section before quoting it.
+
 ## Boundaries to keep in view
 
 - `ticker`, `symbol`, and CIK must not conflict. Resolve ambiguous input before filing-specific use.
 - `limit` is 1 through 50 and `cursor` is a zero-based offset. Do not reuse a cursor after changing filters.
 - Filing availability follows SEC source material. A missing result is a retrieval outcome, not proof that an issuer made no filing.
 - Use the source filing URL and accession number for a conclusion that needs source review; a manifest search result is not the filing text.
+- This surface identifies and retrieves filings; it does not rank legal materiality, interpret disclosures, or guarantee that a general search query has found every relevant filing.
 
 ## Next steps
 

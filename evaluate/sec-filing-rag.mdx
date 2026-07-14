@@ -3,7 +3,7 @@ title: "Evaluate SEC Filing RAG"
 description: "Prove a source-cited filing retrieval loop before adding answer generation."
 ---
 
-Evaluate retrieval before generation. The concrete job is to retrieve candidate filing sections for one research question, fetch the selected source section, and verify that a downstream answer can distinguish source text from interpretation.
+Evaluate retrieval before generation. Choose this path when an application must answer a filing question with inspectable source sections, rather than a general web-search summary or a raw EDGAR document dump. The concrete job is to retrieve candidate filing sections for one research question, fetch the selected source section, and verify that a downstream answer can distinguish source text from interpretation.
 
 ## Endpoints and boundaries
 
@@ -12,6 +12,10 @@ Evaluate retrieval before generation. The concrete job is to retrieve candidate 
 - `GET /v1/search/fulltext` is the separate lexical retrieval path when exact terms matter.
 
 Search ranking narrows a corpus; it does not prove completeness, materiality, or a legal conclusion. Citation spans and snippets can be unavailable. Check `_citation_degraded` when present and preserve accession plus section identity.
+
+## Selection test
+
+Semantic retrieval is useful for a question whose wording differs from the filing; full-text retrieval is useful when exact terms matter. Use raw EDGAR when the requirement is to browse the complete original filing without a retrieval layer. This proof passes only when the answer links each asserted filing fact to a fetched section, flags degraded citations or unavailable retrieval, and leaves the interpretation visibly separate from the source text.
 
 ## Proof of concept
 

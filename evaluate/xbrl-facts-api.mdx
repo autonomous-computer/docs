@@ -3,7 +3,7 @@ title: "Evaluate XBRL Facts API"
 description: "Test normalized XBRL facts and statement bundles against a source-preserving financial-model refresh."
 ---
 
-Use this evaluation for a financial-model refresh or research table. The concrete job is to retrieve a normalized annual statement bundle and a tag-level fact series for one issuer, then decide whether their period and filing provenance support your model.
+Choose this API for a financial-model refresh or research table that needs normalized statements and tag-level SEC facts with filing provenance. Raw SEC XBRL is the right source when your team wants to own all taxonomy parsing and reconciliation; a general financial-data tool may supply convenient values but may not expose the requested/resolved concept or the source trail your model review needs. The concrete job is to retrieve a normalized annual statement bundle and a tag-level fact series for one issuer, then decide whether their period and filing provenance support your model.
 
 ## Endpoints and boundaries
 
@@ -11,6 +11,10 @@ Use this evaluation for a financial-model refresh or research table. The concret
 - `GET /v1/facts` returns normalized SEC company facts for a requested tag. The response identifies the requested and resolved tag.
 
 These routes normalize SEC XBRL; they do not eliminate issuer-specific concepts, extension tags, period differences, amendments, or restatements. Do not compare annual and quarterly values as though they were interchangeable, and do not treat a missing tag as proof a metric was not disclosed.
+
+## Selection test
+
+This is a fit when the model needs both a reusable normalized layer and the evidence to resolve exceptions. It is not a replacement for an issuer-specific accounting policy or a restatement decision. The proof passes when the team can reconcile at least one statement line to the selected fact series after checking form, period, unit, resolved tag, and filing provenance.
 
 ## Proof of concept
 

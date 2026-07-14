@@ -3,7 +3,7 @@ title: "Evaluate 13F API"
 description: "Test manager-reported 13F holdings and quarter-over-quarter comparisons with SEC filing evidence."
 ---
 
-Use this evaluation for a manager-monitor or research-review job: retrieve one manager's disclosed holdings, compare the two reports the API selects, and decide whether the returned filing trail is sufficient for your workflow. A Form 13F is a delayed, manager-reported snapshot. It does not establish current holdings, intraperiod trades, or investment intent.
+Choose this API when the job is to operate a manager-monitor or research-review workflow from normalized 13F holdings while retaining the SEC filing trail. Raw EDGAR can provide the submitted reports, but leaves your application to identify comparable reports, normalize holdings, and preserve the comparison context. A general research tool can summarize a manager's activity, but cannot replace the selected filings and dates your reviewer must inspect. A Form 13F is a delayed, manager-reported snapshot; it does not establish current holdings, intraperiod trades, or investment intent.
 
 ## Endpoints and boundaries
 
@@ -12,6 +12,10 @@ Use this evaluation for a manager-monitor or research-review job: retrieve one m
 - `POST /v1/owners/13f/compare` compares the latest two reports available to the route. It is not an arbitrary-quarter comparison endpoint.
 
 The report date is the quarter-end snapshot; the filing date is when it reached the SEC. Keep both. Holding values are returned as `valueUsdThousands`, so convert units only deliberately.
+
+## Selection test
+
+This is a fit when your product needs a repeatable latest-two-report comparison and can display or retain the underlying report identities. Prefer direct EDGAR retrieval when you only need an original submission or must make an arbitrary historical-quarter comparison that this route does not select. The proof passes when a reviewer can trace every reported change back to both selected filings and can explain why it is disclosure evidence rather than a trade conclusion.
 
 ## Proof of concept
 

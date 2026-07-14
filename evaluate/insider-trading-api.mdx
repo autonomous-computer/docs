@@ -3,13 +3,17 @@ title: "Evaluate Insider Trading API"
 description: "Test a Form 3, 4, and 5 review queue with transaction-level filing evidence."
 ---
 
-Use this evaluation for a disclosure-review queue, not a trading-signal backtest. The concrete job is to find recent Form 4 records for an issuer, distinguish the SEC transaction code from an inferred label, and make each row reviewable against its filing.
+Choose this API when the job is to create a reviewable disclosure queue from Forms 3, 4, and 5, not to manufacture a trading signal. Raw EDGAR provides the source forms but requires your application to parse transactions and assemble a filterable queue. General market tools may label activity, but their labels are not a substitute for the SEC code and filing context. The concrete test is to find recent Form 4 records for one issuer, distinguish the SEC transaction code from an inferred label, and make each row reviewable against its filing.
 
 ## Endpoint and boundaries
 
 `GET /v1/insiders` returns normalized records derived from Forms 3, 4, and 5. It accepts issuer `ticker` or `cik`, form, filing-date, owner, security-title, and `transaction_code` filters. Results use cursor pagination; `limit` is 1 through 50.
 
 For Form 4 review, `transaction_code=P` narrows to the SEC's open-market or private purchase code and `S` narrows to sales. Keep the raw code. Option exercises, gifts, tax withholding, planned sales, and other transactions can coexist with discretionary purchases or sales.
+
+## Selection test
+
+This is a fit when a human or downstream policy can inspect the filing behind each normalized row. Use direct filing retrieval when you only need a single original form, or a purpose-built market-data product when the requirement is a vendor's proprietary signal rather than SEC disclosure evidence. The proof passes when the unfiltered and code-filtered queues reconcile, every retained row has a filing identity, and the integration makes no buy-or-sell inference.
 
 ## Proof of concept
 
