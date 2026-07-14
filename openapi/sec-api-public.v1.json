@@ -8250,6 +8250,26 @@
     "/v1/companies/subsidiaries": {
       "get": {
         "summary": "Return the list of subsidiaries extracted from the latest 10-K Exhibit 21 for a given entity",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Either ticker or cik is required."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Either ticker or cik is required."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -21629,6 +21649,74 @@
     "/v1/compensation/compare": {
       "post": {
         "summary": "Compare the latest two executive compensation disclosures for an issuer",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker. Provide ticker or cik in the query or JSON body."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer CIK. Provide ticker or cik in the query or JSON body."
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "description": "Provide either ticker or cik in this JSON body, or provide one as a query parameter.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "ticker": {
+                    "type": "string",
+                    "description": "Issuer ticker. Provide ticker or cik in the JSON body or query."
+                  },
+                  "cik": {
+                    "type": "string",
+                    "description": "Issuer CIK. Provide ticker or cik in the JSON body or query."
+                  },
+                  "limit": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "minimum": 1,
+                    "maximum": 50,
+                    "default": 10,
+                    "description": "Maximum compensation records to parse from each proxy disclosure."
+                  }
+                }
+              },
+              "examples": {
+                "ticker": {
+                  "summary": "Compare Apple disclosures by ticker",
+                  "value": {
+                    "ticker": "AAPL",
+                    "limit": 10
+                  }
+                },
+                "cik": {
+                  "summary": "Compare Apple disclosures by CIK",
+                  "value": {
+                    "cik": "0000320193",
+                    "limit": 10
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful response",
