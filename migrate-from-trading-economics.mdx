@@ -1,22 +1,22 @@
 ---
 title: "Migrate from Trading Economics"
-description: "Qualify a macro workflow on SEC API route by route, with explicit country, series, timing, and availability checks."
+description: "Qualify a macro read on SEC API by country, series, timing, and returned coverage before you replace a production feed."
 ---
 
-Trading Economics integrations often begin with broad country and series discovery. SEC API macro routes should be qualified more narrowly: identify the country, indicator, date range, and decision your workflow needs, then inspect the returned coverage and timing evidence before replacing a production feed.
+Use this guide to replace one macro-data feed for a defined country and indicator. Before changing a production feed, identify the country, indicator, date window, and decision the result supports.
 
-## Map the workflow
+## Map the feed to a route
 
-| Existing job | SEC API route | What to validate |
+| Existing job | SEC API route | Verify before cutover |
 | --- | --- | --- |
 | Retrieve an indicator series | `GET /v1/macro/indicators` | Country, indicator key, dates, units, observations, and source metadata. |
-| Review scheduled macro events | `GET /v1/macro/calendar` | Country, requested window, event date, and returned coverage or status fields. |
-| Inspect forward estimates | `GET /v1/macro/forecasts` | Country, horizon, source, and observation date. |
-| Use market context | Relevant documented market route | Instrument identity, market date, units, and route-specific freshness. |
+| Review scheduled releases | `GET /v1/macro/calendar` | Country, requested window, event date, and returned coverage or status. |
+| Inspect forecasts | `GET /v1/macro/forecasts` | Country, horizon, source, and observation date. |
+| Add market context | The documented market route for that instrument | Instrument identity, market date, units, and route-specific freshness. |
 
-SEC API does not claim every country, series, calendar, or market representation a broad macro provider may offer. A returned response is evidence for that requested scope, not a promise of universal coverage.
+SEC API does not claim every country, series, calendar, or market representation a broad macro provider may offer. A response demonstrates the requested scope; it does not promise universal coverage.
 
-## Prove one indicator
+## Test one indicator
 
 ```bash
 curl --fail-with-body -sS \
@@ -24,9 +24,9 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/macro/indicators?country=US&indicator=GDPC1"
 ```
 
-Compare the observation dates, units, revisions if supplied, and the source fields your model or dashboard relies on. Store `requestId`, retrieval time, and any provenance, freshness, coverage, warning, or status fields returned by the route.
+Compare observation dates, units, source fields, and revisions when provided. Store the retrieval time, `requestId`, and any returned provenance, freshness, coverage, warning, or status fields.
 
-## Prove the calendar separately
+## Test the calendar separately
 
 ```bash
 curl --fail-with-body -sS \
@@ -34,22 +34,24 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/macro/calendar?country=US&days=7"
 ```
 
-A calendar response and an indicator response answer different questions. Do not use an upcoming event to infer that a series value is current, or use a current series value to infer complete event coverage. Make unavailable, tentative, or degraded conditions visible to the caller.
+An upcoming event does not establish that an indicator is current, and a current indicator does not establish complete calendar coverage. Surface unavailable, tentative, or degraded conditions to the caller instead of filling gaps with assumptions.
 
-## Production cutover rules
+## Cut over one low-risk read
 
-1. Dual-run one country and one indicator for a defined observation window.
-2. Test the country and series inventory your users actually request, including gaps.
+1. Dual-run one country and indicator for a defined observation window.
+2. Test the country and series inventory users actually request, including gaps.
 3. Compare timestamps, units, source records, and revision behavior before joining values to a model.
-4. Move one low-risk read path first, with a reversible fallback during qualification.
-5. Preserve response diagnostics so a stale or unavailable result can be investigated later.
+4. Move one low-risk read behind a reversible control.
+5. Preserve response diagnostics so a stale or unavailable result can be investigated.
 
-For portfolio or factor interpretation, keep modeled output separate from the returned macro evidence. A macro observation can inform analysis; it does not prove a forecast or investment conclusion.
+Macro observations can inform analysis, but they do not prove a forecast or investment conclusion. Keep modeled interpretation separate from the returned evidence.
 
-## Read next
+## Next action
+
+Choose one country-indicator window, dual-run it with the current feed, and use the recorded dates, units, coverage, and revisions to decide whether that read can move.
 
 <CardGroup cols={3}>
-  <Card title="Macro intelligence" icon="chart-no-axes-combined" href="/macro-intelligence">Understand the documented macro workflows and their boundaries.</Card>
-  <Card title="Freshness and source evidence" icon="badge-info" href="/freshness-and-trust">Apply a timing policy to each result.</Card>
-  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Capture the context needed to investigate a failed or partial request.</Card>
+  <Card title="Macro intelligence" icon="chart-no-axes-combined" href="/macro-intelligence">Review documented macro workflows and boundaries.</Card>
+  <Card title="Freshness and trust" icon="badge-info" href="/freshness-and-trust">Apply timing rules to each result.</Card>
+  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Capture the context needed to investigate a partial request.</Card>
 </CardGroup>

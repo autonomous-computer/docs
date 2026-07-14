@@ -1,67 +1,50 @@
 ---
-title: "SEC API and edgartools: choose a production path"
-description: "Decide whether a direct-EDGAR Python workflow or a hosted SEC API contract fits your application, then validate the choice with one filing."
+title: "SEC API and edgartools: choose an operating model"
+description: "Evaluate one filing workflow to decide whether your team should own a local Python workflow or call SEC API's managed contract."
 hidden: true
 ---
 
-[edgartools](https://github.com/dgunning/edgartools) is a Python library for working directly with SEC filings. It also provides LLM-oriented workflows, a local MCP server, and local-storage options for downloaded SEC data. SEC API is a hosted, managed data service with REST, SDK, CLI, and hosted MCP interfaces. Neither is a universal replacement for the other: choose based on where parsing, operations, caching, and source-record handling belong in your application.
+Use this page to choose where a filing workflow runs. The decision is whether your team owns local retrieval and parsing in Python, or calls a managed HTTP contract from the application that needs the data.
 
-## Start with the operating model
+## Start with one job
 
-| Your requirement | A reasonable starting point |
+Choose a known issuer, form, and question. For example, retrieve AAPL's latest 10-K risk factors and retain the filing that supplied the text.
+
+| Decision criterion | Choose the path that proves it |
 | --- | --- |
-| Inspect or customize document parsing in a Python research workflow | edgartools and direct SEC source documents |
-| Run an LLM workflow or MCP server beside local Python data and parsing | edgartools |
-| Cache downloaded SEC data under your own local-storage policy | edgartools local storage |
-| Call a managed, documented HTTP contract from a service, worker, or non-Python runtime | SEC API REST or an SDK |
-| Give an MCP client a hosted tool surface without operating a local MCP server | SEC API hosted MCP |
-| Need a stable handoff from search to retrieval | SEC API filing search, then accession-based retrieval |
-| Need the original filing as the source of record | Keep the SEC filing URL and accession number regardless of the interface |
+| Your application is a local Python research workflow and must control its own source retrieval and processing | Evaluate your local workflow against the SEC source record. |
+| A service, worker, or non-Python application needs a documented HTTP interface | Evaluate SEC API's filing search and retrieval routes. |
+| The result must be traceable to a filing | Keep the accession number, form, filing date, and filing URL with the result on either path. |
+| A downstream system needs a specific rendered filing or exhibit | Test that exact representation before adopting either path. |
 
-Do not select an interface from a benchmark number alone. Compare the exact issuer, filing family, section, response fields, and source record your production workflow needs.
+## Evaluate the managed path
 
-## Prove one filing workflow
-
-Use a known issuer and form. SEC API's latest-filing response is time-dependent, so verify the returned filing identity rather than expecting a fixed result.
+First establish the filing identity, then retrieve only the section your job needs:
 
 ```bash
 curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
-```
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=5"
 
-For a bounded question, fetch a section from that current filing:
-
-```bash
 curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K"
 ```
 
-Persist `accessionNumber`, `form`, `filingDate`, `filingUrl`, and `requestId` when returned. The section is evidence for a specific question; it does not replace the filing identity or the original source document.
+Accept the managed route only when its filing identity, section availability, and response shape meet your application's requirements. Preserve `requestId` and any returned warning or provenance fields with the result.
 
-## What to compare before choosing
+## Keep the ownership boundary explicit
 
-| Check | Why it matters |
-| --- | --- |
-| Issuer identity | Confirm ticker, CIK, company name, and the identifiers your application joins downstream. |
-| Filing identity | Compare form, filing date, accession number, and SEC filing URL. |
-| Extraction need | Test the exact section or structured value your workflow consumes, including missing-data behavior. |
-| Runtime ownership | Decide whether your team operates local Python parsing, MCP, and caches or consumes a hosted managed route contract. |
-| Evidence record | Retain provenance, warnings, freshness, and request diagnostics when the chosen route returns them. |
+SEC API provides documented filing search and retrieval routes. It does not make every filing representation, exhibit, or historical record interchangeable. A successful latest-filing request does not prove that a particular source document or arbitrary filing URL is available in the form your workflow requires.
 
-SEC API does not promise that every exhibit, historic filing representation, or normalized field is available for every issuer. Confirm route-specific availability from the response, and keep a direct-source fallback when your acceptance test requires one.
+If your team owns the local workflow, it also owns its retrieval, caching, parsing, and operational controls. If it adopts SEC API, it should still retain the source filing identity and keep a direct-source fallback for unqualified filing families.
 
-## Choose the operating boundary deliberately
+## Next action
 
-edgartools can be the better fit when a team wants to own Python execution, local storage, direct SEC retrieval, and its local MCP/LLM workflow. SEC API can be the better fit when a team wants a managed HTTP or hosted MCP surface from JavaScript, Python, Go, Rust, a CLI, or another HTTP-capable runtime.
-
-Local caching and hosted retrieval answer different operational questions. Compare cache refresh policy, source identity, error handling, and the exact filing representation your users need. During a migration, run one workflow side by side and compare evidence records before changing downstream storage or prompts.
-
-## Read next
+Run the two requests above alongside your current workflow for one issuer and form. Compare the accession number, filing date, section text, missing-data behavior, and evidence record before changing storage or prompts.
 
 <CardGroup cols={3}>
-  <Card title="First request flows" icon="square-terminal" href="/first-request-flows">Choose REST, an SDK, the CLI, or MCP for the first source-backed request.</Card>
-  <Card title="Filing search" icon="file-search" href="/products/filing-search">Find and carry the accession number into downstream retrieval.</Card>
-  <Card title="Freshness and source evidence" icon="badge-info" href="/freshness-and-trust">Set an evidence policy before automating a conclusion.</Card>
+  <Card title="Filing search" icon="file-search" href="/products/filing-search">Review the search contract and source identifiers.</Card>
+  <Card title="First request flows" icon="square-terminal" href="/first-request-flows">Choose REST, an SDK, CLI, or MCP for the evaluation.</Card>
+  <Card title="Freshness and trust" icon="badge-info" href="/freshness-and-trust">Set the evidence policy for production use.</Card>
 </CardGroup>

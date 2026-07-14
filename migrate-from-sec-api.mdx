@@ -1,59 +1,60 @@
 ---
 title: "Migrate from sec-api.io to SEC API"
-description: "Dual-run a sec-api.io filing workflow against SEC API, compare source evidence, and cut over only after the route contract passes your test."
+description: "Dual-run one sec-api.io workflow against SEC API and cut over only when filing identity, response behavior, and evidence pass your acceptance test."
 ---
 
-Start with the smallest production workflow that has a clear acceptance test: issuer resolution, filing search, a latest filing, or one section. A global URL replacement hides the differences that matter most: identity, pagination, source records, and unavailable states.
+Use this guide to replace one sec-api.io production read without treating similarly named endpoints as equivalent contracts. Start with a workflow that has a clear pass/fail result: issuer resolution, filing search, a latest filing, or one section.
 
-## Choose a first workflow
+## Define the first acceptance test
 
 | Existing need | SEC API route | Acceptance record |
 | --- | --- | --- |
-| Resolve ticker or CIK | `GET /v1/entities/resolve` | Company name, ticker, CIK, and the identifier your app persists. |
+| Resolve ticker or CIK | `GET /v1/entities/resolve` | Company name, ticker, CIK, and the persisted identifier. |
 | Search filings | `GET /v1/filings` | Form, filing date, accession number, filing URL, and pagination behavior. |
-| Get the current filing | `GET /v1/filings/latest` | Returned source identity and retrieval time. |
-| Read a latest filing section | `GET /v1/filings/latest/sections/{section_key}` | Filing identity, section key, text availability, and any route warnings. |
-| Read a reported financial concept | `GET /v1/facts` | Tag, units, fiscal period, and source filing evidence. |
+| Get a latest filing | `GET /v1/filings/latest` | Returned filing identity and retrieval time. |
+| Read a latest section | `GET /v1/filings/latest/sections/{section_key}` | Filing identity, section key, text availability, and warnings. |
+| Read a reported fact | `GET /v1/facts` | Tag, unit, fiscal period, and source filing evidence. |
 
-The API reference is authoritative for route parameters and response fields. Do not infer broad historical availability from a successful test on one issuer or filing family.
+The API reference, not a successful sample response, defines route parameters and fields. Do not infer broad historical or exhibit availability from one issuer or filing family.
 
-## Run an identity-first proof
+## Verify identity before extraction
 
 ```bash
 curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
 
 curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10&view=agent"
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10"
 ```
 
-For every matched filing, compare ticker, CIK, form, filing date, accession number, and source URL. Save `requestId` and returned provenance, freshness, materialization, or warning fields when present.
+For each matched filing, compare ticker, CIK, form, filing date, accession number, and source URL. Retain `requestId` and returned provenance, freshness, materialization, or warning fields when the route provides them.
 
 ## Test a bounded extraction
 
 ```bash
 curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K"
 ```
 
-Treat the returned section as evidence for a bounded question, not as a substitute for the complete filing. If your current workflow depends on an arbitrary filing URL, an exhibit, or a specific rendered representation, test that exact requirement. Keep the existing path as a temporary fallback until the SEC API route returns the representation and source evidence your application needs.
+The section is evidence for a specific question, not a substitute for a complete filing. If the current integration uses an arbitrary filing URL, an exhibit, or a specific rendered document, test that exact requirement and keep the old path until it passes.
 
-## Cutover checklist
+## Release one reversible change
 
-- Pin `secapi-version` if your production client requires a dated version.
-- Send machine credentials through `x-api-key`, never a query parameter or browser bundle.
+- Pin `secapi-version` when your client requires a dated version.
+- Use `x-api-key` for machine credentials; never put it in a URL or browser bundle.
 - Compare nullability, pagination, and source identifiers as well as business fields.
-- Honor `Retry-After` for `429`; do not retry authentication, authorization, billing, or hard-cap stops until their condition changes.
-- Keep a reversible fallback for any unqualified route or filing family.
-- Preserve `Request-Id` and `traceparent` when available for both successful and failed dual-run calls.
+- Honor `Retry-After` for `429` and avoid retrying failures whose condition has not changed.
+- Keep a fallback for every unqualified route or filing family.
 
-## Read next
+## Next action
+
+Run the selected read against both services for a defined issuer and form set, then promote only that path when the recorded acceptance test passes.
 
 <CardGroup cols={3}>
-  <Card title="Filing types and exhibits" icon="files" href="/filing-types-and-exhibits">Check generic retrieval against specialized filing workflows.</Card>
+  <Card title="Filing types and exhibits" icon="files" href="/filing-types-and-exhibits">Check whether generic retrieval fits the required filing workflow.</Card>
   <Card title="API conventions" icon="braces" href="/api-conventions">Apply authentication, pagination, versioning, and retry rules.</Card>
-  <Card title="Error code catalog" icon="circle-alert" href="/error-code-catalog">Turn a dual-run failure into a concrete next action.</Card>
+  <Card title="Error catalog" icon="circle-alert" href="/error-code-catalog">Diagnose a dual-run failure.</Card>
 </CardGroup>

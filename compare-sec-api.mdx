@@ -1,144 +1,59 @@
 ---
-title: "SEC API vs sec-api.io"
-description: "Feature-by-feature comparison of SEC API and sec-api.io — speed, pricing, endpoints, and agent support"
+title: "SEC API vs sec-api.io: qualify your filing workflow"
+description: "Use a route-by-route dual run to determine whether SEC API meets the identity, retrieval, and operational requirements of a sec-api.io integration."
 ---
 
-A direct comparison of the two leading SEC data APIs for developers and AI agents.
+Use this guide to decide whether one sec-api.io read path can move to SEC API. Test the route your application depends on, rather than relying on a feature table or a single response.
 
-## Speed
+## Pick the first production job
 
-Two independent benchmark runs, each with its own SEC API baseline measured at the same time as the competitor. SEC API p50 has improved between runs (production performance is not static) — each table's speedup uses the SEC API value measured alongside that competitor, not across runs.
+| Current job | SEC API route to evaluate | Acceptance criteria |
+| --- | --- | --- |
+| Resolve an issuer | `GET /v1/entities/resolve` | The ticker, CIK, and company identity match the identifier your application stores. |
+| Search filings | `GET /v1/filings` | Form, filing date, accession number, source URL, pagination, and nullability meet your consumer contract. |
+| Read a filing section | `GET /v1/filings/latest/sections/{section_key}` | The selected filing and section are available, with the source identity retained. |
+| Read a reported concept | `GET /v1/facts` | The tag, unit, period, and source filing meet the data model your application expects. |
 
-**vs sec-api.io** (benchmark captured 2026-03-18)
+The public API reference is authoritative for supported parameters and response fields. Treat a successful response for one issuer or form as evidence for that scope only.
 
-| Operation | SEC API p50 | sec-api.io p50 | Winner |
-|---|---|---|---|
-| Entity resolution | **33.98ms** | 231.46ms | SEC API (6.8x) |
-| Filing search | **37.62ms** | 265.23ms | SEC API (7.1x) |
-| Section extraction | **34.38ms** | 315.31ms | SEC API (9.2x) |
-| XBRL-to-JSON | **34.45ms** | 400.53ms | SEC API (11.6x) |
-
-**vs edgartools** (benchmark captured 2026-04-23, preliminary, subprocess-isolated cold fetches)
-
-| Operation | SEC API p50 | edgartools p50 | Winner |
-|---|---|---|---|
-| Entity resolution | **34ms** | 471ms | SEC API (13.9x) |
-| Filing search | **38ms** | 688ms | SEC API (18.1x) |
-| Section extraction | **34ms** | 3,081ms | SEC API (90.6x) |
-| XBRL-to-JSON | **34ms** | 1,508ms | SEC API (44.3x) |
-
-<Tip>
-edgartools numbers are preliminary pending final verification. See [benchmark-results](/benchmark-results) and [compare-edgartools](/compare-edgartools) for the full comparison and methodology.
-</Tip>
-
-## Pricing
-
-| Tier | SEC API | sec-api.io | edgartools |
-|---|---|---|---|
-| **Starter grant** | 150 calls (one-time) | 100 calls (lifetime) | Unlimited (MIT, truly free) |
-| **Pay-as-you-go** | From $0.01/call | Not offered | N/A |
-| **Personal** | $55/month | $49/month | $0 |
-| **Business/Team** | $239/month | $199/month | $0 |
-| **Enterprise** | Custom | Custom | None (community-supported) |
-
-**Key differences:**
-- **SEC API vs sec-api.io:** SEC API offers true pay-as-you-go with no monthly minimum. An agent making 200 queries/month pays $4 with SEC API vs $49 minimum with sec-api.io.
-- **vs edgartools:** edgartools is genuinely free (MIT Python library, calls SEC directly). The tradeoff is client-side parsing, no SLA, no commercial support, Python-only, and a latency/payload profile that's 13.9-90.6× and 600-1,000× higher than SEC API on the operations above. See [compare-edgartools](/compare-edgartools) for when each is the right choice.
-
-## Features
-
-| Feature | SEC API | sec-api.io |
-|---|---|---|
-| **Endpoints** | 217+ | ~35 |
-| **Filing coverage** | 1993–present (18.5M+ manifests) | 1993–present (20M+ claimed) |
-| **Full-text search** | Yes | Yes |
-| **Semantic search** | Yes (hybrid vector + keyword) | No |
-| **Hybrid search (RRF)** | Yes | No |
-| **Intelligence bundles** | Yes (company, security, earnings) | No |
-| **Filing diff** | Yes (amendment tracking) | No |
-| **Saved monitors** | Yes (webhook alerts) | No |
-| **Workflow templates** | Yes (3 built-in) | No |
-| **MCP integration** | Yes (native) | No |
-| **CLI** | Yes (`secapi` on npm) | No |
-| **SDKs** | 4 (JS, Python, Go, Rust) | 2 (Python, Node.js) |
-| **Homebrew** | Yes | No |
-| **Skills** | 8 canonical skills | No |
-| **Agent bootstrap** | Yes (ephemeral credentials) | No |
-| **Budget controls** | Yes (threshold alerts) | No |
-| **Webhooks** | Yes (signed, replay) | No |
-| **Event streams** | Yes (cursor-based) | No |
-| **Data provenance** | Yes (trace on every object) | No |
-| **Filing export** | 6 formats (JSON, MD, CSV, XLSX, DOCX, PDF) | PDF only |
-
-## Endpoint Coverage
-
-| Category | SEC API | sec-api.io |
-|---|---|---|
-| Filing search | Yes | Yes |
-| Full-text search | Yes | Yes |
-| Section extraction | Yes | Yes |
-| XBRL/statements | Yes | Yes |
-| Entity mapping | Yes (+ FIGI, ISIN) | Yes |
-| Insider trading | Yes | Yes |
-| 13F holdings | Yes (+ comparison) | Yes |
-| Executive comp | Yes (+ comparison) | Yes |
-| Enforcement | Yes (5,993+ records) | Yes |
-| Board composition | Yes | Yes (directors) |
-| Subsidiaries | Yes (Exhibit 21) | Yes |
-| Audit fees | Yes | No |
-| Form 144 | Yes | Yes |
-| Form D (structured) | Yes (XML extraction) | Yes |
-| Form C | Yes | Yes |
-| Reg A (Form 1-A) | Yes | Yes |
-| N-PORT | Yes | Yes |
-| N-CEN | Yes | Yes |
-| N-PX | Yes | Yes |
-| Form ADV | Yes (+ schedule/AUM filters) | Yes |
-| **8-K 5.07 voting results** | **Yes (structured proposals, vote counts, approval outcomes)** | **No (open bug since July 2025)** |
-| EDGAR index | Yes (3 endpoints) | Yes |
-| Bulk download | Yes (summary + quarter) | Yes (file mirror) |
-| Real-time streaming | Yes (WebSocket + webhooks) | Yes (WebSocket only) |
-| **Semantic search** | **Yes** | **No** |
-| **Intelligence bundles** | **Yes** | **No** |
-| **Filing diff** | **Yes** | **No** |
-| **Monitors** | **Yes** | **No** |
-| **Factor analysis** | **Yes (broad catalog with narrower launch surface)** | **No** |
-| **Macro data** | **Yes (12 countries)** | **No** |
-| **Portfolio analytics** | **Yes** | **No** |
-
-## Developer Experience
-
-| Feature | SEC API | sec-api.io |
-|---|---|---|
-| Onboarding time | < 2 minutes | ~5 minutes |
-| API key creation | Explicit dashboard/API creation, revealed once | Manual |
-| Starter grant | 150 one-time, no card | 100 lifetime starter calls |
-| Documentation | 205 pages | ~40 pages |
-| Tutorials | 8 (Python + JS) | 27 (Python only) |
-| OpenAPI spec | Yes (generated from Zod) | No |
-| Changelog | Yes | No |
-| Status page | Yes | No |
-| Error codes | Structured with requestId | Basic |
-| Rate limit headers | Yes (remaining, limit) | No |
-| Budget headers | Yes (usage %, threshold) | No |
-
-## Migration
-
-Already using sec-api.io? Our [migration guide](https://docs.secapi.ai/migrate-from-sec-api) maps every sec-api.io endpoint to its SEC API equivalent.
+## Compare identity before output
 
 ```bash
-# sec-api.io                          →  SEC API
-# /mapping/ticker/AAPL                →  /v1/entities/resolve?ticker=AAPL
-# POST / (filing search)              →  /v1/filings?ticker=AAPL&form=10-K
-# /extractor?url=...&item=1A          →  /v1/filings/latest/sections/item_1a
-# /xbrl-to-json?accession=...         →  /v1/statements/all?ticker=AAPL
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
+
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10"
 ```
 
-## Try SEC API
+For each candidate filing, compare the CIK, form, filing date, accession number, and filing URL before comparing downstream text or financial values. Record `requestId` and any returned provenance, freshness, or warning fields.
+
+## Test the exact retrieval boundary
 
 ```bash
-curl "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
-  -H "x-api-key: YOUR_API_KEY"
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K"
 ```
 
-Create an account at secapi.ai/signup to get an API key.
+This route answers a bounded section-retrieval question. It is not a promise that every exhibit, arbitrary filing URL, or rendered representation is available. Keep the existing integration as a reversible fallback until your required filing families pass the same test.
+
+## Implement one reversible cutover
+
+1. Send credentials in `x-api-key`, not a query parameter or browser bundle.
+2. Dual-run a low-risk read path for a defined issuer and form set.
+3. Compare identities, pagination, nulls, units, and source records, not just headline values.
+4. Honor `Retry-After` for `429`; do not retry authentication, authorization, billing, or hard-cap responses until their condition changes.
+5. Release behind a reversible control and retain request diagnostics for both paths.
+
+## Next action
+
+Pick the lowest-risk production read, dual-run it for a defined issuer and form set, and record the acceptance result before moving another route.
+
+<CardGroup cols={3}>
+  <Card title="Migration guide" icon="arrow-right-left" href="/migrate-from-sec-api">Use the full cutover checklist.</Card>
+  <Card title="API conventions" icon="braces" href="/api-conventions">Review authentication, versions, pagination, and retries.</Card>
+  <Card title="Error catalog" icon="circle-alert" href="/error-code-catalog">Turn a failed dual run into an actionable diagnosis.</Card>
+</CardGroup>

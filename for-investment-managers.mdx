@@ -1,108 +1,57 @@
 ---
-title: "SEC Data for Investment Managers"
-description: "Structured SEC filings, factor analytics, and 13F ownership tracking with provenance and freshness metadata for investment research workflows."
+title: "SEC data for investment managers"
+description: "Evaluate a source-backed issuer, ownership, and factor research workflow while keeping descriptive data separate from investment judgment."
 ---
 
-<Info>
-SEC API gives investment managers and research teams a single way to resolve issuers, pull filings and sections, inspect factor routes, review 13F/insider activity, and package intelligence bundles with traceable source context.
-</Info>
-
-## Why investment managers use SEC API
-
-<CardGroup cols={2}>
-  <Card title="Factor decomposition" icon="chart-line" href="/factor-intelligence">
-    Query factor returns, exposures, decomposition, correlations, and related-stock routes for systematic research workflows.
-  </Card>
-  <Card title="13F ownership tracking" icon="building-2" href="/ownership-workflows">
-    Retrieve manager-level 13F holdings, compare quarters, and separately review issuer-level institutional holders where available.
-  </Card>
-  <Card title="Intelligence bundles" icon="brain" href="/investment-intelligence">
-    Use company, security, portfolio, and watchlist intelligence routes to package common research reads.
-  </Card>
-  <Card title="Insider trade monitoring" icon="user-check" href="/api-reference/insiders">
-    Track Form 3, 4, and 5 activity by ticker, CIK, owner, form type, transaction code, and date range.
-  </Card>
-</CardGroup>
-
----
-
-## Key endpoints for investment workflows
-
-| Endpoint | Method | Use case |
-|----------|--------|----------|
-| `/v1/entities/resolve` | `GET` | Resolve ticker, CIK, or name before research reads |
-| `/v1/factors/exposures` | `GET` | Per-stock factor exposure loadings |
-| `/v1/factors/returns` | `GET` | Historical factor return series with z-scores |
-| `/v1/factors/decomposition` | `GET` | Factor decomposition for a single ticker |
-| `/v1/intelligence/security` | `GET` | Comprehensive single-security analysis bundle |
-| `/v1/intelligence/portfolio` | `POST` | Portfolio-level macro and factor analysis |
-| `/v1/owners/13f` | `GET` | Latest 13F holdings report for a manager filer |
-| `/v1/owners/13f/compare` | `POST` | Quarter-over-quarter 13F position changes |
-| `/v1/owners/institutional/ticker` | `GET` | Issuer-level institutional holder lookup |
-| `/v1/insiders` | `GET` | Insider transactions by company or executive |
-
----
-
-## Example: track manager-level ownership changes
-
-13F routes are keyed by the manager filer's CIK, not the issuer ticker. For Berkshire Hathaway:
-
-```bash
-curl -X POST \
-  -H "content-type: application/json" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -d '{"cik":"0001067983","limit":20}' \
-  "https://api.secapi.ai/v1/owners/13f/compare"
-```
-
-If you need issuer-level holders, use the institutional-holder route instead:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/institutional/ticker?ticker=AAPL&limit=25"
-```
-
-Then cross-check with recent insider activity for the issuer:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=10"
-```
-
----
-
-## Example: factor and portfolio context
-
-Pull current factor exposures for a ticker in your portfolio:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/factors/exposures?symbols=NVDA&response_mode=compact"
-```
-
-Package a portfolio-level intelligence read for an internal research note:
-
-```bash
-curl -X POST \
-  -H "content-type: application/json" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -d '{"holdings":[{"symbol":"AAPL","weight":0.25},{"symbol":"MSFT","weight":0.25},{"symbol":"NVDA","weight":0.25},{"symbol":"GOOGL","weight":0.25}]}' \
-  "https://api.secapi.ai/v1/intelligence/portfolio"
-```
-
-## How to use this in a research workflow
-
-<CardGroup cols={2}>
-  <Card title="Keep route semantics explicit" icon="route">
-    Treat manager-level 13F reads, issuer-level holders, insider activity, and factor analytics as separate evidence streams.
-  </Card>
-  <Card title="Use generated prompts" icon="terminal" href="/agents/prompt-library/investment-manager">
-    Start from the investment-manager prompt library for factor research, 13F rotation, earnings context, and issuer briefs.
-  </Card>
-</CardGroup>
+Use this guide to reproduce the evidence section of a research note, such as an issuer brief or position-change review. SEC API supplies documented data routes; your team retains responsibility for methodology, investment decisions, and portfolio action.
 
 <Prompt>
 For holdings [TICKER: WEIGHT] as of [DATE], calculate portfolio and security factor context, then retrieve each issuer's latest material filing and recent Form 4 activity. Return factor outputs separately from filing facts, with accession numbers and transaction dates. Factor exposure is descriptive, not a forecast; 13F and Form 4 activity do not establish conviction. Use portfolio.analyze, factors.decomposition, companies.overview, filings.search, and insiders.list.
 </Prompt>
 
-_See the full 12-prompt [Investment manager library](/agents/prompt-library/investment-manager)._
+## Choose the evidence stream
+
+| Research job | Route | Decision criterion |
+| --- | --- | --- |
+| Resolve the issuer before research | `GET /v1/entities/resolve` | Ticker, CIK, and the downstream identifier are correct. |
+| Retrieve the filing record behind a claim | `GET /v1/filings` | Form, filing date, accession number, and filing URL are retained. |
+| Review a manager's 13F filing | `GET /v1/owners/13f` or `POST /v1/owners/13f/compare` | The manager filer CIK and reporting period are explicit. |
+| Review issuer-level holders | `GET /v1/owners/institutional/ticker` | The issuer and returned coverage fit the question. |
+| Describe factor exposure | `GET /v1/factors/exposures` | Symbols, model inputs, and returned methodology or trust fields are retained. |
+| Review insider activity | `GET /v1/insiders` | Form family, transaction dates, and source fields meet the review policy. |
+
+Manager-level 13F holdings and issuer-level institutional holders answer different questions. Do not use a manager CIK query as an issuer-holder lookup, or infer conviction from a 13F or Form 4 result.
+
+## Test an ownership question
+
+```bash
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
+
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/owners/institutional/ticker?ticker=AAPL&limit=25"
+```
+
+Then retrieve an independent issuer evidence stream before describing the position:
+
+```bash
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&forms=10-K,10-Q,8-K&limit=10"
+```
+
+## Separate research from judgment
+
+Factor exposure is descriptive, not a forecast. Ownership disclosures are time-bound filings, not proof of current intent. Preserve returned filing IDs, dates, source URLs, `requestId`, and any freshness or warning fields, then make any investment interpretation in your own documented process.
+
+## Next action
+
+Select one current research note and reproduce its evidence section with the routes above. Compare identity, reporting period, missing-data behavior, and source records before wiring outputs into a model, dashboard, or prompt.
+
+<CardGroup cols={3}>
+  <Card title="Ownership workflows" icon="building-2" href="/ownership-workflows">Choose the right route for 13F and holder questions.</Card>
+  <Card title="Factor intelligence" icon="chart-line" href="/factor-intelligence">Review factor data and methodology boundaries.</Card>
+  <Card title="Filing search" icon="file-search" href="/products/filing-search">Retrieve the filing record behind a research claim.</Card>
+</CardGroup>

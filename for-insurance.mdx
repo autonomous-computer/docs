@@ -1,110 +1,59 @@
 ---
-title: "SEC Data for Insurance and Risk"
-description: "Monitor financial health, restatements, auditor changes, executive comp, and enforcement history for insured entities and counterparties with the SEC API."
+title: "SEC data for insurance and risk teams"
+description: "Build a source-backed renewal or counterparty review with filings and events while keeping underwriting judgment separate."
 ---
 
-<Info>
-SEC API helps insurance, D&O underwriting, and counterparty-risk teams turn public-company filings into repeatable review packets: entity resolution, filing sections, compensation, ownership, enforcement releases, and monitor delivery.
-</Info>
-
-## Why insurance and risk teams use SEC API
-
-<CardGroup cols={2}>
-  <Card title="Financial health monitoring" icon="heart-pulse" href="/investment-intelligence">
-    Pull company intelligence and structured financial statements for renewal reviews, counterparty checks, and portfolio surveillance.
-  </Card>
-  <Card title="Restatement and auditor alerts" icon="triangle-alert" href="/api-reference/events">
-    Review filing-derived restatement, auditor-change, and officer-change event routes, then route saved-search matches to review queues.
-  </Card>
-  <Card title="Executive compensation screening" icon="dollar-sign" href="/compensation-workflows">
-    Retrieve named-executive compensation and compare year-over-year disclosures as part of governance and D&O context.
-  </Card>
-  <Card title="Enforcement history" icon="gavel" href="/api-reference/events">
-    Search SEC enforcement releases by source type, violation type, penalty range, and date window for underwriting support.
-  </Card>
-</CardGroup>
-
----
-
-## Key endpoints for insurance workflows
-
-| Endpoint | Method | Use case |
-|----------|--------|----------|
-| `/v1/entities/resolve` | `GET` | Resolve insureds and counterparties before deeper reads |
-| `/v1/intelligence/company` | `GET` | Company intelligence bundle for issuer-level context |
-| `/v1/filings` | `GET` | Filing search with form type and date filters |
-| `/v1/filings/latest/sections/{section_key}` | `GET` | Extract risk factors, controls, or auditor-related sections |
-| `/v1/events/restatements` | `GET` | Filing-derived restatement events |
-| `/v1/events/auditor-changes` | `GET` | Filing-derived auditor change events |
-| `/v1/events/enforcement` | `GET` | SEC enforcement releases for diligence support |
-| `/v1/compensation` | `GET` | Executive compensation records by company |
-| `/v1/compensation/compare` | `POST` | Year-over-year compensation changes |
-| `/v1/monitors` | `POST` | Create saved-search monitors with a signed-in browser session |
-| `/v1/delivery/events/export` | `GET` | Export delivery history for audit review |
-
----
-
-## Example: screen a renewal candidate
-
-Resolve the issuer and pull a compact company intelligence bundle:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AIG"
-```
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/company?ticker=AIG"
-```
-
-Review compensation and auditor-change context as separate, cited reads:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/compensation?ticker=AIG&limit=10"
-```
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/events/auditor-changes?ticker=AIG&date_from=2024-01-01&limit=10"
-```
-
----
-
-## Example: monitor filings for risk language
-
-Create a saved-search monitor for material-weakness language from the signed-in dashboard. Monitor creation is a human-authenticated action: it requires a WorkOS browser session and does not accept an API key. Use a name such as `Material weakness watch`, query `material weakness internal control`, and a 10-K / 10-K/A form filter. For webhook delivery, subscribe an org-level endpoint to `monitor.match` as described in [Build a Filing Monitor](/tutorials/build-filing-monitor).
-
-When a filing needs review, extract the controls section directly:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=AIG&form=10-K&mode=compact"
-```
-
-Export delivery history when you need an audit trail for what was sent:
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/delivery/events/export?kind=webhook_delivery&format=ndjson&limit=100"
-```
-
----
-
-## How to use this in an underwriting workflow
-
-<CardGroup cols={2}>
-  <Card title="Separate facts from judgment" icon="list-checks">
-    Keep extracted filing text, compensation rows, and enforcement records separate from risk scoring or underwriting interpretation.
-  </Card>
-  <Card title="Use generated prompts" icon="terminal" href="/agents/prompt-library/insurance">
-    Start from the insurance prompt library for D&O profiles, auditor-change scans, material-weakness reviews, and renewal monitoring.
-  </Card>
-</CardGroup>
+Use this guide to assemble a repeatable renewal or counterparty review packet for a public company. Preserve the filings and event records that support the packet; your team retains responsibility for underwriting criteria, scoring, and coverage decisions.
 
 <Prompt>
 Build a D&O renewal research note for [TICKER] as of [DATE]. Resolve the issuer, retrieve its latest 10-K and relevant 8-Ks, then read Item 1A risk factors and Item 7 MD&A. Add current named-executive compensation, recent Form 4 activity, and the latest available institutional-holder context. Use `owners.institutional_holders` with the issuer ticker or issuer CIK; the manager-specific 13F holdings tool requires a named manager CIK. Separate facts from underwriting interpretation. Cite each finding with form, filing date, accession number, and section or transaction reference. Flag only disclosed auditor changes, restatement language, control weaknesses, executive departures, or unusually concentrated ownership; do not infer fraud, claim likelihood, or coverage. Use entities.resolve, filings.search, sections.get, comp.list, insiders.list, and owners.institutional_holders.
 </Prompt>
 
-_See the full 6-prompt [Insurance & risk library](/agents/prompt-library/insurance)._
+## Build the review packet
+
+| Review question | Route | What to retain |
+| --- | --- | --- |
+| Which issuer is this? | `GET /v1/entities/resolve` | Resolved name, ticker, CIK, and the identifier used downstream. |
+| What did it file? | `GET /v1/filings` | Form, filing date, accession number, and filing URL. |
+| What did the filing say? | `GET /v1/filings/latest/sections/{section_key}` | Filing identity, section key, text, and any route warnings. |
+| Is there a disclosed event to review? | `GET /v1/events/restatements`, `GET /v1/events/auditor-changes`, or `GET /v1/events/enforcement` | Returned event record, source link or filing identity, and response diagnostics. |
+
+Use each route for its documented record type. An event result is a research input, not a determination of fraud, claim likelihood, or coverage.
+
+## Check one renewal candidate
+
+```bash
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AIG"
+
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AIG&forms=10-K,8-K&limit=10"
+
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/events/auditor-changes?ticker=AIG&date_from=2024-01-01&limit=10"
+```
+
+For a filed controls disclosure, retrieve the source section separately:
+
+```bash
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_9a?ticker=AIG&form=10-K"
+```
+
+## Keep the review boundary clear
+
+Capture accession numbers, filing URLs, section keys, dates, and `requestId` with the packet. Treat missing, partial, or unavailable results as review conditions, not as evidence that a condition does not exist. The API does not replace primary-source review, legal analysis, underwriting judgment, or your organization’s retention policy.
+
+## Next action
+
+Run the four reads for one renewal candidate, then compare the resulting evidence record with the packet your team uses today. Add a route only when its fields and source identity satisfy that packet’s acceptance criteria.
+
+<CardGroup cols={3}>
+  <Card title="Filing search" icon="file-search" href="/products/filing-search">Find filings and retain their source identity.</Card>
+  <Card title="Event APIs" icon="triangle-alert" href="/api-reference/events">Inspect event-specific filters and response fields.</Card>
+  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Keep an investigation record for partial or failed reads.</Card>
+</CardGroup>

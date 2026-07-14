@@ -1,24 +1,23 @@
 ---
 title: "Migrate from financialdatasets.ai"
-description: "Move statement, fact, and filing workflows to SEC API with a field-level dual-run instead of a blind endpoint swap."
+description: "Dual-run one financial-statement read against SEC API and verify periods, units, and filing provenance before cutover."
 ---
 
-Use this guide when your application already depends on normalized financial statements and you want to add SEC filing identity and route-specific evidence to the integration. Start with one statement workflow, not every dashboard at once.
+Use this guide to move one normalized-statement read without losing the filing identity behind each value. Start with the screen, job, or downstream calculation affected by a changed period, unit, or source filing.
 
-## Map the job, not just the URL
+## Map the consuming contract
 
-| Current job | SEC API route | Validate before cutover |
+| Current job | SEC API route | What must match |
 | --- | --- | --- |
-| Income statement rows | `GET /v1/statements/income_statement` | Period, units, statement rows, and source filing context. |
-| Balance-sheet rows | `GET /v1/statements/balance_sheet` | Point-in-time date, units, and source filing context. |
-| Cash-flow rows | `GET /v1/statements/cash_flow_statement` | Duration, period basis, units, and source filing context. |
-| Tag-level reported observation | `GET /v1/facts` | Taxonomy tag, unit, form, fiscal period, and accession. |
-| Filing inventory or latest filing | `GET /v1/filings` or `GET /v1/filings/latest` | Form, filing date, accession number, URL, and pagination. |
-| Insider activity | `GET /v1/insiders` | Form family, transaction date, and returned coverage fields. |
+| Income statement | `GET /v1/statements/income_statement` | Period, units, rows, and source filing context. |
+| Balance sheet | `GET /v1/statements/balance_sheet` | Point-in-time date, units, and source filing context. |
+| Cash-flow statement | `GET /v1/statements/cash_flow_statement` | Duration, period basis, units, and source filing context. |
+| Reported concept | `GET /v1/facts` | Tag, unit, fiscal period, form, and accession number. |
+| Filing inventory | `GET /v1/filings` | Form, filing date, accession number, URL, and pagination. |
 
-Route names are not a field-level compatibility guarantee. Normalized values remain issuer disclosures, so compare reporting period, units, `periodBasis` where supplied, and returned provenance before treating two rows as equivalent.
+Matching a headline number is not sufficient. A normalized value remains a reported disclosure, so compare the period, unit, presentation, and returned source fields your application uses.
 
-## Dual-run one annual statement
+## Dual-run one annual statement read
 
 ```bash
 curl --fail-with-body -sS \
@@ -26,11 +25,11 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/statements/income_statement?ticker=AAPL&period=annual&limit=4"
 ```
 
-Record the requested ticker and parameters, retrieval time, `requestId`, source filing identifiers, period, units, and each field your application displays. A matching headline revenue number is useful, but it is not enough to prove equivalent period or filing provenance.
+Persist the request parameters, retrieval time, `requestId`, period, units, source filing identifiers, and each field that your application displays. Compare nulls as carefully as populated values.
 
-## Add facts when a statement row is too broad
+## Test a named disclosure separately
 
-Use the facts route when the application needs a named reported concept rather than a statement presentation:
+When your consumer needs a reported concept rather than a statement presentation, qualify the tag directly:
 
 ```bash
 curl --fail-with-body -sS \
@@ -38,22 +37,24 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4"
 ```
 
-Do not coerce missing observations to zero or assume tags are comparable across issuers. Keep the selected tag, unit, fiscal period, and filing identity with the value.
+Do not coerce absent observations to zero or assume the same tag is comparable across issuers. Keep the selected tag, unit, fiscal period, and filing identity with the value.
 
-## Cut over in small, reversible steps
+## Implement a reversible cutover
 
-1. Resolve one issuer and dual-run one statement request.
-2. Compare the fields your application actually consumes, including nulls and periods.
-3. Store the SEC API filing identity and response diagnostics beside the result.
-4. Move one read path behind a feature flag or equivalent reversible release control.
-5. Add filing or fact routes only after the statement acceptance checks pass.
+1. Dual-run one issuer and annual statement.
+2. Compare the fields, periods, units, and nulls your application consumes.
+3. Store SEC API source identifiers and diagnostics alongside the result.
+4. Put one read path behind a reversible release control.
+5. Add facts or additional statement families only after the acceptance test passes.
 
-For unavailable, partial, or degraded results, preserve the returned condition and show it to the caller. A filing's existence does not guarantee every normalized representation is ready or comparable.
+A filing existing in EDGAR does not guarantee that every normalized representation is ready or comparable. Preserve partial or unavailable conditions rather than turning them into a silent fallback.
 
-## Read next
+## Next action
+
+Select one annual statement read, capture its current output and evidence record, then use the comparison to decide whether that read can move behind a reversible control.
 
 <CardGroup cols={3}>
-  <Card title="Statements reference" icon="table-properties" href="/api-reference/statements">Check each statement route's documented parameters and response shape.</Card>
-  <Card title="Freshness and source evidence" icon="badge-info" href="/freshness-and-trust">Set the evidence standard for financial outputs.</Card>
-  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Capture a safe record when a dual-run differs or fails.</Card>
+  <Card title="Statements reference" icon="table-properties" href="/api-reference/statements">Inspect route parameters and response shapes.</Card>
+  <Card title="Freshness and trust" icon="badge-info" href="/freshness-and-trust">Set the evidence standard for displayed values.</Card>
+  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Capture the details needed to investigate a mismatch.</Card>
 </CardGroup>
