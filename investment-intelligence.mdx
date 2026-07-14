@@ -1,222 +1,60 @@
 ---
-title: Investment Intelligence
-description: Pre-built intelligence bundles that join filings, financials, ownership, signals, and macro context into compact analyst-ready outputs.
+title: "Use investment intelligence bundles"
+description: "Choose the SEC API intelligence bundle that matches a research question, then retain its traceable source evidence before using the result."
 ---
 
-<Info>
-Intelligence endpoints combine multiple SEC API primitives into single-call bundles shaped for real investor workflows. Each response includes full provenance and source trails.
-</Info>
+An intelligence bundle is a route-specific research starting point, not a substitute for source review or an investment conclusion. Use the narrowest bundle that answers the question, then preserve the returned filing, period, provenance, freshness, warning, and trace fields when they are available.
 
-## Endpoint overview
+## Choose the bundle by the question
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/intelligence/security` | `GET` | Comprehensive security analysis |
-| `/v1/intelligence/company` | `GET` | Fundamental company analysis |
-| `/v1/intelligence/portfolio` | `POST` | Portfolio macro analysis |
-| `/v1/intelligence/watchlist` | `POST` | Multi-security analysis |
-| `/v1/intelligence/query` | `POST` | Natural language semantic query |
-| `/v1/intelligence/query/:jobId` | `GET` | Poll async intelligence query |
-| `/v1/intelligence/footnotes/query` | `POST` | Financial footnote analysis |
+| Research question | Start with | Follow with |
+| --- | --- | --- |
+| What is currently notable about one security? | `GET /v1/intelligence/security` | Retrieve the cited filing or section before relying on a specific claim. |
+| What company context matters for fundamental review? | `GET /v1/intelligence/company` | Compare the underlying filing period, units, and source records. |
+| What should a reviewer inspect before an earnings event? | `GET /v1/intelligence/earnings-preview` | Separate returned context from a forecast or investment recommendation. |
+| What changed across this watchlist? | `POST /v1/intelligence/watchlist` | Check the identity and evidence for each returned issuer. |
+| What does this submitted portfolio expose? | `POST /v1/intelligence/portfolio` | Keep holdings input, coverage, model context, and residual limitations together. |
+| What do recent filing footnotes say about a defined question? | `POST /v1/intelligence/footnotes/query` | Retrieve the cited filing evidence and report unavailable material clearly. |
 
----
+The [Intelligence reference](/api-reference/intelligence) is the authority for accepted inputs and returned fields. Do not assume every bundle contains every filing, factor, market, macro, or coverage representation.
 
-## Security intelligence
-
-Returns a comprehensive intelligence bundle for a single security, joining recent filings, financial statements, ownership changes, derived signals, and macro context.
-
-### Query parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `ticker` | string | yes | Security ticker symbol |
-| `includeSignals` | boolean | no | Include derived signal scores (volatility, etc.) |
-| `includeMacro` | boolean | no | Include relevant macro context |
-| `filingLimit` | number | no | Max recent filings to include |
-
-### Example
+## Start with a single-security question
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/security?ticker=AAPL&includeSignals=true"
-```
-
----
-
-## Company intelligence
-
-Returns a fundamental analysis bundle for a company, focused on financial statements, key metrics, segment breakdowns, and governance structure.
-
-### Query parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `ticker` | string | yes | Company ticker symbol |
-| `period` | string | no | Reporting period (`annual`, `quarterly`) |
-| `includeSegments` | boolean | no | Include business segment breakdowns |
-| `includeGovernance` | boolean | no | Include governance and compensation context |
-
-### Example
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/company?ticker=MSFT&period=quarterly"
-```
-
----
-
-## Portfolio intelligence
-
-Accepts a set of holdings and returns portfolio-level macro analysis, factor exposures, concentration risks, and cross-holding context.
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `holdings` | array | yes | Array of holding objects with `ticker` and optional `weight` |
-| `includeMacro` | boolean | no | Include macro overlay context |
-| `includeFactorExposure` | boolean | no | Include factor-level exposure analysis |
-| `includeConcentration` | boolean | no | Include concentration and overlap diagnostics |
-
-### Example
-
-```bash
-curl -X POST \
+curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "holdings": [
-      {"ticker": "AAPL", "weight": 0.30},
-      {"ticker": "MSFT", "weight": 0.25},
-      {"ticker": "GOOGL", "weight": 0.20},
-      {"ticker": "AMZN", "weight": 0.15},
-      {"ticker": "NVDA", "weight": 0.10}
-    ],
-    "includeMacro": true,
-    "includeFactorExposure": true
-  }' \
-  "https://api.secapi.ai/v1/intelligence/portfolio"
+  "https://api.secapi.ai/v1/intelligence/security?ticker=AAPL"
 ```
 
----
+Use the response to identify the next source-backed retrieval. When a conclusion relies on a filing fact, store its accession number and URL, the relevant period, `requestId`, and route-provided provenance or trace data. Do not present a bundle summary as a direct quote from a filing unless the returned evidence supports that connection.
 
-## Watchlist intelligence
-
-Accepts multiple securities and returns a comparative analysis bundle with cross-security context, relative positioning, and signal summaries.
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `tickers` | string[] | yes | Array of ticker symbols |
-| `includeSignals` | boolean | no | Include derived signal scores per security |
-| `includeComparatives` | boolean | no | Include cross-security comparative analysis |
-
-### Example
+## Ask a bounded footnote question
 
 ```bash
-curl -X POST \
+curl --fail-with-body -sS \
+  -X POST \
+  -H "content-type: application/json" \
   -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tickers": ["AAPL", "MSFT", "GOOGL"],
-    "includeSignals": true,
-    "includeComparatives": true
-  }' \
-  "https://api.secapi.ai/v1/intelligence/watchlist"
-```
-
----
-
-## Semantic intelligence query
-
-Submit a natural language query against SEC API's intelligence layer. Short queries may return synchronously. Longer or complex queries return `202 Accepted` with a `jobId` for async polling.
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `query` | string | yes | Natural language intelligence query |
-| `tickers` | string[] | no | Scope the query to specific securities |
-| `context` | object | no | Additional structured context for the query |
-
-### Response behavior
-
-- **Synchronous** (HTTP `200`): Result returned directly when the query resolves quickly.
-- **Asynchronous** (HTTP `202`): Returns a `jobId`. Poll the status endpoint until the job completes.
-
-### Example: submit query
-
-```bash
-curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Compare revenue growth trends for AAPL and MSFT over the last four quarters",
-    "tickers": ["AAPL", "MSFT"]
-  }' \
-  "https://api.secapi.ai/v1/intelligence/query"
-```
-
-### Poll async query
-
-When the submit endpoint returns `202`, use the `jobId` from the response to poll for results.
-
-#### Path parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `jobId` | string | yes | Job identifier returned by the submit endpoint |
-
-#### Example: poll for results
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/intelligence/query/job_abc123"
-```
-
-The poll response includes a `"status"` field (`pending`, `running`, `completed`, `failed`). Continue polling until the status is terminal.
-
----
-
-## Footnote intelligence
-
-Analyze financial footnotes from SEC filings for a given company. Accepts a natural language query scoped to footnote content and returns structured findings with source references.
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `query` | string | yes | Natural language query about footnote content |
-| `ticker` | string | yes | Company ticker symbol |
-| `filingType` | string | no | Limit to a specific filing type (`10-K`, `10-Q`) |
-| `period` | string | no | Target reporting period |
-
-### Example
-
-```bash
-curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "What are the key lease obligation changes disclosed in recent footnotes?",
-    "ticker": "AAPL",
-    "filingType": "10-K"
-  }' \
+  -d '{"ticker":"AAPL","query":"What lease obligations are discussed in the latest annual filing?"}' \
   "https://api.secapi.ai/v1/intelligence/footnotes/query"
 ```
 
----
+Phrase the question around a disclosed subject and issuer. If the response reports a limitation, missing source, or partial coverage, carry that state into the review rather than converting it into an absence-of-disclosure conclusion.
 
-## Shared response conventions
+## Preserve the boundary between evidence and analysis
 
-All intelligence endpoints follow the standard SEC API response conventions:
+1. Record the request parameters, retrieval time, and response identifiers.
+2. Keep returned source links, accession numbers, periods, units, and trace/provenance fields with material claims.
+3. Label model output, inference, and research interpretation separately from reported filing facts.
+4. Retrieve the underlying filing or section when a reader needs to inspect the cited language.
+5. Show stale, unknown, partial, or degraded evidence as a condition, not a silent success.
 
-- `provenance`: source trail for every data point included in the bundle
-- `freshness`: currency metadata showing how recent the underlying data is
-- `materialization`: how the response was assembled
-- `trace`: links back to source filings and pages when available
+An intelligence route can reduce the number of calls needed to orient a review. It does not establish completeness, materiality, legal advice, or a forecast.
 
-<Note>
-Intelligence bundles are built on top of the same primitives available through individual SEC API endpoints. The bundle contract adds structure and cross-domain joins, not opaque transformations.
-</Note>
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Intelligence reference" icon="braces" href="/api-reference/intelligence">Inspect route contracts before adding a bundle to production.</Card>
+  <Card title="Filing search" icon="file-search" href="/products/filing-search">Find the source filing behind a research path.</Card>
+  <Card title="Freshness and source evidence" icon="badge-info" href="/freshness-and-trust">Set a decision policy for returned research evidence.</Card>
+</CardGroup>

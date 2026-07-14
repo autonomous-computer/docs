@@ -1,81 +1,55 @@
 ---
 title: "Migrate from Trading Economics"
-description: "Map your existing Trading Economics macro and market workflows to their SEC API endpoint equivalents with a side-by-side guide."
+description: "Qualify a macro workflow on SEC API route by route, with explicit country, series, timing, and availability checks."
 ---
 
-This guide helps Trading Economics users map their existing workflows to SEC API equivalents. SEC API provides a narrower but deeper macro surface focused on high-signal indicators with factor-aware intelligence overlays that Trading Economics does not offer.
+Trading Economics integrations often begin with broad country and series discovery. SEC API macro routes should be qualified more narrowly: identify the country, indicator, date range, and decision your workflow needs, then inspect the returned coverage and timing evidence before replacing a production feed.
 
-## Endpoint mapping
+## Map the workflow
 
-| Trading Economics | SEC API | Notes |
-|---|---|---|
-| `GET /indicators` | `GET /v1/macro/indicators` | Filter by `country` and `indicator` key |
-| `GET /calendar` | `GET /v1/macro/calendar` | Upcoming macro events with `country` and `days` params |
-| `GET /forecast` | `GET /v1/macro/forecasts` | Forward estimates with `horizons` param |
-| `GET /historical` | `GET /v1/macro/indicators` | Same endpoint, use `limit` for depth |
-| `GET /markets/commodities` | `GET /v1/market/snapshots` | Pass commodity ETF symbols |
-| `GET /markets/currency` | `GET /v1/market/snapshots` | Pass FX pair symbols |
-| `GET /markets/index` | `GET /v1/market/indices` | Supported index inventory |
-| `GET /news` | `GET /v1/news` | News feed |
-| Country overview | `POST /v1/intelligence/country-report` | Factor-aware country analysis — goes beyond TE |
-| N/A | `GET /v1/macro/high-signal-pack` | Curated daily indicator bundles per country — no TE equivalent |
-| N/A | `GET /v1/macro/regimes` | Macro regime classification — no TE equivalent |
+| Existing job | SEC API route | What to validate |
+| --- | --- | --- |
+| Retrieve an indicator series | `GET /v1/macro/indicators` | Country, indicator key, dates, units, observations, and source metadata. |
+| Review scheduled macro events | `GET /v1/macro/calendar` | Country, requested window, event date, and returned coverage or status fields. |
+| Inspect forward estimates | `GET /v1/macro/forecasts` | Country, horizon, source, and observation date. |
+| Use market context | Relevant documented market route | Instrument identity, market date, units, and route-specific freshness. |
 
-## Key differences
+SEC API does not claim every country, series, calendar, or market representation a broad macro provider may offer. A returned response is evidence for that requested scope, not a promise of universal coverage.
 
-### What SEC API adds beyond Trading Economics
-
-- **High-signal packs**: Curated daily/weekly indicator bundles for 12 countries (US, CN, JP, TW, IL, CA, GB, EZ, KR, BR, IN, SA) including yield curves, credit spreads, breakeven inflation, and volatility.
-- **Macro regime classification**: Automated regime detection (expansion, contraction, recovery, overheating) with factor-aware conditioning.
-- **Country reports**: AI-powered country analysis that integrates macro data with factor positioning and risk signals.
-- **Factor-conditioned macro**: Unique overlay of macro indicators with equity factor performance.
-
-### What Trading Economics covers that SEC API does not (yet)
-
-- **Breadth**: TE covers 15,000+ series across 196 countries. SEC API focuses on the 100-200 highest-signal series for allocators.
-- **Excel/Sheets plugins**: TE has native spreadsheet integrations. SEC API provides SDKs (JS, Python, Go, Rust) and MCP.
-- **Commodity/FX spot prices as dedicated series**: SEC API provides these via market snapshots and factor proxies rather than as standalone macro series.
-
-## Authentication
-
-Trading Economics uses a client key in the query string. SEC API uses the `x-api-key` header:
+## Prove one indicator
 
 ```bash
-# Trading Economics
-curl "https://api.tradingeconomics.com/calendar?c=YOUR_KEY"
-
-# SEC API
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/macro/calendar?country=US"
-```
-
-## Example: get US macro indicators
-
-```bash
-# Trading Economics - US GDP
-curl "https://api.tradingeconomics.com/historical/country/united%20states/indicator/gdp?c=KEY"
-
-# SEC API - US GDP
-curl -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/macro/indicators?country=US&indicator=GDPC1"
 ```
 
-## Example: get macro calendar
+Compare the observation dates, units, revisions if supplied, and the source fields your model or dashboard relies on. Store `requestId`, retrieval time, and any provenance, freshness, coverage, warning, or status fields returned by the route.
+
+## Prove the calendar separately
 
 ```bash
-# Trading Economics
-curl "https://api.tradingeconomics.com/calendar?c=KEY"
-
-# SEC API
-curl -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/macro/calendar?country=US&days=7"
 ```
 
-## Example: country analysis (SEC API exclusive)
+A calendar response and an indicator response answer different questions. Do not use an upcoming event to infer that a series value is current, or use a current series value to infer complete event coverage. Make unavailable, tentative, or degraded conditions visible to the caller.
 
-```bash
-curl -X POST -H "x-api-key: $SECAPI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"country": "US", "lookback": "6m"}' \
-  "https://api.secapi.ai/v1/intelligence/country-report"
-```
+## Production cutover rules
+
+1. Dual-run one country and one indicator for a defined observation window.
+2. Test the country and series inventory your users actually request, including gaps.
+3. Compare timestamps, units, source records, and revision behavior before joining values to a model.
+4. Move one low-risk read path first, with a reversible fallback during qualification.
+5. Preserve response diagnostics so a stale or unavailable result can be investigated later.
+
+For portfolio or factor interpretation, keep modeled output separate from the returned macro evidence. A macro observation can inform analysis; it does not prove a forecast or investment conclusion.
+
+## Read next
+
+<CardGroup cols={3}>
+  <Card title="Macro intelligence" icon="chart-no-axes-combined" href="/macro-intelligence">Understand the documented macro workflows and their boundaries.</Card>
+  <Card title="Freshness and source evidence" icon="badge-info" href="/freshness-and-trust">Apply a timing policy to each result.</Card>
+  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Capture the context needed to investigate a failed or partial request.</Card>
+</CardGroup>

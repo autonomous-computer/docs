@@ -1,100 +1,77 @@
 ---
-title: "Error code catalog"
-description: "Look up every SEC API error code with its meaning and fix, so you can debug failed API, SDK, CLI, and MCP responses quickly."
+title: "Common error codes and recovery"
+description: "Use representative SEC API HTTP and hosted MCP error codes to choose the next action without exposing credentials or retrying a stop condition."
 ---
 
-Use this catalog when an API, SDK, CLI, or MCP response includes an error `code`. Keep the `Request-Id`, `traceparent`, HTTP status, endpoint path, and SDK version with the code when you contact support.
+Read the HTTP status and machine-readable error `code` together. Preserve the returned `Request-Id`, `traceparent` when available, endpoint path, and a redacted request before changing a client or retrying.
 
 <Info>
-REST errors use `code` at the top level. Hosted MCP errors use JSON-RPC `error.code` for the transport class and `error.data.code` for the SEC API reason.
+REST responses identify the reason with `code`. Hosted MCP responses use a JSON-RPC transport `error.code` and can include a SEC API reason in `error.data.code`.
 </Info>
 
-## REST error envelope
+This is a recovery guide, not an exhaustive list of every route-specific domain error. Use the `code`, HTTP status, and the endpoint reference together; a route can return additional documented data or materialization errors.
 
-```json
-{
-  "object": "error",
-  "id": "err_...",
-  "code": "invalid_query_parameter",
-  "message": "view must be one of: default, compact, agent",
-  "requestId": "req_...",
-  "traceparent": "00-...",
-  "hint": "Check query parameter 'view' spelling, accepted values, and numeric bounds.",
-  "docsUrl": "https://docs.secapi.ai/api-conventions",
-  "details": {
-    "parameter": "view"
-  }
-}
+## Representative REST codes
+
+| Status | Exact code | What happened | Next action |
+| --- | --- | --- | --- |
+| `400` | `invalid_json` | The body was not valid JSON. | Send valid JSON or omit the body when the route accepts none. |
+| `400` | `validation_error` | A body failed route validation. | Correct the reported fields; do not retry unchanged input. |
+| `400` | `invalid_query_parameter` | A query value is unsupported, out of range, or malformed. | Use the endpoint reference and returned parameter details. |
+| `400` | `invalid_request_parameter` | A route or request parameter is syntactically invalid. | Correct the named parameter before retrying. |
+| `401` | `missing_api_key` | No API key reached a machine-authenticated route. | Send `x-api-key` from the calling process. |
+| `401` | `authentication_failed` | The API key, stream ticket, or bearer credential was rejected. | Replace or refresh the credential using the appropriate signed-in flow. |
+| `402` | `billing_required` | The authenticated plan or billing state does not allow the request. | Inspect billing and limits with the same credential, then resolve the stated condition. |
+| `402` | `insufficient_credits` | Available prepaid credits cannot cover the request. | Add credits or change the account's billing posture before retrying. |
+| `402` | `billing_budget_approval_required` | A configured budget approval threshold stopped the request. | Ask a billing administrator to approve or adjust the budget. |
+| `402` | `billing_budget_hard_cap_exceeded` | A configured hard budget cap stopped the request. | Raise the cap or wait for the relevant billing period. |
+| `403` | `human_auth_required` | The route requires a WorkOS browser session. | Complete the action in a signed-in browser session. |
+| `429` | `rate_limit_exceeded` | A route or plan rate-limit window is full. | Honor `Retry-After` when returned and reduce concurrency. |
+| `429` | `ai_query_quota_exceeded` | The applicable AI-query allowance is exhausted. | Wait for reset or resolve the account limit; do not retry unchanged input. |
+| `503` | `auth_verification_unavailable` | Credential verification is temporarily unavailable. | Retry once with the same credential after `Retry-After`. |
+| `503` | `workos_authorization_server_unavailable` | OAuth authorization-server metadata is unavailable. | Retry later, or use API-key authentication for applicable REST routes. |
+
+Do not send API keys as bearer tokens, URLs, request bodies, logs, or support excerpts. Machine data requests use `x-api-key`.
+
+## Route-specific data and domain errors
+
+| Code pattern | Practical treatment |
+| --- | --- |
+| `*_not_found` | Check the identifier, scope, date window, and route coverage. Do not substitute another issuer or filing. |
+| `*_lookup_failed` | Verify inputs and route availability; retry once only when the response indicates a transient condition. |
+| `*_materialization_failed` or `*_unavailable` | Preserve source identity and the returned limitation. Retry later rather than inventing a result. |
+| `partial_*` | Use only the returned portion that your evidence policy permits, and show the partial condition downstream. |
+
+Availability is route-specific. A successful filing response does not establish availability of every section, normalized fact, or derived representation.
+
+## Hosted MCP codes
+
+| HTTP | JSON-RPC code | Exact `error.data.code` | Next action |
+| --- | --- | --- | --- |
+| `404` | `-32601` | `invalid_request` | Refresh the supported method list and use a documented JSON-RPC method. |
+| `400` | `-32602` | `invalid_request` | Refresh the tool/resource schema, then correct the name or parameters. |
+| `400` | `-32602` | `validation_error` | Correct arguments against the discovered tool schema. |
+| `402` or `429` | `-32007` | `billing_required`, `insufficient_credits`, `billing_budget_approval_required`, `billing_budget_hard_cap_exceeded`, or `rate_limit_exceeded` | Resolve the account condition or honor the retry interval before retrying. |
+| `429` | `-32005` | `ai_query_quota_exceeded` | Wait for reset or resolve the account limit. |
+| `504` | `-32004` | `mcp_tool_timeout` | Retry with a narrower request, lower limit, or simpler workflow. |
+| `503` | `-32006` | `mcp_tool_circuit_open` | Back off and retry only after the protection condition clears. |
+
+Tool names and schemas can change. Have the client discover the current tool list and inspect the selected tool schema before retrying a malformed call.
+
+## Capture a safe diagnostic
+
+```bash
+curl -i -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
 ```
 
-`hint`, `docsUrl`, `action`, and `retryable` may appear either top-level or under `details`, depending on the helper and route. Treat them as useful guidance rather than required schema fields.
+Keep the status, error code, request ID, relevant response headers, client version, and a redacted endpoint/query record. Never include the API key, cookies, bearer tokens, private prompts, or private data in a ticket.
 
-## Customer-actionable REST codes
+## Read next
 
-| Status | Code | Meaning | Likely fix | Retry |
-|---|---|---|---|---|
-| `400` | `invalid_json` | The request body was not valid JSON. | Send a valid JSON object or omit the body for empty-body endpoints. | No |
-| `400` | `validation_error` | A JSON body failed schema validation. | Fix the listed `details.issues[]` fields and retry the same request. | No |
-| `400` | `invalid_query_parameter` | A query parameter is misspelled, out of range, or uses an unsupported value. | Use the endpoint reference and `details.parameter` / `details.acceptedValues`. | No |
-| `400` | `invalid_request_parameter` | A path, date, or request parameter is syntactically invalid. | Correct the named parameter before retrying. | No |
-| `401` | `missing_api_key` | No API key reached a machine-auth endpoint. | Send `x-api-key: $SECAPI_API_KEY`; do not send API keys as bearer tokens. | No |
-| `401` | `authentication_failed` | The API key, stream ticket, or bearer token was rejected. | Rotate the API key, re-issue the stream ticket, or refresh the WorkOS session. | No |
-| `401` | `missing_browser_session` | A dashboard control-plane endpoint needs browser auth. | Sign in at [secapi.ai/login](https://secapi.ai/login); API keys cannot mutate dashboard account, billing, or settings state. | No |
-| `402` | `billing_required` | The route, plan, grant, or billing state does not allow the request. | Inspect `/v1/billing` and `/v1/limits`, then upgrade or resolve billing status. | No |
-| `402` | `billing_budget_approval_required` | The request would cross a configured approval threshold. | Ask an org billing admin to approve or adjust the budget. | No |
-| `402` | `billing_budget_hard_cap_exceeded` | The org reached a hard spend cap. | Raise the cap or wait for the next billing period. | No |
-| `402` | `insufficient_credits` | A prepaid-mode org does not have enough credits for the request. | Add credits or enable auto-top-up from the billing page. | No |
-| `403` | `operator_scope_required` | The endpoint requires an internal operator scope. | Use the correct operator principal; public API keys should not call internal operator routes. | No |
-| `403` | `browser_session_required` | A browser-only operation was called with API-key auth. | Run the workflow from a signed-in browser session. | No |
-| `403` | `human_auth_required` | A WorkOS browser session is required for this endpoint. | Sign in through the dashboard and retry from that session. | No |
-| `403` | `organization_missing` | The authenticated principal has no organization context. | Join or create an organization before calling org-scoped routes. | No |
-| `429` | `rate_limit_exceeded` | A plan or route rate-limit window is full. | Honor `Retry-After`, reduce concurrency, or upgrade for higher limits. | After `Retry-After` |
-| `429` | `rate_limited` | A browser auth or control-plane action was throttled. | Wait before repeating the action. | After backoff |
-| `429` | `render_rate_limited` | Filing render requests exceeded the render window. | Wait before retrying or reduce render fanout. | After backoff |
-| `429` | `verification_resend_rate_limited` | Email verification-code resend was throttled. | Wait before requesting another verification code. | After backoff |
-| `429` | `ai_query_quota_exceeded` | A capped org exhausted its AI-query quota. | Wait for quota reset, reduce AI-query usage, or upgrade. | No, until reset |
-| `503` | `auth_verification_unavailable` | Auth verification infrastructure was temporarily unavailable. | Retry once with the same credential after `Retry-After`. | Yes |
-| `503` | `workos_authorization_server_unavailable` | WorkOS OAuth metadata is not configured for discovery. | Use API-key auth for REST, or wait until hosted OAuth is configured. | Later |
-
-## Domain lookup and data-plane codes
-
-Many data endpoints return a domain-specific code when the request is valid but the lookup or materialization cannot complete. Common examples:
-
-| Code pattern | Meaning | Likely fix |
-|---|---|---|
-| `*_lookup_failed` | A valid lookup could not be completed for the requested entity, filing, owner, market, or compensation surface. | Verify identifiers, date ranges, and coverage. Retry once if the error is transient, then contact support with `Request-Id`. |
-| `*_materialization_failed` | A derived factor, macro, market, or filing artifact could not be materialized. | Retry later and preserve `traceparent` for support. |
-| `*_not_found` | The requested resource, entity, filing, or artifact was not found in the caller's accessible scope. | Check identifiers, tenant scope, date windows, and coverage. |
-| `*_unavailable` | A dependency or configured feature is temporarily unavailable. | Retry later or check status before escalating. |
-| `partial_*` | The response is present but one sub-workflow degraded. | Use returned rows that are present, inspect warnings/errors, and retry the affected sub-workflow if needed. |
-| `mcp_tool_timeout` | An MCP tool exceeded its tool timeout. | Retry with narrower arguments or lower limits. |
-| `mcp_tool_circuit_open` | A tool-specific protection circuit is open. | Back off; do not fan out retries against that tool. |
-
-## MCP JSON-RPC codes
-
-| HTTP | JSON-RPC code | `error.data.code` | Meaning | Likely fix | Retry |
-|---|---|---|---|---|---|
-| `404` | `-32601` | `invalid_request` | The JSON-RPC method is unsupported. | Use `initialize`, `tools/list`, `tools/call`, `resources/list`, `resources/read`, or `prompts/*` methods supported by the server. | No |
-| `400` | `-32602` | `invalid_request` | The tool name, resource URI, prompt name, or JSON-RPC params are unsupported. | Re-run `tools/list`, `resources/list`, or `prompts/list` and use the exact name or URI returned by the server. | No |
-| `400` | `-32602` | `validation_error` | Tool arguments failed schema validation. | Use the exact tool schema from `tools/list`, then retry with corrected arguments. | No |
-| `402` | `-32007` | `billing_required` | Billing or plan state blocks hosted MCP usage. | Resolve billing status or upgrade before retrying. | No |
-| `402` | `-32007` | `insufficient_credits` | Prepaid credits cannot cover the MCP call. | Add credits or enable auto-top-up. | No |
-| `402` | `-32007` | `billing_budget_approval_required` / `billing_budget_hard_cap_exceeded` | MCP usage would cross budget policy. | Adjust budget policy or wait for the next period. | No |
-| `429` | `-32005` | `ai_query_quota_exceeded` | The monthly AI-query quota or MCP quota window is exhausted. | Wait for `Retry-After`, reduce AI-query usage, or upgrade. | No, until reset |
-| `504` | `-32004` | `mcp_tool_timeout` | The selected tool exceeded its execution budget. | Retry with narrower arguments, lower limits, or a simpler workflow. | Yes |
-| `503` | `-32006` | `mcp_tool_circuit_open` | Tool-level circuit protection is active. | Wait and retry after service protection clears. | Yes, after backoff |
-
-## Support checklist
-
-Include these fields in support tickets and internal handoffs:
-
-- `Request-Id`
-- `traceparent`
-- HTTP status
-- REST `code` or MCP `error.data.code`
-- endpoint path, method, or MCP tool name
-- SDK language and version
-- whether `GET /v1/limits` succeeds with the same credential
-- whether the response included `Retry-After`, `docsUrl`, `hint`, `action`, or `retryable`
-
-Read next: [Troubleshooting](/troubleshooting), [API conventions](/api-conventions), and [Event export](/event-export).
+<CardGroup cols={3}>
+  <Card title="Troubleshooting" icon="wrench" href="/troubleshooting">Follow the status-specific recovery path.</Card>
+  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Prepare the smallest useful secret-free support record.</Card>
+  <Card title="API conventions" icon="braces" href="/api-conventions">Review authentication, retry, pagination, and response conventions.</Card>
+</CardGroup>

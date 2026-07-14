@@ -1,151 +1,59 @@
 ---
 title: "Migrate from sec-api.io to SEC API"
-description: "Plan a source-preserving migration from sec-api.io to SEC API for filing search, entity resolution, XBRL facts, sections, insiders, compensation, REST, SDKs, and MCP."
+description: "Dual-run a sec-api.io filing workflow against SEC API, compare source evidence, and cut over only after the route contract passes your test."
 ---
 
-<Info>
-This guide is for teams that already have a working `sec-api.io` integration and want to dual-run SEC API before cutting over. It translates common workflows, calls out current fallback cases, and gives your agent or engineer a checklist for preserving evidence during the migration.
-</Info>
+Start with the smallest production workflow that has a clear acceptance test: issuer resolution, filing search, a latest filing, or one section. A global URL replacement hides the differences that matter most: identity, pagination, source records, and unavailable states.
 
-<CardGroup cols={3}>
-  <Card title="Compare the products" icon="git-compare" href="https://secapi.ai/compare/sec-api-io-alternative">
-    Read the buyer-facing comparison before planning a migration.
-  </Card>
-  <Card title="Run a migration proof" icon="square-terminal" href="/evaluate/sec-filing-search-api">
-    Test issuer mapping, filing search, section extraction, and source trails.
-  </Card>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup?utm_source=docs&utm_medium=migrate_sec_api&utm_campaign=docs_to_signup">
-    Create an account and dual-run the first workflow.
-  </Card>
-</CardGroup>
+## Choose a first workflow
 
-## Migration strategy
+| Existing need | SEC API route | Acceptance record |
+| --- | --- | --- |
+| Resolve ticker or CIK | `GET /v1/entities/resolve` | Company name, ticker, CIK, and the identifier your app persists. |
+| Search filings | `GET /v1/filings` | Form, filing date, accession number, filing URL, and pagination behavior. |
+| Get the current filing | `GET /v1/filings/latest` | Returned source identity and retrieval time. |
+| Read a latest filing section | `GET /v1/filings/latest/sections/{section_key}` | Filing identity, section key, text availability, and any route warnings. |
+| Read a reported financial concept | `GET /v1/facts` | Tag, units, fiscal period, and source filing evidence. |
 
-Do not migrate by replacing every URL in one pass. Pick one production workflow, run it side by side, and compare the evidence your application actually consumes.
+The API reference is authoritative for route parameters and response fields. Do not infer broad historical availability from a successful test on one issuer or filing family.
 
-<Steps>
-  <Step title="Start with issuer and filing identity">
-    Map ticker and CIK resolution first. Confirm company identity, form type, accession number, filing date, source URL, and any internal identifier you join on downstream.
-  </Step>
-  <Step title="Replace the narrowest workflow">
-    Move filing search, latest filing retrieval, or one section-extraction path before broader XBRL, ownership, or intelligence workflows.
-  </Step>
-  <Step title="Keep a fallback for unsupported parity">
-    If your current integration depends on arbitrary historical filing URLs or rendered HTML extractor output, keep that specific path on the old provider until the SEC API replacement passes your acceptance test.
-  </Step>
-</Steps>
-
-## What changes when you switch
-
-<CardGroup cols={2}>
-  <Card title="One normalized object model" icon="layers-2" href="/freshness-and-trust">
-    SEC API keeps provenance, freshness, and materialization visible instead of treating them like optional extras.
-  </Card>
-  <Card title="Filing types and exhibits map" icon="files" href="/filing-types-and-exhibits">
-    Check which filing families SEC API retrieves generically, normalizes directly, or only supports inside workflow-specific parsers.
-  </Card>
-  <Card title="Event export" icon="search-code" href="/event-export">
-    `Request-Id` is first-class across event exports so support and debugging workflows stay sane.
-  </Card>
-  <Card title="Shared REST and MCP surface" icon="bot" href="/mcp-workflows">
-    Hosted MCP and REST share the same underlying workflows rather than diverging into two products.
-  </Card>
-  <Card title="Compact extraction mode" icon="braces" href="/api-reference/sections">
-    Section extraction can return machine-first payloads when you want token efficiency instead of rendered prose.
-  </Card>
-</CardGroup>
-
-## Route mapping
-
-<Warning>
-If you depend on arbitrary historical filing URLs or HTML extractor output, keep a temporary fallback path while you finish historical filing-target support. SEC API is stronger on normalized workflows than on raw URL-style extractor parity.
-</Warning>
-
-| Current job | SEC API path | Migration note |
-|-------------|--------------|----------------|
-| Ticker mapping | `/v1/entities/resolve?ticker={ticker}` | Preserve both ticker and CIK in your stored result. |
-| CIK mapping | `/v1/entities/resolve?cik={cik}` | Normalize leading zero behavior in tests. |
-| Filing search | `/v1/filings` query params | Compare form, filed date, accession number, source URL, and pagination behavior. |
-| Filing types and exhibits | [SEC Filing Types and Exhibits](/filing-types-and-exhibits) | Confirm generic retrieval versus workflow-specific normalization. |
-| Latest section extraction | `/v1/filings/latest/sections/item_1a?...&mode=compact` | Best for latest filing workflows where compact agent payloads matter. |
-| Arbitrary historical URL extraction | Temporary fallback while you qualify historical target support | Keep this path explicit in your dual-run plan. |
-| XBRL to JSON | `/v1/statements/{statement_key}` or `/v1/facts` | Compare tags, periods, units, and source filing references. |
-| Insider transactions | `/v1/insiders` | Preserve Form 3/4/5 identity and transaction date fields. |
-| Compensation | `/v1/compensation?ticker={ticker}` | Validate proxy filing source links and role/year semantics. |
-
-## Request translation examples
-
-### Ticker mapping
+## Run an identity-first proof
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
+
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10&view=agent"
 ```
 
-### Filing search
+For every matched filing, compare ticker, CIK, form, filing date, accession number, and source URL. Save `requestId` and returned provenance, freshness, materialization, or warning fields when present.
+
+## Test a bounded extraction
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10"
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent"
 ```
 
-### Machine-first section extraction
+Treat the returned section as evidence for a bounded question, not as a substitute for the complete filing. If your current workflow depends on an arbitrary filing URL, an exhibit, or a specific rendered representation, test that exact requirement. Keep the existing path as a temporary fallback until the SEC API route returns the representation and source evidence your application needs.
 
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact"
-```
+## Cutover checklist
 
-<Prompt>
-Migrate this sec-api.io workflow to SEC API. Replace mapping calls with entity resolution, replace filing search with /v1/filings query params, and replace extractor workflows with SEC API section endpoints where possible. Dual-run the old and new path for one issuer and one filing family. Return a migration table with old endpoint, new endpoint, fields compared, accession number, source URL, requestId, freshness, and any fallback gap that should remain before cutover.
-</Prompt>
-
-## Migration notes
-
-- Pin `secapi-version` in production clients before cutover
-- Keep recording `Request-Id` during dual-run testing so request diagnostics stay comparable
-- If you depend on arbitrary historical filing URLs for extractor-style requests, keep that path on a temporary fallback until the historical lookup backlog lands
-- If you depend on HTML extractor output, treat that as a current gap and stay on the temporary fallback path
-
-## Recommended cutover order
-
-1. issuer resolution
-2. filing search
-3. statements and facts
-4. section extraction in `compact` mode
-5. compare and artifact flows once the target plan is enabled
-
-## What to compare during dual-run
-
-| Dimension | What to check |
-|-----------|---------------|
-| Identity | Ticker, CIK, company name, accession number, form type, filed date, report period |
-| Source trail | SEC source URL, filing URL, request ID, freshness, materialization metadata |
-| Payload shape | Field names, nullable fields, nested objects, pagination, compact versus verbose response modes |
-| Cost and limits | Meter family, expected fanout, retry behavior, and plan fit |
-| Agent behavior | Whether the prompt can complete using compact evidence without reading the full filing |
-| Fallback policy | Exact workflows that remain on the old provider until parity is accepted |
-
-## Migration acceptance checklist
-
-Before replacing a production sec-api.io workflow, confirm the migrated SEC API path preserves:
-
-- issuer identity: ticker, CIK, and any portfolio identifier you use internally
-- filing identity: form type, filing date, accession number, and source URL
-- response traceability: request ID and any provenance/freshness fields returned by the endpoint
-- fallback policy: what still calls the old path during dual-run testing
-- agent contract: the exact compact payload your coding or research agent will receive
+- Pin `secapi-version` if your production client requires a dated version.
+- Send machine credentials through `x-api-key`, never a query parameter or browser bundle.
+- Compare nullability, pagination, and source identifiers as well as business fields.
+- Honor `Retry-After` for `429`; do not retry authentication, authorization, billing, or hard-cap stops until their condition changes.
+- Keep a reversible fallback for any unqualified route or filing family.
+- Preserve `Request-Id` and `traceparent` when available for both successful and failed dual-run calls.
 
 ## Read next
 
 <CardGroup cols={3}>
-  <Card title="Migrate from financialdatasets.ai" icon="git-compare-arrows" href="/migrate-from-financialdatasets-ai">
-    Compare the second major migration path.
-  </Card>
-  <Card title="Benchmark workflows" icon="gauge" href="/benchmark-workflows">
-    See the current latency, freshness, and workflow proof.
-  </Card>
-  <Card title="API Reference" icon="square-terminal" href="/api-reference">
-    Open the exact operation pages once you are ready to wire the calls.
-  </Card>
+  <Card title="Filing types and exhibits" icon="files" href="/filing-types-and-exhibits">Check generic retrieval against specialized filing workflows.</Card>
+  <Card title="API conventions" icon="braces" href="/api-conventions">Apply authentication, pagination, versioning, and retry rules.</Card>
+  <Card title="Error code catalog" icon="circle-alert" href="/error-code-catalog">Turn a dual-run failure into a concrete next action.</Card>
 </CardGroup>
