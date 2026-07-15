@@ -49,27 +49,9 @@ Expect a JSON response that identifies the current matching filing. Preserve its
 
 ## Special Situations workflow
 
-The async client has helpers for a current roster and detail, filing-event activity, disclosed calendar dates, aggregate counts, archived weekly issues, Markdown exports, underwriting packs, and monitor creation.
+Use the authenticated REST endpoints in the [Special Situations workflow](/special-situations-workflows) for the current public product. Do not write against unlisted Rust helpers for exports, archive reads, underwriting packs, or watch configuration.
 
-```rust
-use sec_api_sdk_rust::SituationWatchDelivery;
-use serde_json::json;
-
-let roster = client.list_situations(&[("types", "merger"), ("statuses", "pending"), ("limit", "25")]).await?;
-let detail = client.get_situation("sit_abc123", &[]).await?;
-let feed = client.situations_feed(&[("tickers", "ACME")]).await?;
-let calendar = client.situations_calendar(&[("date_types", "vote,expected_close"), ("days", "30")]).await?;
-let stats = client.situations_stats(&[("window", "30d")]).await?;
-let issues = client.situations_issues(&[("limit", "12")]).await?;
-let brief = client.export_situation("sit_abc123", &[]).await?;
-let underwriting = client.underwrite_situation("sit_abc123", &[]).await?;
-let watch = client.watch_situations(
-    &json!({"tickers": ["ACME"]}),
-    SituationWatchDelivery::Email("research@example.com".to_string()),
-    Some("ACME situation updates"),
-    None,
-).await?;
-```
+The broader generated SDK helper surface is dependent on [omni-datastream #1657](https://github.com/autonomous-computer/omni-datastream/pull/1657) being merged, released, and deployed.
 
 Current detail can change as filings arrive; an issue is an immutable historical publication. Retain source identifiers and request IDs with derived output, and review the underlying filing before relying on a disclosed term or date. See [Special Situations workflows](/special-situations-workflows) for the REST and CLI workflow.
 

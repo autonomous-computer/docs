@@ -59,29 +59,9 @@ Expect the current matching filing's accession number, date, and SEC URL. Those 
 
 ## Special Situations workflow
 
-The client has helpers for a current roster and detail, filing-event activity, disclosed calendar dates, aggregate counts, archived weekly issues, Markdown exports, underwriting packs, and monitor creation. Each call returns an error; handle it at the boundary that owns the request.
+Use the authenticated REST endpoints in the [Special Situations workflow](/special-situations-workflows) for the current public product. Do not write against unlisted Go helpers for exports, archive reads, underwriting packs, or watch configuration.
 
-```go
-func must[T any](value T, err error) T {
-  if err != nil { log.Fatal(err) }
-  return value
-}
-
-roster := must(client.ListSituations(map[string]string{"types": "merger", "statuses": "pending", "limit": "25"}))
-detail := must(client.GetSituation("sit_abc123", nil))
-feed := must(client.SituationsFeed(map[string]string{"tickers": "ACME"}))
-calendar := must(client.SituationsCalendar(map[string]string{"date_types": "vote,expected_close", "days": "30"}))
-stats := must(client.SituationsStats(map[string]string{"window": "30d"}))
-issues := must(client.SituationsIssues(map[string]string{"limit": "12"}))
-brief := must(client.ExportSituation("sit_abc123", nil))
-underwriting := must(client.UnderwriteSituation("sit_abc123", nil))
-watch := must(client.WatchSituations(sdkgo.SituationWatchParams{
-  Name: "ACME situation updates",
-  Filters: map[string][]string{"tickers": {"ACME"}},
-  Delivery: sdkgo.SituationWatchDelivery{Email: "research@example.com"},
-}))
-_ = []any{roster, detail, feed, calendar, stats, issues, brief, underwriting, watch}
-```
+The broader generated SDK helper surface is dependent on [omni-datastream #1657](https://github.com/autonomous-computer/omni-datastream/pull/1657) being merged, released, and deployed.
 
 Current detail can change as filings arrive; an issue is an immutable historical publication. Retain source identifiers and request IDs with derived output, and review the underlying filing before relying on a disclosed term or date. See [Special Situations workflows](/special-situations-workflows) for the REST and CLI workflow.
 

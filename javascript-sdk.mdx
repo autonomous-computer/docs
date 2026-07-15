@@ -58,23 +58,9 @@ Keep the returned accession number, filing URL, and request ID with any derived 
 
 ## Special Situations workflow
 
-Use the `situations` namespace for a current roster, current detail, filing-event activity, disclosed calendar dates, aggregate counts, and archived weekly issues. Exports return Markdown; underwriting returns the structured underwriting pack. Create a watch only with a deliberate filter and delivery destination.
+Current JavaScript SDK releases expose the read helpers documented in their package API, including list, detail, feed, calendar, stats, and performance. For exports, archive reads, underwriting packs, and watch configuration, call the authenticated REST endpoints in the [Special Situations workflow](/special-situations-workflows). Do not assume a nested `situations` namespace or a watch helper is available in an installed package.
 
-```js
-const roster = await sec.situations.list({ types: ["merger"], statuses: ["pending"], limit: 25 })
-const detail = await sec.situations.get("sit_abc123")
-const feed = await sec.situations.feed({ tickers: ["ACME"] })
-const calendar = await sec.situations.calendar({ date_types: ["vote", "expected_close"], days: 30 })
-const stats = await sec.situations.stats({ window: "30d" })
-const issues = await sec.situations.issues({ limit: 12 })
-const brief = await sec.situations.export("sit_abc123")
-const underwriting = await sec.situations.underwrite("sit_abc123")
-const watch = await sec.situations.watch({
-  filters: { tickers: ["ACME"] },
-  delivery: { email: "research@example.com" },
-  name: "ACME situation updates",
-})
-```
+The broader generated SDK helper surface is dependent on [omni-datastream #1657](https://github.com/autonomous-computer/omni-datastream/pull/1657) being merged, released, and deployed.
 
 Treat `detail` as current data and an issue as an immutable historical publication. Keep source identifiers and request IDs with any derived output, and review the underlying filing before relying on a disclosed term or date. See [Special Situations workflows](/special-situations-workflows) for the REST and CLI workflow.
 

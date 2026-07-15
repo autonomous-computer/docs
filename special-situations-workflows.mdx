@@ -6,7 +6,7 @@ description: "Build cited special-situations discovery, monitoring, archive, and
 Use Special Situations as a durable SEC-derived research layer: discover a live population, open the cited event trail behind a candidate, preserve a fixed weekly archive when reproducibility matters, and monitor only the set that actually warrants attention.
 
 <Info>
-This is a paid public API product. The free [Situations database](https://secapi.ai/situations) is useful for discovery and organic research; API keys unlock programmatic search, exports, archive reads, and monitoring under your organization plan.
+This is a paid public API product. The free [Situations database](https://secapi.ai/situations) is useful for discovery and organic research; API keys unlock programmatic search, exports, and archive reads under your organization plan. Watchlist creation and deactivation use the signed-in organization session required by their endpoint reference.
 </Info>
 
 ## Choose the right object
@@ -18,7 +18,7 @@ This is a paid public API product. The free [Situations database](https://secapi
 | Cite a concise agent brief | `GET /v1/situations/{situation_id}/export` | Source-cited Markdown designed for downstream models |
 | Build a single research packet | `GET /v1/situations/{situation_id}/underwriting-pack` | Canonical detail, narrative, timeline, and Copy-for-LLM Markdown together |
 | Reproduce a past digest | `GET /v1/situations/issues/{issue}` | Immutable publication-time snapshot, not live data |
-| React to a material update | `secapi situations watch` | Durable delivery with an explicit destination and provenance |
+| React to a material update | [`/v1/situations/watchlists`](/api-reference/situations/post-v1-situations-watchlists) | Create a durable watchlist with an explicit destination and provenance |
 
 ## 1. Discover, then narrow
 
@@ -45,7 +45,11 @@ Retrieve current detail before asking an agent to interpret a situation. Keep th
 
 ```bash
 secapi situations get --situation-id sit_abc123
-secapi situations export --situation-id sit_abc123 > situation-brief.md
+
+curl --fail-with-body -sS \
+  -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/sit_abc123/export" \
+  > situation-brief.md
 ```
 
 <Prompt>
@@ -70,37 +74,31 @@ The issue number or slug, publication timestamp, `sourceSituationIds`, `sourceEv
 
 Create a monitor only after narrowing the universe. A direct email monitor is appropriate for a person; organization fanout is appropriate only after signed webhook or stream delivery has been configured and tested.
 
-```bash
-secapi situations watch \
-  --situation-ids sit_abc123 \
-  --use-org-webhooks \
-  --name "ACME vote and close monitoring"
-```
+The current CLI supports situation discovery and analysis commands such as `list`, `by-form`, `feed`, `calendar`, `stats`, `performance`, `get`, `filings`, and `summary`. Create and manage a situation watch through the signed-in organization REST reference until a CLI command is published. Configure and verify a signed organization webhook or stream destination before relying on fanout.
 
-Creating, reading, or changing a watch reports the `monitor_management` control-plane meter. Successful organization-level webhook delivery is metered as `situations_webhook_delivery`, stream fanout delivery as `stream_event`, and direct email delivery as `email_delivery`. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
+Do not infer a route's bill from its name. The current authenticated `/v1/situations*` request class is `situations_lookup`; delivery is separately accounted for as `webhook_delivery`, `stream_event`, or `email_delivery` when a delivery is actually attempted. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
 
 ## MCP and reusable Skills
 
 The hosted MCP surface currently exposes `situations.list`, `situations.search`
 (an alias of `situations.list`), `situations.get`, `situations.feed`,
-`situations.calendar`, `situations.stats`,
-`situations.performance`, `situations.export`, `situations.watch`,
-`situations.issues`, `situations.issue`, and `situations.underwrite`. Tool
-calls use the same organization key, entitlement checks, meter classes, and
-source-citation expectations as REST. Install the server with the
-[MCP setup guide](/mcp-install), then let an agent use the discovery tools
-before issuing a durable watch.
+`situations.calendar`, `situations.stats`, and `situations.performance`. Tool
+calls use the same organization key, entitlement checks, and source-citation
+expectations as REST. Use the REST reference for exports, archive reads,
+underwriting packs, and watch configuration rather than asking an MCP client to
+call an unavailable tool. The expanded MCP and SDK helper surface is dependent
+on [omni-datastream #1657](https://github.com/autonomous-computer/omni-datastream/pull/1657) being merged, released, and deployed.
 
-The bundled `track-special-situations` Skill is the CLI-oriented counterpart:
-it guides an agent from a broad roster to live detail, a cited export, and an
-intentional monitor. It does not expose the internal Omni Apps market or
-fundamentals layer.
+The bundled `track-special-situations` Skill is the CLI-oriented discovery
+counterpart: it guides an agent from a broad roster to live detail, filing
+activity, and calendar context. Use REST for exports and watch configuration.
+It does not expose the internal Omni Apps market or fundamentals layer.
 
 ## Cost and entitlement posture
 
-Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`. For every request, log the response meter and billing headers rather than hard-coding a plan assumption. The important Special Situations meter classes are `situations_lookup`, `situations_feed_read`, `situations_export`, `situations_underwriting_pack`, `monitor_management`, `email_delivery`, `situations_webhook_delivery`, and `stream_event`.
+Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`. For every request, log the response meter and billing headers rather than hard-coding a plan assumption. The current Special Situations read class is `situations_lookup`; delivery work has separate `webhook_delivery`, `email_delivery`, and `stream_event` classes. Rates and entitlements are organization-specific.
 
-Proprietary Omni Apps fundamentals, estimates, valuation, and symbol coverage are internal-only and excluded from the public Special Situations API, documentation, SDKs, CLI, MCP, and pricing.
+TIKR-derived fundamentals, estimates, screener results, and broad symbol coverage are internal-only and excluded from the public Special Situations API, embeds, documentation, SDKs, CLI, MCP, and pricing.
 
 ## Read next
 

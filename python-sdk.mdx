@@ -43,23 +43,9 @@ Expect a current filing identity and request ID. The values are live; retain the
 
 ## Special Situations workflow
 
-The client exposes a current roster, current detail, filing-event activity, disclosed calendar dates, aggregate counts, archived weekly issues, a Markdown export, an underwriting pack, and deliberate monitor creation.
+Use the authenticated REST endpoints in the [Special Situations workflow](/special-situations-workflows) for the current public product. Do not assume a Python helper exists for exports, archive reads, underwriting packs, or watch configuration until it appears in the installed package's release notes and API surface.
 
-```python
-roster = client.list_situations(types=["merger"], statuses=["pending"], limit=25)
-detail = client.get_situation("sit_abc123")
-feed = client.situations_feed(tickers=["ACME"])
-calendar = client.situations_calendar(date_types=["vote", "expected_close"], days=30)
-stats = client.situations_stats(window="30d")
-issues = client.situations_issues(limit=12)
-brief = client.export_situation("sit_abc123")
-underwriting = client.underwrite_situation("sit_abc123")
-watch = client.watch_situations(
-    filters={"tickers": ["ACME"]},
-    delivery={"email": "research@example.com"},
-    name="ACME situation updates",
-)
-```
+The broader generated SDK helper surface is dependent on [omni-datastream #1657](https://github.com/autonomous-computer/omni-datastream/pull/1657) being merged, released, and deployed.
 
 Current detail can change as filings arrive; an issue is an immutable historical publication. Retain source identifiers and request IDs with derived output, and review the underlying filing before relying on a disclosed term or date. See [Special Situations workflows](/special-situations-workflows) for the REST and CLI workflow.
 
