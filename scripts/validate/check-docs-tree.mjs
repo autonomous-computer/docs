@@ -83,12 +83,33 @@ function collectRedirects(docsJson) {
   }))
 }
 
+function findDuplicateRedirectSources(redirects) {
+  const seen = new Set()
+  const duplicates = new Set()
+
+  for (const redirect of redirects) {
+    if (!redirect.source) continue
+    if (seen.has(redirect.source)) {
+      duplicates.add(redirect.source)
+    } else {
+      seen.add(redirect.source)
+    }
+  }
+
+  return [...duplicates]
+}
+
 if (!fs.existsSync(docsJsonPath)) {
   fail(`docs.json not found at ${docsJsonPath}`)
 } else {
   const docsJson = readJson(docsJsonPath)
   const navRoutes = collectNavigationRoutes(docsJson)
   const redirects = collectRedirects(docsJson)
+
+  const duplicateRedirectSources = findDuplicateRedirectSources(redirects)
+  if (duplicateRedirectSources.length > 0) {
+    fail(`Redirects contain duplicate sources: ${duplicateRedirectSources.join(", ")}`)
+  }
 
   const missingNavRoutes = [...navRoutes].filter((route) => !routeExists(route))
   if (missingNavRoutes.length > 0) {
