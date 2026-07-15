@@ -1,9 +1,9 @@
 ---
-title: "Build an earnings preview agent"
-description: "Create a source-linked earnings brief from the SEC API earnings preview bundle for one issuer"
+title: "Build an Earnings Preview"
+description: "Retrieve and preserve one issuer's earnings-preview bundle for a reviewable research brief."
 ---
 
-Use this job to create a compact pre-earnings research brief for one issuer. It saves the returned bundle and renders its disclosed drivers and risks with the source context intact. It does not predict results or recommend a trade.
+Use this workflow to prepare a bounded pre-earnings research brief for one issuer. It saves the returned bundle before anyone writes a summary, so the brief can be checked against the returned context. The bundle is research input, not an earnings forecast, a completeness claim, or a trade recommendation.
 
 ## Set up a clean environment
 
@@ -16,7 +16,7 @@ python -m pip install requests
 export SECAPI_API_KEY="your_api_key"
 ```
 
-## Request and save the preview bundle
+## 1. Request and save the preview bundle
 
 Create `earnings_preview.py`:
 
@@ -39,55 +39,43 @@ bundle = response.json()
 
 Path("earnings-preview.json").write_text(json.dumps(bundle, indent=2))
 print(json.dumps({
-    "symbol": bundle.get("symbol"),
-    "asOf": bundle.get("asOf"),
-    "drivers": len(bundle.get("keyDrivers", [])),
-    "risks": len(bundle.get("keyRisks", [])),
+    "object": bundle.get("object"),
     "requestId": bundle.get("requestId"),
+    "traceparent": bundle.get("traceparent"),
 }, indent=2))
 ```
 
-Run `python earnings_preview.py`. The command writes `earnings-preview.json` and prints the issuer, as-of timestamp, counts of returned drivers and risks, and request ID. The exact content varies by issuer and available supporting material.
+Run `python earnings_preview.py`. It writes `earnings-preview.json` and prints the returned object identity and request metadata. A successful response is the bounded outcome for this step; bundle content can vary by issuer and selected filing context.
 
-## Render a reviewer brief
+## 2. Make a review stub, not a synthetic forecast
 
 Append this code after the request above:
 
 ```python
-def label(item):
-    return item.get("label") or item.get("key") or "Untitled item"
-
 lines = [
-    f"# {bundle.get('symbol', ticker)} earnings preview",
-    f"As of: {bundle.get('asOf', 'not supplied')}",
+    f"# {ticker} earnings preview",
     f"Request ID: {bundle.get('requestId', 'not supplied')}",
+    f"Trace: {bundle.get('traceparent', 'not supplied')}",
     "",
-    "## Summary",
-    bundle.get("summaryMd", "No summary returned."),
+    "## Returned bundle",
+    "See earnings-preview.json. Keep any source or trace context returned in the bundle with this review.",
     "",
-    "## Key drivers",
+    "## Reviewer notes",
+    "- Read the returned supporting context before quoting a driver or risk.",
+    "- Label any conclusion as analyst interpretation, not API output.",
 ]
-lines.extend(
-    f"- {label(item)}: {item.get('summary') or item.get('explanation') or 'No explanation returned.'}"
-    for item in bundle.get("keyDrivers", [])
-)
-lines.extend(["", "## Key risks"])
-lines.extend(
-    f"- {label(item)}: {item.get('summary') or item.get('explanation') or 'No explanation returned.'}"
-    for item in bundle.get("keyRisks", [])
-)
 Path("earnings-preview.md").write_text("\n".join(lines) + "\n")
 ```
 
-This adds `earnings-preview.md`. Keep the JSON bundle beside the rendered brief so a reviewer can inspect `trace`, provenance, freshness, or other supporting context returned with an item.
+This adds `earnings-preview.md` without assuming a stable internal shape for a driver, risk, estimate, or citation. Keep the JSON beside the note. When the returned bundle includes supporting context, retain it unchanged; the source filing remains the authority for a quoted disclosure.
 
 ## Limits and failure modes
 
-- A non-2xx response is a failed retrieval, not evidence that an issuer has no earnings context. Preserve the response body, `requestId`, and `traceparent` when available.
-- Do not fill an absent field with a third-party value and present it as SEC API output. Keep external data separately labeled and sourced.
-- Drivers and risks are research inputs, not forecasts or materiality determinations. Open the returned trace or source context before quoting one in an investment, compliance, or public-facing brief.
-- Save each run with its `asOf` value. A later run can return a different bundle as filings and supporting material change.
+- The route requires `ticker` or `cik`. A failed retrieval is not evidence that an issuer has no earnings context.
+- This filing-derived route does not provide consensus estimates. Keep any external estimate separately sourced and labeled.
+- A driver or risk is not a forecast or materiality determination. Read the returned supporting context and the source before quoting it.
+- Save every run with its request metadata. A later request can return a different bundle.
 
 ## Next step
 
-Add a review status and a source-link check before distributing the brief. For a broader issuer view, use the [company intelligence endpoint](/api-reference/intelligence/get-v1-intelligence-company) alongside the saved earnings bundle.
+Read the [earnings preview reference](/api-reference/intelligence/get-v1-intelligence-earnings-preview), then add a reviewer-approved source check before distributing the brief.
