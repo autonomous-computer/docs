@@ -1,105 +1,49 @@
 ---
-title: "Build a 13F change-tracker agent"
-description: "Compare a manager's latest two parsable Form 13F reports and save an evidence-linked change report"
+title: "Build a 13F Holdings Tracker Agent"
+description: "Create a Python job that records the latest 13F comparison for a manager CIK."
 ---
 
-Use this Python job to compare the latest two parsable Form 13F reports for one reporting manager. Its output describes reported holdings changes between those filings. It does not establish a manager's current portfolio, trade dates, economic exposure, or investment intent.
+Retrieve the latest two 13F reports for a manager and save the comparison. This
+job does not infer trades, performance, or current ownership.
 
-## Set up the input
+## Prerequisites
 
-You need Python 3.9 or later, `requests`, an SEC API key, and a manager CIK. The example uses Berkshire Hathaway's manager CIK.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install requests
-export SECAPI_API_KEY="your_api_key"
-```
-
-## Request the comparison
-
-Create `tracker.py`:
+- Python 3.9+ and `SECAPI_API_KEY`.
+- A manager CIK and durable storage for production results.
 
 ```python
-import json
-import os
+import json, os
+from datetime import datetime, timezone
 from pathlib import Path
-
 import requests
 
+cik = "0001067983"
 response = requests.post(
     "https://api.secapi.ai/v1/owners/13f/compare",
-    headers={"x-api-key": os.environ["SECAPI_API_KEY"], "content-type": "application/json"},
-    json={"cik": "0001067983", "limit": 50},
-    timeout=30,
+    headers={"x-api-key": os.environ["SECAPI_API_KEY"]},
+    json={"cik": cik, "limit": 50}, timeout=30,
 )
 response.raise_for_status()
-comparison = response.json()
-
-Path("13f-comparison.json").write_text(json.dumps(comparison, indent=2))
-print(json.dumps({
-    "manager": comparison.get("managerName"),
-    "currentFilingDate": comparison.get("currentFilingDate"),
-    "previousFilingDate": comparison.get("previousFilingDate"),
-    "requestId": comparison.get("requestId"),
-}, indent=2))
+payload = response.json()
+stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+output = Path(f"13f-compare-{cik}-{stamp}.json")
+output.write_text(json.dumps(payload, indent=2) + "\n")
+print({"output": str(output), "requestId": payload.get("requestId")})
 ```
 
-Run `python tracker.py`. The expected artifact is `13f-comparison.json`: retain it even if a later step creates a reader-friendly report. It contains the returned rows and request context.
+A successful run writes the service's selected-report comparison and prints the
+file path plus `requestId`. Inspect the returned shape before building a
+dashboard; keep accession numbers, report dates, CUSIPs, filing URLs where
+provided, and request metadata with every summary.
 
-## Render a report without assigning intent
+Handle `400` as an invalid CIK, `401`/`403` as an access problem, and temporary
+`5xx` responses with bounded retries. Do not mark a manager unchanged after an
+incomplete or failed retrieval.
 
-Append the following code to `tracker.py` after the comparison request above defines `comparison`.
+## Limitation and next steps
 
-```python
-def write_report(comparison: dict) -> str:
-    groups = {"added": [], "removed": [], "changed": []}
-    for row in comparison.get("rows", []):
-        status = row.get("status")
-        if status in groups:
-            groups[status].append(row)
+13F data is delayed and limited to reportable securities. A new or closed
+position is a change between selected reports, not proof of a real-time trade.
 
-    lines = [
-        f"# {comparison.get('managerName', 'Manager')} 13F comparison",
-        f"Current filing date: {comparison.get('currentFilingDate')}",
-        f"Previous filing date: {comparison.get('previousFilingDate')}",
-        f"Request ID: {comparison.get('requestId')}",
-        "",
-    ]
-    for status, rows in groups.items():
-        lines.append(f"## {status.title()} positions")
-        for row in rows:
-            identifier = row.get("cusip") or "CUSIP unavailable"
-            lines.append(
-                f"- {row.get('issuer')} ({identifier}): "
-                f"{row.get('previousShares')} -> {row.get('currentShares')} shares"
-            )
-        if not rows:
-            lines.append("- None returned")
-        lines.append("")
-    lines.append("These are differences between two reported 13F filings, not a current portfolio or trading-intent record.")
-    return "\n".join(lines)
-
-Path("13f-comparison.md").write_text(write_report(comparison))
-```
-
-`cusip` is a licensed identifier and can be `null` when your account is not entitled to receive it. The report uses `CUSIP unavailable` rather than treating a missing identifier as a match failure. Preserve issuer, filing identity, and any returned class information when you need to distinguish similar positions.
-
-## Source limits and failures
-
-The comparison route selects the latest two parsable reports; it does not accept arbitrary report periods. For a particular quarter, first list the manager's 13F filings and use the returned report or filing dates to choose the evidence you need.
-
-```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=8"
-```
-
-Keep the manager CIK, both returned filing dates, provenance with the current and previous accession numbers when available, and `requestId`. `raise_for_status()` ensures an invalid CIK or service error does not become an empty report. Corporate actions, amendments, and reporting conventions can explain a row difference; inspect the linked filings before making a material characterization.
-
-## Use the same job through MCP
-
-In a connected MCP client, use `tools.search` to locate the live 13F comparison capability, then `tools.describe` before running it. Preserve the structured result, manager identity, both filing dates, provenance, `requestId`, and `traceparent`. The live tool contract is authoritative; do not hard-code a copied tool schema into an agent.
-
-## Next action
-
-Store the manager CIK with both returned filing identities or filing dates as the comparison key, then add a reviewer field before distributing any reported change to an investment or compliance workflow.
+- [13F ownership reference](/api-reference/owners)
+- [MCP workflows](/mcp-workflows)

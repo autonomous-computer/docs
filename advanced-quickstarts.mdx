@@ -1,56 +1,59 @@
 ---
-title: "Advanced quickstarts"
-description: "Extend a working SEC API integration with small, source-aware research workflows"
+title: "Advanced Quickstarts"
+description: "Choose a supported SEC API workflow after your first authenticated request."
 ---
 
-Start here after [your first request](/getting-started) works. Each request is runnable with an API key, but its records depend on current filings and issuer disclosures. Inspect the returned source, period, and request metadata before comparing or summarizing results.
+Set `SECAPI_API_KEY` before running an example. Each quickstart answers one
+question and preserves the source trail needed to review the result.
 
-## Compare reported 13F positions
-
-Use a manager CIK to compare disclosed institutional positions:
+## Compare a manager's latest 13F reports
 
 ```bash
-curl --fail-with-body -sS -X POST \
-  -H "content-type: application/json" \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/owners/13f/compare" \
+curl --fail-with-body -X POST "https://api.secapi.ai/v1/owners/13f/compare" \
+  -H "x-api-key: $SECAPI_API_KEY" -H "content-type: application/json" \
   -d '{"cik":"0001067983","limit":25}'
 ```
 
-Expect a comparison of filed reports. This is disclosure history, not a live ownership ledger. Preserve the returned reporting periods and filing references for each result you use.
+The response compares the two reports selected by the service. Retain report
+dates, position identifiers, and `requestId`. A 13F is historical disclosure,
+not a complete or current portfolio.
 
-## Inspect disclosed executive compensation
-
-Retrieve normalized executive-compensation records derived from the latest DEF 14A filing:
-
-```bash
-curl --fail-with-body -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/compensation?ticker=AAPL"
-```
-
-Expect normalized records from the latest proxy disclosure. Preserve the filing context and fiscal period returned for each record. Compare those disclosed periods and components, not labels alone.
-
-## Find offering-related filings
+## Retrieve a filing section
 
 ```bash
-curl --fail-with-body -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/offerings?forms=S-1,424B4&limit=10"
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K"
 ```
 
-Expect structured rows matching the bounded form query. An offering-related form is not, by itself, evidence that a transaction completed or has particular terms; follow the returned filing source before making that conclusion.
+The result includes extracted text and filing provenance. An unavailable or
+empty section is a review state, not evidence that the issuer has no risks.
 
-## Check the account before repeated work
+## Find filing passages by topic
 
 ```bash
-curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/billing"
-
-curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/limits"
+curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  --data-urlencode "q=supply chain disruption" \
+  --data-urlencode "ticker=AAPL" --data-urlencode "form=10-K" \
+  "https://api.secapi.ai/v1/search/semantic"
 ```
 
-These responses reflect the authenticated organization rather than a universal allowance. Before a repeated or potentially billable workflow, use [Agent billing](/agent-billing) to get a quote and define a stop condition. Account changes such as budgets, Checkout, and payment methods require the signed-in dashboard.
+Search rows are candidates with citations. Ranking is not a materiality finding;
+inspect the cited filing before using a passage in a decision.
 
-For a failed request, use [request diagnostics](/request-diagnostics). For documented endpoint parameters and fields, use the [API reference](/api-reference).
+## Create a monitor delivery path
+
+In the signed-in [Delivery dashboard](https://secapi.ai/app/webhooks), create a
+public-HTTPS webhook endpoint, subscribe it to `monitor.match`, and create a
+narrow saved monitor for the required query, forms, and tickers. These are
+human-authenticated organization control-plane actions; do not use an API key
+or an autonomous agent to create or change them.
+
+Store the dashboard-issued signing secret securely, verify raw-body signatures,
+and make the consumer idempotent. Monitor delivery is scheduled; reconcile
+matches and delivery history with machine-read API requests.
+
+## Next steps
+
+- [13F ownership reference](/api-reference/owners)
+- [Filing retrieval](/api-reference/filings)
+- [Build a Filing Monitor](/tutorials/build-filing-monitor)

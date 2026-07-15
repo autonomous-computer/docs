@@ -1,91 +1,52 @@
 ---
-title: "Build a filing risk-factor review agent"
-description: "Collect source-linked 10-K risk-factor passages for human review without treating a search result as a conclusion"
+title: "Build a Risk Factor Analysis Agent"
+description: "Retrieve two Item 1A sections and produce a reviewable text comparison."
 ---
 
-Use this job to collect candidate 10-K section passages for one issuer and write a reviewer queue. It searches filing sections and keeps each result tied to its filing. It does not prove a risk is new, material, complete, or legally significant; a reviewer must read the cited section in context.
+Compare Item 1A from two named 10-K filings. The output is a review artifact,
+not a materiality score or legal conclusion.
 
-## Set up a clean environment
-
-You need Python 3.9 or later, `requests`, and an SEC API key. This example searches NVIDIA 10-K filings.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install requests
-export SECAPI_API_KEY="your_api_key"
-```
-
-## Test a bounded question
-
-Start with one issuer, one form, and one question you can inspect. This example asks about supply-chain disruption language in NVIDIA's 10-K filings.
+## 1. Find two accessions
 
 ```bash
 curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  --data-urlencode "q=supply chain disruption risk" \
-  --data-urlencode "ticker=NVDA" \
-  --data-urlencode "form=10-K" \
-  --data-urlencode "limit=10" \
-  "https://api.secapi.ai/v1/sections/search" \
-  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
+  --data-urlencode "ticker=AAPL" --data-urlencode "form=10-K" \
+  --data-urlencode "limit=5" --data-urlencode "sort=filing_date_desc" \
+  "https://api.secapi.ai/v1/filings"
 ```
 
-The response contains `data`, `hasMore`, and `nextCursor`. A row can include `accession`, `source_url`, `section_key`, `char_start`, `char_end`, and `highlighted_snippet`. Citation-span fields can be null when validation is degraded; keep the filing identity even in that case.
+Record two accession numbers, filing dates, and URLs from the result. Do not
+quietly compare different forms.
 
-## Write the review queue
-
-Create `risk_queue.py`:
+## 2. Fetch Item 1A and generate a diff
 
 ```python
-import json
-import os
-import sys
+import difflib, os, requests
 from pathlib import Path
-import requests
 
-ticker = (sys.argv[1] if len(sys.argv) > 1 else "NVDA").upper()
-query = sys.argv[2] if len(sys.argv) > 2 else "supply chain disruption risk"
+def section(accession):
+    response = requests.get(
+        f"https://api.secapi.ai/v1/filings/{accession}/sections/item_1a",
+        headers={"x-api-key": os.environ["SECAPI_API_KEY"]}, timeout=30,
+    )
+    response.raise_for_status()
+    payload = response.json(); data = payload.get("data", payload)
+    return data.get("contentMd", data.get("text", "")), payload.get("requestId")
 
-response = requests.get(
-    "https://api.secapi.ai/v1/sections/search",
-    headers={"x-api-key": os.environ["SECAPI_API_KEY"]},
-    params={"q": query, "ticker": ticker, "form": "10-K", "limit": 10},
-    timeout=30,
-)
-response.raise_for_status()
-payload = response.json()
-
-queue = [{
-    "ticker": row.get("ticker"), "form": row.get("form"),
-    "accession": row.get("accession"), "source_url": row.get("source_url"),
-    "section_key": row.get("section_key"), "char_start": row.get("char_start"),
-    "char_end": row.get("char_end"), "highlighted_snippet": row.get("highlighted_snippet"),
-    "citation_degraded": row.get("_citation_degraded"),
-} for row in payload.get("data", [])]
-
-artifact = {"query": query, "ticker": ticker, "queue": queue,
-            "hasMore": payload.get("hasMore"), "nextCursor": payload.get("nextCursor"),
-            "requestId": payload.get("requestId"), "traceparent": payload.get("traceparent")}
-Path("risk-review-queue.json").write_text(json.dumps(artifact, indent=2))
-print(json.dumps({"queueItems": len(queue), "requestId": artifact["requestId"]}, indent=2))
+current, current_id = section("CURRENT_ACCESSION_NUMBER")
+previous, previous_id = section("PREVIOUS_ACCESSION_NUMBER")
+if not current or not previous: raise RuntimeError("Item 1A was unavailable")
+diff = difflib.unified_diff(previous.splitlines(), current.splitlines(), lineterm="")
+Path("item-1a-comparison.diff").write_text("\n".join(diff) + "\n")
+print({"currentRequestId": current_id, "previousRequestId": previous_id})
 ```
 
-Run `python risk_queue.py NVDA "supply chain disruption risk"`. The output is `risk-review-queue.json`, a list for a reviewer to inspect, not a change score. When `hasMore` is true, run the next page with the returned `nextCursor` before calling the queue complete.
+Read the diff beside both filings. Formatting, reordering, or extraction
+differences can create large changes without a new disclosure. Persist accessions,
+section keys, filing URLs, request IDs, and the comparison version. Route empty
+sections and `404` responses to review instead of creating a negative finding.
 
-## Compare years without overstating retrieval
+## Next steps
 
-When the question is historical, add a distinct `filing_year` value to each scoped query and save each artifact. Compare cited source passages from comparable forms. A different search result, snippet, or section arrangement does not prove management added, removed, or changed a risk.
-
-## Source limits and failures
-
-Use `q` with one issuer identifier to start, then narrow with `form`, `filing_year`, fiscal-period fields, or a filing ID when needed. `nextCursor` is opaque: replay it unchanged while `hasMore` is true. An empty result can mean the scope is too narrow or the language is not indexed as expected; it does not establish that no risk disclosure exists.
-
-For every queue item, retain accession, source URL, section key, available span, query, `requestId`, and `traceparent`. The request scopes to a 10-K but does not restrict results to Item 1A, so inspect `section_key` and the linked filing before classifying a passage as a risk factor. When `_citation_degraded` is set or citation fields are absent, open the full source using the filing identity rather than treating a truncated snippet as proof.
-
-## Use the same job through MCP
-
-In a connected MCP client, use `tools.search` to find the live filing-section capability and `tools.describe` before calling it. Ask the client to preserve the typed result, cursor, citation fields, `requestId`, and `traceparent`; do not use narrative text as a replacement for the returned record.
-
-## Next action
-
-Add a reviewer-decision record keyed by accession and section, then require it before any downstream report calls a passage a material risk disclosure.
+- [Filing retrieval](/api-reference/filings)
+- [Search workflows](/products/search)

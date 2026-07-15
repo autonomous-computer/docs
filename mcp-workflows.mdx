@@ -1,43 +1,42 @@
 ---
-title: "MCP workflow: source-backed filing research"
-description: "Discover the live SEC API MCP contract, retrieve one filing section, and return a result a reviewer can trace"
+title: "Hosted MCP Workflows"
+description: "Connect an MCP-aware client to SEC API, verify the deployed contract, and retain provenance."
 ---
 
-Use hosted MCP when the client needs to choose an SEC API capability at runtime. The first useful workflow is deliberately small: discover the tools, retrieve one filing and one section, then summarize only the evidence returned. [Install SEC API MCP](/mcp-install) before running this job, then review [pricing and limits](/evaluate/pricing-and-limits) before expanding it into repeated work.
+Hosted MCP is an authenticated JSON-RPC endpoint. Start with live discovery,
+not a copied client configuration.
 
-## Ask for one bounded result
+## 1. Read deployed metadata
 
-Give a connected MCP client this prompt:
+```bash
+curl --fail-with-body "https://api.secapi.ai/mcp" | jq .
+```
 
-<Prompt>
-Use tools.search to find issuer resolution, latest-filing, and filing-section tools. Use tools.describe before each selected call. Find NVIDIA's latest 10-K and retrieve Item 1A. Return company name, accession number, form, filing date, filing URL, section title, requestId, and a five-bullet summary. Separate retrieved facts from interpretation and say when the filing or section does not support an answer.
-</Prompt>
+The discovery response exposes `protocolVersion`, `capabilities`, and
+`distribution`. The distribution payload includes the streamable HTTP transport
+and current `x-api-key` and client-install hints.
 
-A successful run returns a filing identity and a bounded section result. A later run can legitimately select a newer accession number. An uncited summary is not a substitute for the filing artifact.
+## 2. Configure and prove a research path
 
-## Let the server supply the tool contract
+Use the distribution transport URL and its `x-api-key`/client hints to configure
+your client. Keep credentials in the client's secret or environment facility.
+A successful `GET /mcp` proves discovery is available, not that an authenticated
+tool call will succeed.
 
-`tools.search` accepts a natural-language job. `tools.describe` returns the current input schema for an exact selected name. `tools/list` is available for clients that need a catalog and supports `core` or namespace filters.
+Ask the client to resolve an issuer, retrieve a filing, and extract a section.
+A completed research result should retain issuer identity, accession number,
+filing date, filing URL, section key, and request ID where returned. Tool output
+is retrieved evidence, not an investment recommendation or legal conclusion.
 
-Do not freeze a copied tool list into a durable agent instruction. Tool names, arguments, annotations, and availability belong to the live server contract. Keep `structuredContent` as the typed result; text content can assist the model but should not replace the returned data.
+## Errors and production use
 
-## Retain the review record
+`GET /mcp` is discovery; `POST /mcp` is authenticated JSON-RPC. HTTP-level gates
+can fail before protocol dispatch. Preserve JSON-RPC error data and request/trace
+identifiers, use bounded retries only for transient failures, and log tool
+arguments with source identifiers.
 
-When available, retain:
+## Next steps
 
-- issuer identity;
-- `accessionNumber`, `form`, `filingDate`, and `filingUrl`;
-- `requestId` and `traceparent`; and
-- provenance, freshness, pagination, truncation, and capability fields.
-
-Search and section retrieval identify evidence within a defined scope. A match, a rank, or an extraction does not by itself establish a fact beyond that record.
-
-## Handle failure at the right layer
-
-`GET /mcp` is public discovery metadata. Authenticated JSON-RPC calls go to `POST /mcp` with `x-api-key`. Authentication, generic rate-limit, billing, and entitlement failures can occur before JSON-RPC dispatch; dispatched tool, quota, timeout, and resource failures use JSON-RPC error envelopes. Preserve `error.data.requestId` and `error.data.traceparent` when present.
-
-Do not retry invalid arguments, missing credentials, billing refusals, or quota exhaustion blindly. Check `Retry-After` for rate limits and correct the cause before another call. Use REST or an SDK when your deployed application needs to own stable request loops, timeout policy, and typed application errors.
-
-## Next action
-
-Run the prompt against one issuer, save the raw typed result beside the rendered brief, and verify that a reviewer can open the cited filing URL without asking the model to reconstruct it.
+- [Evaluate hosted MCP](/evaluate/sec-filings-mcp-server)
+- [MCP installation](/mcp-install)
+- [Filing retrieval](/api-reference/filings)

@@ -1,101 +1,46 @@
 ---
-title: "Build a Filing Monitor with Webhooks"
-description: "Create a saved filing search, receive signed monitor.match events, and retain the filing evidence needed for analyst review."
+title: "Build a Filing Monitor"
+description: "Save a filing search, deliver signed monitor matches, and reconcile result history."
 ---
 
-Use this workflow when a research or compliance team needs a durable alert when a watchlist company files language matching a defined question. The monitor finds candidates; your receiver records the event and sends the cited filing to a reviewer. It is not an EDGAR firehose or a materiality decision. The completed path is dashboard configuration, raw-body signature verification, and a source-linked review queue.
+Use a monitor for scheduled filing-search matches. It is not a real-time EDGAR
+feed, so retain a reconciliation path through match and delivery history.
 
-## Prerequisites
+## 1. Configure delivery in the dashboard
 
-- A signed-in organization administrator who can use the [Delivery dashboard](https://secapi.ai/app/webhooks).
-- An API key in `SECAPI_API_KEY` for the read-only match lookup below.
-- A public HTTPS endpoint you control, such as `https://example.com/secapi`.
-- A secret store for the webhook signing secret. It is shown only when the endpoint is created or rotated.
+An organization administrator uses the signed-in
+[Delivery dashboard](https://secapi.ai/app/webhooks) to create a public-HTTPS
+endpoint, subscribe it to `monitor.match`, and create a narrowly scoped monitor
+with a query, form filter, and ticker list. These are human-authenticated
+control-plane actions; an API key cannot create or change them.
 
-```bash
-export SECAPI_API_KEY="your_api_key"
-export RECEIVER_URL="https://example.com/secapi"
-```
+Save the dashboard-issued endpoint ID, monitor ID, and signing secret in the
+receiver's secret store.
 
-## 1. Create the signed delivery endpoint in the dashboard
-
-In the signed-in Delivery dashboard, create an endpoint with `RECEIVER_URL` as its destination and subscribe it to `monitor.match`. This is an organization control-plane action: API keys cannot create, test, replay, rotate, or delete webhook endpoints. Save the one-time signing secret immediately; do not put it in source control.
-
-The dashboard shows a webhook id such as `wh_...` and the one-time signing secret. Set that secret as `SECAPI_WEBHOOK_SIGNING_SECRET` in the receiver runtime.
-
-## 2. Create a saved search
-
-In the signed-in Delivery dashboard, create a keyword monitor named `AAPL material-event watch` with query `material agreement OR results of operations OR departure of directors`, ticker `AAPL`, and form `8-K`. These filters make this a watchlist-company 8-K monitor; the keyword query alone is unscoped and must not be used as a production watchlist monitor. Connect the monitor to the endpoint from step 1.
-
-Record the returned `mon_...` id. The expected result is an active monitor with `searchMode: "keyword"`; it will generate `monitor.match` events when the scheduled sweep finds new matching filings.
-
-## 3. Verify the receiver before parsing a payload
-
-SEC API signs the exact request body with HMAC-SHA256 over `${timestamp}.${rawBody}`. This minimal Node.js receiver rejects a stale or invalid body, de-duplicates the event id, and only then queues the match metadata. The expected test result is a `204` for a signed `webhook.test`; a production `monitor.match` emits source-linked queue records. Replace the in-memory set with a database unique constraint in production.
-
-```js
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { createServer } from "node:http";
-
-const secret = process.env.SECAPI_WEBHOOK_SIGNING_SECRET;
-if (!secret) throw new Error("SECAPI_WEBHOOK_SIGNING_SECRET is required");
-const processed = new Set();
-
-function validSignature(raw, header) {
-  const match = /^t=(\d+),v1=([0-9a-f]+)$/.exec(header ?? "");
-  if (!match || Math.abs(Date.now() / 1000 - Number(match[1])) > 300) return false;
-  const expected = createHmac("sha256", secret).update(`${match[1]}.${raw}`).digest("hex");
-  return expected.length === match[2].length && timingSafeEqual(Buffer.from(expected), Buffer.from(match[2]));
-}
-
-createServer((req, res) => {
-  const chunks = [];
-  req.on("data", (chunk) => chunks.push(chunk));
-  req.on("end", () => {
-    const raw = Buffer.concat(chunks).toString("utf8");
-    if (req.method !== "POST" || !validSignature(raw, req.headers["x-secapi-signature"])) {
-      res.writeHead(401).end(); return;
-    }
-    const event = JSON.parse(raw);
-    if (processed.has(event.id)) { res.writeHead(204).end(); return; }
-    processed.add(event.id);
-    if (event.type === "monitor.match") {
-      for (const match of event.data?.matches ?? []) {
-        console.log(JSON.stringify({ eventId: event.id, requestId: event.requestId,
-          monitorId: event.data?.monitor?.id, accessionNumber: match.id,
-          filingUrl: match.htmlUrl ?? null, form: match.form ?? null }));
-      }
-    }
-    res.writeHead(204).end();
-  });
-}).listen(3000);
-```
-
-Run `node receiver.mjs`, expose it at `RECEIVER_URL`, then have the signed-in organization administrator use the endpoint's dashboard test action. A successful test produces a signed `webhook.test` event; the receiver should acknowledge it without treating it as a filing match.
-
-## 4. Preview and audit matches
-
-Use the monitor id to inspect the saved search. Inspect delivery attempts, replay a fixed receiver failure, or rotate/delete an endpoint only in the signed-in Delivery dashboard; those remain organization control-plane actions.
+## 2. Preview the saved search
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/mon_your_monitor_id/matches?limit=10" \
-  | jq '{data, requestId, traceparent}'
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
 ```
 
-Keep the event id, request id, monitor id, accession number, and filing URL together. A `200` or `204` delivery confirms receiver acknowledgement, not that a downstream analyst reviewed the filing.
+The preview shows current saved-search matches; it does not prove immediate
+future delivery.
 
-## Common errors and false positives
+## 3. Verify and recover
 
-- `401` at the receiver usually means the HMAC was calculated over parsed JSON rather than the raw body, the secret is wrong, or the event is outside the clock-skew window.
-- Duplicate work is normal under retries unless the event id is stored before processing.
-- A keyword hit is not a finding. Read the cited filing and surrounding section before calling an event material, adverse, or actionable.
-- `webhook.test` proves the endpoint and signature path, not that the monitor query will match a future filing.
+Verify signatures against the raw body before parsing JSON, reject stale
+timestamps, and make writes idempotent by event ID or filing accession number.
+Use the dashboard to send a test event. It emits `webhook.test`, not a
+production `monitor.match` event.
 
-## Production considerations
+- Inspect `GET /v1/webhook_endpoints/{webhook_id}/deliveries`.
+- Replay only when duplicates are safe.
+- Reconcile `GET /v1/monitors/{monitor_id}/matches` after delivery failures.
 
-Return a fast `2xx` after a durable queue write, retrieve filing detail outside the request path, and alert on delivery failures separately from research findings. Page through delivery history during incidents and replay only after fixing the receiver. Keep monitor queries narrow enough for a human review queue, then review and retire obsolete monitors.
+A match identifies a disclosure for review; it does not determine materiality.
 
-## Next action
+## Next steps
 
-Add an analyst queue that retrieves the matched filing by accession number and records the reviewer decision beside the event evidence.
+- [Webhook endpoint reference](/api-reference/webhooks)
+- [Filing search](/products/filing-search)
