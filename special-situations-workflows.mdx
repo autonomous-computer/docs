@@ -76,7 +76,7 @@ Create a monitor only after narrowing the universe. A direct email monitor is ap
 
 The current CLI supports situation discovery and analysis commands such as `list`, `by-form`, `feed`, `calendar`, `stats`, `performance`, `get`, `filings`, and `summary`. Create and manage a situation watch through the signed-in organization REST reference until a CLI command is published. Configure and verify a signed organization webhook or stream destination before relying on fanout.
 
-Do not infer a route's bill from its name. The current authenticated `/v1/situations*` request class is `situations_lookup`; delivery is separately accounted for as `webhook_delivery`, `stream_event`, or `email_delivery` when a delivery is actually attempted. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
+Do not infer a route's bill from its name. Under the [#1657](https://github.com/autonomous-computer/omni-datastream/pull/1657) release this page is gated on, watchlist lifecycle uses `monitor_management`; a delivered situation webhook uses `situations_webhook_delivery`, while stream fanout and direct email use `stream_event` and `email_delivery`. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
 
 ## MCP and reusable Skills
 
@@ -96,7 +96,7 @@ It does not expose the internal Omni Apps market or fundamentals layer.
 
 ## Cost and entitlement posture
 
-Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`. For every request, log the response meter and billing headers rather than hard-coding a plan assumption. The current Special Situations read class is `situations_lookup`; delivery work has separate `webhook_delivery`, `email_delivery`, and `stream_event` classes. Rates and entitlements are organization-specific.
+Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`. For every request, log the response meter and billing headers rather than hard-coding a plan assumption. Under the [#1657](https://github.com/autonomous-computer/omni-datastream/pull/1657) release this page is gated on, list, detail, issues, filings, summary, calendar, stats, and performance use `situations_lookup`; feed and RSS use `situations_feed_read`; exports use `situations_export`; underwriting packs use `situations_underwriting_pack`; and watchlist lifecycle uses `monitor_management`. Delivery work is separately accounted for as `situations_webhook_delivery`, `stream_event`, or `email_delivery`. Rates and entitlements are organization-specific.
 
 TIKR-derived fundamentals, estimates, screener results, and broad symbol coverage are internal-only and excluded from the public Special Situations API, embeds, documentation, SDKs, CLI, MCP, and pricing.
 
