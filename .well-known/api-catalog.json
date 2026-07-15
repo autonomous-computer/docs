@@ -485,6 +485,7 @@
           "path": "/v1/delivery/unsubscribe",
           "title": "GET /v1/delivery/unsubscribe",
           "summary": "Render an unsubscribe confirmation page for a signed token",
+          "description": "Anonymous endpoint. GET is preview-safe and never mutates state — it only renders a confirmation page with a POST form. Email link previewers (Outlook, Apple Mail, Gmail) will fetch this URL during scanning; the user must submit POST to actually unsubscribe (RFC 8058).",
           "docs_path": "/api-reference/delivery/get-v1-delivery-unsubscribe",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -497,6 +498,7 @@
           "path": "/v1/delivery/unsubscribe",
           "title": "POST /v1/delivery/unsubscribe",
           "summary": "Unsubscribe from monitor email delivery (RFC 8058 one-click compatible)",
+          "description": "Anonymous endpoint. Token may be supplied in form-encoded body OR query string. When the body includes `List-Unsubscribe=One-Click`, the response is 204 No Content per RFC 8058. Idempotent — repeated calls with the same token return the same result.",
           "docs_path": "/api-reference/delivery/post-v1-delivery-unsubscribe",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -728,6 +730,7 @@
           "path": "/v1/embed/situations",
           "title": "GET /v1/embed/situations",
           "summary": "Public capped Special Situations list for logged-out experiences",
+          "description": "Anonymous, recent-only public projection. Includes SEC filing accessions and safe public citation provenance while keeping provider keys, extraction trace ids, model versions, confidence/cross-validation telemetry, prompts, and raw provenance metadata out of the response.",
           "docs_path": "/api-reference/embed/get-v1-embed-situations",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -740,6 +743,7 @@
           "path": "/v1/embed/situations/{id}",
           "title": "GET /v1/embed/situations/{id}",
           "summary": "Public redacted situation detail used by secapi.ai situation permalinks and embeddable discovery surfaces",
+          "description": "Anonymous, cacheable detail surface for recent public situations. The response matches the implementation's public projection: provider-owned keys are omitted and verification internals are redacted.",
           "docs_path": "/api-reference/embed/get-v1-embed-situations-id",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -764,6 +768,7 @@
           "path": "/v1/embed/situations/feed",
           "title": "GET /v1/embed/situations/feed",
           "summary": "Public capped Special Situations event feed with safe filing provenance",
+          "description": "Anonymous recent event feed for embedded/public UI surfaces. Event provenance includes SEC accession, SEC filing URL when public-safe, and source-linked public citations when available.",
           "docs_path": "/api-reference/embed/get-v1-embed-situations-feed",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -788,6 +793,7 @@
           "path": "/v1/embed/situations/issues",
           "title": "GET /v1/embed/situations/issues",
           "summary": "Public capped Special Situations Digest issue archive",
+          "description": "Anonymous, cacheable archive index for published Special Situations Digest issues. The index omits member situation rows while preserving issue metadata, source ids, and publication dates.",
           "docs_path": "/api-reference/embed/get-v1-embed-situations-issues",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -800,6 +806,7 @@
           "path": "/v1/embed/situations/issues/{issue}",
           "title": "GET /v1/embed/situations/issues/{issue}",
           "summary": "Public Special Situations Digest issue detail by number or slug",
+          "description": "Anonymous, cacheable detail for one published Special Situations Digest issue. The response is the frozen public issue snapshot with provider-owned and market-plane internals omitted by the route projection.",
           "docs_path": "/api-reference/embed/get-v1-embed-situations-issues-issue",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -916,7 +923,8 @@
           "method": "GET",
           "path": "/v1/events/auditor-changes",
           "title": "GET /v1/events/auditor-changes",
-          "summary": "Return 8-K Item 4.01 auditor change events with change-type classification (dismissal, resignation, engagement)",
+          "summary": "Find 8-K Item 4.01 auditor dismissal, resignation, and engagement disclosures",
+          "description": "Finds auditor-change events derived from 8-K Item 4.01 disclosures. Change types summarize the filing and should be checked against the cited source before making a governance or accounting claim. Preserve accession and source fields, and treat filing dates as disclosure dates rather than effective-change dates. Coverage is bounded by the submission scan; continue with the returned `nextCursor` value for the same filters. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/events/get-v1-events-auditor-changes",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -931,7 +939,8 @@
           "method": "GET",
           "path": "/v1/events/enforcement",
           "title": "GET /v1/events/enforcement",
-          "summary": "Search SEC litigation releases, administrative proceedings, and AAERs with source-linked respondent and category filters",
+          "summary": "Search official SEC enforcement releases, proceedings, and accounting actions",
+          "description": "Searches official SEC litigation releases, administrative proceedings, and Accounting and Auditing Enforcement Releases (AAERs). Preserve release URLs and source fields when reviewing a result. `publishedAt` is the source publication date; classifications and extracted penalties are derived fields, and a missing penalty is not zero. Continue with the returned `nextCursor` value for the same filters. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/events/get-v1-events-enforcement",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -946,7 +955,8 @@
           "method": "GET",
           "path": "/v1/events/ipo",
           "title": "GET /v1/events/ipo",
-          "summary": "Return filing-derived IPO events with the cited registration statement or prospectus",
+          "summary": "Find filing-derived IPO and public-offering candidates from registration filings",
+          "description": "Finds IPO and public-offering candidates inferred from S-1, F-1, and 424B filings; it does not confirm that an offering priced, closed, or began trading. Treat filing dates as disclosure dates, preserve accession and source fields, and continue with the returned `nextCursor` value for the same filters. The supported forms and bounded submission scan define coverage, so no result is not proof that no offering occurred. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/events/get-v1-events-ipo",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -961,7 +971,8 @@
           "method": "GET",
           "path": "/v1/events/ma",
           "title": "GET /v1/events/ma",
-          "summary": "Return SEC-native M&A events inferred from public-company filings and relevant exhibits",
+          "summary": "Discover filing-derived merger and acquisition signals from public-company disclosures",
+          "description": "Returns merger and acquisition candidates inferred from SEC filings and relevant exhibits. It is a research surface, not a definitive deal feed or closing-status record. Preserve the cited accession and source fields, and treat filing dates as disclosure timing rather than announcement, signing, or closing dates. Use the returned `nextCursor` value with the same filters. The bounded submission scan can leave older matching filings outside the result. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/events/get-v1-events-ma",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -976,7 +987,8 @@
           "method": "GET",
           "path": "/v1/events/officer-changes",
           "title": "GET /v1/events/officer-changes",
-          "summary": "Return 8-K Item 5.02 officer and director change events with the cited filing",
+          "summary": "Find 8-K Item 5.02 officer and director appointment and departure disclosures",
+          "description": "Finds officer and director changes derived from 8-K Item 5.02 filings, including appointments, departures, resignations, and terminations. These are filing-derived classifications, not a complete employment-history or board record. Preserve accession and source fields, and treat filing dates as disclosure dates. A bounded submission scan can omit older eligible filings; continue with the returned `nextCursor` value for the same filters. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/events/get-v1-events-officer-changes",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -991,7 +1003,8 @@
           "method": "GET",
           "path": "/v1/events/restatements",
           "title": "GET /v1/events/restatements",
-          "summary": "Return 8-K Item 4.02 restatement and non-reliance events with severity classification and affected-period extraction",
+          "summary": "Find 8-K Item 4.02 non-reliance and restatement disclosures with affected periods",
+          "description": "Finds issuer disclosures under 8-K Item 4.02, including non-reliance and restatement-related events. It reports filing-derived classifications and extracted periods, not an independent accounting conclusion or a complete restatement universe. Preserve accession and source fields when reviewing a result. Filing dates are disclosure dates, and bounded submission scans can omit older eligible filings. Continue with the returned `nextCursor` value for the same filters. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/events/get-v1-events-restatements",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1006,7 +1019,8 @@
           "method": "GET",
           "path": "/v1/events/voting-results",
           "title": "GET /v1/events/voting-results",
-          "summary": "Return 8-K Item 5.07 voting results with structured proposals, vote counts, and approval outcomes",
+          "summary": "Retrieve structured shareholder-vote results from 8-K Item 5.07 filings",
+          "description": "Returns proposals, vote counts, and reported outcomes extracted from 8-K Item 5.07 disclosures for one issuer. It is not a universal proxy-voting archive: issuer identity is required, coverage is limited to eligible filings scanned, and proposal interpretation should retain the cited accession and source fields. Treat filing dates as disclosure dates and continue with the returned `nextCursor` value for the same filters. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/events/get-v1-events-voting-results",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1589,6 +1603,7 @@
           "path": "/v1/fund-letters",
           "title": "GET /v1/fund-letters",
           "summary": "List investor letters from hedge funds, partnerships, and registered funds, filterable by manager, fund, company, period, source, and distribution tier.",
+          "description": "view=compact returns the trimmed FundLetterCompactList projection (billed identically); view=agent currently equals the default view.",
           "docs_path": "/api-reference/fund-letters/get-v1-fund-letters",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1601,6 +1616,7 @@
           "path": "/v1/fund-letters/{letter_id}",
           "title": "GET /v1/fund-letters/{letter_id}",
           "summary": "Retrieve one letter with letter-level narratives, performance figures, and inline theses (capped at 25; thesisCount carries the total). Superseded/merged IDs resolve forever via aliases.",
+          "description": "Detail never inlines page markdown (that is the /document endpoint, metered separately), so view=agent and view=compact currently equal the default detail view.",
           "docs_path": "/api-reference/fund-letters/get-v1-fund-letters-letter-id",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1613,6 +1629,7 @@
           "path": "/v1/fund-letters/{letter_id}/document",
           "title": "GET /v1/fund-letters/{letter_id}/document",
           "summary": "Retrieve the original letter document (format=pdf, 302 redirect) or page-segmented markdown whose bytes verify every anchor (format=markdown).",
+          "description": "Distribution rules: public_record and fund_published letters serve the full document; third_party letters return 403 document_not_distributable with a sourceUrl hint. EDGAR-sourced letters redirect to the EDGAR primary document. `?sha=` retrieves a superseded source variant's markdown so historical anchors always verify — only when the canonical letter's distribution permits document serving.",
           "docs_path": "/api-reference/fund-letters/get-v1-fund-letters-letter-id-document",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1625,6 +1642,7 @@
           "path": "/v1/fund-letters/changes",
           "title": "GET /v1/fund-letters/changes",
           "summary": "Keyset-paginated delta feed of fund-letter events (letter.published, letter.updated, letter.superseded, thesis.extracted, manager.added). Never response-cached.",
+          "description": "Metered as fund_letter_lookup. The cursor is an opaque keyset token minted by this endpoint (never an offset); malformed cursors 400 as invalid_cursor. nextCursor pins the last returned row whenever the page is non-empty, so pollers resume from it regardless of hasMore.",
           "docs_path": "/api-reference/fund-letters/get-v1-fund-letters-changes",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1673,6 +1691,7 @@
           "path": "/v1/fund-letters/managers",
           "title": "GET /v1/fund-letters/managers",
           "summary": "Browse the fund directory: managers (firms) with coverage stats, searchable by fund/CIO name, ticker held, theme, strategy, and 13F quarter.",
+          "description": "The Fund Directory expansion (letterless 13F managers, the ticker/cik/theme/min_positions/publishes_letters/period/sort filters, and the theme/publishesLetters/has13F/latest13F/references fields) is flag-gated server-side; while it is disabled this endpoint lists letter-publishing managers with the pre-directory fields only and ignores directory-only parameters. latest13F is a summary — follow crossLinks.holdings13F for full holdings.",
           "docs_path": "/api-reference/fund-letters/get-v1-fund-letters-managers",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1697,6 +1716,7 @@
           "path": "/v1/fund-letters/managers/{manager_id}/overview",
           "title": "GET /v1/fund-letters/managers/{manager_id}/overview",
           "summary": "Fund Overview: one token-efficient briefing per manager — canonical name, description, founders, website, coverage counts, and the latest letter's highlights with up to 5 headline theses. Pass include=positions for the latest 13F's top-10 positions.",
+          "description": "Metered as fund_letter_lookup. The manager twin of GET /v1/companies/overview: identity and latest-letter highlights only — no page markdown, no anchors, no full thesis bodies (follow links.letters / links.theses for those). latestLetter is null for a manager with no canonical letters yet. include=positions opts in latest13F: the manager's latest canonical 13F report (amendment/restatement-deduped, never double-counted) with reportDate, filedAt, totalPositions, and the top 10 positions by reported value — rank, issuer, resolved ticker, CUSIP, USD value, shares, pctOfPortfolio. latest13F is omitted when not requested and null when the manager has no adviser CIK or no indexed 13F; page beyond the top 10 via links.holdings13F. Merged manager IDs resolve forever via aliases; the response carries the canonical id plus requestedId when they differ.",
           "docs_path": "/api-reference/fund-letters/get-v1-fund-letters-managers-manager-id-overview",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1709,6 +1729,7 @@
           "path": "/v1/fund-letters/search",
           "title": "GET /v1/fund-letters/search",
           "summary": "Full-text search over letter bodies; hits carry page-anchored highlights.",
+          "description": "Metered as fund_letter_search. Results are a relevance-ranked top-N (hasMore is always false; raise limit or narrow filters to deepen recall). Every highlight anchor verifies against /document?format=markdown bytes. When the full-text engine is unavailable the response degrades to Postgres lexical search, reported via degradedState.",
           "docs_path": "/api-reference/fund-letters/get-v1-fund-letters-search",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1721,6 +1742,7 @@
           "path": "/v1/fund-letters/semantic",
           "title": "GET /v1/fund-letters/semantic",
           "summary": "Semantic (vector) search over letter content; hits carry similarity scores, matched chunks, and page anchors.",
+          "description": "Metered as fund_letter_semantic; paid plans only. Results are a relevance-ranked top-N (hasMore is always false). third_party-distribution letters return snippet-capped chunks (their /document is not distributable). On vector-engine failure the response degrades to lexical hits (score 0), reported via degradedState.",
           "docs_path": "/api-reference/fund-letters/get-v1-fund-letters-semantic",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2285,6 +2307,7 @@
           "path": "/v1/monitors/compile",
           "title": "POST /v1/monitors/compile",
           "summary": "Compile a natural-language alert request into a structured monitor spec",
+          "description": "Turns a plain-English trigger (e.g. \"notify me about mergers at AAPL\") into a validated structured monitor subscription spec plus a ready-to-POST create body. Read-only: it returns a spec, it does not create the monitor.",
           "docs_path": "/api-reference/monitors/post-v1-monitors-compile",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2336,7 +2359,8 @@
           "method": "GET",
           "path": "/v1/offerings",
           "title": "GET /v1/offerings",
-          "summary": "Return S-1 registration statements and 424B prospectuses with issuer, form, date, and cursor filters",
+          "summary": "Find SEC registration statements and prospectuses for public-offering research",
+          "description": "Searches S-1 and 424B-family filing records. Results identify filed disclosures, not every capital raise or a completed offering. Preserve the accession number and source fields when reviewing a result: `filingDate` is the SEC disclosure date, not necessarily an offering or pricing date. Continue with the returned `nextCursor` value for the same filters. A lower `submission_file_limit` scans fewer SEC submission files and can omit older matches. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/offerings/get-v1-offerings",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3056,6 +3080,7 @@
           "path": "/v1/situations/{situation_id}/underwriting-pack",
           "title": "GET /v1/situations/{situation_id}/underwriting-pack",
           "summary": "Retrieve a deterministic, source-cited underwriting pack with canonical detail, filing timeline, and Copy-for-LLM markdown",
+          "description": "Paid heavy-extract read. The pack reuses the canonical Special Situations detail and SEC filing timeline; it does not include internal-only enrichment or generated investment advice.",
           "docs_path": "/api-reference/situations/get-v1-situations-situation-id-underwriting-pack",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3104,6 +3129,7 @@
           "path": "/v1/situations/feed.rss",
           "title": "GET /v1/situations/feed.rss",
           "summary": "Paid authenticated RSS feed of situation events",
+          "description": "RSS XML version of the paid Special Situations event feed. This is distinct from the anonymous public embed RSS surface.",
           "docs_path": "/api-reference/situations/get-v1-situations-feed-rss",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3360,6 +3386,7 @@
           "path": "/v1/stream/tickets",
           "title": "POST /v1/stream/tickets",
           "summary": "Mint a short-lived signed WebSocket stream ticket for the current principal",
+          "description": "Creates a short-lived signed ticket that can be sent as the `ticket` query parameter when upgrading to `/v1/stream/ws`. This avoids sending long-lived API keys or bearer tokens in browser-visible WebSocket URLs.",
           "docs_path": "/api-reference/stream/post-v1-stream-tickets",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3372,6 +3399,7 @@
           "path": "/v1/stream/ws",
           "title": "GET /v1/stream/ws",
           "summary": "Upgrade to a WebSocket connection for delivery event streaming",
+          "description": "Upgrades an active WebSocket stream subscription to a WebSocket connection. Clients must supply that subscription's `stream_id` and authenticate with either a short-lived signed `ticket` minted from `POST /v1/stream/tickets` or the `x-api-key` header. Connections are capped by plan but are not separately billable in v1. Delivered events use the same delivery-event billing family as stream polling and are idempotent per subscription and event.",
           "docs_path": "/api-reference/stream/get-v1-stream-ws",
           "audience": "application and coding agent",
           "metadata_fields": [
