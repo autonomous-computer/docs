@@ -1,21 +1,29 @@
 ---
 title: "GET /v1/filings/events"
-description: "Persisted AI-tagged 8-K/6-K filing feed (StockInsights-style ai_insights). Cursor-paginated, replayable, one durable row per tagged filing."
+description: "Filing events endpoint (currently unavailable)"
 ---
 
-Persisted AI-tagged 8-K/6-K filing feed (StockInsights-style ai_insights). Cursor-paginated, replayable, one durable row per tagged filing.
+Filing events endpoint (currently unavailable)
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Coverage and source scope
+
+This endpoint is currently unavailable and returns `404 filings_intelligence_not_available`. When available, it will list persisted classifications from covered 8-K and 6-K filings for issuer- and date-bounded monitoring. Rows are derived from filing content and are not a real-time market-news feed or a complete record of every issuer event.
+
+## Current availability
+
+This endpoint currently returns `404 filings_intelligence_not_available`. It is documented here so clients can prepare for the contract, but it is not available for active monitoring. When it becomes available, preserve filing citations and verify material events in the source filing.
+
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
+- `code`
+- `message`
+- `details`
 
 ## Example request
 
@@ -28,30 +36,18 @@ curl -X GET \
 ```
 </RequestExample>
 
-## Example response
+## 404 response
 
 <ResponseExample>
 ```json
 {
+  "object": "error",
+  "id": "err_example",
+  "code": "filings_intelligence_not_available",
+  "type": "invalid_request_error",
+  "message": "The filings-intelligence plane is not enabled.",
   "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "details": {}
 }
 ```
 </ResponseExample>
@@ -59,11 +55,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/events to persisted AI-tagged 8-K/6-K filing feed (StockInsights-style ai_insights). Cursor-paginated, replayable, one durable row per tagged filing. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+GET /v1/filings/events is currently unavailable and returns `404 filings_intelligence_not_available`. Do not use it as an active monitoring dependency. When it becomes available, use the documented form, category, issuer, and filed-date filters to create a bounded review queue, and verify material events in the cited filing.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
+- treat `404 filings_intelligence_not_available` as the current endpoint state, not an empty result
+- do not retry this endpoint as an active dependency until filings intelligence is enabled
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

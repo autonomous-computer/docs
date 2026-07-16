@@ -1,13 +1,21 @@
 ---
 title: "GET /v1/filings/pension-benefit-schedule"
-description: "Return structured expected pension and retiree benefit payments for a target year when the filing discloses the schedule in rendered tables"
+description: "Extract disclosed pension and retiree benefit payments for a target year"
 ---
 
-Return structured expected pension and retiree benefit payments for a target year when the filing discloses the schedule in rendered tables
+Extract disclosed pension and retiree benefit payments for a target year
 
 <Info>
 Audience: application and coding agent.
 </Info>
+
+## Coverage and source scope
+
+Extract expected pension and retiree benefit payments for a requested target year from a selected issuer filing when the rendered source discloses a usable schedule. Supply an issuer, filing year, and target year; preserve the source accession and provenance. An unavailable result is not a zero payment or a complete benefits forecast.
+
+## Disclosure-aware schedule extraction
+
+Supply one issuer selector plus the required `filing_year` and `target_year`; use `accession_number` when the disclosure vintage must be fixed. The route extracts a disclosed schedule from rendered filing tables, so preserve provenance and treat unavailable rows as unavailable disclosure rather than zero expected payments. See [filing and source conventions](/api-conventions) before comparing schedule values across filing vintages.
 
 ## Canonical metadata
 
@@ -59,7 +67,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/pension-benefit-schedule to return structured expected pension and retiree benefit payments for a target year when the filing discloses the schedule in rendered tables. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/filings/pension-benefit-schedule to extract disclosed pension and retiree benefit payments for a target year. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

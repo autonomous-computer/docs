@@ -1375,14 +1375,15 @@
     {
       "slug": "filings",
       "title": "Filings",
-      "description": "Search, resolve, and read filing manifests, accession payloads, and rendered filings.",
+      "description": "Find SEC filings, then retrieve, render, extract, compare, or export a selected source record; filing-intelligence routes are currently unavailable.",
       "docs_path": "/api-reference/filings",
       "operations": [
         {
           "method": "GET",
           "path": "/v1/filings",
           "title": "GET /v1/filings",
-          "summary": "Search filing manifests by issuer, form, date, text, or accession number with historical coverage and offset pagination",
+          "summary": "Find SEC filing records by issuer, form, date, text, or accession number",
+          "description": "Search materialized SEC filing manifests for a bounded research or monitoring workflow. Filter by one issuer identifier, form, filing date, text, or a known accession number; results include filing identity and source links. Coverage and freshness reflect the returned records and provenance, not a promise of real-time or complete EDGAR history.",
           "docs_path": "/api-reference/filings/get-v1-filings",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1397,7 +1398,8 @@
           "method": "GET",
           "path": "/v1/filings/{accession_number}",
           "title": "GET /v1/filings/{accession_number}",
-          "summary": "Retrieve a filing manifest by its immutable SEC accession number from the materialized filing corpus",
+          "summary": "Get one SEC filing record by its accession number",
+          "description": "Retrieve the materialized manifest for one immutable SEC accession number, including filing identity and source provenance. Optional issuer and form values are resolution hints, not substitutes for the accession number. A not-found response should not be silently replaced with a different or latest filing.",
           "docs_path": "/api-reference/filings/get-v1-filings-accession-number",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1412,7 +1414,8 @@
           "method": "GET",
           "path": "/v1/filings/{accession_number}/download",
           "title": "GET /v1/filings/{accession_number}/download",
-          "summary": "Redirect to the SEC EDGAR source document for a filing by accession number",
+          "summary": "Open a filing's source document by accession number",
+          "description": "Resolve a filing accession number and return its source document through the available delivery path. The response may be served from a cached copy or redirect to SEC EDGAR; use the source document itself when the exact filed presentation matters.",
           "docs_path": "/api-reference/filings/get-v1-filings-accession-number-download",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1427,7 +1430,8 @@
           "method": "GET",
           "path": "/v1/filings/{accession_number}/export",
           "title": "GET /v1/filings/{accession_number}/export",
-          "summary": "Export a filing as JSON, Markdown, CSV, XLSX, DOCX, or PDF",
+          "summary": "Export one filing in JSON or document formats",
+          "description": "Export a selected filing as JSON by default, or request a derived Markdown, CSV, XLSX, DOCX, or PDF document with `format`. JSON returns the filing manifest; derived formats can be large and should retain the filing accession and source provenance. Derived exports do not replace the original filing as evidence.",
           "docs_path": "/api-reference/filings/get-v1-filings-accession-number-export",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1442,7 +1446,8 @@
           "method": "GET",
           "path": "/v1/filings/{accession_number}/sections/{section_key}",
           "title": "GET /v1/filings/{accession_number}/sections/{section_key}",
-          "summary": "Extract one canonical section from a specific SEC accession-number filing with citation and response-mode controls",
+          "summary": "Extract a named section from one accession-number filing",
+          "description": "Retrieve a supported canonical section from one explicitly selected SEC filing. The accession number fixes the source document; preserve it with the returned source URL and section key for a reproducible citation. A missing section or unresolved accession does not establish that the underlying disclosure is absent.",
           "docs_path": "/api-reference/filings/get-v1-filings-accession-number-sections-section-key",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1457,7 +1462,8 @@
           "method": "GET",
           "path": "/v1/filings/diff",
           "title": "GET /v1/filings/diff",
-          "summary": "Filing-diff v2 report: auto prior-period pairing, per-section change badges, word-level redline hunks, and materiality scores across two filings of the same form.",
+          "summary": "Filing comparison endpoint (currently unavailable)",
+          "description": "This endpoint is currently unavailable and returns `404 filings_intelligence_not_available`. When available, it will compare a selected issuer filing with a prior-period or explicitly chosen counterpart and return section-level change information. Any comparison is a review aid based on rendered filing text, not a determination of materiality or legal significance.",
           "docs_path": "/api-reference/filings/get-v1-filings-diff",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1472,7 +1478,8 @@
           "method": "GET",
           "path": "/v1/filings/events",
           "title": "GET /v1/filings/events",
-          "summary": "Persisted AI-tagged 8-K/6-K filing feed (StockInsights-style ai_insights). Cursor-paginated, replayable, one durable row per tagged filing.",
+          "summary": "Filing events endpoint (currently unavailable)",
+          "description": "This endpoint is currently unavailable and returns `404 filings_intelligence_not_available`. When available, it will list persisted classifications from covered 8-K and 6-K filings for issuer- and date-bounded monitoring. Rows are derived from filing content and are not a real-time market-news feed or a complete record of every issuer event.",
           "docs_path": "/api-reference/filings/get-v1-filings-events",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1487,7 +1494,8 @@
           "method": "GET",
           "path": "/v1/filings/guidance",
           "title": "GET /v1/filings/guidance",
-          "summary": "Structured guidance store: metric, direction, target period, and value ranges extracted from earnings materials and transcripts.",
+          "summary": "Filing guidance endpoint (currently unavailable)",
+          "description": "This endpoint is currently unavailable and returns `404 filings_intelligence_not_available`. When available, it will list persisted management-guidance records extracted from covered earnings materials and transcripts, including metric, direction, target period, and disclosed ranges where available. These records will be source-derived extractions, not normalized estimates or a complete guidance history.",
           "docs_path": "/api-reference/filings/get-v1-filings-guidance",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1502,7 +1510,8 @@
           "method": "GET",
           "path": "/v1/filings/latest",
           "title": "GET /v1/filings/latest",
-          "summary": "Retrieve an issuer's newest filing overall or newest filing for a requested form, with filing provenance",
+          "summary": "Get an issuer's newest filing, optionally for a specific SEC form",
+          "description": "Resolve the newest materialized filing for one issuer and optionally one SEC form, returning filing identity, date, accession number, and provenance. Without form, the newest record may be any filing type, such as a Form 4 or 8-K; retain the returned accession number for an immutable follow-up.",
           "docs_path": "/api-reference/filings/get-v1-filings-latest",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1517,7 +1526,8 @@
           "method": "GET",
           "path": "/v1/filings/latest/render",
           "title": "GET /v1/filings/latest/render",
-          "summary": "Render an issuer's latest selected filing as Markdown-like text for reading, extraction, or local indexing",
+          "summary": "Render an issuer's latest selected filing as readable text",
+          "description": "Return a Markdown-like rendering of the latest selected filing for reading, local indexing, or downstream extraction. This route defaults to a 10-K, unlike the any-form latest-filing route. Check the selected filing, provenance, and truncated flag before treating the rendering as complete source text.",
           "docs_path": "/api-reference/filings/get-v1-filings-latest-render",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1532,7 +1542,8 @@
           "method": "GET",
           "path": "/v1/filings/latest/risk-categories",
           "title": "GET /v1/filings/latest/risk-categories",
-          "summary": "Return deterministic Item 1A risk-category coverage for the latest covered filing of an issuer",
+          "summary": "Classify Item 1A risk categories in a selected issuer filing",
+          "description": "Return deterministic risk-category coverage derived from Item 1A in a selected covered filing. Use one issuer selector and optionally an accession number to make the filing explicit. Categories describe available extracted disclosure and should be verified against the cited filing before an investment conclusion.",
           "docs_path": "/api-reference/filings/get-v1-filings-latest-risk-categories",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1549,7 +1560,8 @@
           "method": "GET",
           "path": "/v1/filings/latest/sections/{section_key}",
           "title": "GET /v1/filings/latest/sections/{section_key}",
-          "summary": "Extract one canonical section from an issuer's latest selected filing, retaining citation and response-mode controls",
+          "summary": "Extract a named section from an issuer's latest selected filing",
+          "description": "Retrieve one supported canonical filing section, such as item_1a, item_7, or item_8, from an issuer's latest selected filing. Use the returned accession number and source URL as the citation identity. The endpoint defaults to a 10-K and a missing or unavailable section is not evidence that the issuer made no disclosure.",
           "docs_path": "/api-reference/filings/get-v1-filings-latest-sections-section-key",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1564,7 +1576,8 @@
           "method": "GET",
           "path": "/v1/filings/pension-benefit-schedule",
           "title": "GET /v1/filings/pension-benefit-schedule",
-          "summary": "Return structured expected pension and retiree benefit payments for a target year when the filing discloses the schedule in rendered tables",
+          "summary": "Extract disclosed pension and retiree benefit payments for a target year",
+          "description": "Extract expected pension and retiree benefit payments for a requested target year from a selected issuer filing when the rendered source discloses a usable schedule. Supply an issuer, filing year, and target year; preserve the source accession and provenance. An unavailable result is not a zero payment or a complete benefits forecast.",
           "docs_path": "/api-reference/filings/get-v1-filings-pension-benefit-schedule",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1579,7 +1592,8 @@
           "method": "GET",
           "path": "/v1/filings/transcripts",
           "title": "GET /v1/filings/transcripts",
-          "summary": "Persisted earnings-transcript store: speaker attribution, prepared-remarks/Q&A segmentation, and summaries extracted from EX-99 materials.",
+          "summary": "Filing transcripts endpoint (currently unavailable)",
+          "description": "This endpoint is currently unavailable and returns `404 filings_intelligence_not_available`. When available, it will list persisted earnings-transcript records extracted from covered EX-99 filing materials, with speaker and prepared-remarks or Q&A structure where source material supports extraction. Results will depend on available source materials and extraction coverage.",
           "docs_path": "/api-reference/filings/get-v1-filings-transcripts",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1934,7 +1948,8 @@
           "method": "GET",
           "path": "/v1/intelligence/coverage",
           "title": "GET /v1/intelligence/coverage",
-          "summary": "AI coverage-report composer: single-issuer rollup over the persisted filings-intelligence stores (tagged events, guidance, transcripts, footnote newness).",
+          "summary": "Filing-intelligence coverage endpoint (currently unavailable)",
+          "description": "This endpoint is currently unavailable and returns `404 filings_intelligence_not_available`. When available, it will compose a single-issuer rollup over persisted filings-intelligence stores, including tagged events, guidance, transcripts, and footnote newness. Coverage will reflect available extracted records, not complete issuer disclosure history.",
           "docs_path": "/api-reference/intelligence/get-v1-intelligence-coverage",
           "audience": "application and coding agent",
           "metadata_fields": [

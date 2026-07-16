@@ -1,13 +1,23 @@
 ---
 title: "GET /v1/filings/{accession_number}/download"
-description: "Redirect to the SEC EDGAR source document for a filing by accession number"
+description: "Open a filing's source document by accession number"
 ---
 
-Redirect to the SEC EDGAR source document for a filing by accession number
+Open a filing's source document by accession number
 
 <Info>
 Audience: application and coding agent.
 </Info>
+
+## Coverage and source scope
+
+Resolve a filing accession number and return its source document through the available delivery path. The response may be served from a cached copy or redirect to SEC EDGAR; use the source document itself when the exact filed presentation matters.
+
+## Source delivery and evidence
+
+Use an accession number from [filing search](/api-reference/filings/get-v1-filings) or [accession lookup](/api-reference/filings/get-v1-filings-accession-number) to open the source document. Delivery can use an available cache or redirect to EDGAR, so preserve the accession and final source URL when the filed presentation is evidence. See [filing types and exhibits](/filing-types-and-exhibits) for how document classes relate to a filing.
+
+A `404 filing_not_found` or `filing_url_missing` is an unavailable source lookup, not proof that the issuer made no filing.
 
 ## Canonical metadata
 
@@ -59,7 +69,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/{accession_number}/download to redirect to the SEC EDGAR source document for a filing by accession number. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/filings/{accession_number}/download to open a filing's source document by accession number. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

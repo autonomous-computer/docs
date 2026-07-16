@@ -1,21 +1,29 @@
 ---
 title: "GET /v1/filings/guidance"
-description: "Structured guidance store: metric, direction, target period, and value ranges extracted from earnings materials and transcripts."
+description: "Filing guidance endpoint (currently unavailable)"
 ---
 
-Structured guidance store: metric, direction, target period, and value ranges extracted from earnings materials and transcripts.
+Filing guidance endpoint (currently unavailable)
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Coverage and source scope
+
+This endpoint is currently unavailable and returns `404 filings_intelligence_not_available`. When available, it will list persisted management-guidance records extracted from covered earnings materials and transcripts, including metric, direction, target period, and disclosed ranges where available. These records will be source-derived extractions, not normalized estimates or a complete guidance history.
+
+## Current availability
+
+This endpoint currently returns `404 filings_intelligence_not_available`. It is documented here so clients can prepare for the contract, but it is not available as a guidance source. When it becomes available, preserve citations and verify issuer definitions, units, and assumptions in the original disclosure.
+
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
+- `code`
+- `message`
+- `details`
 
 ## Example request
 
@@ -28,30 +36,18 @@ curl -X GET \
 ```
 </RequestExample>
 
-## Example response
+## 404 response
 
 <ResponseExample>
 ```json
 {
+  "object": "error",
+  "id": "err_example",
+  "code": "filings_intelligence_not_available",
+  "type": "invalid_request_error",
+  "message": "The filings-intelligence plane is not enabled.",
   "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "details": {}
 }
 ```
 </ResponseExample>
@@ -59,11 +55,11 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/guidance to structured guidance store: metric, direction, target period, and value ranges extracted from earnings materials and transcripts. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+GET /v1/filings/guidance is currently unavailable and returns `404 filings_intelligence_not_available`. Do not use it as an active guidance source. When it becomes available, preserve citations and verify issuer definitions, units, and assumptions in the original disclosure.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
+- treat `404 filings_intelligence_not_available` as the current endpoint state, not an empty result
+- do not retry this endpoint as an active dependency until filings intelligence is enabled
 - preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff

@@ -1,13 +1,23 @@
 ---
 title: "GET /v1/filings/{accession_number}/export"
-description: "Export a filing as JSON, Markdown, CSV, XLSX, DOCX, or PDF"
+description: "Export one filing in JSON or document formats"
 ---
 
-Export a filing as JSON, Markdown, CSV, XLSX, DOCX, or PDF
+Export one filing in JSON or document formats
 
 <Info>
 Audience: application and coding agent.
 </Info>
+
+## Coverage and source scope
+
+Export a selected filing as JSON by default, or request a derived Markdown, CSV, XLSX, DOCX, or PDF document with `format`. JSON returns the filing manifest; derived formats can be large and should retain the filing accession and source provenance. Derived exports do not replace the original filing as evidence.
+
+## Export format and source limits
+
+The optional `format` parameter defaults to `json`, which returns a structured filing record. Markdown, CSV, XLSX, DOCX, and PDF are derived exports and can be large; retain the accession number, filing date, and source URL alongside any downstream file. For a smaller evidence workflow, use [section extraction](/api-reference/filings/get-v1-filings-accession-number-sections-section-key) instead of exporting an entire filing.
+
+An export failure is not a finding about the filing. Use the original SEC filing when exact filing presentation, exhibits, or formatting matters.
 
 ## Response size
 
@@ -63,7 +73,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/filings/{accession_number}/export to export a filing as JSON, Markdown, CSV, XLSX, DOCX, or PDF. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/filings/{accession_number}/export to export one filing in JSON or document formats. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
