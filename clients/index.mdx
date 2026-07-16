@@ -1,11 +1,17 @@
 ---
 title: "Connect SEC API to your MCP client"
-description: "Choose the SEC API integration for an IDE, agent framework, or ChatGPT, then verify a source-backed filing lookup."
+description: "Choose an SEC API integration for an IDE or agent framework, or review the current ChatGPT compatibility status."
 ---
 
 SEC API exposes its tools through a hosted MCP endpoint. Start with one narrow
 read: load the tools, call `filings.latest` for a known issuer, and retain the
 returned filing identity before you give an agent wider instructions.
+
+`GET https://api.secapi.ai/mcp` is public discovery metadata. It confirms the
+deployed connection shape, but it does not authorize a tool call. Each client
+guide below configures an authenticated MCP connection separately. ChatGPT MCP
+compatibility is not currently published or verified; see the Custom GPT status
+page rather than treating the discovery endpoint as a working setup path.
 
 ```text
 Endpoint: https://api.secapi.ai/mcp
@@ -41,9 +47,8 @@ agent should read its key from the server-side runtime.
 
 ### ChatGPT
 
-- [Custom GPT](/clients/custom-gpt) covers two separate hosted paths: a
-  workspace MCP app or a classic OpenAPI Action. A GPT can use apps or actions,
-  not both at once.
+- [Custom GPT](/clients/custom-gpt) explains why ChatGPT MCP setup is not
+  currently published or verified, and directs builders to supported clients.
 
 ## Verify the data, not only the connection
 
@@ -71,7 +76,7 @@ For failures, inspect the MCP JSON-RPC error and `error.data.code`. Correct
 validation errors, rotate or fix a rejected key on `401`, resolve billing or
 quota state on `402`, and honor `Retry-After` on `429` or a temporary `503`.
 For `mcp_tool_timeout`, reduce the request scope before one bounded retry. Keep
-the request ID when escalating a repeated failure. See the [Error code
+the request ID with a repeated failure. See the [Error code
 catalog](/error-code-catalog) and [Request diagnostics](/request-diagnostics).
 
 ## Next step

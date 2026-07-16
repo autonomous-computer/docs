@@ -3,7 +3,10 @@ title: "Write an SEC API research skill"
 description: "Create portable instructions for a narrow SEC research job with explicit evidence, limits, and stop conditions"
 ---
 
-A skill is an instruction file interpreted by an agent environment. SEC API does not prescribe a universal skill format, installer, scheduler, or secret store. Keep the SEC API part portable: state the job, exact retrieval path, evidence to preserve, and the point where the agent must stop.
+A skill is an instruction file interpreted by an agent environment. SEC API does
+not prescribe a universal skill format, installer, scheduler, or secret store.
+Keep the SEC API part portable: state the job, exact retrieval path, evidence to
+preserve, and the point where the agent must stop.
 
 ## Start with a single filing question
 
@@ -30,7 +33,14 @@ The intended output is an evidence-linked brief, not a general company assessmen
 
 ## Choose the contract at execution time
 
-For a REST skill, verify paths and arguments in the [API reference](/api-reference) before publishing it. For an MCP skill, direct the client to use `tools.search` and `tools.describe` rather than embedding an assumed tool catalog.
+For a REST skill, verify paths and arguments in the [API reference](/api-reference)
+before publishing it. For an MCP skill, direct the client to use `tools.search`
+and `tools.describe` rather than embedding an assumed tool catalog. `GET /mcp`
+only reads public connection metadata; the skill still needs an authenticated
+MCP client to make a tool call. Do not write a ChatGPT skill that assumes an
+SEC API MCP OAuth connection: ChatGPT compatibility is not currently published
+or verified. API-key clients must keep the key in the process or desktop secret
+store that runs the client.
 
 Name the source fields the result needs, especially `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` for filing work. Use one issuer, a defined filing family, a date rule, and a result limit where the route supports it.
 

@@ -1,86 +1,44 @@
 ---
 title: "Connect SEC API to a Custom GPT"
-description: "Choose a ChatGPT MCP app or OpenAPI Action for SEC API, use a private credential boundary, and verify a source-backed filing lookup."
+description: "Current ChatGPT compatibility status for SEC API's remote MCP server."
 ---
 
-ChatGPT offers two distinct integration paths. Choose one for a GPT: an MCP app
-for tool discovery through `https://api.secapi.ai/mcp`, or an OpenAPI Action
-for REST operations defined by the public schema. ChatGPT does not allow a GPT
-to use apps and actions together.
+## Current status
 
-Use either path only when the credential boundary is appropriate. A key stored
-in an app or Action configuration is a service credential for that configured
-experience, not a per-user SEC API key. Do not put a broadly privileged
-organization key into a public GPT. For a multi-user or public product, put
-your own server-side policy and credential handling in front of the integration.
+ChatGPT OAuth setup for SEC API's remote MCP server is not currently
+published or verified as supported. Do not add `https://api.secapi.ai/mcp` to a
+Custom GPT or ChatGPT app as a working SEC API integration.
 
-## First viable path: workspace MCP app
+SEC API publishes [OAuth protected-resource metadata](https://api.secapi.ai/.well-known/oauth-protected-resource)
+and [authorization-server metadata](https://api.secapi.ai/.well-known/oauth-authorization-server).
+That discovery metadata is not sufficient evidence of ChatGPT compatibility:
+the live MCP `POST` tool-discovery path returns an `ApiKey`
+`WWW-Authenticate` challenge. ChatGPT cannot provide a custom API key for that
+MCP connection.
 
-This path gives ChatGPT the current SEC API MCP tool list. It is intended for a
-workspace that can enable custom apps and developer mode.
+SEC API will publish ChatGPT setup instructions only after the MCP tool-call
+authentication challenge is OAuth-compatible and the complete connection has
+been verified with ChatGPT.
 
-1. Have a workspace admin or authorized developer enable developer mode in
-   ChatGPT's Apps settings.
-2. In **Settings or Workspace settings > Apps > Create**, add a custom app.
-3. Set the MCP endpoint to `https://api.secapi.ai/mcp`.
-4. Choose the API-key authentication option and configure the `x-api-key`
-   header with a key held by the approved workspace secret boundary.
-5. Scan tools, create the draft app, and test it in a private chat before any
-   workspace publication.
+## Use a supported client now
 
-ChatGPT's developer-mode availability, tool scanning, approval controls, and
-plan support change independently of SEC API. Follow the current ChatGPT Apps
-settings if the labels differ. Do not claim an app is available to a user until
-an administrator has enabled and approved it.
+For a developer-owned desktop workflow, use [Continue](/clients/continue).
+For a server-side integration, use [LangChain](/clients/langchain),
+[LlamaIndex](/clients/llamaindex), or the [Vercel AI SDK](/clients/vercel-ai-sdk).
+Those clients can keep an SEC API credential on the client or server you
+control; do not place it in a ChatGPT configuration.
 
-## Alternative: Custom GPT OpenAPI Action
+## OAuth context
 
-An Action calls SEC API's REST endpoints rather than discovering MCP tools. Use
-it when a Custom GPT needs a deliberately reviewed endpoint set and your GPT
-editor supports Actions.
+OAuth discovery metadata identifies the authorization server and its advertised
+grant capabilities. It does not establish that a particular MCP client can
+complete the required authorization challenge. Check this page again after SEC
+API publishes a verified ChatGPT compatibility result.
 
-1. Open the GPT editor, then **Actions > Create new action**.
-2. Import `https://docs.secapi.ai/openapi/sec-api.v1.json`.
-3. Select API-key authentication with a custom header named `x-api-key`.
-4. Test a single read operation in Preview before adding instructions that call
-   more than one endpoint.
+## OpenAPI Actions
 
-Actions need an OpenAPI JSON or YAML schema and support API-key authentication
-with a custom header. Workspace domain restrictions can prevent an Action from
-running. A public GPT with an Action also needs the applicable privacy-policy
-configuration in ChatGPT; review ChatGPT's current publication requirements.
-
-## Verify the source record
-
-In a private test chat, ask:
-
-> Retrieve Apple's latest 10-K. Include the accession number, filing date,
-> filing URL, `requestId`, and `traceparent`. State which tool or endpoint you
-> used, and do not summarize a filing without its source URL.
-
-For an MCP app, the expected tool is `filings.latest` with `ticker: AAPL` and
-`form: 10-K`. For an Action, the equivalent REST route is
-`GET /v1/filings/latest?ticker=AAPL&form=10-K`. Preserve the returned accession
-number and filing URL as the source identity, and retain request metadata with
-any generated analysis. Search and extraction results should keep their
-provenance and freshness fields when present.
-
-## Lifecycle, failures, and limits
-
-MCP apps scan a tool snapshot; refresh and review the tools when SEC API's
-surface changes rather than assuming a new server tool is automatically usable.
-Actions are schema-bound; re-import and test after an intentional API schema
-update. In both cases, start with read-only, constrained calls and require user
-review before any workflow with wider scope.
-
-For `401`, fix the configured credential. For `402`, resolve account, credit,
-or budget state rather than looping. For `429` or temporary `503`, respect
-`Retry-After` and reduce the work requested. For an MCP `mcp_tool_timeout`,
-narrow the request before a bounded retry. Keep the error code and request ID
-when support needs to trace a failure.
-
-## Next step
-
-After the private filing test succeeds, add GPT instructions that require a
-source URL, accession number, and request metadata for every SEC API-backed
-conclusion.
+ChatGPT Actions are a separate OpenAI product surface from MCP tool discovery.
+This page does not document an SEC API Action configuration or treat Actions as
+a workaround for the unsupported ChatGPT MCP connection. Review OpenAI's
+current [Action requirements](https://help.openai.com/en/articles/9442513)
+before evaluating an Action independently.
