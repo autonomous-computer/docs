@@ -1,26 +1,26 @@
 ---
 title: "Dilution score"
-description: "Retrieve a beta per-issuer dilution score, its categorical band, and the filing-derived inputs needed for a review workflow"
+description: "Retrieve a beta per-issuer dilution rating with numericScore, overallRisk, and filing-derived inputs needed for a review workflow"
 ---
 
-Use the Dilution Score as a triage signal for an issuer, then inspect the cited filing-derived records before making a capital-structure conclusion. `GET /v1/dilution/score` requires a ticker and returns the score's rating view; dilution routes return the `SECAPI-Maturity: beta` response header.
+Use the Dilution Score as a triage signal for an issuer, then inspect the cited filing-derived records before making a capital-structure conclusion. `GET /v1/dilution/score` requires a ticker and returns the current rating view; dilution routes return the `SECAPI-Maturity: beta` response header.
 
 <Warning>
-Dilution routes are beta. Coverage and extracted terms can be incomplete or unavailable for an issuer. Treat a returned score as a research input, not a production-grade investment conclusion.
+Dilution routes are beta. Coverage and extracted terms can be incomplete or unavailable for an issuer. Treat a returned rating as a research input, not a production-grade investment conclusion.
 </Warning>
 
-## Get a score
+## Get a rating
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/dilution/score?ticker=AAPL"
 ```
 
-The response provides the issuer score, band, categorical sub-ratings, factor breakdown, freshness, provenance, and methodology version. Retain those fields with the response instead of reducing the result to a single number.
+The response provides `numericScore`, `overallRisk`, factor breakdown, `verification.confidence`, freshness, provenance, and methodology context. Retain those fields with the response instead of reducing the result to a single number.
 
-## Use the score with the underlying records
+## Use the rating with underlying records
 
-Follow a score with the records that can explain an issuer's capital-structure risk:
+Follow a rating with the records that can explain an issuer's capital-structure risk:
 
 ```bash
 curl -H "x-api-key: $SECAPI_API_KEY" \
@@ -53,7 +53,7 @@ An offering or registration record is not proof that securities were issued, sol
 - A route failure returns a `502` with a dilution-score lookup error code.
 - List routes paginate; follow `nextCursor` only while `hasMore` is true.
 
-An empty list or a low-confidence input is not evidence that a security has no dilution risk. Preserve the response metadata and identify the source filing needed for a material conclusion.
+An empty list or a low `verification.confidence` input is not evidence that a security has no dilution risk. Preserve the response metadata and identify the source filing needed for a material conclusion.
 
 ## Continue
 

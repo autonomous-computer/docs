@@ -23691,8 +23691,82 @@
     },
     "/v1/dilution/events": {
       "get": {
-        "summary": "List dilution events (S-1, 424B*, FWP, S-3 offerings) with filters by ticker, form, date, and is_atm",
+        "summary": "Find filed offering and issuance events by issuer, filing, date, or ATM status",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC Central Index Key (CIK) filter."
+          },
+          {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact SEC accession number filter."
+          },
+          {
+            "name": "form_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC form type filter, such as S-1, S-3, 424B5, or FWP."
+          },
+          {
+            "name": "offering_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Normalized offering-type filter."
+          },
+          {
+            "name": "is_atm",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Restrict to at-the-market events when true, or non-ATM events when false."
+          },
+          {
+            "name": "filed_at_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower filing-date bound."
+          },
+          {
+            "name": "filed_at_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper filing-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -23703,7 +23777,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -23715,7 +23789,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -23758,7 +23844,7 @@
     },
     "/v1/dilution/events/{event_id}": {
       "get": {
-        "summary": "Retrieve a single dilution event with verification block, warrants, and convertibles linkage",
+        "summary": "Retrieve one filed dilution event with linked instruments and verification fields",
         "parameters": [
           {
             "name": "event_id",
@@ -23766,7 +23852,20 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Dilution event identifier returned by the events list."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -23809,8 +23908,64 @@
     },
     "/v1/dilution/warrants": {
       "get": {
-        "summary": "List warrant schedules parsed from offering exhibits with price-protection and ratchet clauses",
+        "summary": "Find disclosed warrant terms and potential share overhang in offering materials",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC Central Index Key (CIK) filter."
+          },
+          {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact SEC accession number filter."
+          },
+          {
+            "name": "form_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC form type filter."
+          },
+          {
+            "name": "filed_at_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower filing-date bound."
+          },
+          {
+            "name": "filed_at_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper filing-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -23821,7 +23976,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -23833,7 +23988,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -23876,8 +24043,64 @@
     },
     "/v1/dilution/convertibles": {
       "get": {
-        "summary": "List convertible debt schedules with conversion price, maturity, and ratchet metadata",
+        "summary": "Find disclosed convertible instruments and their conversion terms",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC Central Index Key (CIK) filter."
+          },
+          {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact SEC accession number filter."
+          },
+          {
+            "name": "form_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC form type filter."
+          },
+          {
+            "name": "filed_at_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower filing-date bound."
+          },
+          {
+            "name": "filed_at_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper filing-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -23888,7 +24111,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -23900,7 +24123,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -23943,8 +24178,55 @@
     },
     "/v1/dilution/rofr": {
       "get": {
-        "summary": "List right-of-first-refusal and tail-financing clauses parsed from underwriter agreements",
+        "summary": "Find disclosed rights-of-first-refusal and underwriter tail-financing provisions",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC Central Index Key (CIK) filter."
+          },
+          {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact SEC accession number filter."
+          },
+          {
+            "name": "filed_at_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower filing-date bound."
+          },
+          {
+            "name": "filed_at_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper filing-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -23955,7 +24237,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -23967,7 +24249,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24010,8 +24304,55 @@
     },
     "/v1/dilution/lockups": {
       "get": {
-        "summary": "List lockup schedules with start/end dates, parties, and conditions",
+        "summary": "Find disclosed lockup restrictions, dates, parties, and release conditions",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC Central Index Key (CIK) filter."
+          },
+          {
+            "name": "accession_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact SEC accession number filter."
+          },
+          {
+            "name": "filed_at_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower filing-date bound."
+          },
+          {
+            "name": "filed_at_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper filing-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -24022,7 +24363,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -24034,7 +24375,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24077,8 +24430,46 @@
     },
     "/v1/dilution/nasdaq-compliance": {
       "get": {
-        "summary": "List Nasdaq deficiency notices with status and remediation tracking",
+        "summary": "Find Nasdaq deficiency and compliance notices by issuer, status, or date",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Normalized compliance-status filter."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower notice-date bound."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper notice-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -24089,7 +24480,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -24101,7 +24492,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24144,8 +24547,37 @@
     },
     "/v1/dilution/reverse-splits": {
       "get": {
-        "summary": "List reverse-stock-split actions with execution date and ratio",
+        "summary": "Find disclosed reverse stock split ratios and execution dates",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "execution_date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower execution-date bound."
+          },
+          {
+            "name": "execution_date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper execution-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -24156,7 +24588,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -24168,7 +24600,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24211,8 +24655,37 @@
     },
     "/v1/dilution/cash-position": {
       "get": {
-        "summary": "Cash runway, burn, and management commentary computed from quarterly filings",
+        "summary": "Find reported cash, burn, and runway fields by issuer and reporting period",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "period_ended_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower reporting-period-end bound."
+          },
+          {
+            "name": "period_ended_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper reporting-period-end bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -24223,7 +24696,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -24235,7 +24708,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24278,8 +24763,46 @@
     },
     "/v1/dilution/corporate-actions": {
       "get": {
-        "summary": "List dilution-relevant corporate actions: ticker changes, exchange moves, de-SPAC closings, splits",
+        "summary": "Find capital-structure context from ticker, exchange, de-SPAC, and split actions",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "action_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Normalized corporate-action type filter."
+          },
+          {
+            "name": "effective_date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower effective-date bound."
+          },
+          {
+            "name": "effective_date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper effective-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -24290,7 +24813,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -24302,7 +24825,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24345,8 +24880,26 @@
     },
     "/v1/dilution/ratings": {
       "get": {
-        "summary": "Composite Dilution Score with sub-factors (offering ability, historical, cash need, warrant exercise risk)",
+        "summary": "List persisted dilution-rating history by issuer or overall-risk value",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "overall_risk",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Overall-risk bucket filter."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -24357,7 +24910,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -24369,7 +24922,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24412,8 +24977,37 @@
     },
     "/v1/dilution/share-float-history": {
       "get": {
-        "summary": "Historical shares outstanding and public float series materialized from filings",
+        "summary": "List disclosed shares-outstanding and public-float observations by issuer and date",
         "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker filter."
+          },
+          {
+            "name": "as_of_date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive lower observation-date bound."
+          },
+          {
+            "name": "as_of_date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive upper observation-date bound."
+          },
           {
             "name": "limit",
             "in": "query",
@@ -24424,7 +25018,7 @@
               "maximum": 50,
               "default": 10
             },
-            "description": "Maximum dilution records to return."
+            "description": "Maximum records to return (1-50; default 10)."
           },
           {
             "name": "cursor",
@@ -24436,7 +25030,19 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Zero-based offset from a prior page. Follow nextCursor while hasMore is true."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24479,7 +25085,7 @@
     },
     "/v1/dilution/score": {
       "get": {
-        "summary": "Per-issuer Dilution Score with explanation and source events (alias of latest rating; ticker query parameter required)",
+        "summary": "Calculate the current per-issuer Dilution Score from available inputs",
         "parameters": [
           {
             "name": "ticker",
@@ -24488,7 +25094,19 @@
             "schema": {
               "type": "string"
             },
-            "description": "Ticker symbol (required). Returns the latest dilution rating for this issuer."
+            "description": "Issuer ticker. Required; the route resolves the issuer before calculating the current score."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agent"
+              ]
+            },
+            "description": "Return the compact agent projection. Omit for the standard response."
           }
         ],
         "responses": {
@@ -24531,15 +25149,16 @@
     },
     "/v1/dilution/coverage": {
       "get": {
-        "summary": "Dilution-domain coverage and freshness summary across forms, tickers, and verification status",
+        "summary": "Inspect dilution row counts, verified rows, and latest observation dates by table",
         "parameters": [
           {
             "name": "ticker",
             "in": "query",
+            "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Optional ticker scope. When present, counts and freshness are restricted to rows for that issuer."
+            "description": "Optional issuer scope. Counts and latest dates are limited to that issuer's rows when supplied."
           }
         ],
         "responses": {

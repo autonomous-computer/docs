@@ -1,27 +1,28 @@
 ---
 title: "GET /v1/dilution/events"
-description: "List dilution events (S-1, 424B*, FWP, S-3 offerings) with filters by ticker, form, date, and is_atm"
+description: "Find filed offering and issuance events by issuer, filing, date, or ATM status"
 ---
 
-List dilution events (S-1, 424B*, FWP, S-3 offerings) with filters by ticker, form, date, and is_atm
+Find filed offering and issuance events by issuer, filing, date, or ATM status
 
 <Info>
-Audience: application and coding agent.
+Audience: investors, research systems, and developers tracing filed offering activity.
 </Info>
 
 ## Canonical metadata
 
+- `data`
+- `hasMore`
+- `nextCursor`
+- `per-row: id, ticker, accessionNumber, filedAt, verification.confidence`
 - `requestId`
-- `traceparent`
+- `traceparent (standard response/header)`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/events"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/dilution/events?ticker=EXAMPLE&is_atm=true&limit=10"
 ```
 </RequestExample>
 
@@ -30,19 +31,44 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_event",
+      "id": "dil_evt_acme_2026q1_a",
+      "ticker": "ACME",
+      "accessionNumber": "0001234567-26-001234",
+      "formType": "424B5",
+      "documentUrl": "https://example.test/424b5.htm",
+      "isAtm": true,
+      "offeringType": "atm",
+      "offeringAmount": 50000000,
+      "filedAt": "2026-02-12T20:31:00.000Z",
+      "verification": {
+        "confidence": 0.92
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Evidence and limits
+
+Each row is a filing-derived event, not a prediction of future issuance or price impact. Use the accession, filing URL, and verification fields to inspect the underlying disclosure before drawing an investment conclusion. `is_atm=true` narrows disclosed ATM events; it does not establish that an ATM was used after the cited filing. See [filing and source conventions](/api-conventions) and the [Dilution Score guide](/dilution-score).
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/dilution/events to list dilution events (S-1, 424B*, FWP, S-3 offerings) with filters by ticker, form, date, and is_atm. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/dilution/events to find filed offering and issuance events by issuer, filing, date, or ATM status. For the standard response, preserve `data`, `hasMore`, `nextCursor`, `per-row: id, ticker, accessionNumber, filedAt, verification.confidence`, `requestId`. When requesting the compact agent view, keep its returned fields and requestId. Retain traceparent only from standard-response body or HTTP-header context when present; the compact agent view does not include it. Return a concise markdown summary and the structured fields needed for the next step without filling in missing disclosure data.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve accession, filing URL, verification, and pagination metadata with each event
+- treat an empty filtered page as no matching stored disclosure, not proof that no financing occurred
+- distinguish filed offering terms from an inference about future share issuance

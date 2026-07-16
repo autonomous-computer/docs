@@ -1,27 +1,28 @@
 ---
 title: "GET /v1/dilution/rofr"
-description: "List right-of-first-refusal and tail-financing clauses parsed from underwriter agreements"
+description: "Find disclosed rights-of-first-refusal and underwriter tail-financing provisions"
 ---
 
-List right-of-first-refusal and tail-financing clauses parsed from underwriter agreements
+Find disclosed rights-of-first-refusal and underwriter tail-financing provisions
 
 <Info>
-Audience: application and coding agent.
+Audience: developers and investors reviewing disclosed financing-right provisions.
 </Info>
 
 ## Canonical metadata
 
+- `data`
+- `hasMore`
+- `nextCursor`
+- `per-row: rightOfFirstRefusalPresent, rightOfFirstRefusalEndDate, tailFinancingPaymentsPresent, verification.confidence`
 - `requestId`
-- `traceparent`
+- `traceparent (standard response/header)`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/rofr"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/dilution/rofr?ticker=EXAMPLE&limit=10"
 ```
 </RequestExample>
 
@@ -30,19 +31,43 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_rofr",
+      "id": "dil_rofr_acme_a",
+      "ticker": "ACME",
+      "accessionNumber": "0001234567-26-001234",
+      "documentUrl": "https://example.test/underwriting.htm",
+      "filedAt": "2026-02-12",
+      "rightOfFirstRefusalPresent": true,
+      "rightOfFirstRefusalEndDate": "2027-02-12",
+      "tailFinancingPaymentsPresent": false,
+      "verification": {
+        "confidence": 0.92
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Evidence and limits
+
+These rows surface provisions disclosed in covered underwriter or financing materials. A right of first refusal or tail provision is a contractual term, not evidence that a follow-on financing occurred or will occur. Review the cited agreement and any amendment for scope and expiry. See [filing and source conventions](/api-conventions).
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/dilution/rofr to list right-of-first-refusal and tail-financing clauses parsed from underwriter agreements. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/dilution/rofr to find disclosed rights-of-first-refusal and underwriter tail-financing provisions. For the standard response, preserve `data`, `hasMore`, `nextCursor`, `per-row: rightOfFirstRefusalPresent, rightOfFirstRefusalEndDate, tailFinancingPaymentsPresent, verification.confidence`, `requestId`. When requesting the compact agent view, keep its returned fields and requestId. Retain traceparent only from standard-response body or HTTP-header context when present; the compact agent view does not include it. Return a concise markdown summary and the structured fields needed for the next step without filling in missing disclosure data.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve the source agreement reference and verification state
+- distinguish a contractual right from a financing event
+- do not infer enforceability or current status without the underlying filing

@@ -547,168 +547,230 @@
           "method": "GET",
           "path": "/v1/dilution/cash-position",
           "title": "GET /v1/dilution/cash-position",
-          "summary": "Cash runway, burn, and management commentary computed from quarterly filings",
+          "summary": "Find reported cash, burn, and runway fields by issuer and reporting period",
           "docs_path": "/api-reference/dilution/get-v1-dilution-cash-position",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: periodEnded, cash, cashBurn, cashRemainingMonths, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/convertibles",
           "title": "GET /v1/dilution/convertibles",
-          "summary": "List convertible debt schedules with conversion price, maturity, and ratchet metadata",
+          "summary": "Find disclosed convertible instruments and their conversion terms",
           "docs_path": "/api-reference/dilution/get-v1-dilution-convertibles",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: conversionPrice, conversionPriceType, hasResetRatchet, maturityDate, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/corporate-actions",
           "title": "GET /v1/dilution/corporate-actions",
-          "summary": "List dilution-relevant corporate actions: ticker changes, exchange moves, de-SPAC closings, splits",
+          "summary": "Find capital-structure context from ticker, exchange, de-SPAC, and split actions",
           "docs_path": "/api-reference/dilution/get-v1-dilution-corporate-actions",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: effectiveDate, actionType, oldSymbol, newSymbol, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/coverage",
           "title": "GET /v1/dilution/coverage",
-          "summary": "Dilution-domain coverage and freshness summary across forms, tickers, and verification status",
+          "summary": "Inspect dilution row counts, verified rows, and latest observation dates by table",
           "docs_path": "/api-reference/dilution/get-v1-dilution-coverage",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "ticker",
+            "generatedAt",
+            "totalRowCount",
+            "totalVerifiedRowCount",
+            "tables[].table",
+            "tables[].rowCount",
+            "tables[].latestFilingDate",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/events",
           "title": "GET /v1/dilution/events",
-          "summary": "List dilution events (S-1, 424B*, FWP, S-3 offerings) with filters by ticker, form, date, and is_atm",
+          "summary": "Find filed offering and issuance events by issuer, filing, date, or ATM status",
           "docs_path": "/api-reference/dilution/get-v1-dilution-events",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: id, ticker, accessionNumber, filedAt, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/events/{event_id}",
           "title": "GET /v1/dilution/events/{event_id}",
-          "summary": "Retrieve a single dilution event with verification block, warrants, and convertibles linkage",
+          "summary": "Retrieve one filed dilution event with linked instruments and verification fields",
           "docs_path": "/api-reference/dilution/get-v1-dilution-events-event-id",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "id",
+            "ticker",
+            "accessionNumber",
+            "documentUrl",
+            "verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/lockups",
           "title": "GET /v1/dilution/lockups",
-          "summary": "List lockup schedules with start/end dates, parties, and conditions",
+          "summary": "Find disclosed lockup restrictions, dates, parties, and release conditions",
           "docs_path": "/api-reference/dilution/get-v1-dilution-lockups",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: startDate, endDate, sharesAmount, conditions, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/nasdaq-compliance",
           "title": "GET /v1/dilution/nasdaq-compliance",
-          "summary": "List Nasdaq deficiency notices with status and remediation tracking",
+          "summary": "Find Nasdaq deficiency and compliance notices by issuer, status, or date",
           "docs_path": "/api-reference/dilution/get-v1-dilution-nasdaq-compliance",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: date, deficiency, status, accessionNumber, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/ratings",
           "title": "GET /v1/dilution/ratings",
-          "summary": "Composite Dilution Score with sub-factors (offering ability, historical, cash need, warrant exercise risk)",
+          "summary": "List persisted dilution-rating history by issuer or overall-risk value",
           "docs_path": "/api-reference/dilution/get-v1-dilution-ratings",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: ticker, numericScore, overallRisk, factors, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/reverse-splits",
           "title": "GET /v1/dilution/reverse-splits",
-          "summary": "List reverse-stock-split actions with execution date and ratio",
+          "summary": "Find disclosed reverse stock split ratios and execution dates",
           "docs_path": "/api-reference/dilution/get-v1-dilution-reverse-splits",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: executionDate, splitFrom, splitTo, accessionNumber, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/rofr",
           "title": "GET /v1/dilution/rofr",
-          "summary": "List right-of-first-refusal and tail-financing clauses parsed from underwriter agreements",
+          "summary": "Find disclosed rights-of-first-refusal and underwriter tail-financing provisions",
           "docs_path": "/api-reference/dilution/get-v1-dilution-rofr",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: rightOfFirstRefusalPresent, rightOfFirstRefusalEndDate, tailFinancingPaymentsPresent, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/score",
           "title": "GET /v1/dilution/score",
-          "summary": "Per-issuer Dilution Score with explanation and source events (alias of latest rating; ticker query parameter required)",
+          "summary": "Calculate the current per-issuer Dilution Score from available inputs",
           "docs_path": "/api-reference/dilution/get-v1-dilution-score",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "ticker",
+            "numericScore",
+            "overallRisk",
+            "factors",
+            "verification.confidence",
+            "provenance",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/share-float-history",
           "title": "GET /v1/dilution/share-float-history",
-          "summary": "Historical shares outstanding and public float series materialized from filings",
+          "summary": "List disclosed shares-outstanding and public-float observations by issuer and date",
           "docs_path": "/api-reference/dilution/get-v1-dilution-share-float-history",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: asOfDate, sharesOutstanding, publicFloatUsd, sourceAccession, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/dilution/warrants",
           "title": "GET /v1/dilution/warrants",
-          "summary": "List warrant schedules parsed from offering exhibits with price-protection and ratchet clauses",
+          "summary": "Find disclosed warrant terms and potential share overhang in offering materials",
           "docs_path": "/api-reference/dilution/get-v1-dilution-warrants",
           "audience": "application and coding agent",
           "metadata_fields": [
+            "data",
+            "hasMore",
+            "nextCursor",
+            "per-row: warrantsAmount, warrantsExercisePrice, underlyingSharesCalculated, verification.confidence",
             "requestId",
-            "traceparent"
+            "traceparent (standard response/header)"
           ]
         }
       ]

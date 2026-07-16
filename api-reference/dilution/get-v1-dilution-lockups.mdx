@@ -1,27 +1,28 @@
 ---
 title: "GET /v1/dilution/lockups"
-description: "List lockup schedules with start/end dates, parties, and conditions"
+description: "Find disclosed lockup restrictions, dates, parties, and release conditions"
 ---
 
-List lockup schedules with start/end dates, parties, and conditions
+Find disclosed lockup restrictions, dates, parties, and release conditions
 
 <Info>
-Audience: application and coding agent.
+Audience: investors and developers tracking disclosed resale restrictions.
 </Info>
 
 ## Canonical metadata
 
+- `data`
+- `hasMore`
+- `nextCursor`
+- `per-row: startDate, endDate, sharesAmount, conditions, verification.confidence`
 - `requestId`
-- `traceparent`
+- `traceparent (standard response/header)`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/lockups"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/dilution/lockups?ticker=EXAMPLE&limit=10"
 ```
 </RequestExample>
 
@@ -30,19 +31,44 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_lockup",
+      "id": "dil_lockup_acme_a",
+      "ticker": "ACME",
+      "accessionNumber": "0001234567-26-001234",
+      "documentUrl": "https://example.test/lockup.htm",
+      "filedAt": "2026-02-12",
+      "startDate": "2026-02-12",
+      "endDate": "2026-08-11",
+      "sharesAmount": 500000,
+      "conditions": [],
+      "verification": {
+        "confidence": 0.92
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Evidence and limits
+
+Lockup dates, parties, and conditions are disclosure-derived. They can be amended, waived, or subject to exceptions, so a listed end date is not proof that shares became saleable or were sold. Carry the cited filing and verification fields into any calendar or alert. See [coverage and depth](/coverage-and-depth).
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/dilution/lockups to list lockup schedules with start/end dates, parties, and conditions. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/dilution/lockups to find disclosed lockup restrictions, dates, parties, and release conditions. For the standard response, preserve `data`, `hasMore`, `nextCursor`, `per-row: startDate, endDate, sharesAmount, conditions, verification.confidence`, `requestId`. When requesting the compact agent view, keep its returned fields and requestId. Retain traceparent only from standard-response body or HTTP-header context when present; the compact agent view does not include it. Return a concise markdown summary and the structured fields needed for the next step without filling in missing disclosure data.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- retain parties, conditions, source accession, and verification
+- treat lockup expiry as a research cue, not evidence of a sale
+- verify amendments and exceptions in the underlying filing

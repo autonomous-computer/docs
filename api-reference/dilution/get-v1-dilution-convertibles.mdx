@@ -1,27 +1,28 @@
 ---
 title: "GET /v1/dilution/convertibles"
-description: "List convertible debt schedules with conversion price, maturity, and ratchet metadata"
+description: "Find disclosed convertible instruments and their conversion terms"
 ---
 
-List convertible debt schedules with conversion price, maturity, and ratchet metadata
+Find disclosed convertible instruments and their conversion terms
 
 <Info>
-Audience: application and coding agent.
+Audience: investors and developers reviewing disclosed convertible financing terms.
 </Info>
 
 ## Canonical metadata
 
+- `data`
+- `hasMore`
+- `nextCursor`
+- `per-row: conversionPrice, conversionPriceType, hasResetRatchet, maturityDate, verification.confidence`
 - `requestId`
-- `traceparent`
+- `traceparent (standard response/header)`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/convertibles"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/dilution/convertibles?ticker=EXAMPLE&limit=10"
 ```
 </RequestExample>
 
@@ -30,19 +31,45 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_convertible",
+      "id": "dil_convertible_acme_a",
+      "ticker": "ACME",
+      "accessionNumber": "0001234567-26-001234",
+      "documentUrl": "https://example.test/424b5.htm",
+      "convertibleDebtAmount": 5000000,
+      "conversionPrice": 4.25,
+      "conversionPriceType": "fixed",
+      "hasResetRatchet": false,
+      "maturityDate": "2028-02-12",
+      "filedAt": "2026-02-12",
+      "verification": {
+        "confidence": 0.92
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Evidence and limits
+
+Rows reflect disclosed conversion mechanics and dates in the covered filing record. Conversion price, ratchets, and maturity can change through amendments or depend on conditions outside the extracted fields. Model scenario assumptions separately; this endpoint does not calculate realized dilution. See the [Dilution Score guide](/dilution-score) for the derived score's distinct methodology.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/dilution/convertibles to list convertible debt schedules with conversion price, maturity, and ratchet metadata. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/dilution/convertibles to find disclosed convertible instruments and their conversion terms. For the standard response, preserve `data`, `hasMore`, `nextCursor`, `per-row: conversionPrice, conversionPriceType, hasResetRatchet, maturityDate, verification.confidence`, `requestId`. When requesting the compact agent view, keep its returned fields and requestId. Retain traceparent only from standard-response body or HTTP-header context when present; the compact agent view does not include it. Return a concise markdown summary and the structured fields needed for the next step without filling in missing disclosure data.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve conversion terms, accession, and verification fields
+- do not label a disclosed conversion feature as an issued-share outcome
+- inspect subsequent filings for amendments or repayment

@@ -1,27 +1,31 @@
 ---
 title: "GET /v1/dilution/coverage"
-description: "Dilution-domain coverage and freshness summary across forms, tickers, and verification status"
+description: "Inspect dilution row counts, verified rows, and latest observation dates by table"
 ---
 
-Dilution-domain coverage and freshness summary across forms, tickers, and verification status
+Inspect dilution row counts, verified rows, and latest observation dates by table
 
 <Info>
-Audience: application and coding agent.
+Audience: developers and investors checking whether a dilution workflow has stored evidence.
 </Info>
 
 ## Canonical metadata
 
+- `ticker`
+- `generatedAt`
+- `totalRowCount`
+- `totalVerifiedRowCount`
+- `tables[].table`
+- `tables[].rowCount`
+- `tables[].latestFilingDate`
 - `requestId`
-- `traceparent`
+- `traceparent (standard response/header)`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/coverage"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/dilution/coverage?ticker=EXAMPLE"
 ```
 </RequestExample>
 
@@ -30,19 +34,38 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "dilution_coverage",
+  "ticker": "ACME",
+  "generatedAt": "2026-04-25T22:00:00.000Z",
+  "totalRowCount": 47,
+  "totalVerifiedRowCount": 42,
+  "tables": [
+    {
+      "table": "dilution_events",
+      "rowCount": 6,
+      "verifiedRowCount": 6,
+      "latestVerifiedAt": "2026-02-12T20:34:18.000Z",
+      "latestFilingDate": "2026-02-12T20:31:00.000Z"
+    }
+  ],
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Coverage and freshness
+
+This is a bounded inventory of stored rows, verified rows, and latest dates by table. It is not a claim of complete issuer, filing, or market coverage, and `generatedAt` is the rollup time rather than a real-time data guarantee. Use it before an issuer workflow, then preserve the per-table counts and dates with any coverage statement. See [coverage and depth](/coverage-and-depth) and [freshness and trust](/freshness-and-trust).
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/dilution/coverage to dilution-domain coverage and freshness summary across forms, tickers, and verification status. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/dilution/coverage to inspect dilution row counts, verified rows, and latest observation dates by table. Preserve `ticker`, `generatedAt`, `totalRowCount`, `totalVerifiedRowCount`, `tables[].table`, `tables[].rowCount`, `tables[].latestFilingDate`, `requestId` in the output. Return a concise markdown summary and the structured fields needed for the next step without filling in missing disclosure data.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve ticker scope, generatedAt, table counts, and latest dates
+- treat zero counts as no stored rows for the selected scope, not proof of no underlying disclosure
+- do not claim complete or real-time coverage from this rollup

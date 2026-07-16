@@ -1,27 +1,28 @@
 ---
 title: "GET /v1/dilution/share-float-history"
-description: "Historical shares outstanding and public float series materialized from filings"
+description: "List disclosed shares-outstanding and public-float observations by issuer and date"
 ---
 
-Historical shares outstanding and public float series materialized from filings
+List disclosed shares-outstanding and public-float observations by issuer and date
 
 <Info>
-Audience: application and coding agent.
+Audience: investors and developers reconciling disclosed share counts and public-float observations.
 </Info>
 
 ## Canonical metadata
 
+- `data`
+- `hasMore`
+- `nextCursor`
+- `per-row: asOfDate, sharesOutstanding, publicFloatUsd, sourceAccession, verification.confidence`
 - `requestId`
-- `traceparent`
+- `traceparent (standard response/header)`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/dilution/share-float-history"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/dilution/share-float-history?ticker=EXAMPLE&limit=10"
 ```
 </RequestExample>
 
@@ -30,19 +31,43 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "list",
+  "data": [
+    {
+      "object": "dilution_share_float_history",
+      "id": "dil_float_acme_a",
+      "ticker": "ACME",
+      "asOfDate": "2025-12-31",
+      "sharesOutstanding": 15000000,
+      "publicFloatUsd": 45000000,
+      "sourceForm": "10-K",
+      "sourceAccession": "0001234567-26-001234",
+      "computedAt": "2026-02-12T20:34:18.000Z",
+      "verification": {
+        "confidence": 0.92
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Evidence and limits
+
+Rows preserve reported shares outstanding and, where available, disclosed public float. Public float is a value-based disclosure and is not interchangeable with a share count; missing rows are not zeros. Use observation date, source form, accession, and verification when building a history. See [freshness and trust](/freshness-and-trust).
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/dilution/share-float-history to historical shares outstanding and public float series materialized from filings. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/dilution/share-float-history to list disclosed shares-outstanding and public-float observations by issuer and date. For the standard response, preserve `data`, `hasMore`, `nextCursor`, `per-row: asOfDate, sharesOutstanding, publicFloatUsd, sourceAccession, verification.confidence`, `requestId`. When requesting the compact agent view, keep its returned fields and requestId. Retain traceparent only from standard-response body or HTTP-header context when present; the compact agent view does not include it. Return a concise markdown summary and the structured fields needed for the next step without filling in missing disclosure data.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- keep as-of date, units, source form, accession, and verification
+- never label a shares-outstanding value as public float
+- treat gaps as unavailable coverage rather than zero float or zero shares
