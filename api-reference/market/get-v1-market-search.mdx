@@ -1,30 +1,31 @@
 ---
 title: "GET /v1/market/search"
-description: "Search for stock tickers by company name or keyword"
+description: "Find candidate stock tickers from a company name or keyword"
 ---
 
-Search for stock tickers by company name or keyword
+Find candidate stock tickers from a company name or keyword
 
 <Info>
-Audience: application and coding agent.
+Audience: developers and agents finding a candidate security from a company name or keyword.
 </Info>
+
+## Coverage and source scope
+
+Use this route when a workflow starts with a company name or partial keyword and needs candidate symbols. `q` is required and results are matches, not a final identity decision. Resolve the selected symbol or CIK before using it for issuer-scoped research, especially when names are similar or a company has multiple listed classes. The route is subject to the configured result limit and can return a source or service error instead of an empty successful list. See [entity resolution](https://docs.secapi.ai/api-reference/entities/get-v1-entities-resolve) and [API conventions](https://docs.secapi.ai/api-conventions).
 
 ## Canonical metadata
 
+- `source`
+- `sourceUrl`
+- `results`
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/market/search?q=apple&limit=10"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/market/search?q=apple&limit=10"
 ```
 </RequestExample>
 
@@ -33,37 +34,39 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "market_search",
+  "source": "market_data",
+  "sourceUrl": "https://docs.secapi.ai/market-data",
+  "results": [
+    {
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "market": "stocks",
+      "primaryExchange": "XNAS"
+    }
+  ],
   "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Candidate selection
+
+Use `q` to find candidates by name, ticker fragment, or keyword. `limit` is capped at 50. Search results are candidates, not proof that a result is the intended legal issuer or listed class. Confirm the selected symbol with [market reference](/api-reference/market/get-v1-market-reference), then use the returned CIK or other identifiers for issuer-scoped research. A missing or blank `q` is a request error, not a broad search.
+
+## Errors
+
+A missing query returns `400 missing_query`; an invalid limit returns `400 invalid_query_parameter`. `503` indicates that search data is unavailable, while `502` indicates a search failure; neither should be treated as an empty candidate list.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/market/search to search for stock tickers by company name or keyword. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/market/search to find candidate stock tickers from a company name or keyword. Preserve `source`, `sourceUrl`, `results`, `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve source, sourceUrl, the selected candidate, requestId, and traceparent while resolving identity
+- do not infer CIK, exchange, share class, freshness, provenance, or materialization from a name-only match
+- treat an empty successful result as no returned candidate for the supplied query, not proof that a company has no listed security

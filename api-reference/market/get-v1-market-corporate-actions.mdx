@@ -1,30 +1,35 @@
 ---
 title: "GET /v1/market/corporate-actions"
-description: "Return rights-reviewed corporate actions used to normalize price history and event analysis"
+description: "Retrieve splits and dividends for one security"
 ---
 
-Return rights-reviewed corporate actions used to normalize price history and event analysis
+Retrieve splits and dividends for one security
 
 <Info>
-Audience: application and coding agent.
+Audience: developers and agents reconciling splits and dividends with price history.
 </Info>
+
+## Coverage and source scope
+
+Use this route to reconcile splits and cash dividends with a price-history workflow. Supply `ticker` or its `symbol` alias and constrain the date range when you know the event window. `ratio` applies to splits and `cashAmount` applies to dividends when the relevant value is available; neither field turns an event into a total-return calculation. Preserve the ex-date, source-rights, provenance, freshness, and revision fields, and treat an empty list as no returned events for the requested range rather than proof that none occurred. See [API conventions](https://docs.secapi.ai/api-conventions).
 
 ## Canonical metadata
 
+- `data`
+- `per-row actionType`
+- `per-row exDate`
+- `per-row ratio or cashAmount`
+- `per-row freshness`
+- `per-row provenance`
+- `per-row sourceRights`
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/market/corporate-actions"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/market/corporate-actions?ticker=AAPL&date_from=2026-01-01&date_to=2026-06-30&limit=100"
 ```
 </RequestExample>
 
@@ -33,37 +38,61 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "object": "list",
+  "data": [
+    {
+      "object": "corporate_action",
+      "id": "corp_action_example",
+      "symbol": "AAPL",
+      "actionType": "dividend",
+      "exDate": "2026-05-08",
+      "recordDate": "2026-05-12",
+      "payDate": "2026-05-15",
+      "ratio": null,
+      "cashAmount": 0.25,
+      "currency": "USD",
+      "freshness": {
+        "status": "fresh",
+        "asOf": "2026-05-15T00:00:00.000Z",
+        "sourcePublishedAt": null,
+        "lagMs": 0
+      },
+      "provenance": {
+        "source": "market_data",
+        "accessionNumber": null,
+        "filingUrl": "https://example.com/market/AAPL",
+        "retrievedAt": "2026-05-15T00:00:00.000Z",
+        "parserVersion": "example"
+      },
+      "sourceRights": {
+        "source": "market_data",
+        "posture": "contract_gated"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Splits, dividends, and interpretation
+
+`actionType` distinguishes `split` from `dividend`. For a split, inspect `ratio`; for a cash dividend, inspect `cashAmount` and `currency`. Null is an unavailable value, not zero. Use `exDate` to align an event with a daily series, but do not treat a listed corporate action as a total-return calculation, a payment confirmation, or evidence that a future action will occur. See [historical bars](/api-reference/market/get-v1-market-bars) and [freshness and trust](/freshness-and-trust).
+
+## Errors
+
+A missing symbol returns `400 missing_symbol`; a non-positive or malformed limit returns `400 invalid_query_parameter`. A `503` means the requested market-action data is unavailable, not that the issuer had no actions.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/market/corporate-actions to return rights-reviewed corporate actions used to normalize price history and event analysis. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/market/corporate-actions to retrieve splits and dividends for one security. Preserve `data`, `per-row actionType`, `per-row exDate`, `per-row ratio or cashAmount`, `per-row freshness`, `per-row provenance`, `per-row sourceRights`, `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve actionType, exDate, ratio, cashAmount, currency, freshness, provenance, sourceRights, revision, requestId, and traceparent
+- treat null monetary or ratio fields as unavailable rather than zero
+- do not infer a total return or a future payment from a returned action

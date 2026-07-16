@@ -2232,7 +2232,8 @@
           "method": "GET",
           "path": "/v1/market/bars",
           "title": "GET /v1/market/bars",
-          "summary": "Return historical OHLCV bars for a security with materialization and rights metadata",
+          "summary": "Retrieve daily OHLCV history for one security",
+          "description": "Use this route to build a daily price series for one symbol. Supply `ticker` or its `symbol` alias, then narrow the date range before requesting a long history. The route returns daily bars only; `adjusted` is accepted for compatibility but does not change the stored response shape. A returned list is not a guarantee that every trading day in the requested range is present. Preserve each bar's timestamp, freshness, provenance, source-rights, and revision fields when comparing or charting the series. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/market/get-v1-market-bars",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2247,7 +2248,8 @@
           "method": "GET",
           "path": "/v1/market/calendar",
           "title": "GET /v1/market/calendar",
-          "summary": "Return market calendar sessions for supported exchanges with source coverage metadata",
+          "summary": "Check scheduled trading sessions for a supported market",
+          "description": "Use this route before scheduling a market-data job or interpreting a missing daily observation. It returns a bounded calendar window for one supported market and identifies whether each row uses configured-holiday or weekend-only coverage. `sessionStatus` is a schedule, not evidence that trading occurred or that an exchange did not change its hours. Preserve `coverage`, `confidence`, `statusNote`, and row-level `provenance` when a workflow depends on the result. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/market/get-v1-market-calendar",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2261,7 +2263,8 @@
           "method": "GET",
           "path": "/v1/market/corporate-actions",
           "title": "GET /v1/market/corporate-actions",
-          "summary": "Return rights-reviewed corporate actions used to normalize price history and event analysis",
+          "summary": "Retrieve splits and dividends for one security",
+          "description": "Use this route to reconcile splits and cash dividends with a price-history workflow. Supply `ticker` or its `symbol` alias and constrain the date range when you know the event window. `ratio` applies to splits and `cashAmount` applies to dividends when the relevant value is available; neither field turns an event into a total-return calculation. Preserve the ex-date, source-rights, provenance, freshness, and revision fields, and treat an empty list as no returned events for the requested range rather than proof that none occurred. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/market/get-v1-market-corporate-actions",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2276,7 +2279,8 @@
           "method": "GET",
           "path": "/v1/market/reference",
           "title": "GET /v1/market/reference",
-          "summary": "Return canonical market reference metadata for a security, including identifiers, exchange, and listing context",
+          "summary": "Retrieve reference metadata and identifiers for one security",
+          "description": "Use this route to normalize a known security symbol before joining it to SEC records, market history, or an issuer view. Supply `ticker` or its `symbol` alias. The response can include identifiers, listing fields, classification, and market-cap context when available; null fields are unavailable values, not inferred substitutes. Preserve the returned symbol, CIK, FIGIs, `asOf`, freshness, provenance, source-rights, and revision metadata. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/market/get-v1-market-reference",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2291,7 +2295,8 @@
           "method": "GET",
           "path": "/v1/market/search",
           "title": "GET /v1/market/search",
-          "summary": "Search for stock tickers by company name or keyword",
+          "summary": "Find candidate stock tickers from a company name or keyword",
+          "description": "Use this route when a workflow starts with a company name or partial keyword and needs candidate symbols. `q` is required and results are matches, not a final identity decision. Resolve the selected symbol or CIK before using it for issuer-scoped research, especially when names are similar or a company has multiple listed classes. The route is subject to the configured result limit and can return a source or service error instead of an empty successful list. See [entity resolution](https://docs.secapi.ai/api-reference/entities/get-v1-entities-resolve) and [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/market/get-v1-market-search",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2306,7 +2311,8 @@
           "method": "GET",
           "path": "/v1/market/snapshots",
           "title": "GET /v1/market/snapshots",
-          "summary": "Return persisted latest-market snapshots for one or more securities with freshness, rights, and revision metadata",
+          "summary": "Retrieve stored latest-price snapshots for one or more symbols",
+          "description": "Use this route to populate a bounded quote view from stored latest snapshots. Supply `symbols` as a comma-separated list, or one `ticker` alias. Results preserve request order, but a missing requested symbol is reported in `degradedState.missingSymbols` rather than represented as a zero price. Inspect each row's `asOf`, `freshness`, `provenance`, `sourceRights`, and `revision` before presenting a value as current. See [API conventions](https://docs.secapi.ai/api-conventions).",
           "docs_path": "/api-reference/market/get-v1-market-snapshots",
           "audience": "application and coding agent",
           "metadata_fields": [

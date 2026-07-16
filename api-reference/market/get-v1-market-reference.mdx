@@ -1,30 +1,39 @@
 ---
 title: "GET /v1/market/reference"
-description: "Return canonical market reference metadata for a security, including identifiers, exchange, and listing context"
+description: "Retrieve reference metadata and identifiers for one security"
 ---
 
-Return canonical market reference metadata for a security, including identifiers, exchange, and listing context
+Retrieve reference metadata and identifiers for one security
 
 <Info>
-Audience: application and coding agent.
+Audience: developers and agents normalizing one security before issuer or market-data joins.
 </Info>
+
+## Coverage and source scope
+
+Use this route to normalize a known security symbol before joining it to SEC records, market history, or an issuer view. Supply `ticker` or its `symbol` alias. The response can include identifiers, listing fields, classification, and market-cap context when available; null fields are unavailable values, not inferred substitutes. Preserve the returned symbol, CIK, FIGIs, `asOf`, freshness, provenance, source-rights, and revision metadata. See [API conventions](https://docs.secapi.ai/api-conventions).
 
 ## Canonical metadata
 
+- `symbol`
+- `cik`
+- `compositeFigi`
+- `shareClassFigi`
+- `exchange`
+- `securityType`
+- `asOf`
+- `freshness`
+- `provenance`
+- `sourceRights`
+- `revision`
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/market/reference"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/market/reference?ticker=AAPL"
 ```
 </RequestExample>
 
@@ -33,37 +42,62 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
+  "object": "market_reference",
+  "id": "market_reference_AAPL",
+  "createdAt": "2026-07-01T00:00:00.000Z",
+  "livemode": false,
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "market": "stocks",
+  "locale": "us",
+  "exchange": "XNAS",
+  "securityType": "CS",
+  "active": true,
+  "currency": "USD",
+  "cik": "0000320193",
+  "compositeFigi": null,
+  "shareClassFigi": null,
+  "marketCap": null,
+  "listDate": null,
+  "asOf": "2026-07-01T00:00:00.000Z",
   "freshness": {
     "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
+    "asOf": "2026-07-01T00:00:00.000Z",
+    "sourcePublishedAt": null,
+    "lagMs": 0
   },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "provenance": {
+    "source": "market_data",
+    "accessionNumber": null,
+    "filingUrl": "https://example.com/market/AAPL",
+    "retrievedAt": "2026-07-01T00:00:00.000Z",
+    "parserVersion": "example"
+  },
+  "sourceRights": {
+    "source": "market_data",
+    "posture": "contract_gated"
+  },
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Identity and missing fields
+
+Use this record to keep the returned symbol and identifiers together before a cross-system join. `cik`, FIGIs, exchange, security type, and classification fields appear only when the reference record has them; a null field is not an instruction to guess or to copy a similarly named security. `asOf` identifies the reference record's time, while `freshness`, provenance, source-rights, and revision metadata describe its context. For a name-first workflow, start with [market search](/api-reference/market/get-v1-market-search) and resolve the candidate before using it as an issuer identity.
+
+## Errors
+
+A missing symbol returns `400 missing_symbol`. A `503` means reference data is unavailable for the request; it does not establish that the security is delisted or lacks SEC identity.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/market/reference to return canonical market reference metadata for a security, including identifiers, exchange, and listing context. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/market/reference to retrieve reference metadata and identifiers for one security. Preserve `symbol`, `cik`, `compositeFigi`, `shareClassFigi`, `exchange`, `securityType`, `asOf`, `freshness`, `provenance`, `sourceRights`, `revision`, `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve symbol, identifiers, asOf, freshness, provenance, sourceRights, revision, requestId, and traceparent
+- treat null identity and classification fields as unavailable
+- do not select a similarly named security when the returned identifiers do not match the intended issuer

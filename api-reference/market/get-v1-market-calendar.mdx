@@ -1,29 +1,33 @@
 ---
 title: "GET /v1/market/calendar"
-description: "Return market calendar sessions for supported exchanges with source coverage metadata"
+description: "Check scheduled trading sessions for a supported market"
 ---
 
-Return market calendar sessions for supported exchanges with source coverage metadata
+Check scheduled trading sessions for a supported market
 
 <Info>
-Audience: application and coding agent.
+Audience: developers and agents scheduling market-aware jobs.
 </Info>
+
+## Coverage and source scope
+
+Use this route before scheduling a market-data job or interpreting a missing daily observation. It returns a bounded calendar window for one supported market and identifies whether each row uses configured-holiday or weekend-only coverage. `sessionStatus` is a schedule, not evidence that trading occurred or that an exchange did not change its hours. Preserve `coverage`, `confidence`, `statusNote`, and row-level `provenance` when a workflow depends on the result. See [API conventions](https://docs.secapi.ai/api-conventions).
 
 ## Canonical metadata
 
-- `requestId`
-- `traceparent`
+- `data`
 - `supportedMarkets`
+- `coverage`
+- `confidence`
+- `statusNote`
 - `per-row provenance`
+- `requestId`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/market/calendar?market=XNYS&duration=2"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/market/calendar?market=XNYS&start=2026-07-01&duration=5"
 ```
 </RequestExample>
 
@@ -36,26 +40,26 @@ curl -X GET \
   "data": [
     {
       "object": "market_calendar_day",
-      "id": "mkt_xnys_20260318",
-      "createdAt": "2026-03-18T16:00:00.000Z",
+      "id": "mkt_xnys_20260703",
+      "createdAt": "2026-07-01T00:00:00.000Z",
       "livemode": false,
       "market": "XNYS",
       "marketName": "New York Stock Exchange",
-      "date": "2026-03-18",
+      "date": "2026-07-03",
       "timezone": "America/New_York",
-      "sessionStatus": "open",
-      "opensAt": "2026-03-18T09:30:00",
-      "closesAt": "2026-03-18T16:00:00",
-      "holidayName": null,
+      "sessionStatus": "closed",
+      "opensAt": null,
+      "closesAt": null,
+      "holidayName": "Independence Day (observed)",
       "coverage": "configured_holidays",
       "confidence": "confirmed",
-      "statusNote": null,
+      "statusNote": "Closed for Independence Day (observed).",
       "provenance": {
         "source": "exchange",
         "accessionNumber": null,
         "filingUrl": "https://www.nyse.com/markets/hours-calendars",
-        "retrievedAt": "2026-03-18T16:00:00.000Z",
-        "parserVersion": "2026-03-16.1"
+        "retrievedAt": "2026-07-01T00:00:00.000Z",
+        "parserVersion": "example"
       }
     }
   ],
@@ -80,14 +84,22 @@ curl -X GET \
 ```
 </ResponseExample>
 
+## Session coverage
+
+Start with `market`, `start`, and `duration` when a job needs a known exchange calendar. The response is capped at 31 consecutive dates and is not paginated. `configured_holidays` means the response includes the configured local holiday calendar; `weekend_only` means weekday exchange-holiday closures may be absent and an open row can be `tentative`. `supportedMarkets` reports the coverage posture for each listed market. See [freshness and trust](/freshness-and-trust).
+
+## Errors
+
+Invalid `start` values return a contract-aware request error. Do not substitute an unsupported market code with an assumed exchange calendar: the route defaults unsupported codes to XNYS.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/market/calendar to return market calendar sessions for supported exchanges with source coverage metadata. Preserve `requestId`, `traceparent`, `supportedMarkets`, `per-row provenance` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/market/calendar to check scheduled trading sessions for a supported market. Preserve `data`, `supportedMarkets`, `coverage`, `confidence`, `statusNote`, `per-row provenance`, `requestId` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- preserve market, date, coverage, confidence, statusNote, provenance, and requestId with a scheduled job
+- treat weekend-only coverage as a calendar aid, not an exchange-authoritative holiday feed
+- do not infer a trading session from an absent date outside the requested window

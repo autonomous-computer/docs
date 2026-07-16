@@ -1,30 +1,35 @@
 ---
 title: "GET /v1/market/snapshots"
-description: "Return persisted latest-market snapshots for one or more securities with freshness, rights, and revision metadata"
+description: "Retrieve stored latest-price snapshots for one or more symbols"
 ---
 
-Return persisted latest-market snapshots for one or more securities with freshness, rights, and revision metadata
+Retrieve stored latest-price snapshots for one or more symbols
 
 <Info>
-Audience: application and coding agent.
+Audience: developers and agents building a bounded latest-price view.
 </Info>
+
+## Coverage and source scope
+
+Use this route to populate a bounded quote view from stored latest snapshots. Supply `symbols` as a comma-separated list, or one `ticker` alias. Results preserve request order, but a missing requested symbol is reported in `degradedState.missingSymbols` rather than represented as a zero price. Inspect each row's `asOf`, `freshness`, `provenance`, `sourceRights`, and `revision` before presenting a value as current. See [API conventions](https://docs.secapi.ai/api-conventions).
 
 ## Canonical metadata
 
+- `data`
+- `degradedState`
+- `per-row symbol`
+- `per-row asOf`
+- `per-row freshness`
+- `per-row provenance`
+- `per-row sourceRights`
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/market/snapshots"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/market/snapshots?symbols=AAPL,MSFT"
 ```
 </RequestExample>
 
@@ -33,37 +38,67 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "object": "list",
+  "data": [
+    {
+      "object": "market_snapshot",
+      "id": "market_snapshot_AAPL",
+      "createdAt": "2026-07-01T16:00:00.000Z",
+      "livemode": false,
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "exchange": "XNAS",
+      "currency": "USD",
+      "asOf": "2026-07-01T16:00:00.000Z",
+      "price": 200.15,
+      "change": 1.2,
+      "changePercent": 0.6,
+      "volume": 45000000,
+      "marketCap": null,
+      "previousClose": 198.95,
+      "freshness": {
+        "status": "fresh",
+        "asOf": "2026-07-01T16:00:00.000Z",
+        "sourcePublishedAt": null,
+        "lagMs": 0
+      },
+      "provenance": {
+        "source": "market_data",
+        "accessionNumber": null,
+        "filingUrl": "https://example.com/market/AAPL",
+        "retrievedAt": "2026-07-01T16:00:00.000Z",
+        "parserVersion": "example"
+      },
+      "sourceRights": {
+        "source": "market_data",
+        "posture": "contract_gated"
+      }
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "degradedState": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Missing symbols and freshness
+
+Send a comma-separated `symbols` list, or a single `ticker`. The request accepts at most 250 distinct symbols and preserves request order for returned rows. When a requested symbol has no stored snapshot, inspect `degradedState.missingSymbols`; do not fill it with a previous price or a zero. `asOf` is the observation time, while `freshness` and `revision` explain how current or revised that observation is. See [API conventions](/api-conventions) and [freshness and trust](/freshness-and-trust).
+
+## Errors
+
+A request without `symbols` or `ticker` returns `400 missing_symbols`; malformed or oversized symbol input returns `400 invalid_symbols`. A market-data availability problem can return `503` rather than an empty snapshot list.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/market/snapshots to return persisted latest-market snapshots for one or more securities with freshness, rights, and revision metadata. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/market/snapshots to retrieve stored latest-price snapshots for one or more symbols. Preserve `data`, `degradedState`, `per-row symbol`, `per-row asOf`, `per-row freshness`, `per-row provenance`, `per-row sourceRights`, `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- retain the requested symbol order and degradedState with the response
+- treat a missing symbol as unavailable data, not a zero price
+- preserve asOf, freshness, provenance, sourceRights, revision, requestId, and traceparent before downstream display
