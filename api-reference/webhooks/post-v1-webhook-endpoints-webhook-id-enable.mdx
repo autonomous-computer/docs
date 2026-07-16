@@ -6,8 +6,12 @@ description: "Enable a webhook endpoint"
 Enable a webhook endpoint
 
 <Info>
-Audience: signed-in organization administrator.
+Audience: application and admin.
 </Info>
+
+## Future fanout
+
+Enable an existing endpoint so it can receive future events that match its subscriptions. A missing endpoint returns `404`; restoring a disabled endpoint can return `402 delivery_target_limit_exceeded`. Enabling does not replay events missed while disabled; use a recorded delivery replay only when a specific source event is available.
 
 ## Canonical metadata
 
@@ -28,7 +32,7 @@ curl -X POST \
 </RequestExample>
 
 <Info>
-This organization control-plane action requires a signed-in WorkOS browser session. Do not give an API key or an autonomous agent authority to create, change, test, replay, rotate, or delete it.
+This organization control-plane action accepts bearer organization REST authentication. API keys cannot mutate webhook endpoints. The dashboard is optional.
 </Info>
 
 ## Example response
@@ -58,7 +62,7 @@ This organization control-plane action requires a signed-in WorkOS browser sessi
 ## Give this prompt to your agent
 
 <Prompt>
-Explain the required fields for POST /v1/webhook_endpoints/{webhook_id}/enable, but direct the user to complete the change in the signed-in SEC API dashboard. Do not attempt the mutation with an API key or an autonomous agent. Preserve requestId and traceparent when the dashboard or a human-authenticated session returns them.
+Enable the endpoint with bearer organization REST authentication so it can receive future matching events. API keys cannot mutate webhook endpoints; the dashboard is optional.
 </Prompt>
 
 ## Failure posture

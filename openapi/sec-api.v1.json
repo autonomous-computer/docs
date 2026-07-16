@@ -2380,12 +2380,114 @@
         "summary": "List webhook endpoints for the current organization",
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Webhook endpoints for the current organization. Signing secrets are never included.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "data",
+                    "hasMore",
+                    "nextCursor",
+                    "requestId",
+                    "traceparent"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "allOf": [
+                          {
+                            "$ref": "#/components/schemas/WebhookEndpoint"
+                          }
+                        ],
+                        "additionalProperties": true
+                      }
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "queryPath": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "queryPathReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "policyYears": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "degradedState": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "traceparent": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "list",
+                      "data": [
+                        {
+                          "object": "webhook_endpoint",
+                          "id": "wh_2ZK8Q1W9F4M6P7R3",
+                          "createdAt": "2026-06-25T15:00:00.000Z",
+                          "updatedAt": "2026-06-25T15:00:00.000Z",
+                          "livemode": false,
+                          "orgId": "org_example_123",
+                          "description": "Production monitor matches",
+                          "destinationUrl": "https://example.com/hooks/secapi",
+                          "subscribedEventTypes": [
+                            "monitor.match",
+                            "webhook.test"
+                          ],
+                          "status": "active",
+                          "lastDeliveredAt": null
+                        }
+                      ],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "queryPath": null,
+                      "queryPathReason": null,
+                      "policyYears": null,
+                      "degradedState": null,
+                      "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  }
                 }
               }
             }
@@ -3031,14 +3133,210 @@
     "/v1/webhook_endpoints/{webhook_id}/deliveries": {
       "get": {
         "summary": "List canonical delivery attempts for a webhook endpoint",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter delivery attempts to one event id."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "Maximum attempts to return. Values outside 1 through 50 are clamped."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Recorded delivery attempts for the endpoint. A record captures an attempted send and observed HTTP result.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "data",
+                    "hasMore",
+                    "nextCursor",
+                    "requestId",
+                    "traceparent"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "object",
+                          "id",
+                          "createdAt",
+                          "orgId",
+                          "webhookId",
+                          "eventId",
+                          "eventType",
+                          "destinationUrl",
+                          "status",
+                          "ok",
+                          "requestId",
+                          "error",
+                          "latencyMs",
+                          "replayedFromDeliveryId"
+                        ],
+                        "properties": {
+                          "object": {
+                            "type": "string",
+                            "const": "webhook_delivery_attempt"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "orgId": {
+                            "type": "string"
+                          },
+                          "webhookId": {
+                            "type": "string"
+                          },
+                          "eventId": {
+                            "type": "string"
+                          },
+                          "eventType": {
+                            "type": "string"
+                          },
+                          "destinationUrl": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "status": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "ok": {
+                            "type": "boolean"
+                          },
+                          "requestId": {
+                            "type": "string"
+                          },
+                          "error": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "latencyMs": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "replayedFromDeliveryId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "queryPath": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "queryPathReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "policyYears": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "degradedState": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "traceparent": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "list",
+                      "data": [
+                        {
+                          "object": "webhook_delivery_attempt",
+                          "id": "wdel_2ZK8Q1W9F4M6P7R3",
+                          "createdAt": "2026-06-25T15:01:00.250Z",
+                          "orgId": "org_example_123",
+                          "webhookId": "wh_2ZK8Q1W9F4M6P7R3",
+                          "eventId": "evt_webhook_test_123",
+                          "eventType": "webhook.test",
+                          "destinationUrl": "https://example.com/hooks/secapi",
+                          "status": 200,
+                          "ok": true,
+                          "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                          "error": null,
+                          "latencyMs": 250,
+                          "replayedFromDeliveryId": null
+                        }
+                      ],
+                      "hasMore": false,
+                      "nextCursor": null,
+                      "queryPath": null,
+                      "queryPathReason": null,
+                      "policyYears": null,
+                      "degradedState": null,
+                      "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                      "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  }
                 }
               }
             }
@@ -3074,12 +3372,146 @@
         "summary": "Replay a stored webhook delivery attempt by re-emitting its source event to the endpoint",
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Explicit replay result. Replay creates new delivery records linked to the source attempt.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": true
+                  "additionalProperties": false,
+                  "required": [
+                    "object",
+                    "sourceDeliveryId",
+                    "eventId",
+                    "deliveries",
+                    "eventsReplayed"
+                  ],
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "webhook_delivery_replay"
+                    },
+                    "sourceDeliveryId": {
+                      "type": "string"
+                    },
+                    "eventId": {
+                      "type": "string"
+                    },
+                    "deliveries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind",
+                          "deliveryId",
+                          "recordedAt",
+                          "orgId",
+                          "eventId",
+                          "eventType",
+                          "webhookId",
+                          "destinationUrl",
+                          "status",
+                          "ok",
+                          "requestId",
+                          "error",
+                          "latencyMs",
+                          "replayedFromDeliveryId"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "webhook_delivery"
+                          },
+                          "deliveryId": {
+                            "type": "string"
+                          },
+                          "recordedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "orgId": {
+                            "type": "string"
+                          },
+                          "eventId": {
+                            "type": "string"
+                          },
+                          "eventType": {
+                            "type": "string"
+                          },
+                          "webhookId": {
+                            "type": "string"
+                          },
+                          "destinationUrl": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "status": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "ok": {
+                            "type": "boolean"
+                          },
+                          "requestId": {
+                            "type": "string"
+                          },
+                          "error": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "latencyMs": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "replayedFromDeliveryId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "eventsReplayed": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example response",
+                    "value": {
+                      "object": "webhook_delivery_replay",
+                      "sourceDeliveryId": "wdel_2ZK8Q1W9F4M6P7R3",
+                      "eventId": "evt_webhook_test_123",
+                      "deliveries": [
+                        {
+                          "kind": "webhook_delivery",
+                          "deliveryId": "wdel_2ZK8Q1W9F4M6P7R4",
+                          "recordedAt": "2026-06-25T15:05:00.250Z",
+                          "orgId": "org_example_123",
+                          "eventId": "evt_webhook_test_123",
+                          "eventType": "webhook.test",
+                          "webhookId": "wh_2ZK8Q1W9F4M6P7R3",
+                          "destinationUrl": "https://example.com/hooks/secapi",
+                          "status": 200,
+                          "ok": true,
+                          "requestId": "req_2ZK8Q1W9F4M6P7R3",
+                          "error": null,
+                          "latencyMs": 250,
+                          "replayedFromDeliveryId": "wdel_2ZK8Q1W9F4M6P7R3"
+                        }
+                      ],
+                      "eventsReplayed": 1
+                    }
+                  }
                 }
               }
             }

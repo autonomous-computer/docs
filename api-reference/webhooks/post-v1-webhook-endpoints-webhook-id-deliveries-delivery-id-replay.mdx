@@ -6,8 +6,12 @@ description: "Replay a stored webhook delivery attempt by re-emitting its source
 Replay a stored webhook delivery attempt by re-emitting its source event to the endpoint
 
 <Info>
-Audience: signed-in organization administrator.
+Audience: application and admin.
 </Info>
+
+## Explicit replay
+
+Replay re-emits the stored source event to the endpoint and returns the new recorded attempt or attempts with `replayedFromDeliveryId`. An unknown source attempt returns `404 webhook_delivery_not_found`; other replay failures return `500 webhook_delivery_replay_failed`. Use it after correcting the receiver or endpoint configuration. It is an explicit action, not evidence that failed deliveries are automatically retried.
 
 ## Canonical metadata
 
@@ -28,7 +32,7 @@ curl -X POST \
 </RequestExample>
 
 <Info>
-This organization control-plane action requires a signed-in WorkOS browser session. Do not give an API key or an autonomous agent authority to create, change, test, replay, rotate, or delete it.
+This organization control-plane action accepts bearer organization REST authentication. API keys cannot mutate webhook endpoints. The dashboard is optional.
 </Info>
 
 ## Example response
@@ -36,7 +40,28 @@ This organization control-plane action requires a signed-in WorkOS browser sessi
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "webhook_delivery_replay",
+  "sourceDeliveryId": "wdel_2ZK8Q1W9F4M6P7R3",
+  "eventId": "evt_webhook_test_123",
+  "deliveries": [
+    {
+      "kind": "webhook_delivery",
+      "deliveryId": "wdel_2ZK8Q1W9F4M6P7R4",
+      "recordedAt": "2026-06-25T15:05:00.250Z",
+      "orgId": "org_example_123",
+      "eventId": "evt_webhook_test_123",
+      "eventType": "webhook.test",
+      "webhookId": "wh_2ZK8Q1W9F4M6P7R3",
+      "destinationUrl": "https://example.com/hooks/secapi",
+      "status": 200,
+      "ok": true,
+      "requestId": "req_2ZK8Q1W9F4M6P7R3",
+      "error": null,
+      "latencyMs": 250,
+      "replayedFromDeliveryId": "wdel_2ZK8Q1W9F4M6P7R3"
+    }
+  ],
+  "eventsReplayed": 1
 }
 ```
 </ResponseExample>
@@ -44,7 +69,7 @@ This organization control-plane action requires a signed-in WorkOS browser sessi
 ## Give this prompt to your agent
 
 <Prompt>
-Explain the required fields for POST /v1/webhook_endpoints/{webhook_id}/deliveries/{delivery_id}/replay, but direct the user to complete the change in the signed-in SEC API dashboard. Do not attempt the mutation with an API key or an autonomous agent. Preserve requestId and traceparent when the dashboard or a human-authenticated session returns them.
+Replay the stored source event with bearer organization REST authentication; it creates new recorded attempts for the same endpoint. API keys cannot mutate webhook endpoints; the dashboard is optional.
 </Prompt>
 
 ## Failure posture

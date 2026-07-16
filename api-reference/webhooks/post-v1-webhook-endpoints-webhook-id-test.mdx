@@ -6,8 +6,12 @@ description: "Send a signed webhook.test event to a webhook endpoint"
 Send a signed webhook.test event to a webhook endpoint
 
 <Info>
-Audience: signed-in organization administrator.
+Audience: application and admin.
 </Info>
+
+## Verify the receiver
+
+A test emits `webhook.test` to an active endpoint and returns both the event and its recorded delivery attempt. Tests against a disabled endpoint return `409 webhook_disabled`; any other requested event type returns `400 invalid_test_event_type`. The payload is signed like other webhook events. Inspect the receiver's signature verification and the returned status before relying on the integration.
 
 ## Canonical metadata
 
@@ -28,7 +32,7 @@ curl -X POST \
 </RequestExample>
 
 <Info>
-This organization control-plane action requires a signed-in WorkOS browser session. Do not give an API key or an autonomous agent authority to create, change, test, replay, rotate, or delete it.
+This organization control-plane action accepts bearer organization REST authentication. API keys cannot mutate webhook endpoints. The dashboard is optional.
 </Info>
 
 ## Example response
@@ -74,7 +78,7 @@ This organization control-plane action requires a signed-in WorkOS browser sessi
 ## Give this prompt to your agent
 
 <Prompt>
-Explain the required fields for POST /v1/webhook_endpoints/{webhook_id}/test, but direct the user to complete the change in the signed-in SEC API dashboard. Do not attempt the mutation with an API key or an autonomous agent. Preserve requestId and traceparent when the dashboard or a human-authenticated session returns them.
+Send a signed webhook.test event with bearer organization REST authentication and inspect the recorded attempt. API keys cannot mutate webhook endpoints; the dashboard is optional. A successful HTTP status records an attempt, not proof of application-level processing.
 </Prompt>
 
 ## Failure posture

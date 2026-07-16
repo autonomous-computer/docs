@@ -9,6 +9,10 @@ List webhook endpoints for the current organization
 Audience: application and admin.
 </Info>
 
+## Endpoint inventory
+
+The list is scoped to the authenticated organization and returns endpoint configuration, subscribed event types, status, and `lastDeliveredAt`. It never returns a signing secret. Use the endpoint id with delivery-attempt history when diagnosing an event.
+
 ## Canonical metadata
 
 - `requestId`
@@ -30,7 +34,33 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "list",
+  "data": [
+    {
+      "object": "webhook_endpoint",
+      "id": "wh_2ZK8Q1W9F4M6P7R3",
+      "createdAt": "2026-06-25T15:00:00.000Z",
+      "updatedAt": "2026-06-25T15:00:00.000Z",
+      "livemode": false,
+      "orgId": "org_example_123",
+      "description": "Production monitor matches",
+      "destinationUrl": "https://example.com/hooks/secapi",
+      "subscribedEventTypes": [
+        "monitor.match",
+        "webhook.test"
+      ],
+      "status": "active",
+      "lastDeliveredAt": null
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "queryPath": null,
+  "queryPathReason": null,
+  "policyYears": null,
+  "degradedState": null,
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
@@ -38,7 +68,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/webhook_endpoints to list webhook endpoints for the current organization. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Call SEC API GET /v1/webhook_endpoints to list the authenticated organization's destinations, subscribed event types, active state, and last delivery time. The list does not reveal signing secrets.
 </Prompt>
 
 ## Failure posture

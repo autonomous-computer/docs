@@ -6,8 +6,12 @@ description: "Update a webhook endpoint URL, description, subscribed event types
 Update a webhook endpoint URL, description, subscribed event types, or active status
 
 <Info>
-Audience: signed-in organization administrator.
+Audience: application and admin.
 </Info>
+
+## Updating an endpoint
+
+Update one or more of the destination URL, description, subscribed event types, or status. A replacement destination must pass the same public HTTPS validation as creation. A missing endpoint returns `404`; changing status to active can return `402 delivery_target_limit_exceeded`. Configuration changes apply to future fanout; they do not rewrite or replay recorded attempts.
 
 ## Canonical metadata
 
@@ -28,7 +32,7 @@ curl -X PATCH \
 </RequestExample>
 
 <Info>
-This organization control-plane action requires a signed-in WorkOS browser session. Do not give an API key or an autonomous agent authority to create, change, test, replay, rotate, or delete it.
+This organization control-plane action accepts bearer organization REST authentication. API keys cannot mutate webhook endpoints. The dashboard is optional.
 </Info>
 
 ## Example response
@@ -58,7 +62,7 @@ This organization control-plane action requires a signed-in WorkOS browser sessi
 ## Give this prompt to your agent
 
 <Prompt>
-Explain the required fields for PATCH /v1/webhook_endpoints/{webhook_id}, but direct the user to complete the change in the signed-in SEC API dashboard. Do not attempt the mutation with an API key or an autonomous agent. Preserve requestId and traceparent when the dashboard or a human-authenticated session returns them.
+Update endpoint fields with bearer organization REST authentication. API keys cannot mutate webhook endpoints; the dashboard is optional. Changing configuration does not replay historical events.
 </Prompt>
 
 ## Failure posture

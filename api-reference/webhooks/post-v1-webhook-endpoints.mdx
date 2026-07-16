@@ -6,8 +6,18 @@ description: "Create a signed webhook endpoint for Delivery events"
 Create a signed webhook endpoint for Delivery events
 
 <Info>
-Audience: signed-in organization administrator.
+Audience: application and admin.
 </Info>
+
+## Destination and secret
+
+`destinationUrl` must be a public HTTPS URL; self-serve endpoints use the default HTTPS port. Select only public-emitting event types from the event catalog, using exact names, `*`, or namespace wildcards such as `monitor.*`.
+
+The response exposes `signingSecret` once. Store it in your receiver's secret manager before enabling production processing; later reads do not reveal it. Invalid destinations and event filters return `400`; exceeding the active target allowance returns `402 delivery_target_limit_exceeded` with plan and limit details. Creating an endpoint configures a target and does not establish an uptime or delivery guarantee.
+
+## Receiving and verifying events
+
+Webhook requests contain the JSON event body plus `x-secapi-event-id`, `x-secapi-event-type`, `x-secapi-signature`, `x-secapi-signature-timestamp`, and `x-request-id`. Verify the HMAC signature against the exact raw body and timestamp before parsing or applying the event. Use the event id for receiver-side idempotency.
 
 ## Canonical metadata
 
@@ -28,7 +38,7 @@ curl -X POST \
 </RequestExample>
 
 <Info>
-This organization control-plane action requires a signed-in WorkOS browser session. Do not give an API key or an autonomous agent authority to create, change, test, replay, rotate, or delete it.
+This organization control-plane action accepts bearer organization REST authentication. API keys cannot mutate webhook endpoints. The dashboard is optional.
 </Info>
 
 ## Example response
@@ -59,7 +69,7 @@ This organization control-plane action requires a signed-in WorkOS browser sessi
 ## Give this prompt to your agent
 
 <Prompt>
-Explain the required fields for POST /v1/webhook_endpoints, but direct the user to complete the change in the signed-in SEC API dashboard. Do not attempt the mutation with an API key or an autonomous agent. Preserve requestId and traceparent when the dashboard or a human-authenticated session returns them.
+Create the HTTPS destination and public-emitting event filters with bearer organization REST authentication. API keys cannot mutate webhook endpoints; the dashboard is optional. Store the returned signing secret immediately because it is revealed only on creation or rotation.
 </Prompt>
 
 ## Failure posture
