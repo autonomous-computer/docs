@@ -58,7 +58,7 @@ Keep the returned accession number, filing URL, and request ID with any derived 
 
 ## Special Situations workflow
 
-Use the `situations` namespace for a current roster, current detail, filing-event activity, disclosed calendar dates, aggregate counts, and archived weekly issues. Exports return Markdown; underwriting returns the structured underwriting pack. Create a watch only with a deliberate filter and delivery destination.
+Use the published `situations` namespace helpers for a current roster, a filtered roster by EDGAR form, current detail, a filing timeline, and a compact summary.
 
 ```js
 const roster = await sec.situations.list({ types: ["merger"], statuses: ["pending"], limit: 25 })
@@ -66,22 +66,9 @@ const detail = await sec.situations.get("sit_abc123")
 const byForm = await sec.situations.byForm("SC 13D", { limit: 25 })
 const filings = await sec.situations.filings("sit_abc123", { limit: 25 })
 const summary = await sec.situations.summary("sit_abc123")
-const feed = await sec.situations.feed({ tickers: ["ACME"] })
-const calendar = await sec.situations.calendar({ date_types: ["vote", "expected_close"], days: 30 })
-const stats = await sec.situations.stats({ window: "30d" })
-const issues = await sec.situations.issues({ limit: 12 })
-const brief = await sec.situations.export("sit_abc123")
-const underwriting = await sec.situations.underwrite("sit_abc123")
-const publicRoster = await sec.embedSituations({ limit: 10 })
-const publicBrief = await sec.embedSituationExport("sit_abc123")
-const watch = await sec.situations.watch({
-  filters: { tickers: ["ACME"] },
-  delivery: { email: "research@example.com" },
-  name: "ACME situation updates",
-})
 ```
 
-Treat `detail` as current data and an issue as an immutable historical publication. Keep source identifiers and request IDs with any derived output, and review the underlying filing before relying on a disclosed term or date. See [Special Situations workflows](/special-situations-workflows) for the REST and CLI workflow.
+Treat `detail` as current data. Keep source identifiers and request IDs with any derived output, and review the underlying filing before relying on a disclosed term or date. See [Special Situations workflows](/special-situations-workflows) and the [REST reference](/api-reference/situations) for the complete published API surface.
 
 ## Errors and retries
 

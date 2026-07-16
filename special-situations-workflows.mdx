@@ -1,12 +1,12 @@
 ---
 title: "Special Situations Workflows"
-description: "Build cited special-situations discovery, monitoring, archive, and underwriting workflows with the SEC API."
+description: "Build cited special-situations discovery, archive, export, and underwriting workflows with the SEC API."
 ---
 
-Use Special Situations as a durable SEC-derived research layer: discover a live population, open the cited event trail behind a candidate, preserve a fixed weekly archive when reproducibility matters, and monitor only the set that actually warrants attention.
+Use Special Situations as a durable SEC-derived research layer: discover a live population, open the cited event trail behind a candidate, and preserve a fixed weekly archive when reproducibility matters.
 
 <Info>
-This is a paid public API product. The free [Situations database](https://secapi.ai/situations) is useful for discovery and organic research; API keys unlock programmatic search, exports, archive reads, and monitoring under your organization plan.
+This is a paid public API product. The free [Situations database](https://secapi.ai/situations) and anonymous Embed routes are useful for logged-out discovery; an API key unlocks programmatic research, exports, archive reads, and underwriting under your organization plan.
 </Info>
 
 ## Choose the right object
@@ -18,11 +18,21 @@ This is a paid public API product. The free [Situations database](https://secapi
 | Cite a concise agent brief | `GET /v1/situations/{situation_id}/export` | Source-cited Markdown designed for downstream models |
 | Build a single research packet | `GET /v1/situations/{situation_id}/underwriting-pack` | Canonical detail, narrative, timeline, and Copy-for-LLM Markdown together |
 | Reproduce a past digest | `GET /v1/situations/issues/{issue}` | Immutable publication-time snapshot, not live data |
-| React to a material update | `secapi situations watch` | Durable delivery with an explicit destination and provenance |
+
+## Keep the public boundary explicit
+
+| Surface | Available work | Not a substitute for |
+| --- | --- | --- |
+| Anonymous Embed | Recent, redacted list, detail, feed, stats, issue archive, and Markdown brief | The authenticated roster, full historical issue archive, or underwriting |
+| Authenticated REST | Published list/detail/feed/issues/calendar/stats/export/underwriting operations | A claim about transaction completion or investment suitability |
+| CLI and JavaScript SDK | Published shell and client helpers for the authenticated operations | A browser-delivered credential or a public embed |
+| Hosted MCP | Discover tools from the server before invoking them | A substitute for the published REST reference |
+
+Anonymous Embed reads use no API key and are intentionally capped, recent-window, and redacted. Treat `404` as unavailable rather than falling back to an authenticated result or inventing missing terms.
 
 ## 1. Discover, then narrow
 
-Use the lean projection for a broad roster. It lowers transport and parsing cost; it does not lower the meter for the request.
+Use the lean projection for a broad roster when a smaller response is sufficient.
 
 ```bash
 secapi situations list \
@@ -45,7 +55,8 @@ Retrieve current detail before asking an agent to interpret a situation. Keep th
 
 ```bash
 secapi situations get --situation-id sit_abc123
-secapi situations export --situation-id sit_abc123 > situation-brief.md
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/situations/sit_abc123/export" > situation-brief.md
 ```
 
 <Prompt>
@@ -66,42 +77,17 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 The issue number or slug, publication timestamp, `sourceSituationIds`, `sourceEventIds`, and source-event snapshots are the reproducibility anchors. Fetch the referenced `situationId` separately before describing live terms or current status.
 
-## 4. Monitor after you have a thesis
+## CLI, SDK, MCP, and agent workflows
 
-Create a monitor only after narrowing the universe. A direct email monitor is appropriate for a person; organization fanout is appropriate only after signed webhook or stream delivery has been configured and tested.
+The published CLI commands are `situations list`, `situations by-form`, `situations feed`, `situations calendar`, `situations stats`, `situations performance`, `situations get`, `situations filings`, and `situations summary`. The published JavaScript `situations` namespace helpers are `list`, `byForm`, `get`, `filings`, and `summary`. Use the [REST reference](/api-reference/situations) for other published Special Situations operations.
 
-```bash
-secapi situations watch \
-  --situation-ids sit_abc123 \
-  --use-org-webhooks \
-  --name "ACME vote and close monitoring"
-```
+For MCP, start with the server's deployed discovery and tool listing rather than a copied tool inventory. Use the published REST reference as the source of truth for routes and response behavior.
 
-Creating, reading, or changing a watch reports the `monitor_management` control-plane meter. Successful organization-level webhook delivery is metered as `situations_webhook_delivery`, stream fanout delivery as `stream_event`, and direct email delivery as `email_delivery`. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
-
-## MCP and reusable Skills
-
-The hosted MCP surface currently exposes `situations.list`, `situations.search`
-(an alias of `situations.list`), `situations.by_form`, `situations.get`,
-`situations.filings`, `situations.summary`, `situations.feed`,
-`situations.calendar`, `situations.stats`, `situations.performance`,
-`situations.export`, `situations.watch`, `situations.issues`,
-`situations.issue`, and `situations.underwrite`. Tool
-calls use the same organization key, entitlement checks, meter classes, and
-source-citation expectations as REST. Install the server with the
-[MCP setup guide](/mcp-install), then let an agent use the discovery tools
-before issuing a durable watch.
-
-The bundled `track-special-situations` Skill is the CLI-oriented counterpart:
-it guides an agent from a broad roster to live detail, a cited export, and an
-intentional monitor. It does not expose the internal Omni Apps market or
-fundamentals layer.
+For an agent run, use this order: read `GET /v1/limits` and `GET /v1/billing/rates`; discover with list, feed, calendar, or issues; retrieve detail and filings; then request an export or underwriting pack only for selected records. Persist the situation ID, issue number or slug, accession numbers, source URLs, event dates, `requestId`, and `traceparent`. Do not let an agent infer missing deal terms, lifecycle state, or an entitlement from a public embed response.
 
 ## Cost and entitlement posture
 
-Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`. For every request, log the response meter and billing headers rather than hard-coding a plan assumption. The important Special Situations meter classes are `situations_lookup`, `situations_feed_read`, `situations_export`, `situations_underwriting_pack`, `monitor_management`, `email_delivery`, `situations_webhook_delivery`, and `stream_event`.
-
-Proprietary Omni Apps fundamentals, estimates, valuation, and symbol coverage are internal-only and excluded from the public Special Situations API, documentation, SDKs, CLI, MCP, and pricing.
+Before a batch or an agent loop, retrieve `GET /v1/limits` and `GET /v1/billing/rates`, then quote the exact route with `POST /v1/billing/quote` when cadence matters. Retain the returned plan, limits, quote, and request identifiers rather than hard-coding a plan assumption.
 
 ## Read next
 
