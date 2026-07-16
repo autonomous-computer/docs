@@ -1,32 +1,33 @@
 ---
 title: "POST /v1/artifacts"
-description: "Create and persist a derived artifact bundle"
+description: "Build and persist a filing-derived artifact bundle"
 ---
 
-Create and persist a derived artifact bundle
+Build and persist a filing-derived artifact bundle
 
 <Info>
-Audience: application and admin.
+Audience: developers creating a persisted filing-derived or comparison artifact for their organization.
 </Info>
+
+## Coverage and source scope
+
+Builds one derived bundle for the selected issuer or comparison workflow, persists it to the authenticated organization, and returns the persisted record. For filing bundles, the default form is `10-K`; `sectionKey` selects one extracted section when available. This is an asynchronous-style acceptance response (`202`) even when the returned record is ready.
 
 ## Canonical metadata
 
-- `requestId`
-- `traceparent`
+- `id`
+- `kind`
+- `status`
+- `downloadUrl`
+- `storageMode`
+- `manifest`
 - `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  -H "content-type: application/json" \
-  -d '{}' \
-  "https://api.secapi.ai/v1/artifacts"
+curl -X POST -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" -H "content-type: application/json" -d '{"ticker":"AAPL","form":"10-K","sectionKey":"item_1a","kind":"markdown_bundle"}' "https://api.secapi.ai/v1/artifacts"
 ```
 </RequestExample>
 
@@ -35,37 +36,71 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "object": "artifact",
+  "id": "art_example_123",
+  "createdAt": "2026-03-19T12:00:00.000Z",
+  "livemode": false,
+  "kind": "markdown_bundle",
+  "status": "ready",
+  "downloadUrl": "/v1/artifacts/art_example_123/download",
+  "storageMode": "local",
+  "manifest": {
+    "object": "artifact_manifest",
+    "id": "aman_example_123",
+    "artifactId": "art_example_123",
+    "kind": "markdown_bundle",
+    "status": "ready",
+    "filename": "aapl-10-k-item-1a.md",
+    "contentType": "text/markdown; charset=utf-8",
+    "storageMode": "local",
+    "objectKey": null,
+    "byteLength": 18432,
+    "lineCount": 420,
+    "checksumSha1": "example_checksum",
+    "filing": {
+      "accessionNumber": "0000320193-25-000079",
+      "form": "10-K",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml"
+    },
+    "section": {
+      "key": "item_1a",
+      "title": "Risk Factors"
+    },
+    "exportedFormats": [
+      "json",
+      "markdown",
+      "compact_json"
+    ],
+    "createdAt": "2026-03-19T12:00:00.000Z"
+  },
   "provenance": {
-    "source": "sec",
     "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml"
   }
 }
 ```
 </ResponseExample>
 
+## Bundle selection and availability
+
+For a filing-derived bundle, provide a ticker or CIK and optionally set `form`; the route defaults to `10-K`. `sectionKey` selects one resolved canonical section when available. `kind=ownership_compare_bundle` requires a CIK; `kind=compensation_compare_bundle` uses the selected issuer. The accepted response is `202` and can already report `status=ready`; use its artifact ID for follow-up retrieval.
+
+## Source handling
+
+A bundle is a saved derived payload, not a replacement for its underlying filing. Preserve returned provenance, then use the manifest's filing and section context when the output is cited or reviewed.
+
+## Errors
+
+Malformed JSON returns `400 invalid_json`. Structurally invalid JSON values return `400 validation_error`. Build, source-resolution, rendering, or persistence failures return `502 artifact_build_failed`; do not treat that response as an empty bundle.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/artifacts to create and persist a derived artifact bundle. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API POST /v1/artifacts to build and persist a filing-derived artifact bundle. Preserve `id`, `kind`, `status`, `downloadUrl`, `storageMode`, `manifest`, `provenance` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- retain the selected issuer, form, sectionKey, kind, and requestId when a build fails
+- do not infer a successful source lookup from a 202 alone; inspect the returned status and manifest
+- preserve filing provenance with any derived content passed to a reviewer

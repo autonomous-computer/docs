@@ -1,32 +1,31 @@
 ---
 title: "POST /v1/artifacts/{artifact_id}/reconcile"
-description: "Reconcile artifact metadata with object storage and upload if needed"
+description: "Reconcile one persisted artifact with configured object storage"
 ---
 
-Reconcile artifact metadata with object storage and upload if needed
+Reconcile one persisted artifact with configured object storage
 
 <Info>
-Audience: application and admin.
+Audience: developers repairing or checking the storage state of one persisted artifact.
 </Info>
+
+## Coverage and source scope
+
+Checks the saved record against configured R2 storage. Without R2 configuration it reports `local_only`; with R2 it can report an existing object as `synced`, repair a missing stored object as `recovered`, or upload a local record as `uploaded`. Send no request fields.
 
 ## Canonical metadata
 
+- `artifactId`
+- `status`
+- `storageMode`
+- `objectKey`
 - `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  -H "content-type: application/json" \
-  -d '{}' \
-  "https://api.secapi.ai/v1/artifacts/art_example_123/reconcile"
+curl -X POST -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" -H "content-type: application/json" -d '{}' "https://api.secapi.ai/v1/artifacts/art_example_123/reconcile"
 ```
 </RequestExample>
 
@@ -35,37 +34,33 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "object": "artifact_reconciliation",
+  "id": "arec_example_123",
+  "artifactId": "art_example_123",
+  "status": "synced",
+  "storageMode": "r2",
+  "objectKey": "artifacts/art_example_123/aapl-10-k.md",
+  "requestId": "req_2ZK8Q1W9F4M6P7R3"
 }
 ```
 </ResponseExample>
 
+## Storage outcomes
+
+Send no fields: omit the body or send `{}`. If R2 is not configured, the result is `local_only`. With R2 configured, `synced` means the recorded object exists, `recovered` means a missing recorded object was uploaded again, and `uploaded` means a local record was uploaded. The result reports storage state; it does not re-derive, validate, or refresh the filing content.
+
+## Errors
+
+Unknown body fields return `400 validation_error`. A missing, inaccessible, or failed reconciliation returns `404 artifact_reconcile_failed`.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/artifacts/{artifact_id}/reconcile to reconcile artifact metadata with object storage and upload if needed. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API POST /v1/artifacts/{artifact_id}/reconcile to reconcile one persisted artifact with configured object storage. Preserve `artifactId`, `status`, `storageMode`, `objectKey`, `requestId` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- do not represent storage reconciliation as source-data validation
+- preserve requestId and objectKey with a reconciliation report
+- re-fetch the manifest or download only after recording the returned storage state

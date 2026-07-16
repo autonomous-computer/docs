@@ -1,30 +1,31 @@
 ---
 title: "GET /v1/artifacts/{artifact_id}"
-description: "Fetch persisted artifact metadata"
+description: "Get one persisted artifact and its manifest"
 ---
 
-Fetch persisted artifact metadata
+Get one persisted artifact and its manifest
 
 <Info>
-Audience: application and admin.
+Audience: developers retrieving one organization-scoped artifact before an export or download.
 </Info>
+
+## Coverage and source scope
+
+Returns the saved artifact record and its structured manifest when the artifact belongs to the authenticated organization. Use the manifest or export routes when a workflow needs explicit file metadata or an export envelope.
 
 ## Canonical metadata
 
-- `requestId`
-- `traceparent`
+- `id`
+- `kind`
+- `status`
+- `manifest`
 - `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/artifacts/art_example_123"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/artifacts/art_example_123"
 ```
 </RequestExample>
 
@@ -33,37 +34,65 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "object": "artifact",
+  "id": "art_example_123",
+  "createdAt": "2026-03-19T12:00:00.000Z",
+  "livemode": false,
+  "kind": "markdown_bundle",
+  "status": "ready",
+  "manifest": {
+    "object": "artifact_manifest",
+    "id": "aman_example_123",
+    "artifactId": "art_example_123",
+    "kind": "markdown_bundle",
+    "status": "ready",
+    "filename": "aapl-10-k-item-1a.md",
+    "contentType": "text/markdown; charset=utf-8",
+    "storageMode": "local",
+    "objectKey": null,
+    "byteLength": 18432,
+    "lineCount": 420,
+    "checksumSha1": "example_checksum",
+    "filing": {
+      "accessionNumber": "0000320193-25-000079",
+      "form": "10-K",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml"
+    },
+    "section": {
+      "key": "item_1a",
+      "title": "Risk Factors"
+    },
+    "exportedFormats": [
+      "json",
+      "markdown",
+      "compact_json"
+    ],
+    "createdAt": "2026-03-19T12:00:00.000Z"
+  },
   "provenance": {
-    "source": "sec",
     "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml"
   }
 }
 ```
 </ResponseExample>
 
+## Identity and provenance
+
+Use an ID returned by the artifact list or create response. The returned record includes its saved manifest; use the manifest route when only file metadata is needed and the download route when payload retrieval is needed. When the bundle carries filing provenance, preserve that filing reference with any extracted content rather than relying on the artifact ID as a source citation.
+
+## Errors
+
+A missing, inaccessible, or unresolved artifact returns `404 artifact_not_found`. Without an organization on the authenticated principal, the route returns `403 organization_missing`.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/artifacts/{artifact_id} to fetch persisted artifact metadata. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/artifacts/{artifact_id} to get one persisted artifact and its manifest. Preserve `id`, `kind`, `status`, `manifest`, `provenance` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- do not substitute another artifact when an ID returns 404
+- retain the artifact ID and manifest checksum before handing content to another system
+- preserve filing provenance when the result is used as evidence

@@ -22334,15 +22334,47 @@
     },
     "/v1/artifacts": {
       "get": {
-        "summary": "List canonical artifacts for the current organization",
+        "summary": "List artifacts previously persisted for the current organization",
+        "description": "Returns persisted artifact records owned by the authenticated organization. Filter by stored `kind` or `status`; the response is a bounded list and does not promise a complete archive or an external-storage inventory.",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional stored artifact kind filter, such as `markdown_bundle` or `ownership_compare_bundle`."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional stored lifecycle-status filter."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "Maximum number of persisted records to return (1-50). Values outside this range are rejected; no cursor is exposed by this endpoint."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Organization-scoped artifact list with request correlation fields.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ArtifactInventoryList"
                 }
               }
             }
@@ -22373,15 +22405,44 @@
         "x-secapi-smoke": "local"
       },
       "post": {
-        "summary": "Create and persist a derived artifact bundle",
+        "summary": "Build and persist a filing-derived artifact bundle",
+        "description": "Builds one derived bundle for the selected issuer or comparison workflow, persists it to the authenticated organization, and returns the persisted record. For filing bundles, the default form is `10-K`; `sectionKey` selects one extracted section when available. This is an asynchronous-style acceptance response (`202`) even when the returned record is ready.",
+        "requestBody": {
+          "required": false,
+          "description": "Provide issuer selectors and optional bundle settings in JSON. The route also accepts `ticker` and `cik` as query parameters; body values take precedence when they are strings.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateArtifactRequest"
+              },
+              "examples": {
+                "filingSection": {
+                  "summary": "Create a 10-K section bundle",
+                  "value": {
+                    "ticker": "AAPL",
+                    "form": "10-K",
+                    "sectionKey": "item_1a",
+                    "kind": "markdown_bundle"
+                  }
+                },
+                "ownershipComparison": {
+                  "summary": "Create an ownership comparison bundle",
+                  "value": {
+                    "cik": "0000320193",
+                    "kind": "ownership_compare_bundle"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "202": {
+            "description": "Persisted artifact record, including its retrieval paths and manifest.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ArtifactCreateResponse"
                 }
               }
             }
@@ -22414,15 +22475,15 @@
     },
     "/v1/artifacts/summary": {
       "get": {
-        "summary": "Return artifact lifecycle counts by kind, status, and storage mode",
+        "summary": "Summarize persisted artifact storage for the current organization",
+        "description": "Groups the current organization's persisted artifacts by stored kind, lifecycle status, and storage mode. Counts and byte totals describe stored records, not source-filing coverage or external object-store completeness.",
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Organization-scoped artifact counts and total stored bytes.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ArtifactSummary"
                 }
               }
             }
@@ -22455,15 +22516,26 @@
     },
     "/v1/artifacts/{artifact_id}": {
       "get": {
-        "summary": "Fetch persisted artifact metadata",
+        "summary": "Get one persisted artifact and its manifest",
+        "description": "Returns the saved artifact record and its structured manifest when the artifact belongs to the authenticated organization. Use the manifest or export routes when a workflow needs explicit file metadata or an export envelope.",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The artifact ID returned when the bundle was persisted."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Persisted artifact record with its manifest.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ArtifactMemberResponse"
                 }
               }
             }
@@ -22496,15 +22568,26 @@
     },
     "/v1/artifacts/{artifact_id}/manifest": {
       "get": {
-        "summary": "Fetch the structured manifest for a persisted artifact",
+        "summary": "Get the structured manifest for one persisted artifact",
+        "description": "Returns storage metadata, file size, checksum, optional filing and section context, and supported export formats for one organization-scoped artifact. Manifest citation fields are descriptive metadata; retain the cited filing reference when a downstream result needs source evidence.",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The artifact ID returned when the bundle was persisted."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Structured manifest for the requested persisted artifact.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ArtifactManifest"
                 }
               }
             }
@@ -22537,15 +22620,41 @@
     },
     "/v1/artifacts/{artifact_id}/export": {
       "get": {
-        "summary": "Export an artifact as structured JSON or a markdown-oriented download envelope",
+        "summary": "Export one persisted artifact as JSON, compact JSON, or a markdown download envelope",
+        "description": "Returns the saved artifact with its manifest for `json` or `compact_json`. With `format=markdown`, the response is a download envelope rather than inline markdown; follow its download details. Compact JSON is intentionally reduced and may truncate large content or arrays.",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The artifact ID returned when the bundle was persisted."
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "markdown",
+                "compact_json"
+              ],
+              "default": "json"
+            },
+            "description": "Export representation. Omit for full JSON; use `markdown` for a download envelope or `compact_json` for a size-reduced JSON representation."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Artifact export envelope in the requested representation.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ArtifactExport"
                 }
               }
             }
@@ -22578,18 +22687,32 @@
     },
     "/v1/artifacts/{artifact_id}/download": {
       "get": {
-        "summary": "Download or redirect to the persisted artifact payload",
+        "summary": "Download one persisted artifact payload",
+        "description": "Returns the saved payload directly when it is stored locally. When the record is stored in R2, the route returns a `302` redirect to a short-lived signed object URL. Callers must allow redirects and should retain the artifact ID and manifest checksum alongside downloaded content.",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The artifact ID returned when the bundle was persisted."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Locally stored artifact payload.",
             "content": {
-              "application/json": {
+              "text/markdown": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "string"
                 }
               }
             }
+          },
+          "302": {
+            "description": "Redirect to a signed R2 download URL for an externally stored artifact."
           },
           "default": {
             "description": "Contract-aware error response",
@@ -22619,15 +22742,43 @@
     },
     "/v1/artifacts/{artifact_id}/reconcile": {
       "post": {
-        "summary": "Reconcile artifact metadata with object storage and upload if needed",
+        "summary": "Reconcile one persisted artifact with configured object storage",
+        "description": "Checks the saved record against configured R2 storage. Without R2 configuration it reports `local_only`; with R2 it can report an existing object as `synced`, repair a missing stored object as `recovered`, or upload a local record as `uploaded`. Send no request fields.",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The artifact ID returned when the bundle was persisted."
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "description": "Omit the body or send `{}`. Unknown body fields are rejected.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              },
+              "examples": {
+                "empty": {
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Reconciliation result for the persisted artifact.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ArtifactReconciliation"
                 }
               }
             }
@@ -31057,6 +31208,603 @@
           }
         },
         "additionalProperties": false
+      },
+      "Artifact": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "kind",
+          "status",
+          "provenance"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "artifact"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "markdown_bundle",
+              "csv_tablet",
+              "json_bundle",
+              "duckdb_pack",
+              "ownership_compare_bundle",
+              "compensation_compare_bundle"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready",
+              "failed"
+            ]
+          },
+          "downloadUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationStatus"
+          },
+          "bundle": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "ArtifactManifest": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "artifactId",
+          "kind",
+          "status",
+          "filename",
+          "contentType",
+          "storageMode",
+          "objectKey",
+          "byteLength",
+          "lineCount",
+          "checksumSha1",
+          "filing",
+          "section",
+          "exportedFormats",
+          "createdAt"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "artifact_manifest"
+          },
+          "id": {
+            "type": "string"
+          },
+          "artifactId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "storageMode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "r2"
+            ]
+          },
+          "objectKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lineCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "checksumSha1": {
+            "type": "string"
+          },
+          "filing": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exportedFormats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entity": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "citation": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "ArtifactInventory": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "kind",
+          "status",
+          "downloadUrl",
+          "storageMode",
+          "objectKey",
+          "manifest"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "artifact"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "downloadUrl": {
+            "type": "string"
+          },
+          "storageMode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "r2"
+            ]
+          },
+          "objectKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/ArtifactManifest"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArtifactInventoryList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore",
+          "nextCursor",
+          "queryPath",
+          "queryPathReason",
+          "policyYears",
+          "degradedState",
+          "requestId",
+          "traceparent"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtifactInventory"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "queryPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "queryPathReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policyYears": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArtifactCreateResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Artifact"
+          },
+          {
+            "type": "object",
+            "required": [
+              "manifest",
+              "downloadUrl",
+              "status",
+              "storageMode",
+              "requestId",
+              "traceparent"
+            ],
+            "properties": {
+              "manifest": {
+                "$ref": "#/components/schemas/ArtifactManifest"
+              },
+              "downloadUrl": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "const": "ready"
+              },
+              "storageMode": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "r2"
+                ]
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "traceparent": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "ArtifactMemberResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Artifact"
+          },
+          {
+            "type": "object",
+            "required": [
+              "manifest"
+            ],
+            "properties": {
+              "manifest": {
+                "$ref": "#/components/schemas/ArtifactManifest"
+              }
+            }
+          }
+        ]
+      },
+      "ArtifactSummary": {
+        "type": "object",
+        "required": [
+          "object",
+          "orgId",
+          "rows",
+          "requestId",
+          "traceparent"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "artifact_summary"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "status",
+                "storageMode",
+                "totalBytes",
+                "count"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "storageMode": {
+                  "type": "string",
+                  "enum": [
+                    "local",
+                    "r2"
+                  ]
+                },
+                "totalBytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArtifactReconciliation": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "artifactId",
+          "status",
+          "storageMode",
+          "objectKey",
+          "requestId"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "artifact_reconciliation"
+          },
+          "id": {
+            "type": "string"
+          },
+          "artifactId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "local_only",
+              "synced",
+              "recovered",
+              "uploaded"
+            ]
+          },
+          "storageMode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "r2"
+            ]
+          },
+          "objectKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArtifactExport": {
+        "type": "object",
+        "required": [
+          "object",
+          "artifactId",
+          "format",
+          "manifest"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "artifact_export"
+          },
+          "artifactId": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "markdown",
+              "compact_json"
+            ]
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/ArtifactManifest"
+          },
+          "artifact": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "download": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateArtifactRequest": {
+        "type": "object",
+        "description": "Issuer selectors and optional bundle settings for POST /v1/artifacts. Query-string ticker or cik are accepted when their body counterparts are absent.",
+        "additionalProperties": true,
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "description": "Issuer ticker for a filing-derived or compensation-comparison bundle."
+          },
+          "cik": {
+            "type": "string",
+            "description": "Issuer CIK for a filing-derived or ownership-comparison bundle."
+          },
+          "form": {
+            "type": "string",
+            "description": "SEC form for a filing-derived bundle. Defaults to 10-K when omitted."
+          },
+          "sectionKey": {
+            "type": "string",
+            "description": "Optional canonical filing section key, such as item_1a, to include in the bundle."
+          },
+          "kind": {
+            "type": "string",
+            "description": "Optional artifact kind. ownership_compare_bundle requires cik; compensation_compare_bundle uses the issuer selector."
+          }
+        }
       },
       "Trace": {},
       "AnalyticsQueryInput": {},

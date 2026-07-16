@@ -1,30 +1,31 @@
 ---
 title: "GET /v1/artifacts/{artifact_id}/export"
-description: "Export an artifact as structured JSON or a markdown-oriented download envelope"
+description: "Export one persisted artifact as JSON, compact JSON, or a markdown download envelope"
 ---
 
-Export an artifact as structured JSON or a markdown-oriented download envelope
+Export one persisted artifact as JSON, compact JSON, or a markdown download envelope
 
 <Info>
-Audience: application and admin.
+Audience: developers choosing a structured handoff or markdown download for one persisted artifact.
 </Info>
+
+## Coverage and source scope
+
+Returns the saved artifact with its manifest for `json` or `compact_json`. With `format=markdown`, the response is a download envelope rather than inline markdown; follow its download details. Compact JSON is intentionally reduced and may truncate large content or arrays.
 
 ## Canonical metadata
 
-- `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
+- `artifactId`
+- `format`
+- `manifest`
+- `artifact`
+- `download`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/artifacts/art_example_123/export"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/artifacts/art_example_123/export?format=compact_json"
 ```
 </RequestExample>
 
@@ -33,37 +34,64 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
+  "object": "artifact_export",
+  "artifactId": "art_example_123",
+  "format": "compact_json",
+  "manifest": {
+    "object": "artifact_manifest",
+    "id": "aman_example_123",
+    "artifactId": "art_example_123",
+    "kind": "markdown_bundle",
+    "status": "ready",
+    "filename": "aapl-10-k-item-1a.md",
+    "contentType": "text/markdown; charset=utf-8",
+    "storageMode": "local",
+    "objectKey": null,
+    "byteLength": 18432,
+    "lineCount": 420,
+    "checksumSha1": "example_checksum",
+    "filing": {
+      "accessionNumber": "0000320193-25-000079",
+      "form": "10-K",
+      "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml"
+    },
+    "section": {
+      "key": "item_1a",
+      "title": "Risk Factors"
+    },
+    "exportedFormats": [
+      "json",
+      "markdown",
+      "compact_json"
+    ],
+    "createdAt": "2026-03-19T12:00:00.000Z"
   },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
+  "artifact": {
+    "object": "artifact",
+    "id": "art_example_123",
+    "kind": "markdown_bundle",
+    "status": "ready"
   }
 }
 ```
 </ResponseExample>
 
+## Format selection
+
+Omit `format` or use `format=json` for the stored artifact object and manifest. `format=markdown` returns a download envelope rather than inline markdown. `format=compact_json` returns a reduced representation: large `contentMd` or `content` strings are truncated, snippets are shortened, and arrays are capped, so it is not a lossless archive format.
+
+## Errors
+
+A missing, inaccessible, or failed export returns `404 artifact_export_failed`.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/artifacts/{artifact_id}/export to export an artifact as structured JSON or a markdown-oriented download envelope. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/artifacts/{artifact_id}/export to export one persisted artifact as JSON, compact JSON, or a markdown download envelope. Preserve `artifactId`, `format`, `manifest`, `artifact`, `download` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- use full JSON or download when a workflow needs lossless saved content
+- label compact JSON as reduced when passing it to a reviewer
+- retain the manifest and artifact ID with every export

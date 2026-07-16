@@ -1,69 +1,58 @@
 ---
 title: "GET /v1/artifacts/{artifact_id}/download"
-description: "Download or redirect to the persisted artifact payload"
+description: "Download one persisted artifact payload"
 ---
 
-Download or redirect to the persisted artifact payload
+Download one persisted artifact payload
 
 <Info>
-Audience: application and admin.
+Audience: developers retrieving the saved artifact payload as a file.
 </Info>
+
+## Coverage and source scope
+
+Returns the saved payload directly when it is stored locally. When the record is stored in R2, the route returns a `302` redirect to a short-lived signed object URL. Callers must allow redirects and should retain the artifact ID and manifest checksum alongside downloaded content.
 
 ## Canonical metadata
 
-- `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
+- `artifact ID`
+- `manifest checksum`
+- `200 payload or 302 redirect`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/artifacts/art_example_123/download"
+curl -X GET -L -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/artifacts/art_example_123/download" -o artifact.md
 ```
 </RequestExample>
 
-## Example response
+## 200 payload or 302 redirect
 
 <ResponseExample>
-```json
-{
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
-}
+```markdown
+# Example artifact payload
+
+This response body is illustrative markdown saved for the artifact. When the payload is stored in R2, this endpoint instead returns a 302 redirect to a signed download URL.
 ```
 </ResponseExample>
+
+## Direct body versus redirect
+
+For locally stored payloads, the route returns the body with its saved content type and a download filename. For R2-backed payloads, it redirects with `302` to a signed URL. The `-L` flag in the example follows that redirect. Fetch the manifest first when you need the filename, content type, byte length, checksum, or filing context.
+
+## Errors
+
+A missing, inaccessible, or unreadable artifact returns `404 artifact_download_failed`.
 
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/artifacts/{artifact_id}/download to download or redirect to the persisted artifact payload. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/artifacts/{artifact_id}/download to download one persisted artifact payload. Preserve `artifact ID`, `manifest checksum`, `200 payload or 302 redirect` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- allow redirects but do not persist the signed redirect URL as a durable identifier
+- retain artifact ID and manifest checksum with downloaded content
+- use the manifest's source context when the payload supports an evidence claim

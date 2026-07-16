@@ -1,30 +1,34 @@
 ---
 title: "GET /v1/artifacts/summary"
-description: "Return artifact lifecycle counts by kind, status, and storage mode"
+description: "Summarize persisted artifact storage for the current organization"
 ---
 
-Return artifact lifecycle counts by kind, status, and storage mode
+Summarize persisted artifact storage for the current organization
 
 <Info>
-Audience: application and admin.
+Audience: developers checking the stored artifact footprint of their organization.
 </Info>
+
+## Coverage and source scope
+
+Groups the current organization's persisted artifacts by stored kind, lifecycle status, and storage mode. Counts and byte totals describe stored records, not source-filing coverage or external object-store completeness.
 
 ## Canonical metadata
 
+- `orgId`
+- `rows[].kind`
+- `rows[].status`
+- `rows[].storageMode`
+- `rows[].count`
+- `rows[].totalBytes`
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/artifacts/summary"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/artifacts/summary"
 ```
 </RequestExample>
 
@@ -33,37 +37,39 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "artifact_summary",
+  "orgId": "org_example",
+  "rows": [
+    {
+      "kind": "markdown_bundle",
+      "status": "ready",
+      "storageMode": "local",
+      "totalBytes": 18432,
+      "count": 3
+    }
+  ],
   "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## What the totals mean
+
+Each row aggregates persisted records by `kind`, `status`, and `storageMode` for the current organization. `totalBytes` measures stored payload bytes; it is not a quota, billing statement, retention policy, or measure of source-filing completeness.
+
+## Errors
+
+Without an organization on the authenticated principal, the route returns `403 organization_missing`.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/artifacts/summary to return artifact lifecycle counts by kind, status, and storage mode. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/artifacts/summary to summarize persisted artifact storage for the current organization. Preserve `orgId`, `rows[].kind`, `rows[].status`, `rows[].storageMode`, `rows[].count`, `rows[].totalBytes`, `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- retain orgId and requestId with an operational report
+- do not treat byte totals as a billing or retention guarantee
+- distinguish no aggregate rows from an assertion about historical filing coverage

@@ -1,30 +1,36 @@
 ---
 title: "GET /v1/artifacts/{artifact_id}/manifest"
-description: "Fetch the structured manifest for a persisted artifact"
+description: "Get the structured manifest for one persisted artifact"
 ---
 
-Fetch the structured manifest for a persisted artifact
+Get the structured manifest for one persisted artifact
 
 <Info>
-Audience: application and admin.
+Audience: developers verifying a persisted artifact's file metadata and source context.
 </Info>
+
+## Coverage and source scope
+
+Returns storage metadata, file size, checksum, optional filing and section context, and supported export formats for one organization-scoped artifact. Manifest citation fields are descriptive metadata; retain the cited filing reference when a downstream result needs source evidence.
 
 ## Canonical metadata
 
-- `requestId`
-- `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
+- `artifactId`
+- `filename`
+- `contentType`
+- `storageMode`
+- `byteLength`
+- `lineCount`
+- `checksumSha1`
+- `filing`
+- `section`
+- `exportedFormats`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/artifacts/art_example_123/manifest"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/artifacts/art_example_123/manifest"
 ```
 </RequestExample>
 
@@ -33,37 +39,53 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
+  "object": "artifact_manifest",
+  "id": "aman_example_123",
+  "artifactId": "art_example_123",
+  "kind": "markdown_bundle",
+  "status": "ready",
+  "filename": "aapl-10-k.md",
+  "contentType": "text/markdown; charset=utf-8",
+  "storageMode": "local",
+  "objectKey": null,
+  "byteLength": 18432,
+  "lineCount": 420,
+  "checksumSha1": "example_checksum",
+  "filing": {
     "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
+    "form": "10-K",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml"
   },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
+  "section": {
+    "key": "item_1a",
+    "title": "Risk Factors"
   },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "exportedFormats": [
+    "json",
+    "markdown",
+    "compact_json"
+  ],
+  "createdAt": "2026-03-19T12:00:00.000Z"
 }
 ```
 </ResponseExample>
 
+## Integrity and source context
+
+`checksumSha1`, `byteLength`, and `lineCount` describe the persisted payload. `filing` and `section` are optional context captured while building the bundle; preserve their accession number, filing URL, and section key when a reviewer must return to the underlying disclosure. `exportedFormats` names the formats accepted by the export route.
+
+## Errors
+
+A missing, inaccessible, or unresolved manifest returns `404 artifact_manifest_not_found`.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/artifacts/{artifact_id}/manifest to fetch the structured manifest for a persisted artifact. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/artifacts/{artifact_id}/manifest to get the structured manifest for one persisted artifact. Preserve `artifactId`, `filename`, `contentType`, `storageMode`, `byteLength`, `lineCount`, `checksumSha1`, `filing`, `section`, `exportedFormats` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- compare content with the returned checksum only for the persisted payload, not as proof of filing authenticity
+- retain filing and section context with any evidence workflow
+- do not infer a missing section is empty disclosure text

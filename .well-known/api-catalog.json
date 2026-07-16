@@ -139,127 +139,147 @@
     {
       "slug": "artifacts",
       "title": "Artifacts",
-      "description": "Artifact creation, retrieval, manifests, and download/reconcile workflows.",
+      "description": "Build organization-scoped filing or comparison bundles, then inspect their manifests, exports, downloads, and storage state.",
       "docs_path": "/api-reference/artifacts",
       "operations": [
         {
           "method": "GET",
           "path": "/v1/artifacts",
           "title": "GET /v1/artifacts",
-          "summary": "List canonical artifacts for the current organization",
+          "summary": "List artifacts previously persisted for the current organization",
+          "description": "Returns persisted artifact records owned by the authenticated organization. Filter by stored `kind` or `status`; the response is a bounded list and does not promise a complete archive or an external-storage inventory.",
           "docs_path": "/api-reference/artifacts/get-v1-artifacts",
           "audience": "application and admin",
           "metadata_fields": [
+            "data[].id",
+            "data[].kind",
+            "data[].status",
+            "data[].storageMode",
+            "data[].downloadUrl",
+            "data[].objectKey",
+            "hasMore",
+            "nextCursor",
             "requestId",
-            "traceparent",
-            "provenance",
-            "freshness",
-            "materialization"
+            "traceparent"
           ]
         },
         {
           "method": "POST",
           "path": "/v1/artifacts",
           "title": "POST /v1/artifacts",
-          "summary": "Create and persist a derived artifact bundle",
+          "summary": "Build and persist a filing-derived artifact bundle",
+          "description": "Builds one derived bundle for the selected issuer or comparison workflow, persists it to the authenticated organization, and returns the persisted record. For filing bundles, the default form is `10-K`; `sectionKey` selects one extracted section when available. This is an asynchronous-style acceptance response (`202`) even when the returned record is ready.",
           "docs_path": "/api-reference/artifacts/post-v1-artifacts",
           "audience": "application and admin",
           "metadata_fields": [
-            "requestId",
-            "traceparent",
+            "id",
+            "kind",
+            "status",
+            "downloadUrl",
+            "storageMode",
+            "manifest",
             "provenance",
-            "freshness",
-            "materialization"
+            "requestId",
+            "traceparent"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/artifacts/{artifact_id}",
           "title": "GET /v1/artifacts/{artifact_id}",
-          "summary": "Fetch persisted artifact metadata",
+          "summary": "Get one persisted artifact and its manifest",
+          "description": "Returns the saved artifact record and its structured manifest when the artifact belongs to the authenticated organization. Use the manifest or export routes when a workflow needs explicit file metadata or an export envelope.",
           "docs_path": "/api-reference/artifacts/get-v1-artifacts-artifact-id",
           "audience": "application and admin",
           "metadata_fields": [
-            "requestId",
-            "traceparent",
-            "provenance",
-            "freshness",
-            "materialization"
+            "id",
+            "kind",
+            "status",
+            "manifest",
+            "provenance"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/artifacts/{artifact_id}/download",
           "title": "GET /v1/artifacts/{artifact_id}/download",
-          "summary": "Download or redirect to the persisted artifact payload",
+          "summary": "Download one persisted artifact payload",
+          "description": "Returns the saved payload directly when it is stored locally. When the record is stored in R2, the route returns a `302` redirect to a short-lived signed object URL. Callers must allow redirects and should retain the artifact ID and manifest checksum alongside downloaded content.",
           "docs_path": "/api-reference/artifacts/get-v1-artifacts-artifact-id-download",
           "audience": "application and admin",
           "metadata_fields": [
-            "requestId",
-            "traceparent",
-            "provenance",
-            "freshness",
-            "materialization"
+            "payload body or 302 redirect",
+            "artifact ID",
+            "manifest checksum"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/artifacts/{artifact_id}/export",
           "title": "GET /v1/artifacts/{artifact_id}/export",
-          "summary": "Export an artifact as structured JSON or a markdown-oriented download envelope",
+          "summary": "Export one persisted artifact as JSON, compact JSON, or a markdown download envelope",
+          "description": "Returns the saved artifact with its manifest for `json` or `compact_json`. With `format=markdown`, the response is a download envelope rather than inline markdown; follow its download details. Compact JSON is intentionally reduced and may truncate large content or arrays.",
           "docs_path": "/api-reference/artifacts/get-v1-artifacts-artifact-id-export",
           "audience": "application and admin",
           "metadata_fields": [
-            "requestId",
-            "traceparent",
-            "provenance",
-            "freshness",
-            "materialization"
+            "artifactId",
+            "format",
+            "manifest",
+            "artifact or download envelope"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/artifacts/{artifact_id}/manifest",
           "title": "GET /v1/artifacts/{artifact_id}/manifest",
-          "summary": "Fetch the structured manifest for a persisted artifact",
+          "summary": "Get the structured manifest for one persisted artifact",
+          "description": "Returns storage metadata, file size, checksum, optional filing and section context, and supported export formats for one organization-scoped artifact. Manifest citation fields are descriptive metadata; retain the cited filing reference when a downstream result needs source evidence.",
           "docs_path": "/api-reference/artifacts/get-v1-artifacts-artifact-id-manifest",
           "audience": "application and admin",
           "metadata_fields": [
-            "requestId",
-            "traceparent",
-            "provenance",
-            "freshness",
-            "materialization"
+            "artifactId",
+            "filename",
+            "contentType",
+            "byteLength",
+            "checksumSha1",
+            "filing",
+            "section",
+            "exportedFormats"
           ]
         },
         {
           "method": "POST",
           "path": "/v1/artifacts/{artifact_id}/reconcile",
           "title": "POST /v1/artifacts/{artifact_id}/reconcile",
-          "summary": "Reconcile artifact metadata with object storage and upload if needed",
+          "summary": "Reconcile one persisted artifact with configured object storage",
+          "description": "Checks the saved record against configured R2 storage. Without R2 configuration it reports `local_only`; with R2 it can report an existing object as `synced`, repair a missing stored object as `recovered`, or upload a local record as `uploaded`. Send no request fields.",
           "docs_path": "/api-reference/artifacts/post-v1-artifacts-artifact-id-reconcile",
           "audience": "application and admin",
           "metadata_fields": [
-            "requestId",
-            "traceparent",
-            "provenance",
-            "freshness",
-            "materialization"
+            "artifactId",
+            "status",
+            "storageMode",
+            "objectKey",
+            "requestId"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/artifacts/summary",
           "title": "GET /v1/artifacts/summary",
-          "summary": "Return artifact lifecycle counts by kind, status, and storage mode",
+          "summary": "Summarize persisted artifact storage for the current organization",
+          "description": "Groups the current organization's persisted artifacts by stored kind, lifecycle status, and storage mode. Counts and byte totals describe stored records, not source-filing coverage or external object-store completeness.",
           "docs_path": "/api-reference/artifacts/get-v1-artifacts-summary",
           "audience": "application and admin",
           "metadata_fields": [
-            "requestId",
-            "traceparent",
-            "provenance",
-            "freshness",
-            "materialization"
+            "object",
+            "orgId",
+            "rows[].kind",
+            "rows[].status",
+            "rows[].storageMode",
+            "rows[].count",
+            "rows[].totalBytes",
+            "requestId"
           ]
         }
       ]

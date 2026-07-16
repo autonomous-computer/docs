@@ -1,30 +1,35 @@
 ---
 title: "GET /v1/artifacts"
-description: "List canonical artifacts for the current organization"
+description: "List artifacts previously persisted for the current organization"
 ---
 
-List canonical artifacts for the current organization
+List artifacts previously persisted for the current organization
 
 <Info>
-Audience: application and admin.
+Audience: developers retrieving artifacts persisted by their organization.
 </Info>
+
+## Coverage and source scope
+
+Returns persisted artifact records owned by the authenticated organization. Filter by stored `kind` or `status`; the response is a bounded list and does not promise a complete archive or an external-storage inventory.
 
 ## Canonical metadata
 
+- `data[].id`
+- `data[].kind`
+- `data[].status`
+- `data[].storageMode`
+- `data[].downloadUrl`
+- `hasMore`
+- `nextCursor`
 - `requestId`
 - `traceparent`
-- `provenance`
-- `freshness`
-- `materialization`
 
 ## Example request
 
 <RequestExample>
 ```bash
-curl -X GET \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/artifacts"
+curl -X GET -H "x-api-key: $SECAPI_API_KEY" -H "secapi-version: 2026-03-19" "https://api.secapi.ai/v1/artifacts?kind=markdown_bundle&limit=20"
 ```
 </RequestExample>
 
@@ -33,37 +38,48 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
+  "object": "list",
+  "data": [
+    {
+      "object": "artifact",
+      "id": "art_example_123",
+      "createdAt": "2026-03-19T12:00:00.000Z",
+      "livemode": false,
+      "kind": "markdown_bundle",
+      "status": "ready",
+      "downloadUrl": "/v1/artifacts/art_example_123/download",
+      "storageMode": "local",
+      "objectKey": null
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null,
+  "queryPath": null,
+  "queryPathReason": null,
+  "policyYears": null,
+  "degradedState": null,
   "requestId": "req_2ZK8Q1W9F4M6P7R3",
-  "provenance": {
-    "source": "sec",
-    "accessionNumber": "0000320193-25-000079",
-    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
-    "rawSourceKey": "0000320193-25-000079"
-  },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
 
+## Scope and retrieval
+
+This list is scoped to the authenticated organization. `kind` and `status` filter saved records; `limit` accepts integers from 1 through 50 and rejects values outside that range. The route does not expose a cursor, so `hasMore=false` and `nextCursor=null` are part of its current response shape. A list result describes persisted records, not complete filing or object-storage coverage.
+
+## Errors
+
+An invalid `limit` returns `400 invalid_query_parameter`. Without an organization on the authenticated principal, the route returns `403 organization_missing`. Preserve `requestId` and `traceparent` when reporting an empty or unexpected list.
+
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/artifacts to list canonical artifacts for the current organization. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/artifacts to list artifacts previously persisted for the current organization. Preserve `data[].id`, `data[].kind`, `data[].status`, `data[].storageMode`, `data[].downloadUrl`, `hasMore`, `nextCursor`, `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
 
-- treat non-2xx responses as contract-aware failures, not free-form errors
-- preserve `requestId` and `traceparent` in logs and downstream reports
-- if provenance or freshness metadata is present, return it unchanged so trust is not lost in the handoff
+- treat an empty list as no matching persisted record under the selected filters, not a source-coverage conclusion
+- retain the artifact ID before calling manifest, export, download, or reconcile
+- preserve requestId and traceparent when escalating an organization-access issue
