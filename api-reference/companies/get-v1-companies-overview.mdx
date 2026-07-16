@@ -1,18 +1,24 @@
 ---
 title: "GET /v1/companies/overview"
-description: "Return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state…"
+description: "Retrieve an SEC-derived company snapshot with identity, latest material filing, and a sector-aware financial view"
 ---
 
-Return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution,factors to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline; factors is a quantified, time-ranged quant factor-exposure snapshot — an exposure snapshot, not a forecast). Ships beta. Requires ticker or cik.
+Retrieve an SEC-derived company snapshot with identity, latest material filing, and a sector-aware financial view
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Coverage and source scope
+
+Use this route to start issuer research with identity, classification, the latest material filing, and a financial snapshot drawn from recent annual SEC XBRL facts. `companyType` determines which metrics are meaningful, so null margins or cash-flow values can be expected for financial institutions or pre-revenue companies. Optional enrichments are bounded and independently statused; factor exposure is descriptive, not a forecast, and footnotes are returned as a reference. Preserve the returned filing, provenance, and freshness fields before presenting the snapshot as current. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).
+
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
+- `provenance`
+- `freshness`
 
 ## Example request
 
@@ -21,7 +27,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/companies/overview"
+  "https://api.secapi.ai/v1/companies/overview?ticker=AAPL"
 ```
 </RequestExample>
 
@@ -30,7 +36,25 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "provenance": {
+    "source": "sec",
+    "accessionNumber": "0000320193-25-000079",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
+    "retrievedAt": "2026-03-17T00:00:00.000Z",
+    "parserVersion": "2026-03-13.5",
+    "rawSourceKey": "0000320193-25-000079"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-03-17T00:00:00.000Z",
+    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
+    "lagMs": 900000
+  },
+  "materialization": {
+    "parserVersion": "2026-03-13.5",
+    "materializationVersion": "datastream-3.0"
+  }
 }
 ```
 </ResponseExample>
@@ -38,7 +62,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/companies/overview to return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution,factors to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline; factors is a quantified, time-ranged quant factor-exposure snapshot — an exposure snapshot, not a forecast). Ships beta. Requires ticker or cik. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/companies/overview to retrieve an SEC-derived company snapshot with identity, latest material filing, and a sector-aware financial view. Preserve `requestId`, `traceparent`, `provenance`, `freshness` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

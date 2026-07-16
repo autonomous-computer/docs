@@ -1,18 +1,25 @@
 ---
 title: "GET /v1/companies/ratios"
-description: "Return profitability, return, valuation, dividend, and leverage ratios derived from SEC XBRL statements plus market context"
+description: "Retrieve an issuer's statement-derived profitability, return, valuation, dividend, and leverage ratios with period context"
 ---
 
-Return profitability, return, valuation, dividend, and leverage ratios derived from SEC XBRL statements plus market context
+Retrieve an issuer's statement-derived profitability, return, valuation, dividend, and leverage ratios with period context
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Coverage and source scope
+
+Use this route to compare a company's calculated ratios across reported periods or a bounded ticker batch. `tickers` can return a partial degraded state when an individual issuer fails, so inspect each item before ranking. Ratio inputs combine SEC-derived statement values with available market context; retain the reported period, units, provenance, and freshness fields, and do not treat a missing ratio as zero or as a trading signal. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).
+
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
+- `provenance`
+- `freshness`
+- `materialization`
 
 ## Example request
 
@@ -21,7 +28,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/companies/ratios"
+  "https://api.secapi.ai/v1/companies/ratios?ticker=AAPL"
 ```
 </RequestExample>
 
@@ -30,7 +37,25 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "provenance": {
+    "source": "sec",
+    "accessionNumber": "0000320193-25-000079",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
+    "retrievedAt": "2026-03-17T00:00:00.000Z",
+    "parserVersion": "2026-03-13.5",
+    "rawSourceKey": "0000320193-25-000079"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-03-17T00:00:00.000Z",
+    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
+    "lagMs": 900000
+  },
+  "materialization": {
+    "parserVersion": "2026-03-13.5",
+    "materializationVersion": "datastream-3.0"
+  }
 }
 ```
 </ResponseExample>
@@ -38,7 +63,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/companies/ratios to return profitability, return, valuation, dividend, and leverage ratios derived from SEC XBRL statements plus market context. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/companies/ratios to retrieve an issuer's statement-derived profitability, return, valuation, dividend, and leverage ratios with period context. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

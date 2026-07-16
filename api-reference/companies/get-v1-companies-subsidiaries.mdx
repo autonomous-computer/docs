@@ -1,17 +1,21 @@
 ---
 title: "GET /v1/companies/subsidiaries"
-description: "Return the list of subsidiaries extracted from the latest 10-K Exhibit 21 for a given entity"
+description: "Retrieve subsidiaries disclosed in an issuer's latest available 10-K Exhibit 21"
 ---
 
-Return the list of subsidiaries extracted from the latest 10-K Exhibit 21 for a given entity
+Retrieve subsidiaries disclosed in an issuer's latest available 10-K Exhibit 21
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Coverage and source scope
+
+Use this route to review subsidiaries an issuer disclosed in Exhibit 21 of its latest available 10-K. The result is an extracted filing schedule, not a current legal-entity registry, complete ownership chart, or confirmation that an issuer has no other subsidiaries. An empty list can mean the selected filing lacks a usable Exhibit 21. Preserve the returned accession, filing date, and request metadata when presenting the default result; `filingUrl` is included only in `agent` view. See [filing conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).
+
 ## Agent mode
 
-Pass `?view=agent` to receive the compact agent shape: per-subsidiary fields (name, jurisdiction, ownershipPercent) + envelope citation fields (accessionNumber, filingDate, filingUrl). The `lineage` metadata block is dropped. The per-item shape is already narrow, so this endpoint is an API-consistency win rather than a byte-size win — reduction is approximately **0%** but the agent envelope matches the contract exposed by every other agent-mode endpoint. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
+Pass `?view=agent` to receive the compact agent shape: per-subsidiary fields (name, jurisdiction, ownershipPercent) + envelope citation fields (accessionNumber, filingDate, filingUrl). `filingUrl` is exclusive to the agent response; the default response returns accessionNumber and filingDate without it. The `lineage` metadata block is dropped. The per-item shape is already narrow, so this endpoint is an API-consistency win rather than a byte-size win — reduction is approximately **0%** but the agent envelope matches the contract exposed by every other agent-mode endpoint. See [api conventions → response formats](/api-conventions) for the full `?view=` contract.
 
 ## Canonical metadata
 
@@ -42,7 +46,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/companies/subsidiaries to return the list of subsidiaries extracted from the latest 10-K Exhibit 21 for a given entity. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/companies/subsidiaries to retrieve subsidiaries disclosed in an issuer's latest available 10-K Exhibit 21. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

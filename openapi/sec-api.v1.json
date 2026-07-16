@@ -6997,7 +6997,8 @@
     },
     "/v1/statements/segmented-facts": {
       "get": {
-        "summary": "Return filing-derived segmented fact history for supported metrics such as revenue and segment profit/loss, with product or geography dimensions, hierarchy metadata, capability state, and trace references when issuers disclose them",
+        "summary": "Retrieve an issuer's disclosed segment revenue or profit/loss history with filing-level dimensions and source context",
+        "description": "Use this route to compare a disclosed segment metric across recent annual or quarterly filings. Select `metric` first, then use `segment_type` when the workflow needs a product, geographic, or other dimension. Rows preserve the issuer's reported axes, members, units, reporting periods, and filing provenance; a missing segment or unsupported capability is not a zero value. Keep the returned accession, filing URL, and freshness fields with any analysis. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -7037,7 +7038,7 @@
                 "profit_loss"
               ]
             },
-            "description": "Segment metric to extract."
+            "description": "Required disclosed metric: `revenue` or `profit_loss`. Values remain in the returned XBRL unit and are only comparable when unit, period, and segment definition align."
           },
           {
             "name": "period",
@@ -7052,7 +7053,7 @@
                 "q"
               ]
             },
-            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+            "description": "Reporting cadence to select: annual or quarterly. `quarter` and `q` are aliases for `quarterly`; compare values only within like-for-like periods."
           },
           {
             "name": "segment_type",
@@ -7066,7 +7067,7 @@
                 "other"
               ]
             },
-            "description": "Optional segment dimension filter."
+            "description": "Optional disclosed-dimension filter. Omit it to retain all supported dimensions; do not infer an omitted geographic or product split."
           },
           {
             "name": "limit",
@@ -7077,7 +7078,7 @@
               "minimum": 1,
               "maximum": 6
             },
-            "description": "Maximum segment periods to return."
+            "description": "Maximum reporting periods to return (1-6). This bounds returned history rather than proving older disclosure is absent."
           },
           {
             "name": "segment_limit",
@@ -7110,7 +7111,7 @@
               "minimum": 1,
               "maximum": 6
             },
-            "description": "Maximum SEC submission files to inspect."
+            "description": "Maximum SEC submission-history files to inspect (1-6). This bounds historical search depth, not the number of returned segment rows."
           },
           {
             "name": "submissionFileLimit",
@@ -7220,7 +7221,8 @@
     },
     "/v1/statements/segmented-revenues": {
       "get": {
-        "summary": "Return filing-derived segmented revenue history with XBRL product or geography dimensions, capability state, and trace references when issuers disclose them",
+        "summary": "Retrieve an issuer's disclosed product or geographic revenue history with filing-level dimensions and source context",
+        "description": "Use this route to analyze revenue splits the issuer actually disclosed in XBRL. Choose annual or quarterly cadence and, when useful, narrow to a product, geographic, or other reported dimension. Records retain the reported unit, period, segment hierarchy, capability status, and filing provenance; they are not a modeled revenue allocation. Preserve the returned accession, filing URL, and freshness fields before aggregating or presenting the result. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -7262,7 +7264,7 @@
                 "q"
               ]
             },
-            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+            "description": "Reporting cadence to select: annual or quarterly. `quarter` and `q` are aliases for `quarterly`; compare values only within like-for-like periods."
           },
           {
             "name": "segment_type",
@@ -7276,7 +7278,7 @@
                 "other"
               ]
             },
-            "description": "Optional segment dimension filter."
+            "description": "Optional disclosed-dimension filter. Omit it to retain all supported dimensions; no row does not establish that revenue was zero."
           },
           {
             "name": "limit",
@@ -7287,7 +7289,7 @@
               "minimum": 1,
               "maximum": 6
             },
-            "description": "Maximum segment periods to return."
+            "description": "Maximum reporting periods to return (1-6). This bounds returned history rather than proving older disclosure is absent."
           },
           {
             "name": "segment_limit",
@@ -7320,7 +7322,7 @@
               "minimum": 1,
               "maximum": 6
             },
-            "description": "Maximum SEC submission files to inspect."
+            "description": "Maximum SEC submission-history files to inspect (1-6). This bounds historical search depth, not the number of returned segment rows."
           },
           {
             "name": "submissionFileLimit",
@@ -7429,7 +7431,8 @@
     },
     "/v1/statements/share-float": {
       "get": {
-        "summary": "Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise",
+        "summary": "Retrieve an issuer's disclosed public float when available, with a clearly labeled shares-outstanding fallback",
+        "description": "Use this route when a workflow needs the public-float fact reported in SEC company facts and must distinguish it from a shares-outstanding proxy. Check `sourceMode`, `statusNote`, unit, reporting date, provenance, and freshness before using a value: `publicFloatUsd` may be null while `sharesOutstanding` is present. A proxy is not public float, market capitalization, or free float. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -8830,7 +8833,8 @@
     },
     "/v1/companies/subsidiaries": {
       "get": {
-        "summary": "Return the list of subsidiaries extracted from the latest 10-K Exhibit 21 for a given entity",
+        "summary": "Retrieve subsidiaries disclosed in an issuer's latest available 10-K Exhibit 21",
+        "description": "Use this route to review subsidiaries an issuer disclosed in Exhibit 21 of its latest available 10-K. The result is an extracted filing schedule, not a current legal-entity registry, complete ownership chart, or confirmation that an issuer has no other subsidiaries. An empty list can mean the selected filing lacks a usable Exhibit 21. Preserve the returned accession, filing date, and request metadata when presenting the default result; `filingUrl` is included only in `agent` view. See [filing conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -8839,7 +8843,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker. Either ticker or cik is required."
+            "description": "Issuer ticker. Either ticker or cik is required; use CIK when issuer identity or ticker history could be ambiguous."
           },
           {
             "name": "cik",
@@ -8848,7 +8852,20 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer CIK. Either ticker or cik is required."
+            "description": "Issuer CIK. Either ticker or cik is required; CIK is the SEC-stable issuer identifier."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "agent"
+              ]
+            },
+            "description": "Response shape. Use `agent` for the compact subsidiary rows with filing citation fields; omit it or use `default` for the fuller response."
           }
         ],
         "responses": {
@@ -11853,11 +11870,12 @@
                 "3m",
                 "6m",
                 "1y",
+                "ytd",
                 "max"
               ],
               "default": "1y"
             },
-            "description": "Trailing observation window for the returned chart series. Defaults to 1y for token-efficient agent and dashboard workflows. MAX requests the public launch-history floor, 2015-01-01, through the latest complete market date when row-level coverage exists for the factor."
+            "description": "Trailing observation window for the returned chart series. Defaults to 1y for token-efficient agent and dashboard workflows. YTD covers Jan 1 of the latest observation's year through the latest market date. MAX requests the public launch-history floor, 2015-01-01, through the latest complete market date when row-level coverage exists for the factor."
           },
           {
             "name": "date_from",
@@ -12179,11 +12197,12 @@
                 "3m",
                 "6m",
                 "1y",
+                "ytd",
                 "max"
               ],
               "default": "1y"
             },
-            "description": "Trailing observation window for the returned sparkline points. Defaults to 1y for token-efficient dashboard and agent workflows. MAX requests the public launch-history floor, 2015-01-01, through the latest complete market date when row-level coverage exists for each factor."
+            "description": "Trailing observation window for the returned sparkline points. Defaults to 1y for token-efficient dashboard and agent workflows. YTD covers Jan 1 of the latest observation's year through the latest market date. MAX requests the public launch-history floor, 2015-01-01, through the latest complete market date when row-level coverage exists for each factor."
           },
           {
             "name": "metric",
@@ -12689,6 +12708,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -12954,7 +12974,8 @@
     },
     "/v1/factors/exposures": {
       "get": {
-        "summary": "Return compact security, portfolio, or watchlist factor exposures with optional diagnostics and provenance",
+        "summary": "Return factor exposures for securities, portfolios, or watchlists.",
+        "description": "Use `symbols=A,B,C` to request multiple securities. Each returned row includes its source `symbol` and `subjectKey`, so you can match results to requested symbols without relying on row order. `unresolvedSymbols` lists requested symbols with no exposure rows, including securities outside supported historical coverage, so unavailable coverage is distinct from a zero beta.",
         "parameters": [
           {
             "name": "symbols",
@@ -12963,7 +12984,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated symbols to load exposures for. Required unless `symbol`, `ticker`, or `tickers` is provided."
+            "description": "Comma-separated symbols to load exposures for. Required unless `symbol`, `ticker`, or `tickers` is provided. Each response row echoes its originating ticker in `symbol` so batched results attribute back to the requested symbols directly."
           },
           {
             "name": "symbol",
@@ -13074,6 +13095,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -13180,6 +13202,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -14045,6 +14068,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -15610,6 +15634,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -15633,6 +15658,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -15969,6 +15995,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -16368,387 +16395,6 @@
         "x-secapi-smoke": "local"
       }
     },
-    "/v1/model-portfolios/{portfolioId}/factor-view": {
-      "get": {
-        "summary": "Return a model-portfolio factor view with aggregate analysis and per-position exposures for drill-down workflows",
-        "parameters": [
-          {
-            "name": "portfolioId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Saved model portfolio identifier."
-          },
-          {
-            "name": "response_mode",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "compact",
-                "standard",
-                "verbose"
-              ],
-              "default": "compact"
-            },
-            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
-          },
-          {
-            "name": "include",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ModelPortfolioFactorView"
-                },
-                "examples": {
-                  "compact": {
-                    "summary": "Token-efficient compact response",
-                    "value": {
-                      "object": "model_portfolio_factor_view",
-                      "id": "model_portfolio_factor_view:growth-quality-core:2026-06-09",
-                      "portfolioId": "growth-quality-core",
-                      "label": "Growth Quality Core",
-                      "description": "Saved Turos model portfolio factor view.",
-                      "tags": [
-                        "model-builder",
-                        "growth"
-                      ],
-                      "holdings": [
-                        {
-                          "symbol": "AAPL",
-                          "weight": 0.35
-                        },
-                        {
-                          "symbol": "MSFT",
-                          "weight": 0.3
-                        },
-                        {
-                          "symbol": "NVDA",
-                          "weight": 0.2
-                        },
-                        {
-                          "symbol": "JPM",
-                          "weight": 0.15
-                        }
-                      ],
-                      "analysis": {
-                        "object": "portfolio_analysis",
-                        "id": "portfolio_analysis:example:2026-06-09",
-                        "asOf": "2026-06-09T22:15:00.000Z",
-                        "holdings": [
-                          {
-                            "symbol": "AAPL",
-                            "weight": 0.35
-                          },
-                          {
-                            "symbol": "MSFT",
-                            "weight": 0.3
-                          },
-                          {
-                            "symbol": "NVDA",
-                            "weight": 0.2
-                          },
-                          {
-                            "symbol": "JPM",
-                            "weight": 0.15
-                          }
-                        ],
-                        "exposures": [
-                          {
-                            "object": "factor_exposure",
-                            "id": "factor_exposure:AAPL:VALUE:2026-06-09",
-                            "subjectType": "security",
-                            "subjectKey": "AAPL",
-                            "factorKey": "VALUE",
-                            "beta": -0.42,
-                            "percentile": 18.2,
-                            "confidence": "high",
-                            "modelName": "secapi_stock_basket_factor_model_v1",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "responseMode": "compact",
-                            "expansionHints": [
-                              "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
-                            ]
-                          }
-                        ],
-                        "fit": null,
-                        "benchmarkLabel": "NASDAQ 100",
-                        "benchmarkTilts": [],
-                        "whatIfComparison": null,
-                        "positionViews": [],
-                        "positionExposures": [
-                          {
-                            "object": "factor_exposure",
-                            "id": "factor_exposure:AAPL:VALUE:2026-06-09",
-                            "subjectType": "security",
-                            "subjectKey": "AAPL",
-                            "factorKey": "VALUE",
-                            "beta": -0.42,
-                            "percentile": 18.2,
-                            "confidence": "high",
-                            "modelName": "secapi_stock_basket_factor_model_v1",
-                            "asOf": "2026-06-09T22:15:00.000Z",
-                            "responseMode": "compact",
-                            "expansionHints": [
-                              "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
-                            ]
-                          }
-                        ],
-                        "attribution": [
-                          {
-                            "key": "VALUE",
-                            "label": "Value",
-                            "category": "factor",
-                            "contributionPercent": -0.48,
-                            "explanation": "Negative value beta detracted as value lagged over the selected window."
-                          }
-                        ],
-                        "hedgeSuggestions": [
-                          {
-                            "symbol": "VLUE",
-                            "instrumentType": "etf",
-                            "rationale": "Offsets the portfolio's negative value exposure with a liquid value ETF sleeve.",
-                            "expectedExposureDelta": {
-                              "VALUE": 0.18
-                            },
-                            "confidence": "medium"
-                          }
-                        ],
-                        "optimizationNotes": [
-                          "Candidate search respected max position and turnover constraints."
-                        ],
-                        "factorNeutralPlan": [
-                          "Reduce negative VALUE exposure before increasing MOMENTUM exposure."
-                        ],
-                        "optimizerObjective": "factor_neutral",
-                        "optimizerConstraints": {
-                          "maxCandidates": 3,
-                          "maxIterations": 50,
-                          "maxRuntimeMs": 750,
-                          "maxPositionWeight": 0.4,
-                          "minPositionWeight": 0.02,
-                          "longOnly": true,
-                          "turnoverLimit": 0.25,
-                          "riskFreeRate": 0.04
-                        },
-                        "optimizerRuntime": {
-                          "object": "portfolio_optimizer_runtime",
-                          "method": "bounded_deterministic_candidate_search",
-                          "candidateCount": 3,
-                          "iterationBudget": 50,
-                          "iterationsRun": 38,
-                          "runtimeMs": 118,
-                          "maxRuntimeMs": 750,
-                          "timeout": false
-                        },
-                        "optimizerCandidateCount": 1,
-                        "optimizerCandidateSample": [
-                          {
-                            "object": "portfolio_optimizer_candidate",
-                            "rank": 1,
-                            "name": "Factor-neutral tilt",
-                            "objective": "factor_neutral",
-                            "expectedReturn": 0.087,
-                            "expectedVolatility": 0.164,
-                            "expectedSharpe": 0.53,
-                            "maxDrawdownProxy": -0.18,
-                            "factorExposureScore": 0.21,
-                            "turnover": 0.12,
-                            "score": 0.81,
-                            "constraintStatus": "ok",
-                            "constraintsApplied": [
-                              "turnoverLimit"
-                            ],
-                            "rationale": "Improves factor balance without breaching turnover or concentration limits."
-                          }
-                        ],
-                        "selectedCandidate": null,
-                        "optimizerDisclosures": [
-                          "Optimizer output is a deterministic scenario, not investment advice."
-                        ],
-                        "disclosures": [
-                          "Research scenario only. Not investment advice or a recommendation to trade."
-                        ],
-                        "summaryMd": "Portfolio is growth and quality tilted with a moderate negative value exposure.",
-                        "responseMode": "compact",
-                        "dataAsOf": "2026-06-09",
-                        "freshnessStatus": "fresh",
-                        "methodologyVersion": "secapi_portfolio_factor_v1",
-                        "materializationVersion": "2026-06-09",
-                        "provenance": {
-                          "source": "secapi_factor_pipeline",
-                          "sourceLabel": "SecAPI factor pipeline",
-                          "accessionNumber": null,
-                          "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                          "acceptedAt": null,
-                          "retrievedAt": "2026-06-09T22:15:00.000Z",
-                          "parserVersion": "secapi-factor-pipeline"
-                        },
-                        "freshness": {
-                          "status": "fresh",
-                          "asOf": "2026-06-09T22:15:00.000Z",
-                          "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                          "lagMs": 2700000
-                        },
-                        "materialization": {
-                          "parserVersion": "secapi-factor-pipeline",
-                          "materializationVersion": "2026-06-09"
-                        },
-                        "sourceRights": {
-                          "source": "secapi_owned_factor_pipeline",
-                          "sourceLabel": "SecAPI factor pipeline",
-                          "posture": "public_safe",
-                          "publicAvailability": "public",
-                          "contractStatus": "approved",
-                          "restrictions": [],
-                          "notes": "SecAPI-owned derived factor data."
-                        },
-                        "methodology": {
-                          "id": "secapi_factor_returns",
-                          "version": "v1",
-                          "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                          "confidence": "high",
-                          "launchState": "beta",
-                          "inputs": [
-                            "secapi_factor_returns",
-                            "secapi_factor_exposures",
-                            "market_calendar"
-                          ],
-                          "validation": {
-                            "launchHistoryFloor": "2015-01-01",
-                            "marketCalendarAware": true
-                          }
-                        },
-                        "revision": {
-                          "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                          "retrievedAt": "2026-06-09T22:15:00.000Z",
-                          "vintageId": "2026-06-09",
-                          "revisedFrom": null
-                        },
-                        "degradedState": null
-                      },
-                      "positionViews": [],
-                      "positionExposures": [
-                        {
-                          "object": "factor_exposure",
-                          "id": "factor_exposure:AAPL:VALUE:2026-06-09",
-                          "subjectType": "security",
-                          "subjectKey": "AAPL",
-                          "factorKey": "VALUE",
-                          "beta": -0.42,
-                          "percentile": 18.2,
-                          "confidence": "high",
-                          "modelName": "secapi_stock_basket_factor_model_v1",
-                          "asOf": "2026-06-09T22:15:00.000Z",
-                          "responseMode": "compact",
-                          "expansionHints": [
-                            "Use include=diagnostics or response_mode=standard for regression diagnostics such as rSquared, tStat, and observationCount."
-                          ]
-                        }
-                      ],
-                      "responseMode": "compact",
-                      "dataAsOf": "2026-06-09",
-                      "freshnessStatus": "fresh",
-                      "methodologyVersion": "secapi_factor_returns_v1",
-                      "materializationVersion": "2026-06-09",
-                      "provenance": {
-                        "source": "secapi_factor_pipeline",
-                        "sourceLabel": "SecAPI factor pipeline",
-                        "accessionNumber": null,
-                        "filingUrl": "https://docs.secapi.ai/factors/methodology",
-                        "acceptedAt": null,
-                        "retrievedAt": "2026-06-09T22:15:00.000Z",
-                        "parserVersion": "secapi-factor-pipeline"
-                      },
-                      "freshness": {
-                        "status": "fresh",
-                        "asOf": "2026-06-09T22:15:00.000Z",
-                        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                        "lagMs": 2700000
-                      },
-                      "materialization": {
-                        "parserVersion": "secapi-factor-pipeline",
-                        "materializationVersion": "2026-06-09"
-                      },
-                      "sourceRights": {
-                        "source": "secapi_owned_factor_pipeline",
-                        "sourceLabel": "SecAPI factor pipeline",
-                        "posture": "public_safe",
-                        "publicAvailability": "public",
-                        "contractStatus": "approved",
-                        "restrictions": [],
-                        "notes": "SecAPI-owned derived factor data."
-                      },
-                      "methodology": {
-                        "id": "secapi_factor_returns",
-                        "version": "v1",
-                        "summary": "SecAPI-owned daily factor returns, exposures, and portfolio analytics built for agent and API workflows.",
-                        "confidence": "high",
-                        "launchState": "beta",
-                        "inputs": [
-                          "secapi_factor_returns",
-                          "secapi_factor_exposures",
-                          "market_calendar"
-                        ],
-                        "validation": {
-                          "launchHistoryFloor": "2015-01-01",
-                          "marketCalendarAware": true
-                        }
-                      },
-                      "revision": {
-                        "sourcePublishedAt": "2026-06-09T21:30:00.000Z",
-                        "retrievedAt": "2026-06-09T22:15:00.000Z",
-                        "vintageId": "2026-06-09",
-                        "revisedFrom": null
-                      },
-                      "degradedState": null
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Contract-aware error response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ApiKeyAuth": []
-          },
-          {
-            "BearerAuth": []
-          }
-        ],
-        "x-secapi-route-id": "model_portfolios.factor_view",
-        "x-secapi-access": "authenticated",
-        "x-secapi-kind": "api",
-        "x-secapi-docs": "public",
-        "x-secapi-smoke": "local",
-        "x-secapi-anonymous-read": true
-      }
-    },
     "/v1/models/factor-analysis": {
       "post": {
         "summary": "Return model factor analysis for submitted Model Builder or saved-model holdings with optional attribution, hedge, and optimizer sections",
@@ -16960,6 +16606,7 @@
                             "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                             "subjectType": "security",
                             "subjectKey": "AAPL",
+                            "symbol": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
                             "percentile": 18.2,
@@ -16983,6 +16630,7 @@
                             "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                             "subjectType": "security",
                             "subjectKey": "AAPL",
+                            "symbol": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
                             "percentile": 18.2,
@@ -17202,6 +16850,7 @@
                             "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                             "subjectType": "security",
                             "subjectKey": "AAPL",
+                            "symbol": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
                             "percentile": 18.2,
@@ -17393,6 +17042,7 @@
                             "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                             "subjectType": "security",
                             "subjectKey": "AAPL",
+                            "symbol": "AAPL",
                             "factorKey": "VALUE",
                             "beta": -0.42,
                             "percentile": 18.2,
@@ -17526,6 +17176,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -18031,6 +17682,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -18263,6 +17915,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -18286,6 +17939,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -19117,6 +18771,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -19140,6 +18795,7 @@
                           "id": "factor_exposure:AAPL:VALUE:2026-06-09",
                           "subjectType": "security",
                           "subjectKey": "AAPL",
+                          "symbol": "AAPL",
                           "factorKey": "VALUE",
                           "beta": -0.42,
                           "percentile": 18.2,
@@ -19845,7 +19501,7 @@
                 "q"
               ]
             },
-            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+            "description": "Reporting cadence to select: annual or quarterly. `quarter` and `q` are aliases for `quarterly`; compare values only within like-for-like periods."
           },
           {
             "name": "fy",
@@ -20131,7 +19787,8 @@
     },
     "/v1/statements": {
       "get": {
-        "summary": "Return a normalized statement backed by SEC company facts. Resolves us-gaap (10-K/10-Q) filers and IFRS foreign private issuers (ifrs-full on 20-F/6-K) automatically.",
+        "summary": "Retrieve one SEC-derived normalized balance sheet, income statement, or cash flow statement for an issuer",
+        "description": "Use this route to fetch one normalized statement for analysis or a financial-model input. Set `statement` and select annual or quarterly cadence, fiscal year, and a bounded history when the reporting slice matters. The response resolves supported US GAAP and IFRS filers, preserves reported units, periods, and filing provenance, and can contain missing or incomparable line items; it is not a substitute for the cited filing. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -20167,7 +19824,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Statement key such as income_statement, balance_sheet, or cash_flow_statement."
+            "description": "Normalized statement to retrieve: `income_statement`, `balance_sheet`, or `cash_flow_statement`. Omit it to use the route default balance sheet."
           },
           {
             "name": "period",
@@ -20182,7 +19839,7 @@
                 "q"
               ]
             },
-            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+            "description": "Reporting cadence to select: annual or quarterly. `quarter` and `q` are aliases for `quarterly`; compare values only within like-for-like periods."
           },
           {
             "name": "fy",
@@ -20193,7 +19850,7 @@
               "minimum": 1900,
               "maximum": 2100
             },
-            "description": "Fiscal year filter."
+            "description": "Issuer fiscal year to select. This is a fiscal reporting year, not necessarily a calendar year."
           },
           {
             "name": "year",
@@ -20215,7 +19872,7 @@
               "minimum": 1900,
               "maximum": 2100
             },
-            "description": "Inclusive fiscal-year lower bound."
+            "description": "Inclusive lower bound for issuer fiscal years. Combine with `fy_to` for a bounded historical range."
           },
           {
             "name": "fyFrom",
@@ -20237,7 +19894,7 @@
               "minimum": 1900,
               "maximum": 2100
             },
-            "description": "Inclusive fiscal-year upper bound."
+            "description": "Inclusive upper bound for issuer fiscal years. Combine with `fy_from` for a bounded historical range."
           },
           {
             "name": "fyTo",
@@ -20258,7 +19915,8 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 40
-            }
+            },
+            "description": "Maximum statement periods to return (1-40). Use fiscal-year filters when period identity matters."
           },
           {
             "name": "view",
@@ -20325,7 +19983,8 @@
     },
     "/v1/statements/all": {
       "get": {
-        "summary": "Return the balance sheet, income statement, and cash flow statement as one normalized bundle. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+        "summary": "Retrieve an issuer's normalized balance sheet, income statement, and cash flow statement as one SEC-derived bundle",
+        "description": "Use this route to obtain the three core statements for a common issuer and reporting selection. Choose annual or quarterly cadence and fiscal-year filters before comparing periods. Each statement retains its own rows, units, periods, completeness, and filing provenance, so a bundle does not guarantee that every normalized line item is available or comparable across all three statements. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -20367,7 +20026,7 @@
                 "q"
               ]
             },
-            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+            "description": "Reporting cadence to select: annual or quarterly. `quarter` and `q` are aliases for `quarterly`; compare values only within like-for-like periods."
           },
           {
             "name": "fy",
@@ -20486,7 +20145,8 @@
     },
     "/v1/statements/{statement_key}": {
       "get": {
-        "summary": "Return a specific normalized statement keyed by statement type. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+        "summary": "Retrieve one SEC-derived normalized statement selected by statement key",
+        "description": "Use this route when the statement type belongs in the URL rather than a query string. Set `statement_key` to a supported normalized statement, then select annual or quarterly cadence and fiscal years as needed. The result preserves reported units, periods, and filing provenance and may contain missing or incomparable normalized line items. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "statement_key",
@@ -20495,7 +20155,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Statement key such as income_statement, balance_sheet, or cash_flow_statement."
+            "description": "Normalized statement to retrieve: `income_statement`, `balance_sheet`, or `cash_flow_statement`."
           },
           {
             "name": "ticker",
@@ -20537,7 +20197,7 @@
                 "q"
               ]
             },
-            "description": "Reporting period. quarter and q are accepted aliases for quarterly."
+            "description": "Reporting cadence to select: annual or quarterly. `quarter` and `q` are aliases for `quarterly`; compare values only within like-for-like periods."
           },
           {
             "name": "fy",
@@ -20680,15 +20340,26 @@
     },
     "/v1/companies/income-statements": {
       "get": {
-        "summary": "Return SEC XBRL-derived income statements for a ticker with EBITDA and share-count enrichment. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+        "summary": "Retrieve an issuer's SEC-derived income statement history with normalized operating and per-share fields",
+        "description": "Use this route to analyze reported income-statement history for one issuer. Select annual or quarterly cadence, then use fiscal-year filters and `limit` to constrain the reporting periods returned. Values are normalized from supported SEC XBRL filings and retain their reported units, periods, and provenance; derived fields do not replace the cited filing or make unlike periods comparable. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Issuer ticker. Supply ticker or cik; use CIK when issuer identity or ticker history could be ambiguous."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC-stable issuer CIK. Supply ticker or cik."
           },
           {
             "name": "period",
@@ -20700,7 +20371,41 @@
                 "annual",
                 "quarterly"
               ]
-            }
+            },
+            "description": "Reporting cadence to return. Use one cadence when comparing margins, earnings, or per-share values."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Issuer fiscal year to select; this is not necessarily a calendar year."
+          },
+          {
+            "name": "fy_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive lower bound for issuer fiscal years."
+          },
+          {
+            "name": "fy_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive upper bound for issuer fiscal years."
           },
           {
             "name": "limit",
@@ -20710,7 +20415,8 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 40
-            }
+            },
+            "description": "Maximum reporting periods to return (1-40)."
           },
           {
             "name": "view",
@@ -20722,18 +20428,18 @@
                 "compact"
               ]
             },
-            "description": "Use compact for period-indexed row arrays. Omit for the enriched company income-statement envelope."
+            "description": "Use compact for period-indexed row arrays. Omit for the generic Statement response."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response. view=compact returns CompactStatement; default returns CompanyIncomeStatements.",
+            "description": "Successful response. The default response is Statement; view=compact returns CompactStatement.",
             "content": {
               "application/json": {
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/CompanyIncomeStatements"
+                      "$ref": "#/components/schemas/Statement"
                     },
                     {
                       "$ref": "#/components/schemas/CompactStatement"
@@ -20772,15 +20478,26 @@
     },
     "/v1/companies/balance-sheets": {
       "get": {
-        "summary": "Return SEC XBRL-derived balance sheets for a ticker with normalized debt, equity, and cash fields. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+        "summary": "Retrieve an issuer's SEC-derived balance sheet history with normalized cash, debt, and equity fields",
+        "description": "Use this route to inspect reported balance-sheet positions for one issuer. Choose annual or quarterly cadence and bound the history with `limit`; balance-sheet rows are point-in-time observations, so do not treat them as duration values. Results are normalized from supported SEC XBRL filings and retain units, period dates, and provenance. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Issuer ticker. Supply ticker or cik; use CIK when issuer identity or ticker history could be ambiguous."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC-stable issuer CIK. Supply ticker or cik."
           },
           {
             "name": "period",
@@ -20792,7 +20509,41 @@
                 "annual",
                 "quarterly"
               ]
-            }
+            },
+            "description": "Reporting cadence to return. Balance-sheet observations are as of each reported period end."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Issuer fiscal year to select; this is not necessarily a calendar year."
+          },
+          {
+            "name": "fy_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive lower bound for issuer fiscal years."
+          },
+          {
+            "name": "fy_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive upper bound for issuer fiscal years."
           },
           {
             "name": "limit",
@@ -20802,7 +20553,8 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 40
-            }
+            },
+            "description": "Maximum reporting periods to return (1-40)."
           },
           {
             "name": "view",
@@ -20814,18 +20566,18 @@
                 "compact"
               ]
             },
-            "description": "Use compact for period-indexed row arrays. Omit for the enriched company balance-sheet envelope."
+            "description": "Use compact for period-indexed row arrays. Omit for the generic Statement response."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response. view=compact returns CompactStatement; default returns CompanyBalanceSheets.",
+            "description": "Successful response. The default response is Statement; view=compact returns CompactStatement.",
             "content": {
               "application/json": {
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/CompanyBalanceSheets"
+                      "$ref": "#/components/schemas/Statement"
                     },
                     {
                       "$ref": "#/components/schemas/CompactStatement"
@@ -20864,15 +20616,26 @@
     },
     "/v1/companies/cash-flow-statements": {
       "get": {
-        "summary": "Return SEC XBRL-derived cash flow statements for a ticker with free-cash-flow and dividend enrichment. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+        "summary": "Retrieve an issuer's SEC-derived cash flow statement history with normalized cash-generation fields",
+        "description": "Use this route to review operating, investing, and financing cash-flow history for one issuer. Choose annual or quarterly cadence before comparing periods, because cash-flow rows describe a duration rather than a point-in-time balance. Values are normalized from supported SEC XBRL filings and retain units, periods, and provenance; free-cash-flow fields are derived from those filings, not a forecast. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Issuer ticker. Supply ticker or cik; use CIK when issuer identity or ticker history could be ambiguous."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC-stable issuer CIK. Supply ticker or cik."
           },
           {
             "name": "period",
@@ -20884,7 +20647,41 @@
                 "annual",
                 "quarterly"
               ]
-            }
+            },
+            "description": "Reporting cadence to return. Use one cadence when comparing cash generation or capital spending."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Issuer fiscal year to select; this is not necessarily a calendar year."
+          },
+          {
+            "name": "fy_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive lower bound for issuer fiscal years."
+          },
+          {
+            "name": "fy_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive upper bound for issuer fiscal years."
           },
           {
             "name": "limit",
@@ -20894,7 +20691,8 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 40
-            }
+            },
+            "description": "Maximum reporting periods to return (1-40)."
           },
           {
             "name": "view",
@@ -20906,18 +20704,18 @@
                 "compact"
               ]
             },
-            "description": "Use compact for period-indexed row arrays. Omit for the enriched company cash-flow envelope."
+            "description": "Use compact for period-indexed row arrays. Omit for the generic Statement response."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response. view=compact returns CompactStatement; default returns CompanyCashFlowStatements.",
+            "description": "Successful response. The default response is Statement; view=compact returns CompactStatement.",
             "content": {
               "application/json": {
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/CompanyCashFlowStatements"
+                      "$ref": "#/components/schemas/Statement"
                     },
                     {
                       "$ref": "#/components/schemas/CompactStatement"
@@ -20956,14 +20754,117 @@
     },
     "/v1/companies/financials": {
       "get": {
-        "summary": "Return combined SEC XBRL-derived income, balance-sheet, and cash-flow statements for a ticker. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+        "summary": "Retrieve an issuer's SEC-derived income, balance-sheet, and cash flow statements in one company-focused response",
+        "description": "Use this route to assemble the three core normalized statements for one issuer or a bounded ticker batch. `tickers` returns one row per requested ticker and can include a partial degraded state when an individual issuer fails; inspect each row rather than treating the batch as all-or-nothing. Select annual or quarterly cadence and fiscal-year filters before comparing results. Values retain SEC XBRL source context and are not live market data. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker for one company. Supply ticker, cik, or tickers/symbols for a batch."
+          },
+          {
+            "name": "cik",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "SEC-stable issuer CIK for one company. Supply ticker, cik, or tickers/symbols for a batch."
+          },
+          {
+            "name": "tickers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated issuer tickers for a batch of up to 50 companies. Batch rows can individually report an error state."
+          },
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for tickers when requesting a batch."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "annual",
+                "quarterly"
+              ]
+            },
+            "description": "Reporting cadence to return. Compare only like-for-like periods."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Issuer fiscal year to select; this is not necessarily a calendar year."
+          },
+          {
+            "name": "fy_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive lower bound for issuer fiscal years."
+          },
+          {
+            "name": "fy_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive upper bound for issuer fiscal years."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "Maximum reporting periods to return for each issuer."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CompanyFinancials"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/CompanyFinancials"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CompanyFinancialsBatch"
+                    }
+                  ]
                 }
               }
             }
@@ -20997,14 +20898,108 @@
     },
     "/v1/companies/ratios": {
       "get": {
-        "summary": "Return profitability, return, valuation, dividend, and leverage ratios derived from SEC XBRL statements plus market context",
+        "summary": "Retrieve an issuer's statement-derived profitability, return, valuation, dividend, and leverage ratios with period context",
+        "description": "Use this route to compare a company's calculated ratios across reported periods or a bounded ticker batch. `tickers` can return a partial degraded state when an individual issuer fails, so inspect each item before ranking. Ratio inputs combine SEC-derived statement values with available market context; retain the reported period, units, provenance, and freshness fields, and do not treat a missing ratio as zero or as a trading signal. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Issuer ticker for one company. Supply ticker or tickers/symbols for a batch."
+          },
+          {
+            "name": "tickers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated issuer tickers for a batch of up to 50 companies. Batch rows can individually report an error state."
+          },
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for tickers when requesting a batch."
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "annual",
+                "quarterly"
+              ]
+            },
+            "description": "Reporting cadence to return. Compare only like-for-like periods."
+          },
+          {
+            "name": "fy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Issuer fiscal year to select; this is not necessarily a calendar year."
+          },
+          {
+            "name": "fy_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive lower bound for issuer fiscal years."
+          },
+          {
+            "name": "fy_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "Inclusive upper bound for issuer fiscal years."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "Maximum reporting periods to return for each issuer."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CompanyRatios"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/CompanyRatios"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CompanyRatiosBatch"
+                    }
+                  ]
                 }
               }
             }
@@ -21038,7 +21033,8 @@
     },
     "/v1/companies/segments": {
       "get": {
-        "summary": "Return a multi-axis, revenue-anchored business breakdown (Business Breakdown). Groups SEC XBRL segment facts into the canonical product, geographic, and operating axes, de-subtotals each axis against total reported revenue, and emits per-segment revenue share, profit/loss, margin, and YoY growth. Each axis is flagged reported or low_confidence based on whether it ties to total revenue (banks, REITs, and insurers typically do not tie). Ships beta. Requires ticker or cik.",
+        "summary": "Retrieve an issuer's SEC-disclosed product, geographic, and operating segment breakdown with revenue-tie confidence",
+        "description": "Use this route to understand an issuer's disclosed business mix across product, geographic, and operating axes. The service groups filing-derived segment facts, anchors each axis to reported revenue where possible, and returns a confidence signal; a `low_confidence` axis should not be presented as a complete revenue decomposition. Select annual or quarterly reporting before comparing results, and keep the returned filing provenance and freshness fields with any analysis. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -21048,6 +21044,15 @@
               "type": "string"
             },
             "description": "Issuer ticker. Either ticker or cik is required."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker. Supply ticker, symbol, or cik; ticker and symbol must agree when both are sent."
           },
           {
             "name": "cik",
@@ -21070,7 +21075,7 @@
               ],
               "default": "annual"
             },
-            "description": "Reporting period. Accepts quarter/q aliases. Defaults to annual."
+            "description": "Reporting cadence for the disclosed segment facts. Defaults to annual; `quarter` and `q` are accepted aliases for quarterly."
           },
           {
             "name": "segment_type",
@@ -21084,7 +21089,7 @@
                 "operating"
               ]
             },
-            "description": "Optional restriction to a single canonical axis. Defaults to all canonical axes."
+            "description": "Optional restriction to one normalized axis. Omit it to return all supported axes, then inspect each axis's confidence and revenue tie."
           }
         ],
         "responses": {
@@ -21127,7 +21132,8 @@
     },
     "/v1/companies/macro-exposure": {
       "get": {
-        "summary": "Return revenue-weighted macro sensitivities for a single company: geographic revenue segments crossed with the country macro plane, with per-indicator beta, direction, confidence, and a coverage percentage that degrades gracefully when segments are unavailable",
+        "summary": "Retrieve a revenue-weighted macro-exposure snapshot built from an issuer's disclosed geographic revenue and country indicators",
+        "description": "Use this route to inspect a company's modelled macro sensitivities, weighted by available disclosed geographic revenue segments. `coveragePercent`, confidence, source context, and the selected reporting period explain how much of the issuer's revenue could be mapped; a low-coverage result is not a statement that the issuer has no foreign exposure. The returned betas and directions are an exposure snapshot, not a forecast or investment recommendation. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -21137,6 +21143,15 @@
               "type": "string"
             },
             "description": "Issuer ticker (alias: symbol). Either ticker or cik is required."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker. Supply ticker, symbol, or cik; ticker and symbol must agree when both are sent."
           },
           {
             "name": "cik",
@@ -21155,7 +21170,7 @@
               "type": "string",
               "default": "US"
             },
-            "description": "Domestic macro-plane country used for unmapped revenue. Defaults to US."
+            "description": "Domestic country used for revenue that cannot be mapped to a disclosed geography. Defaults to `US`; it is an allocation assumption, not issuer-reported geography."
           },
           {
             "name": "lookback",
@@ -21164,7 +21179,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Optional lookback window label echoed on the response."
+            "description": "Optional lookback label echoed in the exposure context. It does not change the issuer's disclosed reporting period."
           },
           {
             "name": "period",
@@ -21221,7 +21236,8 @@
     },
     "/v1/companies/overview": {
       "get": {
-        "summary": "Return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution,factors to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline; factors is a quantified, time-ranged quant factor-exposure snapshot — an exposure snapshot, not a forecast). Ships beta. Requires ticker or cik.",
+        "summary": "Retrieve an SEC-derived company snapshot with identity, latest material filing, and a sector-aware financial view",
+        "description": "Use this route to start issuer research with identity, classification, the latest material filing, and a financial snapshot drawn from recent annual SEC XBRL facts. `companyType` determines which metrics are meaningful, so null margins or cash-flow values can be expected for financial institutions or pre-revenue companies. Optional enrichments are bounded and independently statused; factor exposure is descriptive, not a forecast, and footnotes are returned as a reference. Preserve the returned filing, provenance, and freshness fields before presenting the snapshot as current. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -21230,7 +21246,16 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker. Either ticker or cik is required."
+            "description": "Issuer ticker for one company. Supply ticker, symbol, cik, or tickers/symbols for a batch."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for ticker. Ticker and symbol must agree when both are sent."
           },
           {
             "name": "cik",
@@ -21242,13 +21267,31 @@
             "description": "Issuer CIK. Either ticker or cik is required."
           },
           {
+            "name": "tickers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated issuer tickers for a batch of up to 50 companies. Batch rows can individually report an error state."
+          },
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for tickers when requesting a batch."
+          },
+          {
             "name": "include",
             "in": "query",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated opt-in enrichments: segments, footnotes, dilution, factors. factors requires a ticker (exposures are per-stock). Omitted enrichments report status not_requested."
+            "description": "Comma-separated optional enrichments: `segments`, `footnotes`, `dilution`, and `factors`. Each reports its own status; `factors` requires a ticker, and `footnotes` returns a reference rather than rendered filing text."
           }
         ],
         "responses": {
@@ -21257,7 +21300,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CompanyOverview"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/CompanyOverview"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CompanyOverviewBatch"
+                    }
+                  ]
                 }
               }
             }
@@ -21291,7 +21341,8 @@
     },
     "/v1/owners/13f": {
       "get": {
-        "summary": "Return the latest normalized 13F ownership report for a manager CIK, with optional quarter-specific selection",
+        "summary": "Retrieve one manager's disclosed Form 13F holdings for the latest parsable or selected report",
+        "description": "Use this route to inspect the positions an institutional manager disclosed on Form 13F for one reporting period. `cik` identifies the manager/filer, not an issuer held in the report. Without a date selector, the service returns the latest parsable 13F it can select; `reportDate` and `filingDate` select one disclosed period. Retain the returned report date, filing date, accession number, provenance, and freshness metadata when presenting holdings. Form 13F is delayed, periodic disclosure rather than a live portfolio, transaction ledger, or complete economic-exposure record. See [ownership workflows](/ownership-workflows) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "cik",
@@ -21300,7 +21351,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Institutional manager CIK."
+            "description": "CIK of the institutional manager that filed the 13F; do not pass the CIK of an issuer held in the portfolio."
           },
           {
             "name": "reportDate",
@@ -21310,7 +21361,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Optional quarter-end report date (YYYY-MM-DD)."
+            "description": "Optional disclosed quarter-end report date in YYYY-MM-DD form. Use a date returned by the manager's 13F filing list when selecting a historical report."
           },
           {
             "name": "filingDate",
@@ -21320,7 +21371,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Optional SEC filing date (YYYY-MM-DD)."
+            "description": "Optional SEC filing date in YYYY-MM-DD form. This is the filing date, not the portfolio reporting-period end."
           },
           {
             "name": "limit",
@@ -21332,7 +21383,7 @@
               "maximum": 50,
               "default": 50
             },
-            "description": "Maximum holdings to return from the selected report."
+            "description": "Maximum disclosed holding rows to return from the selected report (1-50). A smaller result does not establish that the manager held no additional positions."
           },
           {
             "name": "view",
@@ -21345,7 +21396,7 @@
                 "agent"
               ]
             },
-            "description": "Response shape. Use agent for a compact, citation-preserving payload."
+            "description": "Response shape. Use `agent` for the compact, citation-preserving payload; omit it or use `default` for the fuller response."
           }
         ],
         "responses": {
@@ -21389,7 +21440,8 @@
     },
     "/v1/owners/institutional/investor": {
       "get": {
-        "summary": "Return an investor-centric institutional ownership graph for a manager CIK, including ranked holdings and quarter-over-quarter changes",
+        "summary": "Retrieve a manager-centric 13F portfolio with ranked disclosed holdings and available prior-quarter changes",
+        "description": "Use this manager-centric view to review one institutional filer's selected 13F portfolio and the reported changes against a prior parsable report when one is available. `cik` is the manager/filer CIK. The ranking and changes describe filed 13F positions for the returned reporting period; they are not real-time holdings, trades, or a complete exposure view. Preserve the selected report and filing dates, accession, provenance, and freshness metadata before comparing managers or periods. See [ownership workflows](/ownership-workflows) for disclosure-family and period guidance.",
         "parameters": [
           {
             "name": "cik",
@@ -21398,7 +21450,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Institutional manager CIK."
+            "description": "CIK of the institutional manager whose filed 13F portfolio you want to inspect."
           },
           {
             "name": "reportDate",
@@ -21408,7 +21460,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Optional quarter-end report date (YYYY-MM-DD)."
+            "description": "Optional quarter-end report date in YYYY-MM-DD form for the manager's selected 13F report."
           },
           {
             "name": "filingDate",
@@ -21418,7 +21470,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Optional SEC filing date (YYYY-MM-DD)."
+            "description": "Optional SEC filing date in YYYY-MM-DD form for the manager's selected 13F report."
           },
           {
             "name": "limit",
@@ -21430,7 +21482,7 @@
               "maximum": 50,
               "default": 50
             },
-            "description": "Maximum holdings to return."
+            "description": "Maximum ranked disclosed holdings to return (1-50)."
           }
         ],
         "responses": {
@@ -21474,7 +21526,8 @@
     },
     "/v1/owners/institutional/extract": {
       "get": {
-        "summary": "Return a quarter-specific historical institutional ownership extract for a manager CIK over the SEC-native 13F family",
+        "summary": "Retrieve one manager's historical 13F extract for a specified calendar quarter",
+        "description": "Use this route when the reporting period is known and you need a manager's quarter-specific 13F extract. `year` and `quarter` select the calendar quarter-end report date; the response can include prior-quarter deltas only when a prior parsable report is available, otherwise its coverage is current-only. Results are SEC-derived, period-specific holdings disclosure, not current ownership or a complete exposure record. Keep the returned filing identity, provenance, and freshness metadata with any analysis. See [ownership workflows](/ownership-workflows).",
         "parameters": [
           {
             "name": "cik",
@@ -21483,7 +21536,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Institutional manager CIK."
+            "description": "CIK of the institutional manager that filed the historical 13F."
           },
           {
             "name": "year",
@@ -21493,7 +21546,7 @@
               "type": "integer",
               "minimum": 1900
             },
-            "description": "Report year."
+            "description": "Four-digit calendar year for the requested quarter-end report date (1900 or later)."
           },
           {
             "name": "quarter",
@@ -21508,7 +21561,7 @@
                 4
               ]
             },
-            "description": "Calendar quarter of the report."
+            "description": "Calendar quarter number for the requested report date: 1, 2, 3, or 4."
           },
           {
             "name": "limit",
@@ -21520,7 +21573,7 @@
               "maximum": 50,
               "default": 50
             },
-            "description": "Maximum holdings to return."
+            "description": "Maximum disclosed holding rows to return (1-50)."
           }
         ],
         "responses": {
@@ -21564,7 +21617,8 @@
     },
     "/v1/owners/institutional/ticker": {
       "get": {
-        "summary": "Return a ticker-centric institutional holder graph for the latest materialized 13F cohort, ranked by disclosed position value",
+        "summary": "Retrieve institutional managers that disclosed a position in one issuer for a selected 13F cohort",
+        "description": "Use this issuer-centric view to identify managers that disclosed a position in one security within the selected materialized 13F cohort. Provide either the issuer ticker or issuer CIK, not a manager identifier. The response is ranked by disclosed position value and tied to its returned report date, filing date, and accessions; it is not a current cap table, complete holder roster, or real-time ownership measure. Cohort availability depends on the materialized 13F read model, so preserve provenance and freshness metadata and treat a non-2xx response as unavailable data rather than an absence-of-holders conclusion. See [ownership workflows](/ownership-workflows).",
         "parameters": [
           {
             "name": "ticker",
@@ -21573,7 +21627,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker. Provide ticker or CIK."
+            "description": "Issuer ticker for the security whose disclosed institutional holders you want to inspect. Provide this or the issuer `cik`."
           },
           {
             "name": "cik",
@@ -21582,7 +21636,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer CIK. Provide ticker or CIK."
+            "description": "Issuer CIK for the security whose disclosed institutional holders you want to inspect. Provide this or the issuer `ticker`; do not pass a manager CIK."
           },
           {
             "name": "reportDate",
@@ -21592,7 +21646,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Optional quarter-end report date (YYYY-MM-DD)."
+            "description": "Optional 13F quarter-end report date in YYYY-MM-DD form for the holder cohort."
           },
           {
             "name": "filingDate",
@@ -21602,7 +21656,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Optional SEC filing date (YYYY-MM-DD)."
+            "description": "Optional SEC filing date in YYYY-MM-DD form for the holder cohort."
           },
           {
             "name": "limit",
@@ -21614,7 +21668,7 @@
               "maximum": 50,
               "default": 25
             },
-            "description": "Maximum institutional holders to return."
+            "description": "Maximum institutional-holder rows to return (1-50), ranked by disclosed position value."
           },
           {
             "name": "view",
@@ -21627,7 +21681,7 @@
                 "agent"
               ]
             },
-            "description": "Response shape. Use agent for a compact holder ranking with filing identifiers."
+            "description": "Response shape. Use `agent` for a compact holder ranking with filing identifiers; omit it or use `default` for the fuller response."
           }
         ],
         "responses": {
@@ -21671,7 +21725,8 @@
     },
     "/v1/owners/13f/filings": {
       "get": {
-        "summary": "List recent 13F filings, including quarter-end report dates, for a manager CIK",
+        "summary": "List a manager's recent SEC Form 13F filings and their reported period dates",
+        "description": "Use this route to discover the available 13F filings for one institutional manager before selecting a historical report or comparing periods. `cik` identifies the manager/filer. Each filing record supplies the reported quarter-end date, SEC filing identity, and provenance needed to request the corresponding holdings. `since` supports incremental polling by filing acceptance time when available, with filing-date fallback for records that have only day-level timing. A returned filing is a disclosure record, not proof that every filing is parsable or that it represents current holdings. See [ownership workflows](/ownership-workflows).",
         "parameters": [
           {
             "name": "cik",
@@ -21680,7 +21735,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Institutional manager CIK."
+            "description": "CIK of the institutional manager whose Form 13F filing history you want to list."
           },
           {
             "name": "since",
@@ -21690,7 +21745,7 @@
               "type": "string",
               "format": "date-time"
             },
-            "description": "Optional inclusive filing-acceptance timestamp for incremental polling."
+            "description": "Optional inclusive ISO-8601 timestamp for incremental polling. The filter uses SEC acceptance time when available and otherwise includes records from the same filing-date day."
           },
           {
             "name": "limit",
@@ -21702,7 +21757,7 @@
               "maximum": 50,
               "default": 8
             },
-            "description": "Maximum filing records to return."
+            "description": "Maximum filing records to return (1-50)."
           }
         ],
         "responses": {
@@ -21746,7 +21801,8 @@
     },
     "/v1/owners/13d-13g": {
       "get": {
-        "summary": "List beneficial ownership reports across the SEC-native 13D and 13G filing families",
+        "summary": "Search SEC Schedule 13D and 13G beneficial-ownership reports by issuer, filer, form, and filing date",
+        "description": "Use this route to find filed beneficial-ownership reports in the Schedule 13D and 13G families, including amendments. Filter by issuer, filer name, form, and filing date, then retain the returned accession, filing URL, provenance, and freshness metadata for review. Reported beneficial ownership is filing-specific and can be amended; it is not a real-time cap table, complete economic-exposure measure, or inference about investor intent. Pagination is offset-based: advance only with the returned `nextCursor` while `hasMore` is true. See [ownership workflows](/ownership-workflows) and [freshness and source evidence](/freshness-and-trust).",
         "parameters": [
           {
             "name": "ticker",
@@ -21755,7 +21811,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker filter."
+            "description": "Optional issuer ticker filter for beneficial-ownership filings."
           },
           {
             "name": "cik",
@@ -21764,7 +21820,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer CIK filter."
+            "description": "Optional issuer CIK filter for beneficial-ownership filings."
           },
           {
             "name": "filer",
@@ -21773,7 +21829,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Beneficial owner or filer-name filter."
+            "description": "Optional case-insensitive beneficial owner or filer-name filter."
           },
           {
             "name": "forms",
@@ -21782,7 +21838,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated SEC form filters, such as SC 13D or SC 13G."
+            "description": "Optional comma-separated form filter, for example `SC 13D,SC 13G`. Omit to search the supported 13D, 13G, and amendment forms."
           },
           {
             "name": "date_from",
@@ -21792,7 +21848,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Inclusive filing-date lower bound."
+            "description": "Optional inclusive filing-date lower bound in YYYY-MM-DD form."
           },
           {
             "name": "date_to",
@@ -21802,7 +21858,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Inclusive filing-date upper bound."
+            "description": "Optional inclusive filing-date upper bound in YYYY-MM-DD form."
           },
           {
             "name": "limit",
@@ -21814,7 +21870,7 @@
               "maximum": 50,
               "default": 25
             },
-            "description": "Maximum beneficial ownership reports to return."
+            "description": "Maximum beneficial-ownership report rows to return per page (1-50)."
           },
           {
             "name": "cursor",
@@ -21826,7 +21882,7 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Non-negative safe-integer offset. Use the response `nextCursor` for the next page; do not derive an offset from row IDs."
           },
           {
             "name": "submission_file_limit",
@@ -21837,7 +21893,7 @@
               "minimum": 1,
               "maximum": 50
             },
-            "description": "Maximum SEC submission files to inspect while looking for 13D/13G reports."
+            "description": "Maximum SEC submission-history files to inspect while locating 13D/13G reports (1-50). This bounds search depth, not the number of returned rows."
           }
         ],
         "responses": {
@@ -21881,7 +21937,8 @@
     },
     "/v1/owners/13f/compare": {
       "post": {
-        "summary": "Compare the latest two parsable 13F ownership reports for a manager CIK",
+        "summary": "Compare the latest two parsable Form 13F reports for one institutional manager",
+        "description": "Use this route to generate a manager-level difference between the latest two parsable 13F reports the service finds. The request CIK belongs to the manager/filer. The response labels disclosed positions as added, removed, changed, or unchanged and includes filing dates and provenance, but it does not accept arbitrary report-date selectors. For a specific historical period, first list the manager's filings and retrieve individual reports. 13F changes are delayed filing differences, not trade dates, manager intent, current ownership, or complete exposure. See [ownership workflows](/ownership-workflows) and the [13F comparison guide](/seo/sec-13f-comparison-api).",
         "requestBody": {
           "required": true,
           "content": {
@@ -21894,14 +21951,14 @@
                 "properties": {
                   "cik": {
                     "type": "string",
-                    "description": "Manager CIK for the two-report comparison."
+                    "description": "CIK of the institutional manager whose latest two parsable 13F reports will be compared; do not pass an issuer CIK."
                   },
                   "limit": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 50,
                     "default": 50,
-                    "description": "Maximum position rows to include in each parsed report."
+                    "description": "Maximum disclosed position rows to parse from each report (1-50). Rows outside that limit cannot appear in the comparison."
                   }
                 }
               }
@@ -21948,7 +22005,8 @@
     },
     "/v1/insiders": {
       "get": {
-        "summary": "Return recent normalized insider trading records derived from Forms 3, 4, and 5 with date filters and cursor pagination",
+        "summary": "Search normalized SEC Forms 3, 4, and 5 records by issuer, reporting owner, transaction, and filing date",
+        "description": "Use this route to build a review queue from filed insider-ownership records. Filter by issuer, reporting owner, security title, Form 4 transaction code, and filing date; `date_from` and `date_to` apply to the filing date, not the transaction date. Rows preserve the reported transaction and filing fields, accession, provenance, and freshness metadata, but a filing-derived record does not establish motive, legality, 10b5-1-plan status, current ownership, or investment outcome. Page only with the returned `nextCursor` while `hasMore` is true, and inspect the cited filing for footnotes or missing context. See [ownership workflows](/ownership-workflows) and the [insider trading guide](/seo/insider-trading-api).",
         "parameters": [
           {
             "name": "ticker",
@@ -21957,7 +22015,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer ticker filter."
+            "description": "Optional issuer ticker filter for Forms 3, 4, and 5."
           },
           {
             "name": "cik",
@@ -21966,7 +22024,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Issuer CIK filter."
+            "description": "Optional issuer CIK filter for Forms 3, 4, and 5."
           },
           {
             "name": "forms",
@@ -21975,7 +22033,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Comma-separated insider ownership forms, typically 3, 4, and 5."
+            "description": "Optional comma-separated ownership-form filter, typically `3,4,5`. Omit to search Forms 3, 4, and 5."
           },
           {
             "name": "date_from",
@@ -21985,7 +22043,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Inclusive filing-date lower bound."
+            "description": "Optional inclusive filing-date lower bound in YYYY-MM-DD form; this does not filter `transactionDate`."
           },
           {
             "name": "date_to",
@@ -21995,7 +22053,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Inclusive filing-date upper bound."
+            "description": "Optional inclusive filing-date upper bound in YYYY-MM-DD form; this does not filter `transactionDate`."
           },
           {
             "name": "owner_name",
@@ -22004,7 +22062,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Insider owner-name filter."
+            "description": "Optional case-insensitive reporting-owner name filter."
           },
           {
             "name": "owner_cik",
@@ -22013,7 +22071,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Insider owner CIK filter."
+            "description": "Optional reporting-owner CIK filter."
           },
           {
             "name": "security_title",
@@ -22022,7 +22080,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Security title filter."
+            "description": "Optional case-insensitive disclosed security-title filter."
           },
           {
             "name": "transaction_code",
@@ -22031,7 +22089,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Form 4 transaction code filter."
+            "description": "Optional Form 4 transaction-code filter. This filters the reported filing code; inspect the source filing before assigning economic intent."
           },
           {
             "name": "limit",
@@ -22043,7 +22101,7 @@
               "maximum": 50,
               "default": 25
             },
-            "description": "Maximum insider trade records to return."
+            "description": "Maximum normalized insider-record rows to return per page (1-50)."
           },
           {
             "name": "cursor",
@@ -22055,7 +22113,7 @@
               "maximum": 9007199254740991,
               "default": 0
             },
-            "description": "Non-negative safe-integer pagination offset."
+            "description": "Non-negative safe-integer offset. Use the response `nextCursor` for the next page; do not derive an offset from row IDs."
           },
           {
             "name": "submission_file_limit",
@@ -22066,7 +22124,7 @@
               "minimum": 1,
               "maximum": 50
             },
-            "description": "Maximum SEC submission files to inspect while looking for insider filings."
+            "description": "Maximum SEC submission-history files to inspect while locating insider filings (1-50). This bounds search depth, not the number of returned rows."
           }
         ],
         "responses": {
@@ -29511,13 +29569,376 @@
         },
         "additionalProperties": false
       },
-      "CompanyIncomeStatements": {},
-      "CompanyBalanceSheets": {},
-      "CompanyCashFlowStatements": {},
       "CompanyFinancials": {},
+      "CompanyFinancialsBatch": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "count",
+          "degradedState"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CompanyFinancials"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "ticker",
+                        "status"
+                      ],
+                      "properties": {
+                        "ticker": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "const": "ok"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "ticker",
+                    "status",
+                    "error"
+                  ],
+                  "properties": {
+                    "ticker": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "const": "error"
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "status",
+                  "reason",
+                  "missingTickers"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "const": "partial"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "missingTickers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "CompanyRatios": {},
+      "CompanyRatiosBatch": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "count",
+          "degradedState"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CompanyRatios"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "ticker",
+                        "status"
+                      ],
+                      "properties": {
+                        "ticker": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "const": "ok"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "ticker",
+                    "status",
+                    "error"
+                  ],
+                  "properties": {
+                    "ticker": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "const": "error"
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "status",
+                  "reason",
+                  "missingTickers"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "const": "partial"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "missingTickers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "CompanySegments": {},
       "CompanyOverview": {},
+      "CompanyOverviewBatch": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "count",
+          "degradedState"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CompanyOverview"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "ticker",
+                        "status"
+                      ],
+                      "properties": {
+                        "ticker": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "const": "ok"
+                        }
+                      },
+                      "additionalProperties": true
+                    }
+                  ]
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "ticker",
+                    "status",
+                    "error"
+                  ],
+                  "properties": {
+                    "ticker": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "const": "error"
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "status",
+                  "reason",
+                  "missingTickers"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "const": "partial"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "missingTickers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "SegmentedFactSeries": {
         "type": "object",
         "required": [

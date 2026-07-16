@@ -287,7 +287,7 @@
     {
       "slug": "companies",
       "title": "Companies",
-      "description": "Reference pages for Companies endpoints.",
+      "description": "Build issuer research views from SEC-derived statements, ratios, segments, macro exposure, and company snapshots.",
       "docs_path": "/api-reference/companies",
       "operations": [
         {
@@ -306,103 +306,132 @@
           "method": "GET",
           "path": "/v1/companies/balance-sheets",
           "title": "GET /v1/companies/balance-sheets",
-          "summary": "Return SEC XBRL-derived balance sheets for a ticker with normalized debt, equity, and cash fields. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+          "summary": "Retrieve an issuer's SEC-derived balance sheet history with normalized cash, debt, and equity fields",
+          "description": "Use this route to inspect reported balance-sheet positions for one issuer. Choose annual or quarterly cadence and bound the history with `limit`; balance-sheet rows are point-in-time observations, so do not treat them as duration values. Results are normalized from supported SEC XBRL filings and retain units, period dates, and provenance. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-balance-sheets",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",
-            "traceparent"
+            "traceparent",
+            "provenance",
+            "freshness",
+            "materialization"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/companies/cash-flow-statements",
           "title": "GET /v1/companies/cash-flow-statements",
-          "summary": "Return SEC XBRL-derived cash flow statements for a ticker with free-cash-flow and dividend enrichment. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+          "summary": "Retrieve an issuer's SEC-derived cash flow statement history with normalized cash-generation fields",
+          "description": "Use this route to review operating, investing, and financing cash-flow history for one issuer. Choose annual or quarterly cadence before comparing periods, because cash-flow rows describe a duration rather than a point-in-time balance. Values are normalized from supported SEC XBRL filings and retain units, periods, and provenance; free-cash-flow fields are derived from those filings, not a forecast. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-cash-flow-statements",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",
-            "traceparent"
+            "traceparent",
+            "provenance",
+            "freshness",
+            "materialization"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/companies/financials",
           "title": "GET /v1/companies/financials",
-          "summary": "Return combined SEC XBRL-derived income, balance-sheet, and cash-flow statements for a ticker. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+          "summary": "Retrieve an issuer's SEC-derived income, balance-sheet, and cash flow statements in one company-focused response",
+          "description": "Use this route to assemble the three core normalized statements for one issuer or a bounded ticker batch. `tickers` returns one row per requested ticker and can include a partial degraded state when an individual issuer fails; inspect each row rather than treating the batch as all-or-nothing. Select annual or quarterly cadence and fiscal-year filters before comparing results. Values retain SEC XBRL source context and are not live market data. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-financials",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",
-            "traceparent"
+            "traceparent",
+            "provenance",
+            "freshness",
+            "materialization"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/companies/income-statements",
           "title": "GET /v1/companies/income-statements",
-          "summary": "Return SEC XBRL-derived income statements for a ticker with EBITDA and share-count enrichment. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+          "summary": "Retrieve an issuer's SEC-derived income statement history with normalized operating and per-share fields",
+          "description": "Use this route to analyze reported income-statement history for one issuer. Select annual or quarterly cadence, then use fiscal-year filters and `limit` to constrain the reporting periods returned. Values are normalized from supported SEC XBRL filings and retain their reported units, periods, and provenance; derived fields do not replace the cited filing or make unlike periods comparable. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-income-statements",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",
-            "traceparent"
+            "traceparent",
+            "provenance",
+            "freshness",
+            "materialization"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/companies/macro-exposure",
           "title": "GET /v1/companies/macro-exposure",
-          "summary": "Return revenue-weighted macro sensitivities for a single company: geographic revenue segments crossed with the country macro plane, with per-indicator beta, direction, confidence, and a coverage percentage that degrades gracefully when segments are unavailable",
+          "summary": "Retrieve a revenue-weighted macro-exposure snapshot built from an issuer's disclosed geographic revenue and country indicators",
+          "description": "Use this route to inspect a company's modelled macro sensitivities, weighted by available disclosed geographic revenue segments. `coveragePercent`, confidence, source context, and the selected reporting period explain how much of the issuer's revenue could be mapped; a low-coverage result is not a statement that the issuer has no foreign exposure. The returned betas and directions are an exposure snapshot, not a forecast or investment recommendation. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-macro-exposure",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",
-            "traceparent"
+            "traceparent",
+            "provenance"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/companies/overview",
           "title": "GET /v1/companies/overview",
-          "summary": "Return a first-party SEC company overview — a due-diligence briefing combining identity/classification (name, CIK, tickers, sector/industry from SIC, state of incorporation, exchange, former names) with the latest material filing and a sector-aware financial snapshot derived from multi-year annual SEC XBRL facts. A companyType discriminator (operating / financial_institution / pre_revenue) drives which metrics are valid: financial institutions null gross/operating margin and free cash flow and lean on net margin, ROE, ROA, book value, and total assets. The revenue concept is recency-selected (the candidate whose latest fiscal year is most recent wins) so deprecated tags and wrong sub-lines never win. The base overview is intentionally light; pass include=segments,footnotes,dilution,factors to attach opt-in, bounded enrichments (footnotes is returned as a reference link rather than rendered inline; factors is a quantified, time-ranged quant factor-exposure snapshot — an exposure snapshot, not a forecast). Ships beta. Requires ticker or cik.",
+          "summary": "Retrieve an SEC-derived company snapshot with identity, latest material filing, and a sector-aware financial view",
+          "description": "Use this route to start issuer research with identity, classification, the latest material filing, and a financial snapshot drawn from recent annual SEC XBRL facts. `companyType` determines which metrics are meaningful, so null margins or cash-flow values can be expected for financial institutions or pre-revenue companies. Optional enrichments are bounded and independently statused; factor exposure is descriptive, not a forecast, and footnotes are returned as a reference. Preserve the returned filing, provenance, and freshness fields before presenting the snapshot as current. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-overview",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",
-            "traceparent"
+            "traceparent",
+            "provenance",
+            "freshness"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/companies/ratios",
           "title": "GET /v1/companies/ratios",
-          "summary": "Return profitability, return, valuation, dividend, and leverage ratios derived from SEC XBRL statements plus market context",
+          "summary": "Retrieve an issuer's statement-derived profitability, return, valuation, dividend, and leverage ratios with period context",
+          "description": "Use this route to compare a company's calculated ratios across reported periods or a bounded ticker batch. `tickers` can return a partial degraded state when an individual issuer fails, so inspect each item before ranking. Ratio inputs combine SEC-derived statement values with available market context; retain the reported period, units, provenance, and freshness fields, and do not treat a missing ratio as zero or as a trading signal. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-ratios",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",
-            "traceparent"
+            "traceparent",
+            "provenance",
+            "freshness",
+            "materialization"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/companies/segments",
           "title": "GET /v1/companies/segments",
-          "summary": "Return a multi-axis, revenue-anchored business breakdown (Business Breakdown). Groups SEC XBRL segment facts into the canonical product, geographic, and operating axes, de-subtotals each axis against total reported revenue, and emits per-segment revenue share, profit/loss, margin, and YoY growth. Each axis is flagged reported or low_confidence based on whether it ties to total revenue (banks, REITs, and insurers typically do not tie). Ships beta. Requires ticker or cik.",
+          "summary": "Retrieve an issuer's SEC-disclosed product, geographic, and operating segment breakdown with revenue-tie confidence",
+          "description": "Use this route to understand an issuer's disclosed business mix across product, geographic, and operating axes. The service groups filing-derived segment facts, anchors each axis to reported revenue where possible, and returns a confidence signal; a `low_confidence` axis should not be presented as a complete revenue decomposition. Select annual or quarterly reporting before comparing results, and keep the returned filing provenance and freshness fields with any analysis. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-segments",
           "audience": "application and coding agent",
           "metadata_fields": [
             "requestId",
-            "traceparent"
+            "traceparent",
+            "provenance",
+            "freshness"
           ]
         },
         {
           "method": "GET",
           "path": "/v1/companies/subsidiaries",
           "title": "GET /v1/companies/subsidiaries",
-          "summary": "Return the list of subsidiaries extracted from the latest 10-K Exhibit 21 for a given entity",
+          "summary": "Retrieve subsidiaries disclosed in an issuer's latest available 10-K Exhibit 21",
+          "description": "Use this route to review subsidiaries an issuer disclosed in Exhibit 21 of its latest available 10-K. The result is an extracted filing schedule, not a current legal-entity registry, complete ownership chart, or confirmation that an issuer has no other subsidiaries. An empty list can mean the selected filing lacks a usable Exhibit 21. Preserve the returned accession, filing date, and request metadata when presenting the default result; `filingUrl` is included only in `agent` view. See [filing conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/companies/get-v1-companies-subsidiaries",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1115,7 +1144,8 @@
           "method": "GET",
           "path": "/v1/factors/exposures",
           "title": "GET /v1/factors/exposures",
-          "summary": "Return compact security, portfolio, or watchlist factor exposures with optional diagnostics and provenance",
+          "summary": "Return factor exposures for securities, portfolios, or watchlists.",
+          "description": "Use `symbols=A,B,C` to request multiple securities. Each returned row includes its source `symbol` and `subjectKey`, so you can match results to requested symbols without relying on row order. `unresolvedSymbols` lists requested symbols with no exposure rows, including securities outside supported historical coverage, so unavailable coverage is distinct from a zero beta.",
           "docs_path": "/api-reference/factors/get-v1-factors-exposures",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -1794,7 +1824,8 @@
           "method": "GET",
           "path": "/v1/insiders",
           "title": "GET /v1/insiders",
-          "summary": "Return recent normalized insider trading records derived from Forms 3, 4, and 5 with date filters and cursor pagination",
+          "summary": "Search normalized SEC Forms 3, 4, and 5 records by issuer, reporting owner, transaction, and filing date",
+          "description": "Use this route to build a review queue from filed insider-ownership records. Filter by issuer, reporting owner, security title, Form 4 transaction code, and filing date; `date_from` and `date_to` apply to the filing date, not the transaction date. Rows preserve the reported transaction and filing fields, accession, provenance, and freshness metadata, but a filing-derived record does not establish motive, legality, 10b5-1-plan status, current ownership, or investment outcome. Page only with the returned `nextCursor` while `hasMore` is true, and inspect the cited filing for footnotes or missing context. See [ownership workflows](/ownership-workflows) and the [insider trading guide](/seo/insider-trading-api).",
           "docs_path": "/api-reference/insiders/get-v1-insiders",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2185,26 +2216,6 @@
       ]
     },
     {
-      "slug": "model-portfolios",
-      "title": "Model Portfolios",
-      "description": "Reference pages for Model Portfolios endpoints.",
-      "docs_path": "/api-reference/model-portfolios",
-      "operations": [
-        {
-          "method": "GET",
-          "path": "/v1/model-portfolios/{portfolioId}/factor-view",
-          "title": "GET /v1/model-portfolios/{portfolioId}/factor-view",
-          "summary": "Return a model-portfolio factor view with aggregate analysis and per-position exposures for drill-down workflows",
-          "docs_path": "/api-reference/model-portfolios/get-v1-model-portfolios-portfolioId-factor-view",
-          "audience": "application and coding agent",
-          "metadata_fields": [
-            "requestId",
-            "traceparent"
-          ]
-        }
-      ]
-    },
-    {
       "slug": "models",
       "title": "Models",
       "description": "Reference pages for Models endpoints.",
@@ -2383,7 +2394,8 @@
           "method": "GET",
           "path": "/v1/owners/13d-13g",
           "title": "GET /v1/owners/13d-13g",
-          "summary": "List beneficial ownership reports across the SEC-native 13D and 13G filing families",
+          "summary": "Search SEC Schedule 13D and 13G beneficial-ownership reports by issuer, filer, form, and filing date",
+          "description": "Use this route to find filed beneficial-ownership reports in the Schedule 13D and 13G families, including amendments. Filter by issuer, filer name, form, and filing date, then retain the returned accession, filing URL, provenance, and freshness metadata for review. Reported beneficial ownership is filing-specific and can be amended; it is not a real-time cap table, complete economic-exposure measure, or inference about investor intent. Pagination is offset-based: advance only with the returned `nextCursor` while `hasMore` is true. See [ownership workflows](/ownership-workflows) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/owners/get-v1-owners-13d-13g",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2398,7 +2410,8 @@
           "method": "GET",
           "path": "/v1/owners/13f",
           "title": "GET /v1/owners/13f",
-          "summary": "Return the latest normalized 13F ownership report for a manager CIK, with optional quarter-specific selection",
+          "summary": "Retrieve one manager's disclosed Form 13F holdings for the latest parsable or selected report",
+          "description": "Use this route to inspect the positions an institutional manager disclosed on Form 13F for one reporting period. `cik` identifies the manager/filer, not an issuer held in the report. Without a date selector, the service returns the latest parsable 13F it can select; `reportDate` and `filingDate` select one disclosed period. Retain the returned report date, filing date, accession number, provenance, and freshness metadata when presenting holdings. Form 13F is delayed, periodic disclosure rather than a live portfolio, transaction ledger, or complete economic-exposure record. See [ownership workflows](/ownership-workflows) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/owners/get-v1-owners-13f",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2413,7 +2426,8 @@
           "method": "POST",
           "path": "/v1/owners/13f/compare",
           "title": "POST /v1/owners/13f/compare",
-          "summary": "Compare the latest two parsable 13F ownership reports for a manager CIK",
+          "summary": "Compare the latest two parsable Form 13F reports for one institutional manager",
+          "description": "Use this route to generate a manager-level difference between the latest two parsable 13F reports the service finds. The request CIK belongs to the manager/filer. The response labels disclosed positions as added, removed, changed, or unchanged and includes filing dates and provenance, but it does not accept arbitrary report-date selectors. For a specific historical period, first list the manager's filings and retrieve individual reports. 13F changes are delayed filing differences, not trade dates, manager intent, current ownership, or complete exposure. See [ownership workflows](/ownership-workflows) and the [13F comparison guide](/seo/sec-13f-comparison-api).",
           "docs_path": "/api-reference/owners/post-v1-owners-13f-compare",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2428,7 +2442,8 @@
           "method": "GET",
           "path": "/v1/owners/13f/filings",
           "title": "GET /v1/owners/13f/filings",
-          "summary": "List recent 13F filings, including quarter-end report dates, for a manager CIK",
+          "summary": "List a manager's recent SEC Form 13F filings and their reported period dates",
+          "description": "Use this route to discover the available 13F filings for one institutional manager before selecting a historical report or comparing periods. `cik` identifies the manager/filer. Each filing record supplies the reported quarter-end date, SEC filing identity, and provenance needed to request the corresponding holdings. `since` supports incremental polling by filing acceptance time when available, with filing-date fallback for records that have only day-level timing. A returned filing is a disclosure record, not proof that every filing is parsable or that it represents current holdings. See [ownership workflows](/ownership-workflows).",
           "docs_path": "/api-reference/owners/get-v1-owners-13f-filings",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2443,7 +2458,8 @@
           "method": "GET",
           "path": "/v1/owners/institutional/extract",
           "title": "GET /v1/owners/institutional/extract",
-          "summary": "Return a quarter-specific historical institutional ownership extract for a manager CIK over the SEC-native 13F family",
+          "summary": "Retrieve one manager's historical 13F extract for a specified calendar quarter",
+          "description": "Use this route when the reporting period is known and you need a manager's quarter-specific 13F extract. `year` and `quarter` select the calendar quarter-end report date; the response can include prior-quarter deltas only when a prior parsable report is available, otherwise its coverage is current-only. Results are SEC-derived, period-specific holdings disclosure, not current ownership or a complete exposure record. Keep the returned filing identity, provenance, and freshness metadata with any analysis. See [ownership workflows](/ownership-workflows).",
           "docs_path": "/api-reference/owners/get-v1-owners-institutional-extract",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2460,7 +2476,8 @@
           "method": "GET",
           "path": "/v1/owners/institutional/investor",
           "title": "GET /v1/owners/institutional/investor",
-          "summary": "Return an investor-centric institutional ownership graph for a manager CIK, including ranked holdings and quarter-over-quarter changes",
+          "summary": "Retrieve a manager-centric 13F portfolio with ranked disclosed holdings and available prior-quarter changes",
+          "description": "Use this manager-centric view to review one institutional filer's selected 13F portfolio and the reported changes against a prior parsable report when one is available. `cik` is the manager/filer CIK. The ranking and changes describe filed 13F positions for the returned reporting period; they are not real-time holdings, trades, or a complete exposure view. Preserve the selected report and filing dates, accession, provenance, and freshness metadata before comparing managers or periods. See [ownership workflows](/ownership-workflows) for disclosure-family and period guidance.",
           "docs_path": "/api-reference/owners/get-v1-owners-institutional-investor",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -2475,7 +2492,8 @@
           "method": "GET",
           "path": "/v1/owners/institutional/ticker",
           "title": "GET /v1/owners/institutional/ticker",
-          "summary": "Return a ticker-centric institutional holder graph for the latest materialized 13F cohort, ranked by disclosed position value",
+          "summary": "Retrieve institutional managers that disclosed a position in one issuer for a selected 13F cohort",
+          "description": "Use this issuer-centric view to identify managers that disclosed a position in one security within the selected materialized 13F cohort. Provide either the issuer ticker or issuer CIK, not a manager identifier. The response is ranked by disclosed position value and tied to its returned report date, filing date, and accessions; it is not a current cap table, complete holder roster, or real-time ownership measure. Cohort availability depends on the materialized 13F read model, so preserve provenance and freshness metadata and treat a non-2xx response as unavailable data rather than an absence-of-holders conclusion. See [ownership workflows](/ownership-workflows).",
           "docs_path": "/api-reference/owners/get-v1-owners-institutional-ticker",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3238,14 +3256,15 @@
     {
       "slug": "statements",
       "title": "Statements",
-      "description": "Read normalized statement bundles, facts, and segmented revenue surfaces.",
+      "description": "Read SEC-derived, normalized statements and disclosed segment history with period and source context.",
       "docs_path": "/api-reference/statements",
       "operations": [
         {
           "method": "GET",
           "path": "/v1/statements",
           "title": "GET /v1/statements",
-          "summary": "Return a normalized statement backed by SEC company facts. Resolves us-gaap (10-K/10-Q) filers and IFRS foreign private issuers (ifrs-full on 20-F/6-K) automatically.",
+          "summary": "Retrieve one SEC-derived normalized balance sheet, income statement, or cash flow statement for an issuer",
+          "description": "Use this route to fetch one normalized statement for analysis or a financial-model input. Set `statement` and select annual or quarterly cadence, fiscal year, and a bounded history when the reporting slice matters. The response resolves supported US GAAP and IFRS filers, preserves reported units, periods, and filing provenance, and can contain missing or incomparable line items; it is not a substitute for the cited filing. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/statements/get-v1-statements",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3260,7 +3279,8 @@
           "method": "GET",
           "path": "/v1/statements/{statement_key}",
           "title": "GET /v1/statements/{statement_key}",
-          "summary": "Return a specific normalized statement keyed by statement type. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+          "summary": "Retrieve one SEC-derived normalized statement selected by statement key",
+          "description": "Use this route when the statement type belongs in the URL rather than a query string. Set `statement_key` to a supported normalized statement, then select annual or quarterly cadence and fiscal years as needed. The result preserves reported units, periods, and filing provenance and may contain missing or incomparable normalized line items. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/statements/get-v1-statements-statement-key",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3275,7 +3295,8 @@
           "method": "GET",
           "path": "/v1/statements/all",
           "title": "GET /v1/statements/all",
-          "summary": "Return the balance sheet, income statement, and cash flow statement as one normalized bundle. Resolves us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.",
+          "summary": "Retrieve an issuer's normalized balance sheet, income statement, and cash flow statement as one SEC-derived bundle",
+          "description": "Use this route to obtain the three core statements for a common issuer and reporting selection. Choose annual or quarterly cadence and fiscal-year filters before comparing periods. Each statement retains its own rows, units, periods, completeness, and filing provenance, so a bundle does not guarantee that every normalized line item is available or comparable across all three statements. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/statements/get-v1-statements-all",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3290,7 +3311,8 @@
           "method": "GET",
           "path": "/v1/statements/segmented-facts",
           "title": "GET /v1/statements/segmented-facts",
-          "summary": "Return filing-derived segmented fact history for supported metrics such as revenue and segment profit/loss, with product or geography dimensions, hierarchy metadata, capability state, and trace references when issuers disclose them",
+          "summary": "Retrieve an issuer's disclosed segment revenue or profit/loss history with filing-level dimensions and source context",
+          "description": "Use this route to compare a disclosed segment metric across recent annual or quarterly filings. Select `metric` first, then use `segment_type` when the workflow needs a product, geographic, or other dimension. Rows preserve the issuer's reported axes, members, units, reporting periods, and filing provenance; a missing segment or unsupported capability is not a zero value. Keep the returned accession, filing URL, and freshness fields with any analysis. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/statements/get-v1-statements-segmented-facts",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3305,7 +3327,8 @@
           "method": "GET",
           "path": "/v1/statements/segmented-revenues",
           "title": "GET /v1/statements/segmented-revenues",
-          "summary": "Return filing-derived segmented revenue history with XBRL product or geography dimensions, capability state, and trace references when issuers disclose them",
+          "summary": "Retrieve an issuer's disclosed product or geographic revenue history with filing-level dimensions and source context",
+          "description": "Use this route to analyze revenue splits the issuer actually disclosed in XBRL. Choose annual or quarterly cadence and, when useful, narrow to a product, geographic, or other reported dimension. Records retain the reported unit, period, segment hierarchy, capability status, and filing provenance; they are not a modeled revenue allocation. Preserve the returned accession, filing URL, and freshness fields before aggregating or presenting the result. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/statements/get-v1-statements-segmented-revenues",
           "audience": "application and coding agent",
           "metadata_fields": [
@@ -3320,7 +3343,8 @@
           "method": "GET",
           "path": "/v1/statements/share-float",
           "title": "GET /v1/statements/share-float",
-          "summary": "Return a share-float wrapper backed by SEC company facts, including disclosed public float when available and shares-outstanding fallback semantics otherwise",
+          "summary": "Retrieve an issuer's disclosed public float when available, with a clearly labeled shares-outstanding fallback",
+          "description": "Use this route when a workflow needs the public-float fact reported in SEC company facts and must distinguish it from a shares-outstanding proxy. Check `sourceMode`, `statusNote`, unit, reporting date, provenance, and freshness before using a value: `publicFloatUsd` may be null while `sharesOutstanding` is present. A proxy is not public float, market capitalization, or free float. See [API conventions](/api-conventions) and [freshness and source evidence](/freshness-and-trust).",
           "docs_path": "/api-reference/statements/get-v1-statements-share-float",
           "audience": "application and coding agent",
           "metadata_fields": [

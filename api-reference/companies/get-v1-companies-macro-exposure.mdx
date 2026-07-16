@@ -1,18 +1,23 @@
 ---
 title: "GET /v1/companies/macro-exposure"
-description: "Return revenue-weighted macro sensitivities for a single company: geographic revenue segments crossed with the country macro plane, with per-indicator beta…"
+description: "Retrieve a revenue-weighted macro-exposure snapshot built from an issuer's disclosed geographic revenue and country indicators"
 ---
 
-Return revenue-weighted macro sensitivities for a single company: geographic revenue segments crossed with the country macro plane, with per-indicator beta, direction, confidence, and a coverage percentage that degrades gracefully when segments are unavailable
+Retrieve a revenue-weighted macro-exposure snapshot built from an issuer's disclosed geographic revenue and country indicators
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Coverage and source scope
+
+Use this route to inspect a company's modelled macro sensitivities, weighted by available disclosed geographic revenue segments. `coveragePercent`, confidence, source context, and the selected reporting period explain how much of the issuer's revenue could be mapped; a low-coverage result is not a statement that the issuer has no foreign exposure. The returned betas and directions are an exposure snapshot, not a forecast or investment recommendation. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).
+
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
+- `provenance`
 
 ## Example request
 
@@ -21,7 +26,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/companies/macro-exposure"
+  "https://api.secapi.ai/v1/companies/macro-exposure?ticker=AAPL"
 ```
 </RequestExample>
 
@@ -30,7 +35,25 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "provenance": {
+    "source": "sec",
+    "accessionNumber": "0000320193-25-000079",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
+    "retrievedAt": "2026-03-17T00:00:00.000Z",
+    "parserVersion": "2026-03-13.5",
+    "rawSourceKey": "0000320193-25-000079"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-03-17T00:00:00.000Z",
+    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
+    "lagMs": 900000
+  },
+  "materialization": {
+    "parserVersion": "2026-03-13.5",
+    "materializationVersion": "datastream-3.0"
+  }
 }
 ```
 </ResponseExample>
@@ -38,7 +61,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/companies/macro-exposure to return revenue-weighted macro sensitivities for a single company: geographic revenue segments crossed with the country macro plane, with per-indicator beta, direction, confidence, and a coverage percentage that degrades gracefully when segments are unavailable. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/companies/macro-exposure to retrieve a revenue-weighted macro-exposure snapshot built from an issuer's disclosed geographic revenue and country indicators. Preserve `requestId`, `traceparent`, `provenance` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture

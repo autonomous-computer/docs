@@ -1,18 +1,25 @@
 ---
 title: "GET /v1/companies/cash-flow-statements"
-description: "Return SEC XBRL-derived cash flow statements for a ticker with free-cash-flow and dividend enrichment. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-…"
+description: "Retrieve an issuer's SEC-derived cash flow statement history with normalized cash-generation fields"
 ---
 
-Return SEC XBRL-derived cash flow statements for a ticker with free-cash-flow and dividend enrichment. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically.
+Retrieve an issuer's SEC-derived cash flow statement history with normalized cash-generation fields
 
 <Info>
 Audience: application and coding agent.
 </Info>
 
+## Coverage and source scope
+
+Use this route to review operating, investing, and financing cash-flow history for one issuer. Choose annual or quarterly cadence before comparing periods, because cash-flow rows describe a duration rather than a point-in-time balance. Values are normalized from supported SEC XBRL filings and retain units, periods, and provenance; free-cash-flow fields are derived from those filings, not a forecast. See [statements reference](/api-reference/statements) and [freshness and source evidence](/freshness-and-trust).
+
 ## Canonical metadata
 
 - `requestId`
 - `traceparent`
+- `provenance`
+- `freshness`
+- `materialization`
 
 ## Example request
 
@@ -30,7 +37,26 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "provenance": {
+    "source": "sec",
+    "accessionNumber": "0000320193-25-000079",
+    "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
+    "retrievedAt": "2026-03-17T00:00:00.000Z",
+    "parserVersion": "2026-03-13.5",
+    "rawSourceKey": "0000320193-25-000079"
+  },
+  "freshness": {
+    "status": "fresh",
+    "asOf": "2026-03-17T00:00:00.000Z",
+    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
+    "lagMs": 900000
+  },
+  "materialization": {
+    "parserVersion": "2026-03-13.5",
+    "materializationVersion": "datastream-3.0"
+  },
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
@@ -38,7 +64,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/companies/cash-flow-statements to return SEC XBRL-derived cash flow statements for a ticker with free-cash-flow and dividend enrichment. Covers us-gaap (10-K/10-Q) and IFRS foreign-private-issuer (20-F/6-K) filers automatically. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/companies/cash-flow-statements to retrieve an issuer's SEC-derived cash flow statement history with normalized cash-generation fields. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
