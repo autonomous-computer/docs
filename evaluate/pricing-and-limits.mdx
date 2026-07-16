@@ -39,6 +39,21 @@ curl --fail-with-body -X POST -H "x-api-key: $SECAPI_API_KEY" \
 
 Use the [billing quote reference](/api-reference/platform/post-v1-billing-quote) if the workflow needs a different request shape. Do not estimate a fleet-wide cost from a pricing screenshot or a one-off response.
 
+## Special Situations preflight
+
+Quote the exact operation that will run. For example, a source-cited brief:
+
+```bash
+curl --fail-with-body -X POST -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" \
+  --data '{"method":"GET","path":"/v1/situations/sit_abc123/export"}' \
+  "https://api.secapi.ai/v1/billing/quote"
+```
+
+Anonymous `/v1/embed/situations*` discovery is a separate recent-window,
+redacted surface. It does not establish a paid entitlement or provide a route
+to authenticated underwriting.
+
 ## Verified plan and rights boundaries
 
 The authored plan catalog currently describes a one-time 150-call starter grant, PAYG as the default paid path, Personal and Team self-serve plans, and Commercial as the plan family for redistribution and external commercial rights. Starter-grant use is for evaluation; PAYG, Personal, and Team are for in-house use. Customer-facing embedding, redistribution, white-labeling, resale, and Bulk Factor Export require Commercial.
