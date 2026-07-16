@@ -9,6 +9,10 @@ Return recent Form N-PX proxy voting filings with cursor pagination and date fil
 Audience: application and coding agent.
 </Info>
 
+## Coverage and source scope
+
+Use this route to locate filed Form N-PX proxy-voting disclosures for a fund or manager review. Results identify filings, not a complete current holdings list, an issuer-level vote tally, or an interpretation of voting intent. `date_from` and `date_to` bound filing dates; the filing's own reporting period may differ. A lower `submission_file_limit` can omit older SEC submission matches. Follow `nextCursor` with the same filters and retain the accession number for review. See [filing conventions](/api-conventions).
+
 ## Canonical metadata
 
 - `requestId`
@@ -38,7 +42,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/forms/npx to return recent Form N-PX proxy voting filings with cursor pagination and date filters. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/forms/npx to locate filed Form N-PX proxy-voting disclosures. Start with a ticker or CIK when known and use `date_from` and `date_to` as filing-date bounds. Preserve the accession number, filing date, filing URL, `hasMore`, `nextCursor`, `requestId`, and `traceparent`; when present, preserve `provenance`, `freshness`, and `materialization` metadata unchanged, but do not assume those fields on response shapes that omit them. The filing date may differ from the report period, and a filing is not a complete current holdings or vote-tally dataset. Keep the same filters while following `nextCursor`, and note that a lower `submission_file_limit` can omit older SEC matches.
 </Prompt>
 
 ## Failure posture
