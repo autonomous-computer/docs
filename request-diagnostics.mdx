@@ -1,9 +1,9 @@
 ---
 title: "Request diagnostics"
-description: "Capture a small, secret-free record for an SEC API REST, SDK, CLI, or MCP failure"
+description: "Capture a concise, secret-free record for an SEC API REST, SDK, CLI, or MCP failure"
 ---
 
-Capture the failing response before you retry it. A status code without its response context cannot reliably distinguish a malformed request, rejected credential, billing condition, rate limit, or transient service failure.
+Capture the failing response before retrying. A status code alone cannot reliably distinguish a malformed request, rejected credential, billing condition, rate limit, or transient service failure.
 
 ## Make one inspectable request
 
@@ -26,7 +26,7 @@ curl -i -sS \
 | `Retry-After` and returned quota or billing headers | Explains whether and when a retry is appropriate |
 | SDK, CLI, MCP client, or HTTP-library version | Makes a client-specific failure reproducible |
 
-For a request body, preserve a redacted copy and the names of relevant headers. Include query parameters, response view, and pagination cursor when they influence the result.
+For a request body, preserve a redacted copy and the names of relevant headers. Include query parameters, response view, and pagination cursor when they affect the result.
 
 ## Classify before retrying
 
@@ -34,7 +34,7 @@ For a request body, preserve a redacted copy and the names of relevant headers. 
 - `401` or `403`: verify the credential context. API data requests use `x-api-key`; a dashboard bearer session is not a replacement.
 - `402`: stop and resolve the billing or entitlement condition described by the response.
 - `429`: honor `Retry-After` when returned and reduce concurrency before retrying.
-- `5xx` or transport failure: retry only with bounded backoff and keep the captured request ID.
+- `5xx` or transport failure: use bounded backoff and keep the captured request ID.
 
 Do not turn a billing, hard-cap, or validation failure into a tight retry loop.
 
@@ -50,7 +50,7 @@ curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/billing"
 ```
 
-For an MCP failure, include the client name and version, the server URL, the tool or method name, and the returned request identifier. For SDK and CLI failures, include their versions and the smallest redacted reproduction.
+For an MCP failure, include the client name and version, server URL, tool or method name, and returned request identifier. For SDK and CLI failures, include their versions and the smallest redacted reproduction.
 
 ## Redact before sharing
 
