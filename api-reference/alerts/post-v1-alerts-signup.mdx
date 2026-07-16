@@ -9,6 +9,12 @@ Register an email for the free alerts tier (idempotent lead capture)
 Audience: application and coding agent.
 </Info>
 
+## Registration behavior
+
+Submit one valid email address. Repeating the same registration is safe, but this endpoint records registration only; it does not create a saved monitor, authenticate an organization, or prove that any alert will be delivered.
+
+The alerts surface can be disabled. Treat `404` as unavailable and show the returned result rather than promising a fallback subscription.
+
 ## Canonical metadata
 
 - `requestId`
@@ -19,10 +25,9 @@ Audience: application and coding agent.
 <RequestExample>
 ```bash
 curl -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -H "secapi-version: 2026-03-19" \
+  -d '{"email":"alerts@example.com"}' \
   "https://api.secapi.ai/v1/alerts/signup"
 ```
 </RequestExample>
@@ -40,7 +45,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/alerts/signup to register an email for the free alerts tier (idempotent lead capture). Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Call SEC API POST /v1/alerts/signup with one valid email address to register interest in the exposed public alerts tier. The registration is idempotent, but a 404 means the public alerts surface is unavailable; do not retry it as a delivery failure.
 </Prompt>
 
 ## Failure posture

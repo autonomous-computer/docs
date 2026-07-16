@@ -13,6 +13,10 @@ Audience: application and coding agent.
 
 Turns a plain-English trigger (e.g. "notify me about mergers at AAPL") into a validated structured monitor subscription spec plus a ready-to-POST create body. Read-only: it returns a spec, it does not create the monitor.
 
+## Draft before creation
+
+The compiler returns a validated structured subscription specification and a ready-to-submit create body. It does not persist a monitor or reserve a delivery destination. The endpoint can be unavailable, and invalid prompts or unsupported filters return validation errors that should be shown for correction.
+
 ## Canonical metadata
 
 - `requestId`
@@ -26,7 +30,7 @@ curl -X POST \
   -H "Authorization: Bearer $SECAPI_BEARER_TOKEN" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{"prompt":"Notify me about mergers at AAPL"}' \
   "https://api.secapi.ai/v1/monitors/compile"
 ```
 </RequestExample>
@@ -44,7 +48,7 @@ curl -X POST \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API POST /v1/monitors/compile to compile a natural-language alert request into a structured monitor spec. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Call SEC API POST /v1/monitors/compile to validate a natural-language request and obtain a structured draft. It is read-only: review the returned create body and create a monitor separately after a human approves it.
 </Prompt>
 
 ## Failure posture

@@ -9,6 +9,12 @@ Run the monitor's saved query and return new matches since last_checked_at
 Audience: application and coding agent.
 </Info>
 
+## Match window
+
+This endpoint runs the saved query using the monitor's current boundary and returns up to `limit` matches. It is an inspection read: unlike an internal monitor check, it does not advance `lastCheckedAt`. Do not treat an empty response as proof that no future scheduled check can find a match.
+
+For keyword monitors, `lastCheckedAt` becomes the filing-date lower bound. Structured monitor modes are availability-gated, so a disabled structured mode can produce no matches without proving that the underlying event type is absent.
+
 ## Canonical metadata
 
 - `requestId`
@@ -38,7 +44,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/monitors/{monitor_id}/matches to run the monitor's saved query and return new matches since last_checked_at. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Call SEC API GET /v1/monitors/{monitor_id}/matches to inspect the current saved-search result set. This read does not advance the monitor cursor, so keep the monitor id and returned filing identifiers when reconciling results with later delivery.
 </Prompt>
 
 ## Failure posture

@@ -9,6 +9,12 @@ Create a saved-search monitor with optional webhook or email delivery destinatio
 Audience: signed-in organization administrator.
 </Info>
 
+## Creation constraints
+
+A monitor requires a non-empty `name` and `query`. Choose one destination model: the legacy `webhookUrl` field and `delivery` cannot be sent together. Email delivery and certain event subscriptions can require account activation; preserve `Retry-After` on a throttled response.
+
+`startAt` defines the initial search boundary for ordinary saved searches. Structured search modes are validated against their own filter schema and may be unavailable. Creating a monitor records configuration; it is not a guarantee of a polling interval, match volume, or successful downstream delivery.
+
 ## Canonical metadata
 
 - `requestId`
@@ -22,7 +28,7 @@ curl -X POST \
   -H "Authorization: Bearer $SECAPI_BEARER_TOKEN" \
   -H "secapi-version: 2026-03-19" \
   -H "content-type: application/json" \
-  -d '{}' \
+  -d '{"name":"Example filings monitor","query":"material agreement"}' \
   "https://api.secapi.ai/v1/monitors"
 ```
 </RequestExample>
