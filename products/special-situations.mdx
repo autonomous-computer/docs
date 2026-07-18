@@ -3,11 +3,24 @@ title: "Special situations"
 description: "Follow filing-derived corporate events with current detail, filing timelines, calendars, and source-cited research exports"
 ---
 
-Special Situations is the authenticated paid API for following filing-derived M&A, tender offers, going-private transactions, spin-offs, activist campaigns, restructurings, and bankruptcies. Use it to research the current record and its filing trail while keeping current situations, calendar events, and immutable weekly digest snapshots distinct.
+Special Situations is the authenticated API for following filing-derived M&A, tender offers, going-private transactions, spin-offs, activist campaigns, restructurings, and bankruptcies. Use it to monitor the current record and its filing trail while keeping current situations, calendar events, and immutable weekly digest snapshots distinct.
 
-<Info>
-The anonymous Embed family is a separate, recent-window discovery surface for logged-out pages. It is not an API-key-free version of the paid product: it does not provide authenticated list/detail depth or underwriting packs.
-</Info>
+## Free public preview
+
+The `/v1/embed/situations` routes are a free, anonymous preview for public sites and browser embeds. Do not send `x-api-key` to these routes:
+
+```bash
+curl -sS "https://api.secapi.ai/v1/embed/situations?types=merger&limit=10"
+```
+
+Preview reads are CORS-enabled for browser use and return public cache headers. They are intentionally limited to a capped, recent public projection, so a cached response is not a substitute for an authenticated research workflow.
+
+| Use case | Route family | Access |
+| --- | --- | --- |
+| Public site or lightweight browser preview | [`/v1/embed/situations`](/api-reference/embed) | Anonymous, CORS-enabled, cacheable preview |
+| Application, agent, or sustained monitoring workflow | [`/v1/situations`](/api-reference/situations) | Paid API with a server-held `x-api-key` |
+
+To move beyond the preview, create an organization API key and call the `/v1/situations` routes from your server, worker, shell, SDK, CLI, or MCP client. Never put a paid API key in browser-delivered code.
 
 ## Find a current event and its filing trail
 
@@ -19,7 +32,7 @@ curl -sS \
 
 Narrow list results by type, subtype, status, ticker, sector, market-cap bucket, country, announcement date, update time, and supported EDGAR forms. Use the returned situation ID to fetch current detail, its paginated filing timeline, a compact summary, a Markdown export, or an underwriting pack. Record filing identities, source references, update metadata, and `requestId` for a decision-critical record.
 
-## Routes for discovery and evidence
+## Routes for discovery, monitoring, and evidence
 
 | Method | Path | Job | Output |
 | --- | --- | --- | --- |
@@ -35,19 +48,11 @@ Narrow list results by type, subtype, status, ticker, sector, market-cap bucket,
 
 Use `enrich=false` to request a smaller list projection when scanning a wide set. It changes the returned projection, not the billed request class. `limit` is 1 through 100; advance pagination only with the returned cursor and unchanged filters.
 
-## Public boundary, freshness, and decision boundaries
+## Freshness, coverage, and decision boundaries
 
 Situations are filing-derived. They do not confirm that a transaction will close or that a disclosed date, term, or status remains current. Digest issues are immutable publication-time snapshots, while current situation detail can change as new filings arrive. Calendar and performance responses answer different questions and should remain separate from current detail in a research record.
 
-| Surface | Intended use | Boundary |
-| --- | --- | --- |
-| Authenticated read routes | Paid research, exports, and underwriting | Send an organization API key; inspect live plan and limits before automation. |
-| Anonymous `/v1/embed/situations*` | Logged-out discovery and embeds | Capped, recent, redacted projection with no key; it can return `404` when a record is outside the public window or unavailable. |
-| Authenticated RSS | Paid feed consumption | Use `/v1/situations/feed.rss`, not the anonymous RSS route, for a paid workflow. |
-
-The published watchlist-management routes are a separate bearer-org surface. This guide does not present watchlist creation or delivery activation as an API-key, CLI, SDK, or MCP workflow.
-
-Coverage is limited to SEC filing-derived situations. This documentation describes only the published Special Situations contract. A missing situation or timeline is not proof that no related event exists.
+The authenticated API is distinct from public embed routes, and the paid RSS feed is distinct from a capped anonymous embed RSS surface. Coverage is limited to SEC filing-derived situations; it does not include broader market, fundamentals, estimates, valuation, or symbol-coverage datasets. A missing situation or timeline is not proof that no related event exists.
 
 ## Next action
 
