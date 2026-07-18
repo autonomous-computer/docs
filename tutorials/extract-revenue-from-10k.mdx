@@ -3,7 +3,11 @@ title: "Extract Revenue from a 10-K"
 description: "Retrieve annual SEC revenue facts with the selected concept, period, unit, and filing provenance intact."
 ---
 
-Use this journey when you need annual reported revenue for a model, diligence memo, or data pipeline. The returned number is only useful when its unit, reporting period, selected XBRL concept, and filing provenance travel with it. The finished output is a reproducible observation record, not a display-formatted headline number.
+Use this journey when you need annual reported revenue for a model, diligence
+memo, or data pipeline. The returned number is only useful when its unit,
+reporting period, selected XBRL concept, and filing provenance travel with it.
+The finished output is a reproducible observation record, not a display-formatted
+headline number.
 
 ## Prerequisites
 
@@ -32,7 +36,9 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   | jq '{requestedTag, resolvedTag, aliasStrategy, data: [.data[] | {value, unit, periodEnd, fy, fp, form, filedAt, provenance}], requestId, traceparent}'
 ```
 
-The expected result is up to four annual fact observations. `resolvedTag` records the concept actually selected; values are raw units, not display-formatted dollars.
+The expected result is up to four annual fact observations. `resolvedTag`
+records the concept selected by the service; values are raw units, not
+display-formatted dollars.
 
 ## 3. Write a provenance-preserving result
 

@@ -3,13 +3,21 @@ title: "Build a 13F Holdings Tracker Agent"
 description: "Create a Python job that records the latest 13F comparison for a manager CIK."
 ---
 
-Retrieve the latest two 13F reports for a manager and save the comparison. This
-job does not infer trades, performance, or current ownership.
+Retrieve the latest two parsable Form 13F reports for one manager and save the
+returned comparison. This job creates an evidence artifact; it does not infer
+trades, performance, or current ownership.
 
 ## Prerequisites
 
-- Python 3.9+ and `SECAPI_API_KEY`.
+- Python 3.9+, `requests`, and `SECAPI_API_KEY`.
 - A manager CIK and durable storage for production results.
+
+```bash
+python -m pip install requests
+export SECAPI_API_KEY="your_api_key"
+```
+
+Create `track_13f.py`:
 
 ```python
 import json, os
@@ -28,22 +36,37 @@ payload = response.json()
 stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 output = Path(f"13f-compare-{cik}-{stamp}.json")
 output.write_text(json.dumps(payload, indent=2) + "\n")
-print({"output": str(output), "requestId": payload.get("requestId")})
+print({
+    "output": str(output),
+    "requestId": payload.get("requestId"),
+    "traceparent": payload.get("traceparent"),
+})
 ```
 
-A successful run writes the service's selected-report comparison and prints the
-file path plus `requestId`. Inspect the returned shape before building a
-dashboard; keep accession numbers, report dates, CUSIPs, filing URLs where
-provided, and request metadata with every summary.
+Run `python track_13f.py`. A successful run writes the service-selected
+comparison and prints the file path and request metadata. Keep the original
+JSON, manager CIK, report dates, filing dates, source accessions or URLs, and
+request metadata with every derived summary. The underlying Form 13F reports
+remain the source for a material statement.
 
-Handle `400` as an invalid CIK, `401`/`403` as an access problem, and temporary
-`5xx` responses with bounded retries. Do not mark a manager unchanged after an
-incomplete or failed retrieval.
+## Common errors
+
+- `400`: provide the reporting manager's CIK, not a portfolio-company ticker.
+- `401` or `403`: the key is missing, invalid, or not entitled to the route.
+- An unavailable comparison can mean fewer than two parsable reports; it is not
+  evidence of no exposure or no change.
+
+## Production considerations
+
+Use an idempotent object key that includes the manager and retrieval time, keep
+bounded retries for temporary `5xx` responses, and do not mark a manager
+unchanged after an incomplete request. A 13F is a delayed snapshot of reportable
+securities, so label a row change as a comparison between selected reports.
 
 ## Limitation and next steps
 
 13F data is delayed and limited to reportable securities. A new or closed
 position is a change between selected reports, not proof of a real-time trade.
 
-- [13F ownership reference](/api-reference/owners)
-- [MCP workflows](/mcp-workflows)
+List a manager's filing history with [13F ownership](/api-reference/owners),
+then schedule the job after the relevant filing window.

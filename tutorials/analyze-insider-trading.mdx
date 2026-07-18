@@ -23,11 +23,15 @@ curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   | jq '{data, hasMore, nextCursor, requestId, traceparent}'
 ```
 
-The expected result is a paginated list of normalized Form 4 records. Preserve owner name, relationship fields, transaction code and date, security title, shares, price/value when present, accession number, and provenance.
+The expected result is a paginated list of normalized Form 4 records. Preserve
+the returned owner fields, transaction code and date, security title, quantities,
+accession, filing URL or provenance, and request metadata.
 
 ## 2. Build a purchase-review queue
 
-`transaction_code=P` asks for the SEC code, not an inferred label. The script below writes evidence records for potential open-market/private purchases and keeps pagination visible for the next run.
+`transaction_code=P` filters by the returned SEC transaction code; it is not an
+inferred investment label. The script writes review records and keeps pagination
+visible for the next run.
 
 ```js
 const query = new URLSearchParams({ ticker: "JPM", forms: "4", transaction_code: "P",

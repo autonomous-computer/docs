@@ -6,6 +6,11 @@ description: "Save a filing search, deliver signed monitor matches, and reconcil
 Use a monitor for scheduled filing-search matches. It is not a real-time EDGAR
 feed, so retain a reconciliation path through match and delivery history.
 
+## Prerequisites
+
+- A signed-in SEC API organization with a configured monitor and delivery endpoint.
+- `SECAPI_API_KEY`, `curl`, and `jq` to reconcile saved-search matches.
+
 ## 1. Configure delivery in the dashboard
 
 An organization administrator uses the signed-in
@@ -24,18 +29,18 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
 ```
 
-The preview shows current saved-search matches; it does not prove immediate
-future delivery.
+The expected result is a page of current saved-search matches with pagination
+and request metadata. It does not prove immediate future delivery.
 
 ## 3. Verify and recover
 
 Verify signatures against the raw body before parsing JSON, reject stale
 timestamps, and make writes idempotent by event ID or filing accession number.
-Use the dashboard to send a test event. It emits `webhook.test`, not a
-production `monitor.match` event.
+Use the dashboard to send a test event. It proves receiver handling, not that
+the saved search will produce a filing.
 
 - Inspect `GET /v1/webhook_endpoints/{webhook_id}/deliveries`.
-- Replay only when duplicates are safe.
+- Replay only when duplicate intake is safe.
 - Reconcile `GET /v1/monitors/{monitor_id}/matches` after delivery failures.
 
 A match identifies a disclosure for review; it does not determine materiality.

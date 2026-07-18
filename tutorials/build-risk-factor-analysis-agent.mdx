@@ -1,52 +1,71 @@
 ---
-title: "Build a Risk Factor Analysis Agent"
-description: "Retrieve two Item 1A sections and produce a reviewable text comparison."
+title: "Build a Risk Factor Review Agent"
+description: "Retrieve the latest Item 1A section and save a source-linked review input."
 ---
 
-Compare Item 1A from two named 10-K filings. The output is a review artifact,
-not a materiality score or legal conclusion.
+Retrieve one issuer's latest Item 1A and save a reviewable source artifact. The
+output is not a materiality score, legal conclusion, or prediction.
 
-## 1. Find two accessions
+## Prerequisites
+
+- Python 3.9+, `requests`, and an API key in `SECAPI_API_KEY`.
+- An issuer ticker or CIK. This example uses `AAPL`.
+
+```bash
+python -m pip install requests
+export SECAPI_API_KEY="your_api_key"
+```
+
+## 1. Retrieve the latest Item 1A
 
 ```bash
 curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   --data-urlencode "ticker=AAPL" --data-urlencode "form=10-K" \
-  --data-urlencode "limit=5" --data-urlencode "sort=filing_date_desc" \
-  "https://api.secapi.ai/v1/filings"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a" \
+  | jq '{key, contentMd, provenance, requestId, traceparent}'
 ```
 
-Record two accession numbers, filing dates, and URLs from the result. Do not
-quietly compare different forms.
+The result contains the returned section content and filing provenance. Keep the
+provenance with the text; a section is a retrieval aid and the filing is the
+authoritative disclosure.
 
-## 2. Fetch Item 1A and generate a diff
+## 2. Save a review input
+
+Create `risk_review.py`:
 
 ```python
-import difflib, os, requests
+import json, os
 from pathlib import Path
+import requests
 
-def section(accession):
-    response = requests.get(
-        f"https://api.secapi.ai/v1/filings/{accession}/sections/item_1a",
-        headers={"x-api-key": os.environ["SECAPI_API_KEY"]}, timeout=30,
-    )
-    response.raise_for_status()
-    payload = response.json(); data = payload.get("data", payload)
-    return data.get("contentMd", data.get("text", "")), payload.get("requestId")
-
-current, current_id = section("CURRENT_ACCESSION_NUMBER")
-previous, previous_id = section("PREVIOUS_ACCESSION_NUMBER")
-if not current or not previous: raise RuntimeError("Item 1A was unavailable")
-diff = difflib.unified_diff(previous.splitlines(), current.splitlines(), lineterm="")
-Path("item-1a-comparison.diff").write_text("\n".join(diff) + "\n")
-print({"currentRequestId": current_id, "previousRequestId": previous_id})
+response = requests.get(
+    "https://api.secapi.ai/v1/filings/latest/sections/item_1a",
+    headers={"x-api-key": os.environ["SECAPI_API_KEY"]},
+    params={"ticker": "AAPL", "form": "10-K"}, timeout=30,
+)
+response.raise_for_status()
+payload = response.json()
+Path("item-1a-review-input.json").write_text(json.dumps(payload, indent=2) + "\n")
+print({"output": "item-1a-review-input.json", "requestId": payload.get("requestId")})
 ```
 
-Read the diff beside both filings. Formatting, reordering, or extraction
-differences can create large changes without a new disclosure. Persist accessions,
-section keys, filing URLs, request IDs, and the comparison version. Route empty
-sections and `404` responses to review instead of creating a negative finding.
+Run `python risk_review.py`. The expected result is a JSON file with the section,
+filing provenance, and request metadata. Read the linked filing before quoting or
+classifying a risk; wording and extraction boundaries can change without a new
+economic disclosure.
+
+## Common errors and production use
+
+- `400` usually means the issuer identifier is absent; `401` and `403` indicate
+  a credential or entitlement problem.
+- `GET /v1/filings/latest/sections/item_1a` returns `502` with
+  `section_lookup_failed` when the selected latest filing section cannot be
+  resolved or rendered. Review that boundary; it is not a negative risk finding.
+- Store the returned accession, source URL, section key, and request ID. When
+  comparing periods, retrieve and retain each filing explicitly rather than
+  treating a text diff as a materiality decision.
 
 ## Next steps
 
-- [Filing retrieval](/api-reference/filings)
-- [Search workflows](/products/search)
+Use [filing search](/products/search) to locate a specific disclosure, then add
+a reviewer-approved comparison process for two identified filings.

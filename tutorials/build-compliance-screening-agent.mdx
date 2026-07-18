@@ -5,13 +5,15 @@ description: "Verify signed monitor events and create source-linked items for a 
 
 This guide receives a `monitor.match` event, verifies the signature, and creates a source-linked intake record. It does not decide whether a filing is material, resolve a counterparty, or clear a compliance issue. The filing remains the review source.
 
-## 1. Configure the event source
+## Prerequisites
 
-An organization administrator can create the webhook endpoint with `POST /v1/webhook_endpoints` and the monitor with `POST /v1/monitors`. Those public organization routes use `Authorization: Bearer $SECAPI_BEARER_TOKEN`; an `x-api-key` is not sufficient for the mutation. The signed-in [SEC API dashboard](https://secapi.ai/app/webhooks) is an optional way to configure or inspect the same resources. Use a narrow monitor name, query, form filter, and ticker set. Store the signing secret returned when the endpoint is created in `SECAPI_WEBHOOK_SIGNING_SECRET`.
+You need Python 3.9+, Flask, a public HTTPS receiver, and the signing secret for
+an already configured delivery endpoint. Configure the endpoint and a narrow
+monitor in the signed-in [SEC API dashboard](https://secapi.ai/app/webhooks),
+then store the secret as `SECAPI_WEBHOOK_SIGNING_SECRET`. An API key is only
+needed to read a configured monitor's matches.
 
-You need Python 3.9+, Flask, a public HTTPS receiver, the signing secret, a bearer token to create or change the organization resources through the API, and an API key only if you later query monitor matches.
-
-## 2. Verify the raw delivery
+## 1. Verify the raw delivery
 
 Create `receiver.py`:
 
@@ -54,14 +56,14 @@ def receive():
 
 Run `pip install flask`, then expose this receiver at the configured HTTPS destination. A valid production event prints one source-linked record for each delivered match. A valid `webhook.test` is acknowledged but ignored; it proves the receiver can verify delivery, not that the monitor query will produce a filing.
 
-## 3. Make the review record durable
+## 2. Make the review record durable
 
 Use the event id as an idempotency key before enqueueing work. Retain event `requestId`, monitor name, issuer identity, form, filing date, and `htmlUrl`. The event is a notification envelope, not the filing itself, so give the reviewer the source URL and keep an LLM summary separate from the decision.
 
 For a configured monitor, an API key can run its saved query and retrieve matches:
 
 ```bash
-curl -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=25"
 ```
 
@@ -71,4 +73,6 @@ curl -H "x-api-key: $SECAPI_API_KEY" \
 
 ## Next links
 
-Replace `print` with one transactional write that stores the event id, source URL, and a pending-review status. Send a `webhook.test` from the dashboard or `POST /v1/webhook_endpoints/{webhook_id}/test` to exercise signature verification; it proves receiver handling, not that a monitor query has found a filing. See [webhook delivery audit](/webhook-delivery-audit) for delivery investigation.
+Replace `print` with one transactional write that stores the event ID, source
+reference, and pending-review status. A dashboard test proves receiver handling,
+not that a monitor query found a filing. See [webhook delivery audit](/webhook-delivery-audit).
