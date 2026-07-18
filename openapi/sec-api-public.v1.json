@@ -26911,6 +26911,170 @@
           "Special Situations"
         ],
         "summary": "Create a situation-scoped watchlist monitor",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "query",
+                  "searchMode",
+                  "filters"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "query": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "searchMode": {
+                    "type": "string",
+                    "enum": [
+                      "situation"
+                    ]
+                  },
+                  "filters": {
+                    "type": "object",
+                    "properties": {
+                      "situationIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "types": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "subtypes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "statuses": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "tickers": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "sectors": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "startAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "delivery": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "config"
+                        ],
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "email"
+                            ]
+                          },
+                          "config": {
+                            "type": "object",
+                            "required": [
+                              "to"
+                            ],
+                            "properties": {
+                              "to": {
+                                "type": "string",
+                                "format": "email"
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "config"
+                        ],
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "webhook"
+                            ]
+                          },
+                          "config": {
+                            "type": "object",
+                            "required": [
+                              "organizationEventFanout"
+                            ],
+                            "properties": {
+                              "organizationEventFanout": {
+                                "type": "boolean"
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "examples": {
+                "filterOnly": {
+                  "summary": "Filter-only API-key-safe watchlist",
+                  "value": {
+                    "name": "M&A watch",
+                    "query": "situations.watch",
+                    "searchMode": "situation",
+                    "filters": {
+                      "types": [
+                        "merger"
+                      ],
+                      "statuses": [
+                        "pending"
+                      ],
+                      "tickers": [
+                        "AAPL"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Situation-scoped watchlist monitor.",
