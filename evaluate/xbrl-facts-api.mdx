@@ -1,56 +1,56 @@
 ---
 title: "Evaluate XBRL Facts API"
-description: "Test normalized XBRL facts and statement bundles against a source-preserving financial-model refresh."
+description: "Run a source-aware financial-model refresh proof using normalized statements and SEC XBRL facts."
 ---
 
-Choose this API for a financial-model refresh or research table that needs normalized statements and tag-level SEC facts with filing provenance. Raw SEC XBRL is the right source when your team wants to own all taxonomy parsing and reconciliation; a general financial-data tool may supply convenient values but may not expose the requested/resolved concept or the source trail your model review needs. The concrete job is to retrieve a normalized annual statement bundle and a tag-level fact series for one issuer, then decide whether their period and filing provenance support your model.
+Use this guide when a model or research table needs normalized statements, tag-level facts, and the filing context needed to reconcile them. It is not a replacement for issuer-specific accounting judgment, taxonomy review, or a restatement policy.
 
-## Endpoints and boundaries
+## The buyer job
 
-- `GET /v1/statements/all` returns a normalized balance sheet, income statement, and cash-flow bundle. It accepts issuer identity, annual or quarterly period selection, fiscal-year filters, and `limit` up to 40.
-- `GET /v1/facts` returns normalized SEC company facts for a requested tag. The response identifies the requested and resolved tag.
+Refresh one issuer's annual financial inputs while retaining enough evidence for a model reviewer to reconcile a statement line to its fact series. Choose raw SEC XBRL if your team needs to own taxonomy parsing and normalization. Choose this path when a reusable normalized layer plus provenance is the practical requirement.
 
-These routes normalize SEC XBRL; they do not eliminate issuer-specific concepts, extension tags, period differences, amendments, or restatements. Do not compare annual and quarterly values as though they were interchangeable, and do not treat a missing tag as proof a metric was not disclosed.
+## Smallest proof of concept
 
-## Selection test
-
-This is a fit when the model needs both a reusable normalized layer and the evidence to resolve exceptions. It is not a replacement for an issuer-specific accounting policy or a restatement decision. The proof passes when the team can reconcile at least one statement line to the selected fact series after checking form, period, unit, resolved tag, and filing provenance.
-
-## Proof of concept
+Retrieve one annual statement bundle and a small annual fact series, then compare only aligned periods and units.
 
 ```bash
-# Retrieve one normalized annual statement bundle.
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/statements/all?ticker=MSFT&period=annual&limit=1"
 
-# Retrieve up to four annual observations for a requested revenue concept.
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/facts?ticker=MSFT&tag=Revenues&form=10-K&limit=4"
 ```
 
-Compare the reported statement line to the fact series only after aligning `form`, fiscal period, `periodEnd`, `filedAt`, and unit. Inspect `resolvedTag` before assuming the requested concept was used.
+For the selected revenue row, compare `form`, fiscal labels, `periodEnd`, `filedAt`, unit, and the fact response's requested and resolved tag before treating values as reconcilable.
 
-## Expected evidence
+## What a passing result contains
 
-For every model input, retain requested/resolved tag, value, unit, form, fiscal labels, period end, filing date, accession number and filing URL from per-point provenance, plus the enclosing `requestId` and `traceparent`. Values are returned in raw units; apply display formatting or unit conversion only in a clearly defined model layer.
+For every model input, preserve requested tag, `resolvedTag`, value, unit, form, fiscal period, period end, filing date, and provenance with its source or filing URL. Preserve `accessionNumber` when it is present; it can be null for a valid response. Also retain enclosing `requestId`, `traceparent`, and freshness where supplied. Values are raw units; display conversion belongs in an explicit model layer.
 
-## Failure modes
+## Source and production limits
 
-- `401` or `403`: check the server-side key and route entitlement.
-- Empty fact data: confirm issuer and tag, then inspect `resolvedTag`; issuers can use another valid concept or taxonomy.
-- Apparent reconciliation failure: recheck units, annual versus quarterly periods, the filing date, and whether an amendment or restatement is part of the intended model policy.
-- High-volume refreshes: cache historical observations, bound concurrency, and quote the actual cadence using [Pricing and limits](/evaluate/pricing-and-limits).
+- Normalization does not remove issuer extensions, taxonomy variation, amendments, restatements, or period-basis choices.
+- A missing tag is not proof that an issuer did not disclose the metric; inspect the resolved concept and the issuer's reporting context.
+- Annual and quarterly values are not interchangeable.
+- Reconciliation failures should first be checked for units, form, period, filing selection, and restatement policy.
+- Cache historical observations, bound refresh concurrency, and quote the actual issuer cadence through [Pricing and limits](/evaluate/pricing-and-limits).
 
-## Next action
+## Next decision
 
-Follow [Extract revenue from a 10-K](/tutorials/extract-revenue-from-10k) for a provenance-preserving implementation, then test an issuer with the edge cases your model must support.
+Adopt this layer for a model only after a reviewer can reconcile one chosen statement line to the relevant fact series and document the exception policy for the issuer types you cover.
 
 <CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for a model-refresh proof.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect facts and statement bundles first.</Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review issuer-universe refresh usage.</Card>
+  <Card title="Facts API reference" icon="book-open" href="/api-reference/facts/get-v1-facts">Inspect fact fields and response metadata.</Card>
+  <Card title="Revenue tutorial" icon="graduation-cap" href="/tutorials/extract-revenue-from-10k">Build a provenance-preserving implementation.</Card>
+  <Card title="Price the refresh" icon="calculator" href="/evaluate/pricing-and-limits">Estimate the actual issuer universe.</Card>
 </CardGroup>
 
-<Steps><Step title="Retrieve the annual bundle">Start with an issuer and period the team can reconcile.</Step><Step title="Retrieve the fact series">Inspect requested and resolved concepts before comparing values.</Step><Step title="Exercise an edge case">Test taxonomy, amendment, or period mix that matters to the model.</Step></Steps>
+<CardGroup cols={3}>
+  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Start a one-issuer reconciliation.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect facts and statement bundles.</Card>
+  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review model-refresh options.</Card>
+</CardGroup>
 
-<Prompt>For one issuer, retrieve an annual statement bundle and revenue fact series. Return requested and resolved tags, unit, period, filing provenance, and request metadata. Identify any unit, period, taxonomy, amendment, or restatement judgment before model use.</Prompt>
+<Steps><Step title="Retrieve one annual bundle">Start from a period the team can reconcile.</Step><Step title="Inspect the fact series">Align tag, unit, form, and period.</Step><Step title="Test an exception">Exercise a taxonomy or restatement case before rollout.</Step></Steps>
+
+<Prompt>For one issuer, retrieve an annual statement bundle and revenue fact series. Return the requested and resolved tags, units, fiscal periods, provenance and source URL, `accessionNumber` when non-null, freshness, and request metadata. Identify any taxonomy, unit, period, amendment, or restatement judgment before the values enter a model.</Prompt>

@@ -1,58 +1,62 @@
 ---
 title: "Evaluate SEC Filings MCP Server"
-description: "Test hosted MCP discovery, environment-backed authentication, and source-linked filing retrieval."
+description: "Prove one authenticated, source-linked MCP filing workflow before enabling an agent loop."
 ---
 
-Evaluate MCP as an agent transport, not as a substitute for evidence. Choose it when a client needs tool discovery and structured filing retrieval inside an MCP session; choose REST when you control the application workflow directly or need the documented HTTP response surface. The concrete job is to connect one client to the deployed server, request a latest filing and a named section, and confirm the client returns the same SEC source identity a REST workflow would preserve.
+Use hosted MCP when a team wants a client to discover and invoke SEC API tools inside an agent session. It is a transport evaluation, not evidence that a model summary is correct. Use REST when your application owns the workflow directly or needs the documented HTTP response surface.
 
-## Connection boundary
+## The buyer job
 
-Read the deployed discovery metadata at `https://api.secapi.ai/mcp` before configuring a client. Supply the API key through an environment variable as the `x-api-key` header. Do not put the key in source control, browser-visible configuration, or a prompt transcript.
+Connect one supported MCP client, authenticate it without exposing a secret, and retrieve a latest filing plus a named section with source identity intact. Public discovery at `GET https://api.secapi.ai/mcp` describes the deployed server. It does not authenticate a client or authorize tool use.
 
-The hosted MCP surface and REST are related but not interchangeable in every client. Verify the deployed discovery result and the actual tool inventory before assuming a client can make a particular call.
+## Smallest proof of concept
 
-## Selection test
+Keep the key in the client process environment and configure it as `x-api-key`. Then have the client use authenticated MCP tool discovery before selecting tools; the inventory is the contract for that deployed session.
 
-MCP removes client-side tool wiring; it does not turn a model's prose into a verified filing answer. Raw EDGAR remains the primary source to inspect for a decision-critical statement, and a general agent without source identifiers does not meet this test. The proof passes when the configured client exposes the expected deployed tools, returns the accession and filing URL for the requested task, and a REST cross-check can reproduce the source retrieval.
+```bash
+export SECAPI_API_KEY="secapi_..."
+curl --fail-with-body -sS https://api.secapi.ai/mcp
+```
 
-## Proof of concept
-
-1. Configure the MCP client from the deployed discovery metadata with an environment-backed `x-api-key`.
-2. Ask it to find one issuer's latest 10-K and retrieve Item 1A.
-3. Require the result to include its tool calls, accession number, filing URL, source text, and request metadata.
-4. Cross-check the expected retrieval behavior with REST:
+Ask the configured client to resolve `AAPL`, retrieve its latest `10-K`, then retrieve `Item 1A`. Require it to return the tool names, accession number, filing URL, source text, and returned request metadata. Cross-check the underlying retrieval path:
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K"
-
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K"
 ```
 
-## Expected evidence
+`POST /mcp` is authenticated JSON-RPC. Do not describe discovery as anonymous MCP access: only the `GET /mcp` metadata request is public.
 
-Capture the discovery response or configuration version, client and tool names, request/result transcript with secrets removed, accession number, filing URL, `requestId`, `traceparent`, and returned source/freshness metadata. The test passes only when the client makes source review possible; a fluent summary without its filing identity does not pass.
+## What a passing result contains
 
-## Failure modes
+Keep a secret-redacted discovery/configuration record, client name, selected tool names, tool arguments, accession number, filing URL, section identity and text, plus `requestId`, `traceparent`, and returned provenance/freshness when supplied. The REST cross-check should identify the same source record; it need not make a claim about identical model prose.
 
-- Stale client configuration: re-read deployed discovery metadata instead of reusing an old local config.
-- Authentication failure: confirm that `x-api-key` is injected from the environment and never exposed in the client-visible URL.
-- Missing tool or unsupported behavior: use the deployed tool inventory and a REST cross-check to define the actual boundary.
-- Tool failure or uncited result: retain the error, then retrieve the filing or section directly before downstream use.
+## Source and production limits
 
-MCP agent loops can compound usage. Run the same workload through [Pricing and limits](/evaluate/pricing-and-limits) before enabling autonomy.
+- A client may not implement every deployed transport behavior. Treat the current tool inventory and a real call as the compatibility test.
+- A fluent answer without filing identity is not a passing research result.
+- The returned section is filing evidence, not investment, legal, or accounting advice.
+- `401`, `403`, JSON-RPC validation, billing, quota, and tool failures are distinct states. Preserve their identifiers; do not retry a broad agent task blindly.
+- Estimate a bounded tool sequence with [Pricing and limits](/evaluate/pricing-and-limits) before enabling repeated or autonomous runs.
 
-## Next action
+## Next decision
 
-Follow [Hosted MCP workflows](/mcp-workflows) for client setup, then add the source-identity assertions to the client smoke test.
+Use MCP in production only when the client can retain source identifiers and keep the API key in its own secret facility. Otherwise, use REST behind your server while the client boundary is repaired.
 
 <CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create an environment-backed MCP credential.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect the underlying API response shape first.</Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review autonomous-agent usage before scheduling runs.</Card>
+  <Card title="Install MCP" icon="plug" href="/mcp-install">Use the supported environment-backed setup.</Card>
+  <Card title="MCP workflows" icon="workflow" href="/mcp-workflows">Review discovery and evidence retention.</Card>
+  <Card title="Price the loop" icon="calculator" href="/evaluate/pricing-and-limits">Quote the actual tool sequence.</Card>
 </CardGroup>
 
-<Steps><Step title="Read deployed discovery">Configure from current metadata, not a copied snippet.</Step><Step title="Run one cited task">Retrieve a latest filing and named section.</Step><Step title="Cross-check REST">Separate client behavior from API behavior.</Step></Steps>
+<CardGroup cols={3}>
+  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Keep the credential in the client environment.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect the REST evidence path.</Card>
+  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review agent-loop options.</Card>
+</CardGroup>
 
-<Prompt>Using deployed MCP discovery and an environment-backed `x-api-key`, retrieve one issuer's latest 10-K and Item 1A. Return tools used, filing identity, source text, and request metadata. Cross-check REST and report unsupported or uncited output as a failure.</Prompt>
+<Steps><Step title="Read discovery">Use public metadata only to configure the deployed endpoint.</Step><Step title="Prove one tool call">Require filing and section identity in the result.</Step><Step title="Cross-check REST">Separate client behavior from source retrieval.</Step></Steps>
+
+<Prompt>Using deployed MCP discovery and an environment-backed x-api-key, discover available tools, retrieve AAPL's latest 10-K and Item 1A, and return the tools used, accession number, filing URL, section text, request metadata, and any provenance. Cross-check the source with REST. Treat missing source identity or unsupported client behavior as a failed proof.</Prompt>

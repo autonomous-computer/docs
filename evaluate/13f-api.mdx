@@ -1,64 +1,60 @@
 ---
 title: "Evaluate 13F API"
-description: "Test manager-reported 13F holdings and quarter-over-quarter comparisons with SEC filing evidence."
+description: "Test manager-reported Form 13F holdings and the latest-two-report comparison with SEC filing evidence."
 ---
 
-Choose this API when the job is to operate a manager-monitor or research-review workflow from normalized 13F holdings while retaining the SEC filing trail. Raw EDGAR can provide the submitted reports, but leaves your application to identify comparable reports, normalize holdings, and preserve the comparison context. A general research tool can summarize a manager's activity, but cannot replace the selected filings and dates your reviewer must inspect. A Form 13F is a delayed, manager-reported snapshot; it does not establish current holdings, intraperiod trades, or investment intent.
+Use this guide for a manager-monitor or research-review workflow built on disclosed Form 13F holdings. A 13F is delayed, periodic manager disclosure. It is not a live portfolio, trade ledger, statement of intent, or complete economic-exposure record.
 
-## Endpoints and boundaries
+## The buyer job
 
-- `GET /v1/owners/13f` requires a reporting-manager `cik`; it returns the latest normalized report and accepts optional `reportDate`, `filingDate`, and `limit` selectors.
-- `GET /v1/owners/13f/filings` lists recent reports for that manager. Use it to inspect availability before treating a missing comparison as a data conclusion.
-- `POST /v1/owners/13f/compare` compares the latest two reports available to the route. It is not an arbitrary-quarter comparison endpoint.
+For one reporting manager, inspect available filings, retrieve a selected report, and compare the latest two parsable reports with their filing context. Direct EDGAR is the better path when you only need the original submission or must choose an arbitrary pair of historical quarters.
 
-The report date is the quarter-end snapshot; the filing date is when it reached the SEC. Keep both. Holding values are returned as `valueUsdThousands`, so convert units only deliberately.
+## Smallest proof of concept
 
-## Selection test
-
-This is a fit when your product needs a repeatable latest-two-report comparison and can display or retain the underlying report identities. Prefer direct EDGAR retrieval when you only need an original submission or must make an arbitrary historical-quarter comparison that this route does not select. The proof passes when a reviewer can trace every reported change back to both selected filings and can explain why it is disclosure evidence rather than a trade conclusion.
-
-## Proof of concept
-
-Use a manager your team already follows. This example uses Berkshire Hathaway's CIK.
+`cik` identifies the reporting manager, not an issuer held in the report. Start with filing history, then retrieve the selected report, then run the route's latest-two-parsable-report comparison.
 
 ```bash
-# Inspect the source reports before making a comparison.
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f/filings?cik=0001067983&limit=20"
 
-# Retrieve the selected normalized report.
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/owners/13f?cik=0001067983&limit=20"
 
-# Compare the two latest reports available to the endpoint.
-curl --fail-with-body -X POST \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  -H "content-type: application/json" \
-  --data '{"cik":"0001067983","limit":50}' \
+curl --fail-with-body -X POST -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" --data '{"cik":"0001067983","limit":50}' \
   "https://api.secapi.ai/v1/owners/13f/compare"
 ```
 
-## Expected evidence
+The comparison does not accept arbitrary report-date selectors. `valueUsdThousands` is reported in thousands; make any unit conversion explicit.
 
-For each selected report, retain the manager CIK, report date, filing date, accession number, filing URL, reported holdings, `requestId`, `traceparent`, and `provenance` when supplied. For the comparison, retain its two filing dates, row statuses and deltas, plus its request metadata. Pair the diff with the report-history and selected-report evidence before presenting a position as added, removed, increased, or reduced.
+## What a passing result contains
 
-## Failure modes
+Retain manager CIK, report date, filing date, accession number, filing URL, returned holdings, request metadata, and provenance/freshness. For the comparison, retain both selected filing dates, row status and deltas. A reviewer must be able to trace an added, removed, or changed row back to both disclosure records.
 
-- `missing_cik` means the request needs the reporting manager's CIK, not an issuer ticker.
-- A comparison needs two available reports. Inspect the filing-history endpoint rather than treating no comparison as a manager's lack of activity.
-- Amendments, fund structure, corporate actions, and reporting conventions can change a row without representing a discretionary trade.
-- Bound repeated polling with the account's live limits and quote the workflow before a broad manager universe. See [Pricing and limits](/evaluate/pricing-and-limits).
+## Source and production limits
 
-## Next action
+- The report date is a quarter-end snapshot; the filing date is when it reached the SEC. Keep both.
+- A missing comparison can mean fewer than two parsable reports. Check filing history before drawing a conclusion.
+- Amendments, fund structure, corporate actions, and reporting conventions can change a row without a discretionary trade.
+- Do not describe latest-two-report differences as current holdings, intraperiod trading, or manager intent.
+- Before monitoring a manager universe, bound the polling schedule and quote the workload through [Pricing and limits](/evaluate/pricing-and-limits).
 
-Run the same PoC for a manager in your coverage set, then use the [13F monitoring tutorial](/tutorials/monitor-13f-holdings) to design an idempotent ingestion job.
+## Next decision
+
+Use the comparison only when your product can display its two underlying reports and label the result as a filing difference. For an arbitrary historical comparison, retrieve the intended reports separately and own that comparison policy.
 
 <CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for the selected-manager proof.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect 13F response shapes before scheduling a monitor.</Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review recurring manager-coverage costs.</Card>
+  <Card title="13F API reference" icon="book-open" href="/api-reference/owners/get-v1-owners-13f">Inspect selected-report semantics.</Card>
+  <Card title="13F tutorial" icon="graduation-cap" href="/tutorials/monitor-13f-holdings">Design an idempotent monitor.</Card>
+  <Card title="Price the monitor" icon="calculator" href="/evaluate/pricing-and-limits">Estimate repeated manager coverage.</Card>
 </CardGroup>
 
-<Steps><Step title="Choose a known manager">Use a manager in your coverage set and inspect available reports first.</Step><Step title="Compare the selected evidence">Keep report identities beside the latest-two-report diff.</Step><Step title="Set a polling boundary">Quote and limit the manager universe before recurring use.</Step></Steps>
+<CardGroup cols={3}>
+  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Start a selected-manager proof.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect report and comparison shapes.</Card>
+  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review monitoring options.</Card>
+</CardGroup>
 
-<Prompt>For one reporting-manager CIK, retrieve filing history and a selected 13F report, then compare the two latest reports. Return report and comparison evidence separately, including provenance and request ID, and state the disclosure limits.</Prompt>
+<Steps><Step title="Inspect available reports">Use the manager CIK and retain filing dates.</Step><Step title="Compare evidence">Keep both report identities beside the diff.</Step><Step title="Bound monitoring">Set cadence before covering a manager universe.</Step></Steps>
+
+<Prompt>For one reporting-manager CIK, list available Form 13F filings, retrieve one selected report, and compare the latest two parsable reports. Return filing identities, report and filing dates, holding units, comparison rows, provenance, and request IDs. State that the result is delayed disclosure evidence, not current ownership or trading intent.</Prompt>

@@ -1,57 +1,53 @@
 ---
 title: "Evaluate Insider Trading API"
-description: "Test a Form 3, 4, and 5 review queue with transaction-level filing evidence."
+description: "Build a reviewable Form 3, 4, and 5 queue with transaction-level filing evidence."
 ---
 
-Choose this API when the job is to create a reviewable disclosure queue from Forms 3, 4, and 5, not to manufacture a trading signal. Raw EDGAR provides the source forms but requires your application to parse transactions and assemble a filterable queue. General market tools may label activity, but their labels are not a substitute for the SEC code and filing context. The concrete test is to find recent Form 4 records for one issuer, distinguish the SEC transaction code from an inferred label, and make each row reviewable against its filing.
+Use this guide to build a queue of filed insider-ownership records for human or policy review. The output is disclosure evidence, not a trading signal, legality assessment, statement of motive, 10b5-1-plan status, or current-ownership determination.
 
-## Endpoint and boundaries
+## The buyer job
 
-`GET /v1/insiders` returns normalized records derived from Forms 3, 4, and 5. It accepts issuer `ticker` or `cik`, form, filing-date, owner, security-title, and `transaction_code` filters. Results use cursor pagination; `limit` is 1 through 50.
+For one issuer, retrieve a bounded Form 4 queue, preserve each row's filing identity, and inspect the source filing before applying a label or action. Direct filing retrieval is appropriate when you only need an original form; this route is appropriate when you need filterable normalized records first.
 
-For Form 4 review, `transaction_code=P` narrows to the SEC's open-market or private purchase code and `S` narrows to sales. Keep the raw code. Option exercises, gifts, tax withholding, planned sales, and other transactions can coexist with discretionary purchases or sales.
+## Smallest proof of concept
 
-## Selection test
-
-This is a fit when a human or downstream policy can inspect the filing behind each normalized row. Use direct filing retrieval when you only need a single original form, or a purpose-built market-data product when the requirement is a vendor's proprietary signal rather than SEC disclosure evidence. The proof passes when the unfiltered and code-filtered queues reconcile, every retained row has a filing identity, and the integration makes no buy-or-sell inference.
-
-## Proof of concept
+Start with one issuer and one form. Use `transaction_code` only to preserve the SEC-reported code, not to infer a discretionary trade. Continue pagination only with `nextCursor` while `hasMore` is true.
 
 ```bash
-# Start with all recent Form 4 records for one issuer.
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&limit=25"
-
-# Build a separately labeled purchase review queue.
-curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&transaction_code=P&limit=25"
+  "https://api.secapi.ai/v1/insiders?ticker=AAPL&forms=4&transaction_code=P&limit=10"
 ```
 
-Advance with `nextCursor` while `hasMore` is true. Run both requests so the team can inspect what the transaction-code filter excludes.
+The route also accepts issuer `cik`, owner, security-title, and filing-date filters. `date_from` and `date_to` apply to filing date, not transaction date.
 
-## Expected evidence
+## What a passing result contains
 
-Persist each row's owner identity, owner relationship or title when present, security title, transaction code, transaction and filing dates, shares, price or value when present, post-transaction ownership when present, accession number, filing URL, `requestId`, and `traceparent`. The filing identity is the evidence; a normalized transaction alone is not an investment recommendation.
+For each queue row, retain issuer, reporting owner, form, filing date, transaction date, transaction code, security title, shares, price/value when returned, accession number, filing URL, `requestId`, and provenance/freshness. The test passes when a reviewer can open the cited filing and see the transaction and its context.
 
-## Failure modes
+## Source and production limits
 
-- `401` or `403`: the machine key is missing, invalid, or not entitled for the route.
-- Empty data: confirm issuer, form, dates, and filter. It is not proof of no activity outside that query.
-- Duplicates or late corrections: paginate, retain a backfill window, and deduplicate by filing accession plus transaction identity in your own store.
-- Over-interpretation: route unusual records to a human filing review instead of emitting a buy or sell conclusion.
+- `P` and `S` are reported Form 4 transaction codes. Options, gifts, tax withholding, planned sales, and other context can change the interpretation.
+- Filing-derived data does not establish motive, legality, investment outcome, or a complete current holdings picture.
+- An empty result is not proof that an issuer or owner had no relevant activity.
+- Cursor pagination must use the returned cursor; do not synthesize offsets.
+- Inspect footnotes and the cited filing before classifying a row, then quote the intended watchlist cadence through [Pricing and limits](/evaluate/pricing-and-limits).
 
-Before enabling a watchlist, preflight the actual recurring call pattern with [Pricing and limits](/evaluate/pricing-and-limits).
+## Next decision
 
-## Next action
-
-Build the review artifact with the [insider-transaction tutorial](/tutorials/analyze-insider-trading), then test the same dates against the issuer's filing history.
+Deploy this as a review queue only when each downstream label links back to the filing and your policy explicitly separates SEC codes from inferred behavior.
 
 <CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for a narrow issuer review.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect Form 3, 4, and 5 records first.</Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review watchlist usage before polling.</Card>
+  <Card title="Insiders API reference" icon="book-open" href="/api-reference/insiders/get-v1-insiders">Inspect filters and pagination fields.</Card>
+  <Card title="Ownership workflows" icon="workflow" href="/ownership-workflows">Choose evidence-retention rules.</Card>
+  <Card title="Price the queue" icon="calculator" href="/evaluate/pricing-and-limits">Estimate issuer-watchlist usage.</Card>
 </CardGroup>
 
-<Steps><Step title="Start with all Form 4 records">Keep issuer, owner, filing date, and transaction date distinct.</Step><Step title="Apply one SEC code">Compare the code-filtered queue with unfiltered records.</Step><Step title="Review each filing">Do not emit an investment conclusion from a normalized row alone.</Step></Steps>
+<CardGroup cols={3}>
+  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Start a narrow issuer review.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect Form 3, 4, and 5 records.</Card>
+  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review watchlist options.</Card>
+</CardGroup>
 
-<Prompt>For one issuer, retrieve recent Form 4 records and a separate `transaction_code=P` queue. Return raw code, owner, dates, filing identity, and request ID; identify records that need filing review rather than an inferred signal.</Prompt>
+<Steps><Step title="Build one queue">Keep filing and transaction dates distinct.</Step><Step title="Open each filing">Review the code in its source context.</Step><Step title="Set a policy">Keep inferred labels separate from disclosure data.</Step></Steps>
+
+<Prompt>For one issuer, retrieve up to ten Form 4 records with transaction_code P. Return transaction and filing dates, SEC code, accession number, filing URL, request ID, and provenance. Explain that the code is disclosed data, not a conclusion about motive, legality, or investment significance.</Prompt>

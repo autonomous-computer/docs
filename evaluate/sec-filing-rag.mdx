@@ -1,61 +1,57 @@
 ---
 title: "Evaluate SEC Filing RAG"
-description: "Prove a source-cited filing retrieval loop before adding answer generation."
+description: "Test cited filing retrieval before permitting generated answers."
 ---
 
-Evaluate retrieval before generation. Choose this path when an application must answer a filing question with inspectable source sections, rather than a general web-search summary or a raw EDGAR document dump. The concrete job is to retrieve candidate filing sections for one research question, fetch the selected source section, and verify that a downstream answer can distinguish source text from interpretation.
+Use this guide for an application that must answer a filing question with inspectable source sections. The evaluation is about retrieval and attribution first. It does not establish that ranked results are complete, material, or sufficient for a legal, accounting, or investment conclusion.
 
-## Endpoints and boundaries
+## The buyer job
 
-- `GET /v1/search/semantic` finds section matches for an open-ended query. It supports `keyword`, `semantic`, and `hybrid` modes; hybrid is the default.
-- `GET /v1/filings/{accession_number}/sections/{section_key}` retrieves the named source section for inspection or citation.
-- `GET /v1/search/fulltext` is the separate lexical retrieval path when exact terms matter.
+For one real question, retrieve candidate sections, open the section selected for an answer, and keep retrieval evidence separate from the application's interpretation. Use direct EDGAR when a reviewer must browse the original filing without a retrieval layer.
 
-Search ranking narrows a corpus; it does not prove completeness, materiality, or a legal conclusion. Citation spans and snippets can be unavailable. Check `_citation_degraded` when present and preserve accession plus section identity.
+## Smallest proof of concept
 
-## Selection test
-
-Semantic retrieval is useful for a question whose wording differs from the filing; full-text retrieval is useful when exact terms matter. Use raw EDGAR when the requirement is to browse the complete original filing without a retrieval layer. This proof passes only when the answer links each asserted filing fact to a fetched section, flags degraded citations or unavailable retrieval, and leaves the interpretation visibly separate from the source text.
-
-## Proof of concept
+Run semantic retrieval for a conceptual question. Replace the placeholders in the section request with returned values, then repeat the test with full-text search for an exact phrase. The two methods are not expected to rank the same way.
 
 ```bash
-# Retrieve candidate filing sections for a real research question.
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/search/semantic?q=regulatory%20risk&ticker=TSLA&form=10-K&mode=hybrid&limit=5"
 
-# Fetch the cited source before quoting or summarizing it.
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?ticker=TSLA&form=10-K"
+
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/search/fulltext?q=regulatory%20risk&ticker=TSLA&form=10-K&limit=5"
 ```
 
-Replace `ACCESSION` and `SECTION_KEY` with values returned by the first request. Repeat with `/v1/search/fulltext` using an exact phrase, then compare the evidence rather than expecting both retrieval methods to rank identically.
+## What a passing result contains
 
-## Expected evidence
+For each generated assertion, retain the retrieved language, accession number, section key, filing URL, form, filing date, available character range, `requestId`, and returned provenance/freshness. If the response supplies `_citation_degraded`, preserve it with the result. A user must be able to distinguish a source quotation from your application's interpretation.
 
-Keep the retrieved text with accession, section key, source URL, form, filing date, available character range, `requestId`, and returned provenance/freshness metadata. Require generated output to separate:
+## Source and production limits
 
-1. The cited filing language.
-2. The filing and section identity.
-3. The application's interpretation.
+- Search narrows a corpus; it does not prove completeness, absence, or relevance to a decision.
+- A snippet without a fetched source section is not enough to quote or substantiate a claim.
+- A semantic or full-text dependency can be unavailable independently. Surface that condition as failed retrieval, not as an absence of disclosure.
+- Citation spans and snippets can be unavailable or degraded; require a retrieval fallback in the answer policy.
+- Bound the corpus, result count, and retries, then quote the planned loop through [Pricing and limits](/evaluate/pricing-and-limits).
 
-## Failure modes
+## Next decision
 
-- Invalid or missing `q`, filters, or semantic mode is a request problem, not an empty search result.
-- An unavailable full-text backend or vector dependency can return `503`; surface it as unavailable retrieval rather than an invented absence of disclosure.
-- A highlighted snippet without a retrievable source section is insufficient evidence for a quote.
-- Repeated semantic retrieval has its own meter class. Check [Pricing and limits](/evaluate/pricing-and-limits) before an agent loop or corpus-wide evaluation.
-
-## Next action
-
-Use [Filing content search](/products/search) to select the retrieval mode, then make section-level evidence a required field in the generation evaluation.
+Permit answer generation only when every material filing assertion has a fetched section and stable source identity. Keep uncited retrieval results in a research queue rather than presenting them as answers.
 
 <CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key for source-cited retrieval.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect semantic and section retrieval first.</Card>
-  <Card title="Check pricing" icon="credit-card" href="https://secapi.ai/pricing">Review semantic-retrieval usage before an agent loop.</Card>
+  <Card title="Filing search evaluation" icon="search" href="/evaluate/sec-filing-search-api">Compare the lexical retrieval path.</Card>
+  <Card title="Search API reference" icon="book-open" href="/api-reference/search/get-v1-search-semantic">Inspect semantic search fields.</Card>
+  <Card title="Price the loop" icon="calculator" href="/evaluate/pricing-and-limits">Estimate bounded retrieval usage.</Card>
 </CardGroup>
 
-<Steps><Step title="Retrieve candidates">Run an explicit retrieval mode for one real question.</Step><Step title="Fetch the source">Retrieve the cited section before a quote or summary.</Step><Step title="Separate interpretation">Keep source language and generated analysis distinct.</Step></Steps>
+<CardGroup cols={3}>
+  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Start a bounded retrieval test.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect source retrieval responses.</Card>
+  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review semantic-search usage.</Card>
+</CardGroup>
 
-<Prompt>For one issuer and question, run semantic retrieval and fetch the selected filing section. Return accession, section key, SEC URL, request ID, and any citation-degraded signal. Separate retrieved language from interpretation and report unavailable retrieval as a failure.</Prompt>
+<Steps><Step title="Retrieve candidates">Use a real question and constrained result set.</Step><Step title="Fetch the source">Open the selected section before generation.</Step><Step title="Gate answers">Require source identity for every material assertion.</Step></Steps>
+
+<Prompt>For one issuer and research question, run semantic retrieval, fetch the selected filing section, and repeat with full-text search for an exact phrase. Return accession, section key, SEC URL, request ID, provenance, freshness, and any citation-degraded signal. Keep retrieved language separate from interpretation and mark unavailable retrieval as a failure.</Prompt>

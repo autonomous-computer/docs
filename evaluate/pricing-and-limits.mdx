@@ -1,86 +1,64 @@
 ---
 title: "Evaluate Pricing and Limits"
-description: "Preflight an SEC API workflow against its live plan, meters, budget controls, and usage rights."
+description: "Price a bounded SEC API proof of concept from the current account contract before expanding usage."
 ---
 
-Treat commercial and operational limits as part of the product-selection proof, not an afterthought after integration. The job is to map one proposed workflow to its API calls, inspect the authenticated organization's current posture, and obtain a quote before broad fanout. Published pricing and a generic cost model are useful for orientation, but only the authenticated responses establish the current plan, meters, budget gates, and rights boundary for this organization.
+Use this guide when a buyer must decide whether a concrete API or agent workflow is economically and operationally ready to expand. It does not publish a permanent price sheet: account state, plan, budget gates, and the current pricing catalog are the source of truth for an evaluation.
 
-## Live preflight endpoints
+## The buyer job
 
-- `GET /v1/billing` returns the organization's billing snapshot, including pricing posture and budget controls.
-- `GET /v1/billing/rates` returns the public catalog, starter-grant metadata, plan metadata, and meter-family rates.
-- `GET /v1/limits` returns the current account limits.
-- `POST /v1/billing/quote` quotes a billable workflow or meter class against the current plan and budget gates.
+Price one bounded workload, observe its account context, and choose whether to keep it as a proof, enable paid usage, or request commercial terms. The public pricing page explains plans; authenticated API responses determine what a particular account can use and what a proposed request is quoted to cost.
 
-Use `x-api-key` for these machine reads. Billing mutations are browser-session actions and require the documented billing permissions; do not use a machine key for checkout, payment, credit, or budget changes.
+## Smallest proof of concept
 
-## Selection test
-
-This preflight is required when a prototype will become a scheduled job, agent loop, customer-facing feature, or broad historical run. It is not a contract quote and does not grant a use right beyond the returned plan posture. The proof passes when the implementation has a saved route or meter quote, a bounded cadence, an owner for budget policy, and a decision about whether the output stays in-house or needs Commercial terms.
-
-## Proof of concept
+Start with one representative request path and one unit. The rates endpoint returns the current public catalog and starter-grant metadata. Read the limits contract with the same key before quoting: it states the effective plan, current billing state, recorded time, and route quota windows. The quote endpoint evaluates a path or meter class against that current context; it does not reserve usage or guarantee a later billing state.
 
 ```bash
-curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/limits"
-
-curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/billing"
-
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/billing/rates"
 
-# Send a documented quote body for the workflow or route you intend to repeat.
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
+
 curl --fail-with-body -X POST -H "x-api-key: $SECAPI_API_KEY" \
   -H "content-type: application/json" \
-  --data '{"method":"GET","path":"/v1/search/semantic"}' \
+  --data '{"path":"/v1/facts","method":"GET","units":1}' \
   "https://api.secapi.ai/v1/billing/quote"
+
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/billing"
 ```
 
-Use the [billing quote reference](/api-reference/platform/post-v1-billing-quote) if the workflow needs a different request shape. Do not estimate a fleet-wide cost from a pricing screenshot or a one-off response.
+Repeat the quote for the actual paths and units in the planned loop rather than estimating from an unrelated endpoint.
 
-## Special Situations preflight
+## What a passing result contains
 
-Quote the exact operation that will run. For example, a source-cited brief:
+Save the catalog version, `starterGrant`, account `planKey`, limits response `effectivePlanKey`, `billingState`, `recordedAt`, and `quotas`, plus quoted `meterClass`, `meterFamily`, units, unit amount, total amount, currency, budget/budget-gate result, and request IDs. Record the workload assumptions: issuer count, calls per issuer, retry policy, polling cadence, and whether a human or an agent triggers the calls.
 
-```bash
-curl --fail-with-body -X POST -H "x-api-key: $SECAPI_API_KEY" \
-  -H "content-type: application/json" \
-  --data '{"method":"GET","path":"/v1/situations/sit_abc123/export"}' \
-  "https://api.secapi.ai/v1/billing/quote"
-```
+## Source and production limits
 
-Anonymous `/v1/embed/situations*` discovery is a separate recent-window,
-redacted surface. It does not establish a paid entitlement or provide a route
-to authenticated underwriting.
+- New organizations start with a 150-call, non-renewing starter grant. Do not present it as a recurring free allowance.
+- `/v1/billing/quote` is an estimate for the supplied path or meter class and current context; it neither reserves credits nor promises future billing eligibility.
+- A `402`, quota response, or budget gate is a control signal to narrow, fund, or reconfigure the workload, not a reason to replay it blindly.
+- Keep API keys server-side or in a client secret facility. Billing-management actions have their own authenticated control-plane requirements.
+- Redistribution, embedding, white-labeling, resale, and similar commercial use require commercial terms; do not infer rights from a successful evaluation request.
 
-## Verified plan and rights boundaries
+## Next decision
 
-The authored plan catalog currently describes a one-time 150-call starter grant, PAYG as the default paid path, Personal and Team self-serve plans, and Commercial as the plan family for redistribution and external commercial rights. Starter-grant use is for evaluation; PAYG, Personal, and Team are for in-house use. Customer-facing embedding, redistribution, white-labeling, resale, and Bulk Factor Export require Commercial.
-
-Plan pricing, meter rates, limits, and budget state can change, so the account's live endpoints above are the source for a go/no-go decision. See [Plans and pricing](/plans-and-pricing) for the current published catalog and [Enterprise and commercial posture](/enterprise-commercial) for rights details.
-
-## Expected evidence
-
-Record the effective plan and billing state, endpoint or meter class, rate/quote response, budget and limit signals, anticipated cadence, and `requestId`. Preserve response headers including `SECAPI-Meter-Class`, `SECAPI-Plan-Key`, `SECAPI-Billing-State`, `SECAPI-Billing-Status`, and `Retry-After` when supplied.
-
-## Failure modes
-
-- `401`: the machine credential did not reach the API or is not accepted.
-- `402`: billing, credits, plan access, or a budget policy blocks the request; resolve the state before retrying.
-- `429`: honor `Retry-After` and lower fanout rather than immediately retrying.
-- A workflow crosses an external-use boundary: pause implementation and obtain commercial terms before exposing SEC API-derived output to customers or public users.
-
-## Next action
-
-Attach this preflight record to the specific endpoint PoC, then set an explicit budget and retry policy before scheduling recurring jobs.
+Proceed with a bounded production pilot when the account quote, budget policy, and source-evidence requirements fit the intended workload. Use the public [pricing page](https://secapi.ai/pricing) or contact the commercial team before shipping redistribution or embedded data products.
 
 <CardGroup cols={3}>
-  <Card title="Get an API key" icon="key-round" href="https://secapi.ai/signup">Create a key to inspect machine-readable limits.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Explore the workflow before expanding usage.</Card>
-  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Compare the current published plans.</Card>
+  <Card title="Plans and rights" icon="credit-card" href="/plans-and-pricing">Review plan and commercial-use boundaries.</Card>
+  <Card title="Billing rates reference" icon="book-open" href="/api-reference/platform/get-v1-billing-rates">Inspect the account-readable catalog.</Card>
+  <Card title="Billing quote reference" icon="calculator" href="/api-reference/platform/post-v1-billing-quote">Quote a real request path.</Card>
 </CardGroup>
 
-<Steps><Step title="Map each API call">Identify endpoint, cadence, and data-use boundary.</Step><Step title="Read account state">Use live billing and limits responses.</Step><Step title="Quote repeated work">Save the quote and budget posture with the implementation decision.</Step></Steps>
+<CardGroup cols={3}>
+  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Retrieve the account-readable pricing contract.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Explore a bounded request before scaling.</Card>
+  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Compare public plans and commercial paths.</Card>
+</CardGroup>
 
-<Prompt>For this workflow, inspect billing, rates, and limits, then submit the applicable quote request. Return effective plan, rights boundary, meter or route, budget signals, retry guidance, and request IDs. Mark any customer-facing use that requires Commercial terms.</Prompt>
+<Steps><Step title="Map the workload">List every request path, unit, and cadence.</Step><Step title="Read limits and quote current context">Save rate, limits, account, and budget responses.</Step><Step title="Choose the boundary">Keep a proof bounded or obtain the required terms.</Step></Steps>
+
+<Prompt>For the planned SEC API workflow, retrieve the current pricing catalog and limits contract, quote each request path with the intended units, and retrieve current account billing state. Return catalog version, plan, `effectivePlanKey`, `billingState`, `recordedAt`, `quotas`, meter class/family, units, amount, budget gate, and request IDs. Identify any rights, quota, or budget constraint before expanding the workload.</Prompt>
