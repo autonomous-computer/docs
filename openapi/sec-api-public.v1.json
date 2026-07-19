@@ -22263,7 +22263,7 @@
     "/v1/owners/institutional/ticker": {
       "get": {
         "summary": "Retrieve institutional managers that disclosed a position in one issuer for a selected 13F cohort",
-        "description": "Use this issuer-centric view to identify managers that disclosed a position in one security within the selected materialized 13F cohort. Provide either the issuer ticker or issuer CIK, not a manager identifier. The response is ranked by disclosed position value and tied to its returned report date, filing date, and accessions; it is not a current cap table, complete holder roster, or real-time ownership measure. Cohort availability depends on the materialized 13F read model, so preserve provenance and freshness metadata and treat a non-2xx response as unavailable data rather than an absence-of-holders conclusion. See [ownership workflows](/ownership-workflows).",
+        "description": "Use this issuer-centric view to identify managers that disclosed a position in one security within the selected materialized 13F cohort. Provide either the issuer ticker or issuer CIK, not a manager identifier. The response is ranked by disclosed position value and tied to its returned report date, filing date, and accessions; it is not a current cap table, complete holder roster, or real-time ownership measure. Pagination is offset-based: advance only with the returned `nextCursor` while `hasMore` is true, and read the full cohort size from `totals.holders`. Cohort availability depends on the materialized 13F read model, so preserve provenance and freshness metadata and treat a non-2xx response as unavailable data rather than an absence-of-holders conclusion. See [ownership workflows](/ownership-workflows).",
         "parameters": [
           {
             "name": "ticker",
@@ -22313,7 +22313,19 @@
               "maximum": 50,
               "default": 25
             },
-            "description": "Maximum institutional-holder rows to return (1-50), ranked by disclosed position value."
+            "description": "Maximum institutional-holder rows to return per page (1-50), ranked by disclosed position value."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "default": 0
+            },
+            "description": "Non-negative safe-integer offset into the value-ranked holder cohort. Use the response `nextCursor` for the next page while `hasMore` is true; do not derive an offset from holder ranks. `totals.holders` reports the full cohort size."
           },
           {
             "name": "view",

@@ -1,13 +1,17 @@
 ---
 title: "GET /v1/owners/institutional/ticker"
-description: "Return a ticker-centric institutional holder graph for the latest materialized 13F cohort, ranked by disclosed position value"
+description: "Retrieve institutional managers that disclosed a position in one issuer for a selected 13F cohort"
 ---
 
-Return a ticker-centric institutional holder graph for the latest materialized 13F cohort, ranked by disclosed position value
+Retrieve institutional managers that disclosed a position in one issuer for a selected 13F cohort
 
 <Info>
 Audience: application and coding agent.
 </Info>
+
+## Coverage and source scope
+
+Use this issuer-centric view to identify managers that disclosed a position in one security within the selected materialized 13F cohort. Provide either the issuer ticker or issuer CIK, not a manager identifier. The response is ranked by disclosed position value and tied to its returned report date, filing date, and accessions; it is not a current cap table, complete holder roster, or real-time ownership measure. Pagination is offset-based: advance only with the returned `nextCursor` while `hasMore` is true, and read the full cohort size from `totals.holders`. Cohort availability depends on the materialized 13F read model, so preserve provenance and freshness metadata and treat a non-2xx response as unavailable data rather than an absence-of-holders conclusion. See [ownership workflows](/ownership-workflows).
 
 ## Canonical metadata
 
@@ -60,7 +64,7 @@ Pass `?view=agent` for a compact holder ranking. It retains the reporting cohort
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/owners/institutional/ticker to return a ticker-centric institutional holder graph for the latest materialized 13F cohort, ranked by disclosed position value. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/owners/institutional/ticker to retrieve institutional managers that disclosed a position in one issuer for a selected 13F cohort. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
