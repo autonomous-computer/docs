@@ -18,7 +18,7 @@ Special Situations is a paid public API with a limited free website preview. The
 | Cite a concise agent brief | `GET /v1/situations/{situation_id}/export` | Source-cited Markdown designed for downstream models |
 | Build a single research packet | `GET /v1/situations/{situation_id}/underwriting-pack` | Canonical detail, narrative, timeline, and Copy-for-LLM Markdown together |
 | Reproduce a past digest | `GET /v1/situations/issues/{issue}` | Immutable publication-time snapshot, not live data |
-| React to a material update | `POST /v1/situations/watchlists` | Durable monitoring with explicit filters, destination, and provenance |
+| React to a material update | `POST /v1/situations/watchlists` | Durable filter monitoring with explicit scope and provenance |
 
 ## 1. Discover, then narrow
 
@@ -69,7 +69,7 @@ The issue number or slug, publication timestamp, `sourceSituationIds`, `sourceEv
 
 ## 4. Monitor after you have a thesis
 
-Create a monitor only after narrowing the universe. The API-key example below creates a filter-only watch with delivery suppressed; activate email or organization fanout only from a bearer-authenticated workflow after signed webhook or stream delivery has been configured and tested.
+Create a monitor only after narrowing the universe. The API-key example below creates a poll-only watchlist: save the returned monitor, poll `GET /v1/situations/watchlists` for matches, and retrieve the cited filing detail before notifying a person or downstream system. Direct email or organization fanout belongs behind bearer/org-authenticated delivery configuration after signed webhook or stream delivery has been configured and tested.
 
 ```bash
 curl --fail-with-body -X POST \
@@ -84,7 +84,7 @@ curl --fail-with-body -X POST \
   }'
 ```
 
-Watchlist create, read, and update operations report `monitor_management`. Delivery activation may require an additional delivery entitlement and delivery-specific metering. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
+Watchlist create, read, and update operations report `monitor_management`. Poll-only watchlists do not send alerts by themselves. Delivery activation may require bearer/org authentication, an additional delivery entitlement, and delivery-specific metering. Preserve delivery IDs and source filing provenance, verify inbound signatures over the raw body, and replay only failed deliveries when the receiving system is ready.
 
 ## MCP and reusable Skills
 
@@ -97,10 +97,11 @@ source-citation expectations as REST. Install the server with the
 [MCP setup guide](/mcp-install), then let an agent inspect the deployed tool
 list before issuing durable research or monitoring operations.
 
-The bundled `track-special-situations` Skill is the CLI-oriented counterpart:
-it guides an agent from a broad roster to live detail, a cited export, and an
-intentional monitor. It intentionally covers only the public Special Situations
-API workflow: discovery, cited research, and monitoring.
+If you want a reusable agent workflow, turn the steps on this page into a local
+or organization-specific Skill with the [custom skills guide](/custom-skills).
+Keep the Skill scoped to public Special Situations API work: discovery, cited
+research, archive reads, and poll-only monitoring unless your organization has
+separately configured delivery.
 
 ## Cost and entitlement posture
 
