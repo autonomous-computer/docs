@@ -34,7 +34,31 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3"
+  "object": "situation_underwriting_pack",
+  "id": "sit_example_123",
+  "generatedAt": "2026-07-11T12:00:00.000Z",
+  "research": {
+    "headline": "Acme Corp enters a definitive merger agreement",
+    "businessProfile": "Acme Corp develops industrial automation software.",
+    "narrative": "The issuer disclosed a definitive cash merger agreement."
+  },
+  "situation": {
+    "object": "situation",
+    "id": "sit_example_123",
+    "type": "merger",
+    "status": "pending",
+    "headline": "Acme Corp enters a definitive merger agreement",
+    "sourceAccessions": ["0001234567-26-000001"],
+    "events": [
+      {
+        "object": "situation_event",
+        "accessionNumber": "0001234567-26-000001",
+        "formType": "8-K",
+        "documentUrl": "https://www.sec.gov/Archives/edgar/data/1234567/000123456726000001/doc.htm"
+      }
+    ]
+  },
+  "markdown": "# Acme Corp\n\n## Filing timeline\n- 8-K (0001234567-26-000001)"
 }
 ```
 </ResponseExample>
@@ -42,7 +66,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/situations/{situation_id}/underwriting-pack to retrieve a deterministic, source-cited underwriting pack with canonical detail, filing timeline, and Copy-for-LLM markdown. Preserve `requestId`, `traceparent` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/situations/{situation_id}/underwriting-pack to retrieve a deterministic, source-cited underwriting pack with canonical detail, filing timeline, and Copy-for-LLM markdown. Preserve the top-level `object`, `id`, `generatedAt`, `research`, `situation`, and `markdown` fields, plus `requestId` and `traceparent` when returned. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
