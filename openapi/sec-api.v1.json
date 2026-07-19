@@ -3885,6 +3885,15 @@
             "description": "Comma-separated situation_type values."
           },
           {
+            "name": "categories",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated filing_event_category values."
+          },
+          {
             "name": "tickers",
             "in": "query",
             "required": false,
@@ -4441,7 +4450,7 @@
         "tags": [
           "Embed"
         ],
-        "summary": "Public recent-window Special Situations counts by type/status/sector/market cap",
+        "summary": "Public recent-window Special Situations counts with persisted-column coverage scope",
         "responses": {
           "200": {
             "description": "Successful response",
@@ -27727,7 +27736,7 @@
         "tags": [
           "Special Situations"
         ],
-        "summary": "Situation counts by type, status, sector, and market-cap bucket over an optional window",
+        "summary": "Situation counts by type, status, sector, market-cap bucket, and country with coverage scope",
         "parameters": [
           {
             "name": "window",
@@ -44145,7 +44154,228 @@
       "SituationEventList": {},
       "SituationFeedItemList": {},
       "SituationCalendarEntryList": {},
-      "SituationStats": {},
+      "SituationStats": {
+        "type": "object",
+        "required": [
+          "object",
+          "asOf",
+          "window",
+          "total",
+          "byType",
+          "byStatus",
+          "bySector",
+          "byMarketCapBucket"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "situation_stats"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "byType": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "byStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "bySector": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "byMarketCapBucket": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "byCountry": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "coverage": {
+            "type": "object",
+            "required": [
+              "scope",
+              "countedFields",
+              "dimensions",
+              "enrichedDimensionFilters"
+            ],
+            "properties": {
+              "scope": {
+                "type": "string",
+                "const": "persisted_situation_columns"
+              },
+              "countedFields": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "type",
+                    "status",
+                    "sector",
+                    "marketCapBucket",
+                    "country"
+                  ]
+                }
+              },
+              "dimensions": {
+                "type": "object",
+                "required": [
+                  "sector",
+                  "marketCapBucket",
+                  "country"
+                ],
+                "properties": {
+                  "sector": {
+                    "type": "object",
+                    "required": [
+                      "known",
+                      "unknown",
+                      "total",
+                      "ratio"
+                    ],
+                    "properties": {
+                      "known": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "unknown": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "total": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ratio": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "marketCapBucket": {
+                    "type": "object",
+                    "required": [
+                      "known",
+                      "unknown",
+                      "total",
+                      "ratio"
+                    ],
+                    "properties": {
+                      "known": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "unknown": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "total": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ratio": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "country": {
+                    "type": "object",
+                    "required": [
+                      "known",
+                      "unknown",
+                      "total",
+                      "ratio"
+                    ],
+                    "properties": {
+                      "known": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "unknown": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "total": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ratio": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "enrichedDimensionFilters": {
+                "type": "object",
+                "required": [
+                  "scope",
+                  "candidateBudget",
+                  "batchLimit"
+                ],
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "const": "bounded_page_candidate_enrichment"
+                  },
+                  "candidateBudget": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "batchLimit": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
       "SituationPerformance": {},
       "PublicSituation": {
         "type": "object",
@@ -45430,6 +45660,7 @@
           "data",
           "hasMore",
           "nextCursor",
+          "degradedState",
           "generatedAt"
         ],
         "properties": {
@@ -45450,6 +45681,73 @@
             "anyOf": [
               {
                 "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "code",
+                  "message",
+                  "retryable",
+                  "missingCapabilities",
+                  "fallbackUsed",
+                  "scope",
+                  "candidatesScanned",
+                  "candidateBudget",
+                  "batchLimit",
+                  "exhaustive"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "const": "bounded_dimension_filter_enrichment"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  },
+                  "missingCapabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "fallbackUsed": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "scope": {
+                    "type": "string",
+                    "const": "bounded_page_candidate_enrichment"
+                  },
+                  "candidatesScanned": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "candidateBudget": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "batchLimit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "exhaustive": {
+                    "type": "boolean",
+                    "const": false
+                  }
+                },
+                "additionalProperties": false
               },
               {
                 "type": "null"
