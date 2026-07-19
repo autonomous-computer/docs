@@ -1,163 +1,119 @@
-<!-- audit-checked: 2026-06-24 sha=831232e44 -->
-# SEC API Documentation
+<!-- audit-checked: 2026-06-27 sha=e1e2218c6 -->
+# SEC API
 
-SEC API provides REST and MCP access to SEC filings, companies, ownership data, financial statements, filing search, market data, factor data, portfolio analytics, events, webhooks, and agent-ready intelligence workflows.
+SEC API is a primary-source, agent-native SEC and factor data platform with REST, CLI, hosted MCP, compact AI-ready responses, and a 50-prompt persona library spanning law firms, investment managers, sophisticated investors, insurance, and PR firms.
 
-Use this file as the entrypoint for coding agents and LLM tools. Prefer the OpenAPI spec and canonical docs links below over guessing endpoint paths or inventing SDK methods.
+## Best entry points
 
-## Agent Instructions
+- Start with an agent (one-paste onramp): https://secapi.ai/agents
+- Product home: https://secapi.ai/
+- Developer hub: https://secapi.ai/developers
+- Pricing: https://secapi.ai/pricing
+- Drop-in agent rules file: https://secapi.ai/agents/AGENTS.md
+- Installable agent skills: `npx skills add secapi-ai/secapi-skills`
+- Agent prompt library: https://docs.secapi.ai/agents/prompt-library
+- Full docs export (every page, one file): https://docs.secapi.ai/llms-full.txt
+- Docs home: https://docs.secapi.ai/
+- SEC EDGAR API guide: https://docs.secapi.ai/seo/sec-edgar-api
+- 13F data API guide: https://docs.secapi.ai/seo/13f-data-api
+- SEC filing search API evaluation: https://docs.secapi.ai/evaluate/sec-filing-search-api
+- 13F API evaluation: https://docs.secapi.ai/evaluate/13f-api
+- Pricing and limits evaluation: https://docs.secapi.ai/evaluate/pricing-and-limits
+- Migrate from sec-api.io: https://docs.secapi.ai/migrate-from-sec-api
+- API health: `/healthz`
+- Factor quickstart: https://docs.secapi.ai/factor-quickstart
+- Factor API reference: https://docs.secapi.ai/api-reference/factors
+- Portfolio API reference: https://docs.secapi.ai/api-reference/portfolio
+- FactorsToday migration: https://docs.secapi.ai/migrate-from-factorstoday
+- CLI guide: https://docs.secapi.ai/cli
+- MCP server: `/mcp`
+- JS SDK: https://docs.secapi.ai/javascript-sdk
+- Python SDK: https://docs.secapi.ai/python-sdk
 
-- Base API URL: `https://api.secapi.ai`
-- Docs URL: `https://docs.secapi.ai`
-- OpenAPI spec: `https://docs.secapi.ai/openapi/sec-api-public.v1.json`
-- MCP endpoint: `https://api.secapi.ai/mcp`
-- Authenticate REST calls with `x-api-key: $SECAPI_API_KEY`.
-- Pin examples with `secapi-version: 2026-03-19` when possible.
-- Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization`, accession numbers, and SEC source URLs in user-facing answers.
-- Do not remove degraded-state, partial-coverage, entitlement, or rate-limit metadata.
-- Do not assume market-data routes are available unless the customer has the required plan and provider entitlements.
+## Core API workflows
 
-## OpenAPI Specs
+- resolve entities: `GET /v1/entities/resolve`
+- search filings: `GET /v1/filings`
+- latest filing: `GET /v1/filings/latest`
+- latest section: `GET /v1/filings/latest/sections/{sectionKey}`
+- facts: `GET /v1/facts`
+- statements: `GET /v1/statements/{statementKey}`
+- 13F: `GET /v1/owners/13f`
+- compensation: `GET /v1/compensation`
+- artifacts: `POST /v1/artifacts`
+- billing + plan caps: `GET /v1/billing` (rate caps, monthly budget headroom)
+- delivery events: `GET /v1/delivery/events`
+- event catalog: `GET /v1/event_types`
 
-- [SEC API OpenAPI JSON](https://docs.secapi.ai/openapi/sec-api-public.v1.json): Complete public REST contract for generated clients, playgrounds, and endpoint discovery.
+## Factor and portfolio workflows
 
-## Start Here
+Use these as top-level agent entry points for factor data, factor discovery, portfolio attribution, hedging, optimization, and model analysis. For factor analytic, portfolio, and model-analysis endpoints that expose response controls, prefer `response_mode=compact` by default. Add `include=trust` when the answer must preserve freshness, materialization, methodology, degraded-state, and provenance metadata; add `include=series` only when the caller needs chart/table time series.
 
-- [Overview](https://docs.secapi.ai): Start page for SEC API documentation.
-- [SEC API Docs](https://docs.secapi.ai/sec-api-docs): Workflow-oriented entrypoint for common investor and agent tasks.
-- [Getting started](https://docs.secapi.ai/getting-started): First API key, first request, and next steps.
-- [First request flows](https://docs.secapi.ai/first-request-flows): Copyable entity, filing, statements, and search requests.
-- [API playground](https://docs.secapi.ai/api-playground): Interactive and copyable examples for common endpoints.
-- [API conventions](https://docs.secapi.ai/api-conventions): Authentication, versioning, pagination, errors, metadata, and response formats.
+- factor catalog: `GET /v1/factors/catalog`
+- factor returns: `GET /v1/factors/returns`
+- single-factor history: `GET /v1/factors/history/{factorKey}`
+- multi-factor sparklines: `GET /v1/factors/sparklines`
+- intraday factor snapshots: `GET /v1/factors/returns/intraday`
+- factor correlations: `GET /v1/factors/correlations`
+- extreme factor moves: `GET /v1/factors/extreme-moves`
+- extreme factor pairs: `GET /v1/factors/extreme-pairs`
+- exposures/loadings: `GET /v1/factors/exposures`, `GET /v1/stocks/{ticker}/loadings`
+- related stocks: `GET /v1/factors/related-stocks`
+- factor decomposition: `GET /v1/factors/decomposition`
+- factor dashboard: `GET /v1/factors/dashboard`
+- regime performance: `GET /v1/factors/regime-performance`
+- factor pair spread: `GET /v1/factors/pairs`, `GET /v1/factors/pair-history/{f1}/{f2}`
+- bulk factor returns: `GET /v1/factors/bulk-download`
+- custom factor discovery: `POST /v1/factors/custom`
+- portfolio analysis: `POST /v1/portfolio/analyze`
+- portfolio attribution: `POST /v1/portfolio/attribution`
+- portfolio hedge: `POST /v1/portfolio/hedge`
+- portfolio optimization: `POST /v1/portfolio/optimize`
+- portfolio stress test: `POST /v1/portfolio/stress-test`
+- model factor analysis: `POST /v1/models/factor-analysis`
 
-## API Reference
+## MCP workflows
 
-- [API reference](https://docs.secapi.ai/api-reference): Public REST endpoint families.
-- [Entities](https://docs.secapi.ai/api-reference/entities/get-v1-entities-resolve): Resolve tickers, CIKs, FIGIs, CUSIPs, ISINs, and names.
-- [Filings](https://docs.secapi.ai/api-reference/filings/get-v1-filings): Search and retrieve SEC filing metadata.
-- [Filing sections](https://docs.secapi.ai/api-reference/filings/get-v1-filings-accession-number-sections-section-key): Extract filing items and sections.
-- [Statements](https://docs.secapi.ai/api-reference/statements/get-v1-statements-all): Get normalized financial statements.
-- [Facts](https://docs.secapi.ai/api-reference/facts/get-v1-facts): Get normalized SEC company facts.
-- [Ownership](https://docs.secapi.ai/api-reference/owners/get-v1-owners-13f): Retrieve 13F, institutional, and beneficial ownership data.
-- [Insiders](https://docs.secapi.ai/api-reference/insiders/get-v1-insiders): Retrieve Forms 3, 4, and 5 insider trading records.
-- [Search](https://docs.secapi.ai/api-reference/search/get-v1-search-fulltext): Full-text and semantic filing search.
-- [Events](https://docs.secapi.ai/api-reference/platform/get-v1-events): Filing-derived and delivery events.
-- [Webhooks](https://docs.secapi.ai/api-reference/webhooks/get-v1-webhook-endpoints): Signed webhook endpoints, deliveries, replay, and rotation.
-- [Billing rates](https://docs.secapi.ai/api-reference/platform/get-v1-billing-rates): Public pricing catalog and meter rates.
+Selected tools live on `https://api.secapi.ai/mcp`:
 
-## Factor And Portfolio Workflows
+- entity: `entities.resolve`
+- filings: `filings.search`, `filings.latest`, `filings.render`, `filings.export`, `sections.get`, `sections.search`
+- xbrl + statements: `facts.get`, `statements.get`
+- company financials: `companies.financials`, `companies.ratios`, `companies.income_statements`, `companies.balance_sheets`, `companies.cash_flow_statements`
+- ownership + insiders: `owners.get_13f`, `owners.compare_13f`, `insiders.list`
+- compensation: `comp.list`, `comp.compare`
+- artifacts: `artifacts.bundle`
+- market data: `market.search`, `market.snapshots`
+- macro: `macro.indicators`, `macro.high_signal_pack`, `macro.regimes`
+- factors: `factors.catalog`, `factors.returns`, `factors.history`, `factors.sparklines`, `factors.correlations`, `factors.extreme_moves`, `factors.extreme_pairs`, `factors.exposures`, `factors.bulk_returns`, `factors.pair_spread`, `factors.regime_performance`, `factors.dashboard`, `factors.decomposition`, `factors.related_stocks`
+- portfolio: `portfolio.analyze`, `portfolio.attribution`, `portfolio.hedge`, `portfolio.optimize`, `portfolio.stress_test`
+- intelligence: `intelligence.query`, `intelligence.footnotes` (topics: lease, tax, revenue, debt_covenant, segment)
+- dilution: `dilution.score.get`, `dilution.coverage.get`, `dilution.events.list`, `dilution.events.get`, `dilution.share_float_history.list`, `dilution.cash_position.list`, `dilution.convertibles.list`, `dilution.warrants.list`, `dilution.lockups.list`, `dilution.rofr.list`, `dilution.corporate_actions.list`, `dilution.reverse_splits.list`, `dilution.nasdaq_compliance.list`, `dilution.ratings.list`
+- signals: `signals.dilution.get`, `signals.dilution.enhanced.get` (SEC API Dilution Score — factor-weighted 0-100 derived metric + factor-model context)
+- sec events: `events.voting_results` (8-K Item 5.07 structured proposals)
+- special situations: `situations.list`, `situations.search`, `situations.get`, `situations.feed`, `situations.calendar`, `situations.stats`, `situations.performance`, `situations.export`, `situations.watch`, `situations.issues`, `situations.issue`, `situations.underwrite`
+- fund letters: `fund_letters.list`, `fund_letters.search`, `fund_letters.semantic`, `fund_letters.get`, `fund_letters.document`, `fund_letters.theses`, `fund_letters.managers`, `fund_letters.manager_overview`, `fund_letters.changes`
 
-- [Factor quickstart](https://docs.secapi.ai/factor-quickstart): Compact cURL, TypeScript, Python, and MCP examples for factor returns, history, extreme moves, attribution, and portfolio workflows.
-- [Factor intelligence](https://docs.secapi.ai/factor-intelligence): Factor workflow overview for returns, exposures, correlations, dashboards, decomposition, and portfolio analysis.
-- [Factor model methodology](https://docs.secapi.ai/factor-model-methodology): Model construction, launch coverage posture, and 2010+ claim boundaries.
-- [Factor provenance](https://docs.secapi.ai/factor-provenance): SecAPI-owned factor methodology, source-rights posture, and trust metadata.
-- [Factor freshness](https://docs.secapi.ai/factor-freshness): Market-calendar-aware freshness clocks, materialization IDs, and degraded-state handling.
-- [Migrate from FactorsToday](https://docs.secapi.ai/migrate-from-factorstoday): Workflow mapping from FactorsToday-style factor tools to SecAPI-owned APIs.
-- [Factors API reference](https://docs.secapi.ai/api-reference/factors): Factor catalog, returns, history, sparklines, intraday snapshots, correlations, extreme moves, extreme pairs, exposures, related stocks, dashboard, decomposition, pair spread, bulk download, and custom factor discovery.
-- [Portfolio API reference](https://docs.secapi.ai/api-reference/portfolio): Portfolio analysis, attribution, hedge, optimization, stress testing, and portfolio intelligence endpoints.
-- [Model factor analysis](https://docs.secapi.ai/api-reference/models/post-v1-models-factor-analysis): Factor analysis for model-builder drafts and saved model views.
+Resources include: `sec://entities/{ticker_or_cik}`, `sec://filings/latest/{ticker_or_cik}/{form}`, `sec://sections/latest/{ticker_or_cik}/{form}/{section_key}` (+ `?mode=compact|full`), `sec://statements/{ticker_or_cik}/{statement_key}/{period}`, `sec://13f/{cik}`, `sec://market/snapshot/{symbol}`, `sec://macro/{country}/{indicator_key}`, `sec://factors/returns/{factor_key}`, and `sec://intelligence/company/{ticker_or_cik}`.
 
-For factor analytic, portfolio, and model-analysis endpoints that expose response controls, use `response_mode=compact` for agent and LLM calls by default. Add `include=trust` when preserving freshness, materialization, methodology, degraded-state, and provenance metadata matters. Add `include=series` only for chart/table time series.
+## Agent prompt library
 
-Key REST entry points:
+50 v1 prompts (12 investment-manager / 12 law-firm / 12 pr-firm / 8 sophisticated-investor / 6 insurance) plus 10 v2-pending entries queued for delivery alongside the dilution-tools epic + AAER MCP wrap. Discoverable at:
 
-- `GET /v1/factors/catalog`
-- `GET /v1/factors/returns`
-- `GET /v1/factors/history/{factorKey}`
-- `GET /v1/factors/sparklines`
-- `GET /v1/factors/returns/intraday`
-- `GET /v1/factors/correlations`
-- `GET /v1/factors/extreme-moves`
-- `GET /v1/factors/extreme-pairs`
-- `GET /v1/factors/exposures`
-- `GET /v1/factors/dashboard`
-- `GET /v1/factors/decomposition`
-- `GET /v1/factors/related-stocks`
-- `GET /v1/factors/regime-performance`
-- `GET /v1/factors/pairs`
-- `GET /v1/factors/bulk-download`
-- `POST /v1/portfolio/analyze`
-- `POST /v1/portfolio/attribution`
-- `POST /v1/portfolio/hedge`
-- `POST /v1/portfolio/optimize`
-- `POST /v1/portfolio/stress-test`
-- `POST /v1/models/factor-analysis`
+- Mintlify: `https://docs.secapi.ai/agents/prompt-library/{persona}`
+- CLI: `secapi agents prompts list/read/copy`
 
-Key MCP tools:
+## API conventions
 
-- `factors.catalog`, `factors.returns`, `factors.history`, `factors.sparklines`
-- `factors.correlations`, `factors.extreme_moves`, `factors.extreme_pairs`
-- `factors.exposures`, `factors.bulk_returns`, `factors.dashboard`, `factors.decomposition`, `factors.related_stocks`
-- `portfolio.analyze`, `portfolio.attribution`, `portfolio.hedge`, `portfolio.optimize`, `portfolio.stress_test`
+- request correlation: `Request-Id` header
+- metering classification: `SECAPI-Meter-Class` header
+- auth: `x-api-key` today, WorkOS OAuth discovery later
+- errors: structured JSON with `object=error`, `code`, `type`, `message`, `requestId`
 
-## Macro Workflows
+## Notes for agents
 
-- [Macro intelligence](https://docs.secapi.ai/macro-intelligence): Search indicators, fetch compact high-signal country packs, check status/freshness, add forecasts/regimes, build country briefings, and connect macro to factor/portfolio stress workflows.
-- [Macro Tier-1 official sources](https://docs.secapi.ai/macro-tier1): Country coverage, source posture, and freshness ownership.
-- [Macro API reference](https://docs.secapi.ai/api-reference/macro): Macro search, indicators, releases, calendar, forecasts, regimes, credit ratings, and high-signal pack endpoints.
-
-Use macro data to enrich SEC, factor, and portfolio workflows. Search first when you do not know an indicator key. Use compact response modes for agents by default, then expand with `response_mode=standard` or `include=series,trust` when full series and trust metadata are required.
-
-Key REST entry points:
-
-- `GET /v1/macro/search` with required `q`
-- `GET /v1/macro/indicators` with required `indicator` or `indicator_key`
-- `GET /v1/macro/high-signal-pack` defaults to `country=US` and compact mode
-- `GET /v1/macro/releases` defaults to released history; use `status=scheduled` for upcoming release rows
-- `GET /v1/macro/calendar` returns future scheduled releases only
-- `GET /v1/macro/forecasts`
-- `GET /v1/macro/regimes`
-- `GET /v1/macro/status`
-- `GET /v1/macro/credit-ratings`
-- `POST /v1/intelligence/country-report`
-- `GET /v1/portfolio/stress-test/scenarios`
-- `GET /v1/factors/macro-sensitivity`
-
-Macro status is artifact-backed when runtime validation artifacts are packaged with the API; if `statusSource` is `runtime_registry_fallback`, cite the degraded status and avoid freshness-sensitive claims. For large MCP macro tools, especially `macro.investment_briefing`, set `params.content_mode: "minimal"` to keep full `structuredContent` without duplicating it in text.
-
-Key MCP tools:
-
-- `macro.search`, `macro.indicators`, `macro.high_signal_pack`
-- `macro.releases`, `macro.calendar`, `macro.forecasts`, `macro.regimes`
-- `macro.status`, `macro.credit_ratings`, `macro.country_report`, `macro.investment_briefing`
-- `portfolio.stress_scenarios`, `factors.macro_sensitivity`
-
-## SDKs, MCP, And Agents
-
-- [Libraries and SDKs](https://docs.secapi.ai/libraries-and-sdks): Runtime options and package naming.
-- [CLI guide](https://docs.secapi.ai/cli): Terminal install, auth, local help, MCP setup, and agent-context inventory.
-- [JavaScript SDK](https://docs.secapi.ai/javascript-sdk): JavaScript and TypeScript examples.
-- [Python SDK](https://docs.secapi.ai/python-sdk): Python examples.
-- [Go SDK](https://docs.secapi.ai/go-sdk): Go examples.
-- [Rust SDK](https://docs.secapi.ai/rust-sdk): Rust examples.
-- [MCP workflows](https://docs.secapi.ai/mcp-workflows): Hosted MCP setup and usage.
-- [MCP install](https://docs.secapi.ai/mcp-install): MCP client setup.
-- [LLM and agent guide](https://docs.secapi.ai/llm-guide): Instructions for agents using SEC API docs and results.
-- [Give this prompt to your agent](https://docs.secapi.ai/give-this-prompt-to-your-agent): Copyable setup prompt for coding agents.
-
-## Pricing, Trust, And Operations
-
-- [Plans and pricing](https://docs.secapi.ai/plans-and-pricing): Public plan table and meter classes.
-- [Pay as you go](https://docs.secapi.ai/pay-as-you-go): PAYG model and examples.
-- [Billing FAQ](https://docs.secapi.ai/billing-faq): Billing, limits, and plan behavior.
-- [Freshness and trust](https://docs.secapi.ai/freshness-and-trust): Freshness, provenance, and response evidence metadata.
-- [Coverage and depth](https://docs.secapi.ai/coverage-and-depth): Coverage status by workflow family.
-- [Status](https://docs.secapi.ai/status): Current production status.
-- [Changelog](https://docs.secapi.ai/changelog): Public release notes.
-- [Glossary](https://docs.secapi.ai/glossary): Common SEC API, EDGAR, filing, and agent terms.
-
-## Common Workflows
-
-- [Build a filing monitor](https://docs.secapi.ai/tutorials/build-filing-monitor): Monitor filings and deliver alerts.
-- [Monitor 13F holdings](https://docs.secapi.ai/tutorials/monitor-13f-holdings): Track institutional ownership changes.
-- [Extract revenue from a 10-K](https://docs.secapi.ai/tutorials/extract-revenue-from-10k): Pull statements and filing evidence.
-- [Semantic search risk factors](https://docs.secapi.ai/tutorials/semantic-search-risk-factors): Search filing sections by concept.
-- [Compare executive compensation](https://docs.secapi.ai/tutorials/compare-executive-compensation): Retrieve and compare proxy compensation data.
-
-## Migration Guides
-
-- [Migrate from sec-api.io](https://docs.secapi.ai/migrate-from-sec-api)
-- [Migrate from Financial Datasets](https://docs.secapi.ai/migrate-from-financialdatasets-ai)
-- [Migrate from AskEdgar](https://docs.secapi.ai/migrate-from-askedgar)
-- [Migrate from FactorsToday](https://docs.secapi.ai/migrate-from-factorstoday)
-- [Migrate from Trading Economics](https://docs.secapi.ai/migrate-from-trading-economics)
+- Auth with the `x-api-key` header. Never send the API key as `Authorization: Bearer` (bearer = browser/session credentials).
+- Resolve entities (`GET /v1/entities/resolve`) before querying; pass the resolved CIK downstream. `companies/overview` and `companies/segments` accept only `ticker` or `cik`.
+- Prefer structured endpoints and compact responses (`response_mode=compact`) over raw filing text; paginate with cursors, do not poll.
+- Cite the source accession number and filing page for any filing-derived number; keep extracted facts separate from interpretation.
+- Check `GET /v1/billing` and `POST /v1/billing/quote` before expensive or repeated loops; stop on a budget cap or approval requirement. Back off on `429`; tolerate `503` from beta-gated surfaces.
