@@ -3994,7 +3994,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SituationWeeklyIssueList"
+                  "$ref": "#/components/schemas/PublicSituationWeeklyIssueList"
                 }
               }
             }
@@ -4041,7 +4041,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SituationWeeklyIssue"
+                  "$ref": "#/components/schemas/PublicSituationWeeklyIssue"
                 }
               }
             }
@@ -4070,8 +4070,8 @@
         "tags": [
           "Embed"
         ],
-        "summary": "Public redacted situation detail used by secapi.ai situation permalinks and embeddable discovery surfaces",
-        "description": "Anonymous, cacheable detail surface for recent public situations. The response matches the implementation's public projection: provider-owned keys are omitted and verification internals are redacted.",
+        "summary": "Public situation detail used by secapi.ai situation permalinks and embeddable discovery surfaces",
+        "description": "Anonymous, cacheable detail surface for recent public situations. The response matches the implementation's public projection: provider-owned keys and verification internals are omitted.",
         "parameters": [
           {
             "name": "id",
@@ -4457,7 +4457,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SituationStats"
+                  "$ref": "#/components/schemas/PublicSituationStats"
                 }
               }
             }
@@ -44376,6 +44376,236 @@
         },
         "additionalProperties": false
       },
+      "PublicSituationStats": {
+        "type": "object",
+        "required": [
+          "object",
+          "asOf",
+          "total",
+          "byType",
+          "byStatus"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "situation_stats"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "window": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "byType": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "byStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "bySector": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "byMarketCapBucket": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "byCountry": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "coverage": {
+            "type": "object",
+            "required": [
+              "scope",
+              "countedFields"
+            ],
+            "properties": {
+              "scope": {
+                "type": "string",
+                "const": "persisted_situation_columns"
+              },
+              "countedFields": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "type",
+                    "status",
+                    "sector",
+                    "marketCapBucket",
+                    "country"
+                  ]
+                }
+              },
+              "dimensions": {
+                "type": "object",
+                "properties": {
+                  "sector": {
+                    "type": "object",
+                    "required": [
+                      "known",
+                      "unknown",
+                      "total",
+                      "ratio"
+                    ],
+                    "properties": {
+                      "known": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "unknown": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "total": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ratio": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "marketCapBucket": {
+                    "type": "object",
+                    "required": [
+                      "known",
+                      "unknown",
+                      "total",
+                      "ratio"
+                    ],
+                    "properties": {
+                      "known": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "unknown": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "total": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ratio": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "country": {
+                    "type": "object",
+                    "required": [
+                      "known",
+                      "unknown",
+                      "total",
+                      "ratio"
+                    ],
+                    "properties": {
+                      "known": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "unknown": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "total": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ratio": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "suppressedDimensions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "dimension",
+                    "reason"
+                  ],
+                  "properties": {
+                    "dimension": {
+                      "type": "string",
+                      "enum": [
+                        "sector",
+                        "marketCapBucket",
+                        "country"
+                      ]
+                    },
+                    "reason": {
+                      "type": "string",
+                      "const": "not_enriched"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "enrichedDimensionFilters": {
+                "type": "object",
+                "required": [
+                  "scope",
+                  "candidateBudget",
+                  "batchLimit"
+                ],
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "const": "bounded_page_candidate_enrichment"
+                  },
+                  "candidateBudget": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "batchLimit": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
       "SituationPerformance": {},
       "PublicSituation": {
         "type": "object",
@@ -44386,20 +44616,13 @@
           "updatedAt",
           "livemode",
           "type",
-          "subtype",
           "status",
           "statusUpdatedAt",
-          "ticker",
           "cik",
           "entityName",
           "headline",
-          "terms",
-          "keyDates",
-          "market",
           "sourceAccessions",
           "eventCount",
-          "latestEventAt",
-          "verification",
           "publicProvenance"
         ],
         "properties": {
@@ -44423,14 +44646,7 @@
             "type": "string"
           },
           "subtype": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "status": {
             "type": "string"
@@ -44439,14 +44655,7 @@
             "type": "string"
           },
           "ticker": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "cik": {
             "type": "string"
@@ -44455,209 +44664,73 @@
             "type": "string"
           },
           "exchange": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "country": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "sector": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "headline": {
             "type": "string"
           },
           "summaryMd": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "businessProfile": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "terms": {
             "type": "object",
             "properties": {
               "counterparty": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "counterpartyTicker": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "stakePct": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "dealValueUsd": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "pricePerShare": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "considerationType": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "premiumPct": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               }
             },
             "additionalProperties": false
           },
           "keyDates": {
             "type": "object",
-            "required": [
-              "announced"
-            ],
             "properties": {
               "announced": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "record": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "vote": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "expiry": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "expectedClose": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "completed": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "terminated": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -44666,54 +44739,19 @@
             "type": "object",
             "properties": {
               "price": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "marketCapUsd": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "marketCapBucket": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "enterpriseValueUsd": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "asOf": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -44729,48 +44767,7 @@
             "minimum": 0
           },
           "latestEventAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "verification": {
-            "type": "object",
-            "required": [
-              "sourceSpan",
-              "extractionTraceId",
-              "confidence",
-              "crossValidations",
-              "modelVersion",
-              "verifiedAt"
-            ],
-            "properties": {
-              "sourceSpan": {
-                "type": "null"
-              },
-              "extractionTraceId": {
-                "type": "null"
-              },
-              "confidence": {
-                "type": "null"
-              },
-              "crossValidations": {
-                "type": "array",
-                "maxItems": 0,
-                "items": {}
-              },
-              "modelVersion": {
-                "type": "null"
-              },
-              "verifiedAt": {
-                "type": "null"
-              }
-            },
-            "additionalProperties": false
+            "type": "string"
           },
           "publicProvenance": {
             "type": "object",
@@ -44789,56 +44786,24 @@
                 "items": {
                   "type": "object",
                   "required": [
-                    "accessionNumber",
-                    "filingUrl",
-                    "formType",
-                    "filedAt",
-                    "title"
+                    "accessionNumber"
                   ],
                   "properties": {
                     "accessionNumber": {
                       "type": "string"
                     },
                     "filingUrl": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
+                      "type": "string",
                       "format": "uri"
                     },
                     "formType": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     },
                     "filedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     },
                     "title": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -44851,8 +44816,7 @@
                   "required": [
                     "claimPath",
                     "claim",
-                    "accessionNumber",
-                    "filingUrl"
+                    "accessionNumber"
                   ],
                   "properties": {
                     "claimPath": {
@@ -44865,14 +44829,7 @@
                       "type": "string"
                     },
                     "filingUrl": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
+                      "type": "string",
                       "format": "uri"
                     }
                   },
@@ -44894,20 +44851,13 @@
           "updatedAt",
           "livemode",
           "type",
-          "subtype",
           "status",
           "statusUpdatedAt",
-          "ticker",
           "cik",
           "entityName",
           "headline",
-          "terms",
-          "keyDates",
-          "market",
           "sourceAccessions",
           "eventCount",
-          "latestEventAt",
-          "verification",
           "publicProvenance",
           "events"
         ],
@@ -44932,14 +44882,7 @@
             "type": "string"
           },
           "subtype": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "status": {
             "type": "string"
@@ -44948,14 +44891,7 @@
             "type": "string"
           },
           "ticker": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "cik": {
             "type": "string"
@@ -44964,209 +44900,73 @@
             "type": "string"
           },
           "exchange": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "country": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "sector": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "headline": {
             "type": "string"
           },
           "summaryMd": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "businessProfile": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "terms": {
             "type": "object",
             "properties": {
               "counterparty": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "counterpartyTicker": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "stakePct": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "dealValueUsd": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "pricePerShare": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "considerationType": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "premiumPct": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               }
             },
             "additionalProperties": false
           },
           "keyDates": {
             "type": "object",
-            "required": [
-              "announced"
-            ],
             "properties": {
               "announced": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "record": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "vote": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "expiry": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "expectedClose": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "completed": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "terminated": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -45175,54 +44975,19 @@
             "type": "object",
             "properties": {
               "price": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "marketCapUsd": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "marketCapBucket": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "enterpriseValueUsd": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "number"
               },
               "asOf": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -45238,48 +45003,7 @@
             "minimum": 0
           },
           "latestEventAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "verification": {
-            "type": "object",
-            "required": [
-              "sourceSpan",
-              "extractionTraceId",
-              "confidence",
-              "crossValidations",
-              "modelVersion",
-              "verifiedAt"
-            ],
-            "properties": {
-              "sourceSpan": {
-                "type": "null"
-              },
-              "extractionTraceId": {
-                "type": "null"
-              },
-              "confidence": {
-                "type": "null"
-              },
-              "crossValidations": {
-                "type": "array",
-                "maxItems": 0,
-                "items": {}
-              },
-              "modelVersion": {
-                "type": "null"
-              },
-              "verifiedAt": {
-                "type": "null"
-              }
-            },
-            "additionalProperties": false
+            "type": "string"
           },
           "publicProvenance": {
             "type": "object",
@@ -45298,56 +45022,24 @@
                 "items": {
                   "type": "object",
                   "required": [
-                    "accessionNumber",
-                    "filingUrl",
-                    "formType",
-                    "filedAt",
-                    "title"
+                    "accessionNumber"
                   ],
                   "properties": {
                     "accessionNumber": {
                       "type": "string"
                     },
                     "filingUrl": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
+                      "type": "string",
                       "format": "uri"
                     },
                     "formType": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     },
                     "filedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     },
                     "title": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -45360,8 +45052,7 @@
                   "required": [
                     "claimPath",
                     "claim",
-                    "accessionNumber",
-                    "filingUrl"
+                    "accessionNumber"
                   ],
                   "properties": {
                     "claimPath": {
@@ -45374,14 +45065,7 @@
                       "type": "string"
                     },
                     "filingUrl": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
+                      "type": "string",
                       "format": "uri"
                     }
                   },
@@ -45412,12 +45096,7 @@
           "accessionNumber",
           "formType",
           "eightKItems",
-          "category",
           "title",
-          "statusBefore",
-          "statusAfter",
-          "documentUrl",
-          "verification",
           "publicProvenance"
         ],
         "properties": {
@@ -45453,92 +45132,23 @@
             }
           },
           "category": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "title": {
             "type": "string"
           },
           "summaryMd": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "statusBefore": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "statusAfter": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "documentUrl": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "format": "uri"
-          },
-          "verification": {
-            "type": "object",
-            "required": [
-              "sourceSpan",
-              "extractionTraceId",
-              "confidence",
-              "crossValidations",
-              "modelVersion",
-              "verifiedAt"
-            ],
-            "properties": {
-              "sourceSpan": {
-                "type": "null"
-              },
-              "extractionTraceId": {
-                "type": "null"
-              },
-              "confidence": {
-                "type": "null"
-              },
-              "crossValidations": {
-                "type": "array",
-                "maxItems": 0,
-                "items": {}
-              },
-              "modelVersion": {
-                "type": "null"
-              },
-              "verifiedAt": {
-                "type": "null"
-              }
-            },
-            "additionalProperties": false
           },
           "publicProvenance": {
             "type": "object",
@@ -45557,56 +45167,24 @@
                 "items": {
                   "type": "object",
                   "required": [
-                    "accessionNumber",
-                    "filingUrl",
-                    "formType",
-                    "filedAt",
-                    "title"
+                    "accessionNumber"
                   ],
                   "properties": {
                     "accessionNumber": {
                       "type": "string"
                     },
                     "filingUrl": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
+                      "type": "string",
                       "format": "uri"
                     },
                     "formType": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     },
                     "filedAt": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     },
                     "title": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -45619,8 +45197,7 @@
                   "required": [
                     "claimPath",
                     "claim",
-                    "accessionNumber",
-                    "filingUrl"
+                    "accessionNumber"
                   ],
                   "properties": {
                     "claimPath": {
@@ -45633,14 +45210,7 @@
                       "type": "string"
                     },
                     "filingUrl": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
+                      "type": "string",
                       "format": "uri"
                     }
                   },
@@ -45659,8 +45229,6 @@
           "object",
           "data",
           "hasMore",
-          "nextCursor",
-          "degradedState",
           "generatedAt"
         ],
         "properties": {
@@ -45678,81 +45246,67 @@
             "type": "boolean"
           },
           "nextCursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "degradedState": {
-            "anyOf": [
-              {
-                "type": "object",
-                "required": [
-                  "code",
-                  "message",
-                  "retryable",
-                  "missingCapabilities",
-                  "fallbackUsed",
-                  "scope",
-                  "candidatesScanned",
-                  "candidateBudget",
-                  "batchLimit",
-                  "exhaustive"
-                ],
-                "properties": {
-                  "code": {
-                    "type": "string",
-                    "const": "bounded_dimension_filter_enrichment"
-                  },
-                  "message": {
-                    "type": "string"
-                  },
-                  "retryable": {
-                    "type": "boolean"
-                  },
-                  "missingCapabilities": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "fallbackUsed": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "scope": {
-                    "type": "string",
-                    "const": "bounded_page_candidate_enrichment"
-                  },
-                  "candidatesScanned": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "candidateBudget": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "batchLimit": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "exhaustive": {
-                    "type": "boolean",
-                    "const": false
-                  }
-                },
-                "additionalProperties": false
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "retryable",
+              "missingCapabilities",
+              "fallbackUsed",
+              "scope",
+              "candidatesScanned",
+              "candidateBudget",
+              "batchLimit",
+              "exhaustive"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "const": "bounded_dimension_filter_enrichment"
               },
-              {
-                "type": "null"
+              "message": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              },
+              "missingCapabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "fallbackUsed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "scope": {
+                "type": "string",
+                "const": "bounded_page_candidate_enrichment"
+              },
+              "candidatesScanned": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "candidateBudget": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "batchLimit": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "exhaustive": {
+                "type": "boolean",
+                "const": false
               }
-            ]
+            },
+            "additionalProperties": false
           },
           "generatedAt": {
             "type": "string"
@@ -45780,12 +45334,9 @@
             "required": [
               "id",
               "type",
-              "subtype",
               "status",
-              "ticker",
               "entityName",
-              "headline",
-              "market"
+              "headline"
             ],
             "properties": {
               "id": {
@@ -45795,27 +45346,13 @@
                 "type": "string"
               },
               "subtype": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "status": {
                 "type": "string"
               },
               "ticker": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "entityName": {
                 "type": "string"
@@ -45824,77 +45361,28 @@
                 "type": "string"
               },
               "summaryMd": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "businessProfile": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "type": "string"
               },
               "market": {
                 "type": "object",
                 "properties": {
                   "price": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": "number"
                   },
                   "marketCapUsd": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": "number"
                   },
                   "marketCapBucket": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": "string"
                   },
                   "enterpriseValueUsd": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": "number"
                   },
                   "asOf": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": "string"
                   }
                 },
                 "additionalProperties": false
@@ -45911,7 +45399,6 @@
           "object",
           "data",
           "hasMore",
-          "nextCursor",
           "generatedAt"
         ],
         "properties": {
@@ -45929,16 +45416,294 @@
             "type": "boolean"
           },
           "nextCursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string"
           },
           "generatedAt": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSituationWeeklyIssue": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "issueNumber",
+          "slug",
+          "periodStart",
+          "periodEnd",
+          "title",
+          "markdown",
+          "sourceSituationIds",
+          "sourceEventIds",
+          "sourceEvents",
+          "publishedAt",
+          "situations"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "situation_weekly_issue"
+          },
+          "id": {
+            "type": "string"
+          },
+          "issueNumber": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "slug": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "markdown": {
+            "type": "string"
+          },
+          "sourceSituationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceEventIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceEvents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "object",
+                "id",
+                "createdAt",
+                "livemode",
+                "situationId",
+                "occurredAt",
+                "accessionNumber",
+                "formType",
+                "eightKItems",
+                "title"
+              ],
+              "properties": {
+                "object": {
+                  "type": "string",
+                  "const": "situation_event"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "livemode": {
+                  "type": "boolean"
+                },
+                "situationId": {
+                  "type": "string"
+                },
+                "occurredAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "accessionNumber": {
+                  "type": "string"
+                },
+                "formType": {
+                  "type": "string"
+                },
+                "eightKItems": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "category": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "summaryMd": {
+                  "type": "string"
+                },
+                "statusBefore": {
+                  "type": "string"
+                },
+                "statusAfter": {
+                  "type": "string"
+                },
+                "documentUrl": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "situations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "type",
+                "status",
+                "cik",
+                "entityName",
+                "headline",
+                "sourceAccessions",
+                "eventCount"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "subtype": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "ticker": {
+                  "type": "string"
+                },
+                "cik": {
+                  "type": "string"
+                },
+                "entityName": {
+                  "type": "string"
+                },
+                "headline": {
+                  "type": "string"
+                },
+                "summaryMd": {
+                  "type": "string"
+                },
+                "businessProfile": {
+                  "type": "string"
+                },
+                "terms": {
+                  "type": "object",
+                  "properties": {
+                    "counterparty": {
+                      "type": "string"
+                    },
+                    "counterpartyTicker": {
+                      "type": "string"
+                    },
+                    "stakePct": {
+                      "type": "number"
+                    },
+                    "dealValueUsd": {
+                      "type": "number"
+                    },
+                    "pricePerShare": {
+                      "type": "number"
+                    },
+                    "considerationType": {
+                      "type": "string"
+                    },
+                    "premiumPct": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "keyDates": {
+                  "type": "object",
+                  "properties": {
+                    "announced": {
+                      "type": "string"
+                    },
+                    "record": {
+                      "type": "string"
+                    },
+                    "vote": {
+                      "type": "string"
+                    },
+                    "expiry": {
+                      "type": "string"
+                    },
+                    "expectedClose": {
+                      "type": "string"
+                    },
+                    "completed": {
+                      "type": "string"
+                    },
+                    "terminated": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "sourceAccessions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "eventCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "latestEventAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSituationWeeklyIssueList": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "hasMore"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSituationWeeklyIssue"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
             "type": "string"
           }
         },
