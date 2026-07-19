@@ -37,22 +37,29 @@ Narrow list results by type, subtype, status, ticker, sector, market-cap bucket,
 | Method | Path | Job | Output |
 | --- | --- | --- | --- |
 | `GET` | [`/v1/situations`](/api-reference/situations) | Find current situations with filters and pagination. | A filtered situation list. |
+| `GET` | [`/v1/situations/by-form/{form}`](/api-reference/situations/get-v1-situations-by-form-form) | Start from a triggering EDGAR form such as `SC 13D`, `SC TO-T`, `425`, or `DEFM14A`. | Filtered situations for that form family. |
 | `GET` | [`/v1/situations/feed`](/api-reference/situations/get-v1-situations-feed) | Read reverse-chronological situation events. | JSON event feed. |
-| `GET` | [`/v1/situations/feed.rss`](/api-reference/situations/get-v1-situations-feed-rss) | Consume the authenticated paid event feed. | RSS feed. |
+| `GET` | [`/v1/situations/feed.rss`](/api-reference/situations/get-v1-situations-feed-rss) | Consume the authenticated paid event feed in RSS readers. | RSS feed. |
 | `GET` | [`/v1/situations/calendar`](/api-reference/situations/get-v1-situations-calendar) | Check disclosed record dates, votes, expiries, and expected closes. | Calendar records. |
+| `GET` | [`/v1/situations/stats`](/api-reference/situations/get-v1-situations-stats) | Count current situations by type and status for an optional lookback. | Aggregate counts. |
+| `GET` | [`/v1/situations/performance`](/api-reference/situations/get-v1-situations-performance) | Review closed-situation outcome cohorts separately from current detail. | Performance cohorts. |
 | `GET` | [`/v1/situations/issues`](/api-reference/situations/get-v1-situations-issues) | Browse weekly digest snapshots. | Immutable numbered issues. |
+| `GET` | [`/v1/situations/issues/{issue}`](/api-reference/situations/get-v1-situations-issues-issue) | Fetch one published weekly digest issue by number or slug. | Frozen issue detail. |
+| `GET` | [`/v1/situations/watchlists`](/api-reference/situations/get-v1-situations-watchlists) | List durable situation monitors. | Watchlist records. |
+| `POST` | [`/v1/situations/watchlists`](/api-reference/situations/post-v1-situations-watchlists) | Create a filter-only watchlist with an API key, or activate delivery with bearer/org auth. | Monitor record. |
 | `GET` | [`/v1/situations/{situation_id}`](/api-reference/situations/get-v1-situations-situation-id) | Inspect one current situation and filing timeline. | Current detail. |
 | `GET` | [`/v1/situations/{situation_id}/filings`](/api-reference/situations/get-v1-situations-situation-id-filings) | Page only the filing timeline. | Filing timeline records. |
+| `GET` | [`/v1/situations/{situation_id}/summary`](/api-reference/situations/get-v1-situations-situation-id-summary) | Retrieve compact markdown, deal terms, and the latest timeline event. | Situation summary. |
 | `GET` | [`/v1/situations/{situation_id}/export`](/api-reference/situations/get-v1-situations-situation-id-export) | Prepare a source-cited Markdown handoff. | Markdown brief. |
 | `GET` | [`/v1/situations/{situation_id}/underwriting-pack`](/api-reference/situations/get-v1-situations-situation-id-underwriting-pack) | Assemble detail, timeline, and copyable source context. | Underwriting pack. |
 
-Use `enrich=false` to request a smaller list projection when scanning a wide set. It changes the returned projection, not the billed request class. `limit` is 1 through 100; advance pagination only with the returned cursor and unchanged filters.
+Use `enrich=false` to request a smaller list projection when scanning a wide set. It changes the returned projection, not the billed request class. `limit` is 1 through 100; advance pagination only with the returned cursor and unchanged filters. CLI and MCP workflows use the structured JSON feed (`/v1/situations/feed`) so agents can preserve IDs, request metadata, and citations; RSS is a direct HTTP/feed-reader surface at `/v1/situations/feed.rss`.
 
 ## Freshness, coverage, and decision boundaries
 
 Situations are filing-derived. They do not confirm that a transaction will close or that a disclosed date, term, or status remains current. Digest issues are immutable publication-time snapshots, while current situation detail can change as new filings arrive. Calendar and performance responses answer different questions and should remain separate from current detail in a research record.
 
-The authenticated API is distinct from public embed routes, and the paid RSS feed is distinct from a capped anonymous embed RSS surface. Coverage is limited to SEC filing-derived situations; it does not include broader market, fundamentals, estimates, valuation, or symbol-coverage datasets. A missing situation or timeline is not proof that no related event exists.
+The authenticated API is distinct from public embed routes, and the paid RSS feed is distinct from a capped anonymous embed RSS surface. Watchlist filters can be created with API-key credentials, while email or organization webhook/stream delivery requires bearer/org authentication and is metered as monitor management plus delivery events. Coverage is limited to SEC filing-derived situations; it does not include broader market, fundamentals, estimates, valuation, or symbol-coverage datasets. A missing situation or timeline is not proof that no related event exists.
 
 ## Next action
 
