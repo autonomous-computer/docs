@@ -1,9 +1,11 @@
 ---
 title: "Troubleshooting"
-description: "Resolve SEC API authentication, billing, rate-limit, and request failures from the HTTP status and error code"
+description: "Diagnose an SEC API failure from its HTTP response, request ID, and account context"
 ---
 
-Start with the failed response. Record its HTTP status, error `code`, `Request-Id`, and `traceparent` when present. Then reproduce the request once with safe, redacted inputs.
+Use this page when a REST, SDK, CLI, or hosted MCP request does not produce the result you expected. Start with the response, not a retry: record the HTTP status, error `code`, `Request-Id`, and `traceparent` when present. Those details separate a request problem from an account limit or a temporary service problem.
+
+Make one safe reproduction with the same credential context. This checks that the key reaches a machine-authenticated route without exposing it in a URL or request body.
 
 ```bash
 curl -i -sS \
@@ -11,41 +13,47 @@ curl -i -sS \
   "https://api.secapi.ai/v1/limits"
 ```
 
-If this request fails, resolve the credential or organization condition before debugging a filing, statement, SDK, or MCP workflow. Machine requests use `x-api-key`; browser account actions use a signed-in browser session.
+If this request does not succeed, resolve the credential or organization condition before investigating a filing, statement, SDK, or MCP workflow. Machine data requests use `x-api-key`; browser account actions use their documented signed-in browser flow.
 
-## Use the HTTP status and code together
+## Choose the next action from the response
 
-| Status or code | Meaning | First action |
-| --- | --- | --- |
-| `400`, `invalid_query_parameter`, or `validation_error` | The path, query, or body does not match the route contract. | Compare the request with the endpoint reference and remove unsupported fields. |
-| `401 missing_api_key` | No API key reached the API. | Send `x-api-key` from the process making the request. |
-| `401 authentication_failed` | The credential is invalid, revoked, or belongs to another organization. | Replace the key through the appropriate signed-in flow. |
-| `401 missing_browser_session` | A browser-only action was called as a machine request. | Complete it in the signed-in dashboard. |
-| `402` or `billing_required` | Billing, plan, grant, or budget state blocks the request. | Inspect billing and limits with the same credential; resolve the stated condition before retrying. |
-| `403` | A valid credential lacks authorization for the resource or feature. | Check the credential's access and the plan feature. |
-| `429` or `rate_limit_exceeded` | A rate or quota window applies. | Honor `Retry-After`, reduce fan-out, and retry only after the indicated interval. |
-| `5xx` | The request could not complete. | Retry once with bounded backoff, then retain the request context. |
+Read the HTTP status and machine-readable `code` together. The code explains the particular stop; the status tells you whether to correct, wait, or change account state.
 
-Read the [error code catalog](/error-code-catalog) for code-specific guidance.
+| Response | What to do next |
+| --- | --- |
+| `400`, `invalid_query_parameter`, or `validation_error` | Compare the path, query, or body with the endpoint or tool schema. Correct the named field; do not retry unchanged input. |
+| `401 missing_api_key` | Ensure the process making the request sends `x-api-key`. |
+| `401 authentication_failed` | Replace or refresh the rejected credential through the appropriate account flow. |
+| `401 missing_browser_session` or `403 human_auth_required` | Use a signed-in browser session for the browser-only action. |
+| `402`, `billing_required`, or a budget code | Inspect billing and limits with the same credential, then resolve the stated account condition. |
+| `403` | Confirm that the credential and plan are authorized for the resource or feature. |
+| `429` or `rate_limit_exceeded` | Honor `Retry-After` when supplied, reduce concurrency, and retry only after that interval. |
+| `5xx` or a transport failure | Use bounded backoff. Keep the response context if the failure repeats. |
 
-For a `401` response, capture the secret-free request context described in [Request diagnostics](/request-diagnostics) before replacing a key or changing the authentication flow.
+For code-specific recovery, see the [error code catalog](/error-code-catalog). A successful health check or unrelated endpoint does not prove that a particular issuer, filing, or derived data surface is available.
 
-## Resolve billing and quota stops
+## Resolve account, billing, and quota stops
+
+Use the failing workload's key for both checks. A different key can have different plan, billing, or quota state.
 
 ```bash
-curl -sS -H "x-api-key: $SECAPI_API_KEY" "https://api.secapi.ai/v1/billing"
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/billing"
 
-curl -sS -H "x-api-key: $SECAPI_API_KEY" "https://api.secapi.ai/v1/limits"
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
 ```
 
-`billing_budget_approval_required` means a configured approval threshold stopped the request. `billing_budget_hard_cap_exceeded` means the configured hard cap stopped it. `ai_query_quota_exceeded` means the applicable AI-query allowance is exhausted. Stop rather than repeatedly retrying these outcomes. See [Agent billing](/agent-billing), [GET /v1/limits](/api-reference/platform/get-v1-limits), [API keys, usage, and billing](/auth-and-pricing), and [Plans and pricing](/plans-and-pricing).
+`billing_budget_approval_required` means a configured approval threshold stopped the request. `billing_budget_hard_cap_exceeded` means a configured hard cap stopped it. `ai_query_quota_exceeded` means the applicable AI-query allowance is exhausted. These are control signals, not transient failures: avoid a retry loop until the returned condition changes. See [Agent billing](/agent-billing), [GET /v1/limits](/api-reference/platform/get-v1-limits), and [API keys, usage, and billing](/auth-and-pricing).
 
-## Diagnose a partial data result
+## Investigate a result that is partial or surprising
 
-A partial or degraded result is not necessarily a transport failure. Inspect the returned capability, warning, provenance, period, freshness, or status-note fields for that route. Preserve usable source evidence and make the limitation visible to your caller; do not silently substitute a different issuer, period, or data surface.
+A response can succeed at the HTTP layer while still carrying a route-specific limitation. Inspect returned capability, warning, provenance, period, freshness, and status-note fields where the route supplies them. Preserve the usable source evidence and show the limitation to your caller; do not silently substitute a different issuer, period, or data surface.
 
-## Diagnose hosted MCP calls
+For hosted MCP, confirm the client connects to `https://api.secapi.ai/mcp`, sends its configured API key for API-key authentication, and has refreshed its tool catalog. JSON-RPC `-32004` indicates a tool execution-budget stop, `-32005` an AI-query or MCP quota stop, and `-32006` a tool-level protection stop. Narrow the request or wait for the applicable limit instead of issuing identical calls in parallel.
 
-Confirm that the client connects to `https://api.secapi.ai/mcp`, sends the configured API key when using API-key authentication, and has refreshed its tool list. JSON-RPC `-32004` indicates a tool execution-budget stop, `-32005` an AI-query or MCP quota stop, and `-32006` a tool-level protection stop. Narrow the request or wait for the applicable limit instead of retrying blindly.
+## Escalate with a useful diagnostic
 
-For support, include the method or tool name, redacted request, HTTP status, error code, `Request-Id`, trace context, and the outcome of `GET /v1/limits` with the same credential. Never include an API key.
+Include the method or tool name, a redacted request, UTC timestamp, HTTP status, error code, `Request-Id`, trace context, relevant response headers, and the outcome of `GET /v1/limits` with the same credential. For data results, include the returned filing or source identifiers. Exclude API keys, bearer tokens, cookies, and private payloads.
+
+Use [Request diagnostics](/request-diagnostics) for the exact capture checklist.

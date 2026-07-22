@@ -1,13 +1,15 @@
 ---
 title: "First request flows"
-description: "Resolve an issuer, retrieve a current filing, and choose a REST, SDK, CLI, or MCP path"
+description: "Resolve an issuer, retrieve a filing, and choose a SEC API REST, SDK, CLI, or MCP workflow"
 ---
 
-Every first-success path should end with one filing you can identify later. Keep its accession number, form, filing date, filing URL, and request ID when returned. A latest-filing result is time-dependent, so verify the returned filing identity before using it as evidence.
+Use this guide to prove one filing workflow end to end. A useful first success is not only an HTTP `200`: retain the issuer identity, accession number, form, filing date, filing URL, and request ID when returned. A latest-filing result is time-dependent, so verify the returned filing identity before using it as evidence.
 
-## REST: the reference flow
+Choose REST when your application owns HTTP and response parsing; an SDK or CLI when it already fits your runtime; and hosted MCP when an MCP client needs discovered SEC API tools. Each path should produce the same kind of source record, but their client setup and retry ownership differ.
 
-Use REST when your application owns HTTP, retries, and response parsing.
+## REST: establish the filing record
+
+Set the key in your server-side environment. Machine requests use `x-api-key`.
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
@@ -21,9 +23,9 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-The first call establishes the issuer identity. The second returns the current latest matching filing. Continue with the [latest filing reference](/api-reference/filings/get-v1-filings-latest) when you need the exact parameters and response schema.
+The first request establishes the issuer identity. The second returns the current latest matching filing. Inspect the response before continuing, then retain its filing identifiers. See the [latest filing reference](/api-reference/filings/get-v1-filings-latest) for exact parameters and schema.
 
-To read one section from that current filing, use the documented section key:
+To inspect a named section of that filing, use a documented section key:
 
 ```bash
 curl --fail-with-body -sS \
@@ -31,11 +33,11 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent"
 ```
 
-A section answers a narrower question; it does not replace the filing identity you retained from the preceding call.
+A section answers a narrower question; it does not replace the filing identity from the preceding request.
 
-## JavaScript SDK
+## JavaScript SDK: use the same workflow
 
-Install the SDK, then let it read `SECAPI_API_KEY` from the server-side environment.
+Install the SDK, then keep `SECAPI_API_KEY` in the server-side environment.
 
 ```bash
 npm install @secapi/sdk-js
@@ -56,11 +58,9 @@ const section = await sec.agentSection({
 console.log({ entity, filing, section })
 ```
 
-Expect the same live entity, filing, and section data exposed by the public API. Keep the filing identity from `filing`; inspect each returned object before assuming optional provenance or freshness fields are available. See [JavaScript SDK](/javascript-sdk) for a runnable error-handling example.
+Inspect each returned object before assuming optional provenance or freshness fields are available. Preserve the filing identity from `filing`; see [JavaScript SDK](/javascript-sdk) for a runnable error-handling example.
 
-## CLI
-
-For a terminal workflow, install the CLI and use the same environment variable:
+## CLI: verify the same path from a terminal
 
 ```bash
 npm install -g @secapi/cli
@@ -70,18 +70,18 @@ secapi filings latest --ticker AAPL --form 10-K
 secapi sections get --ticker AAPL --form 10-K --section item_1a --view agent
 ```
 
-The CLI prints JSON for the current response. Use `secapi <command> --help` for the command version you installed, and continue with the [CLI reference](/cli) for configuration and diagnostic commands.
+The CLI prints JSON for the current response. Run `secapi <command> --help` for the installed command version, and see the [CLI reference](/cli) for configuration and diagnostic commands.
 
-## Hosted MCP
+## Hosted MCP: discover before you call
 
-Install the hosted server in your MCP client, then let the client discover its current tool catalog rather than hard-coding tool names into an application contract.
+Configure the hosted server in your MCP client, then let the client discover its current tool catalog instead of hard-coding tool names as a compatibility contract.
 
 <Prompt>
 Use tools.search to find issuer resolution, latest filing, and filing section tools. Use tools.describe on each selected tool before calling it. Resolve AAPL, retrieve its latest 10-K, then retrieve Item 1A. Return the company name, accession number, form, filing date, filing URL, requestId, and a short Item 1A summary. State when a field is absent instead of inferring it.
 </Prompt>
 
-MCP output can include structured content and presentation text. Preserve the typed source record and identifiers; use any returned provenance, freshness, truncation, or trace information only in the context supplied by that tool. [Install MCP](/mcp-install) to configure the connection.
+MCP output can include structured content and presentation text. Preserve the typed source record and identifiers. Use any provenance, freshness, truncation, or trace information only in the context supplied by that tool. [Install MCP](/mcp-install) to configure the connection.
 
-## When the path does not work
+## When a first request stops
 
-Correct `400` validation errors from the route or tool schema. Repair credentials for `401` or `403`, stop for a `402` billing condition, and honor `Retry-After` on `429` when it is present. Preserve the request ID with the failed attempt, then use [request diagnostics](/request-diagnostics).
+Correct `400` validation errors from the route or tool schema. For `401` or `403`, verify the credential and auth flow; machine data requests use `x-api-key`. Stop for a `402` billing condition. For `429`, honor `Retry-After` when present and reduce parallel work before a bounded retry. Preserve the request ID with the failed attempt, then use [Request diagnostics](/request-diagnostics).

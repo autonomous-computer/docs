@@ -1,64 +1,64 @@
 ---
 title: "Common error codes and recovery"
-description: "Use representative SEC API HTTP and hosted MCP error codes to choose the next action without exposing credentials or retrying a stop condition."
+description: "Interpret SEC API REST and hosted MCP errors and choose the right recovery action"
 ---
 
-Read the HTTP status and machine-readable error `code` together. Preserve the returned `Request-Id`, `traceparent` when available, endpoint path, and a redacted request before changing a client or retrying.
+Use the error `code` to decide what changes next. Read it with the HTTP status, preserve the returned `Request-Id` and `traceparent` when present, and retain a redacted request before changing a client or retrying.
 
 <Info>
-REST responses identify the reason with `code`. Hosted MCP responses use a JSON-RPC transport `error.code` and can include a SEC API reason in `error.data.code`.
+REST errors identify the reason with `code`. Hosted MCP errors use a JSON-RPC transport `error.code` and can include a SEC API reason in `error.data.code`.
 </Info>
 
-This is a recovery guide, not an exhaustive list of every route-specific domain error. Use the `code`, HTTP status, and the endpoint reference together; a route can return additional documented data or materialization errors.
+This is a recovery guide, not a route-by-route error inventory. The endpoint reference and response payload remain the contract for the route you called.
 
-## Representative REST codes
+## REST: correct, resolve, or wait
 
-| Status | Exact code | What happened | Next action |
+| Status | Code | Meaning | Next action |
 | --- | --- | --- | --- |
-| `400` | `invalid_json` | The body was not valid JSON. | Send valid JSON or omit the body when the route accepts none. |
+| `400` | `invalid_json` | The body is not valid JSON. | Send valid JSON, or omit the body when the route accepts none. |
 | `400` | `validation_error` | A body failed route validation. | Correct the reported fields; do not retry unchanged input. |
 | `400` | `invalid_query_parameter` | A query value is unsupported, out of range, or malformed. | Use the endpoint reference and returned parameter details. |
 | `400` | `invalid_request_parameter` | A route or request parameter is syntactically invalid. | Correct the named parameter before retrying. |
 | `401` | `missing_api_key` | No API key reached a machine-authenticated route. | Send `x-api-key` from the calling process. |
-| `401` | `authentication_failed` | The API key, stream ticket, or bearer credential was rejected. | Replace or refresh the credential using the appropriate signed-in flow. |
+| `401` | `authentication_failed` | The API key, stream ticket, or bearer credential was rejected. | Replace or refresh the credential using the documented account flow. |
 | `402` | `billing_required` | The authenticated plan or billing state does not allow the request. | Inspect billing and limits with the same credential, then resolve the stated condition. |
-| `402` | `insufficient_credits` | Available prepaid credits cannot cover the request. | Add credits or change the account's billing posture before retrying. |
+| `402` | `insufficient_credits` | Available prepaid credits cannot cover the request. | Change the account's billing posture before retrying. |
 | `402` | `billing_budget_approval_required` | A configured budget approval threshold stopped the request. | Ask a billing administrator to approve or adjust the budget. |
 | `402` | `billing_budget_hard_cap_exceeded` | A configured hard budget cap stopped the request. | Raise the cap or wait for the relevant billing period. |
 | `403` | `human_auth_required` | The route requires a WorkOS browser session. | Complete the action in a signed-in browser session. |
 | `429` | `rate_limit_exceeded` | A route or plan rate-limit window is full. | Honor `Retry-After` when returned and reduce concurrency. |
 | `429` | `ai_query_quota_exceeded` | The applicable AI-query allowance is exhausted. | Wait for reset or resolve the account limit; do not retry unchanged input. |
-| `503` | `auth_verification_unavailable` | Credential verification is temporarily unavailable. | Retry once with the same credential after `Retry-After`. |
+| `503` | `auth_verification_unavailable` | Credential verification is temporarily unavailable. | Honor `Retry-After` when present, then use bounded backoff with the same credential. |
 | `503` | `workos_authorization_server_unavailable` | OAuth authorization-server metadata is unavailable. | Retry later, or use API-key authentication for applicable REST routes. |
 
 Do not send API keys as bearer tokens, URLs, request bodies, logs, or support excerpts. Machine data requests use `x-api-key`.
 
-## Route-specific data and domain errors
+## Data and domain outcomes are not interchangeable
 
 | Code pattern | Practical treatment |
 | --- | --- |
 | `*_not_found` | Check the identifier, scope, date window, and route coverage. Do not substitute another issuer or filing. |
-| `*_lookup_failed` | Verify inputs and route availability; retry once only when the response indicates a transient condition. |
-| `*_materialization_failed` or `*_unavailable` | Preserve source identity and the returned limitation. Retry later rather than inventing a result. |
-| `partial_*` | Use only the returned portion that your evidence policy permits, and show the partial condition downstream. |
+| `*_lookup_failed` | Verify inputs and route availability; retry only when the response identifies a transient condition. |
+| `*_materialization_failed` or `*_unavailable` | Preserve the source identity and returned limitation. Retry later rather than inventing a result. |
+| `partial_*` | Use only the returned portion that your evidence policy permits, and surface the partial condition downstream. |
 
-Availability is route-specific. A successful filing response does not establish availability of every section, normalized fact, or derived representation.
+Availability is route-specific. A successful filing response does not establish the availability of another section, normalized fact, or derived representation.
 
-## Hosted MCP codes
+## Hosted MCP: inspect both error codes
 
-| HTTP | JSON-RPC code | Exact `error.data.code` | Next action |
+| HTTP | JSON-RPC code | `error.data.code` | Next action |
 | --- | --- | --- | --- |
 | `404` | `-32601` | `invalid_request` | Refresh the supported method list and use a documented JSON-RPC method. |
-| `400` | `-32602` | `invalid_request` | Refresh the tool/resource schema, then correct the name or parameters. |
+| `400` | `-32602` | `invalid_request` | Refresh the tool or resource schema, then correct the name or parameters. |
 | `400` | `-32602` | `validation_error` | Correct arguments against the discovered tool schema. |
 | `402` or `429` | `-32007` | `billing_required`, `insufficient_credits`, `billing_budget_approval_required`, `billing_budget_hard_cap_exceeded`, or `rate_limit_exceeded` | Resolve the account condition or honor the retry interval before retrying. |
 | `429` | `-32005` | `ai_query_quota_exceeded` | Wait for reset or resolve the account limit. |
-| `504` | `-32004` | `mcp_tool_timeout` | Retry with a narrower request, lower limit, or simpler workflow. |
+| `504` | `-32004` | `mcp_tool_timeout` | Retry with narrower arguments, a lower limit, or a simpler workflow. |
 | `503` | `-32006` | `mcp_tool_circuit_open` | Back off and retry only after the protection condition clears. |
 
-Tool names and schemas can change. Have the client discover the current tool list and inspect the selected tool schema before retrying a malformed call.
+Tool names and schemas can change. Have the client discover the current tool list and inspect the selected schema before retrying a malformed call.
 
-## Capture a safe diagnostic
+## Capture the evidence once
 
 ```bash
 curl -i -sS \
@@ -66,12 +66,10 @@ curl -i -sS \
   "https://api.secapi.ai/v1/limits"
 ```
 
-Keep the status, error code, request ID, relevant response headers, client version, and a redacted endpoint/query record. Never include the API key, cookies, bearer tokens, private prompts, or private data in a ticket.
-
-## Read next
+Keep the status, error code, request ID, relevant response headers, client version, and a redacted endpoint/query record. Exclude API keys, cookies, bearer tokens, private prompts, and private data from tickets.
 
 <CardGroup cols={3}>
   <Card title="Troubleshooting" icon="wrench" href="/troubleshooting">Follow the status-specific recovery path.</Card>
-  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Prepare the smallest useful secret-free support record.</Card>
-  <Card title="API conventions" icon="braces" href="/api-conventions">Review authentication, retry, pagination, and response conventions.</Card>
+  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Prepare a small secret-free support record.</Card>
+  <Card title="API conventions" icon="braces" href="/api-conventions">Review authentication, retry, and response conventions.</Card>
 </CardGroup>

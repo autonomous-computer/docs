@@ -1,49 +1,48 @@
 ---
 title: "SDK reliability"
-description: "Understand retries, backoff, retry budgets, and circuit breakers in the SEC API JavaScript and Python SDKs"
+description: "Control retries, retry budgets, and circuit breakers in the SEC API JavaScript and Python SDKs"
 ---
 
-The JavaScript and Python SDKs retry transient read failures so a brief network or service interruption does not immediately fail a filing lookup. `POST`, `PUT`, `PATCH`, and `DELETE` are not retried for transient failures by default. A `429` rate-limit response is the exception: unless retries are disabled, the SDK can reissue any method after the retry delay.
+Use the SDK retry policy to absorb a short-lived read failure, not to hide a request, account, or data problem. Let one layer own retries: when your job runner, gateway, or application already retries, disable SDK retries there to avoid multiplying attempts during an outage.
 
-## Default retry policy
+The JavaScript and Python SDKs retry eligible transient read failures. `POST`, `PUT`, `PATCH`, and `DELETE` are not retried for transient failures by default. A `429` is retried for any method when retries are enabled unless the API marks the response non-retryable; that does not make replaying a write safe.
 
-| Behavior                      | Default                                                            |
-| ----------------------------- | ------------------------------------------------------------------ |
-| Automatically retried methods | `GET`, `HEAD`, `OPTIONS`                                           |
-| Retryable failures            | Network failures and HTTP `408`, `429`, `502`, `503`, `504`        |
-| Never retried                 | HTTP `400`, `401`, `403`, `404`, `422`                             |
-| `429` rate limit response     | Retried for any method unless retries are disabled                 |
-| Retry count                   | Up to 3 retries                                                    |
-| Backoff                       | Jittered exponential delay, starting at `200ms` and capped at `5s` |
-| Retry budget                  | `30s`                                                              |
-| Circuit breaker               | Opens after 5 terminal retryable failures and cools down for `60s` |
+## Default retry boundary
 
-When the service sends `Retry-After`, the SDK uses it. It also reads structured retry timing from the error payload when an intermediary has removed that header.
+| Behavior | Default |
+| --- | --- |
+| Automatically retried methods | `GET`, `HEAD`, `OPTIONS` |
+| Retryable failures | Network failures and HTTP `408`, `502`, `503`, `504` when the response is retryable; HTTP `429` unless the response is marked non-retryable |
+| Not retried | HTTP `400`, `401`, `403`, `404`, `422`, and responses marked non-retryable |
+| Retry count | Up to 3 retries |
+| Backoff | Jittered exponential delay, starting at `200ms` and capped at `5s` |
+| Retry budget | `30s` |
+| Circuit breaker | Opens after 5 terminal retryable failures and cools down for `60s` |
 
-## Keep writes explicit
+When the service provides `Retry-After`, the SDK uses it. When an intermediary removes that header, the SDK can also read structured retry timing in the API error payload.
 
-`POST`, `PUT`, `PATCH`, and `DELETE` are not retried for transient failures by default. A `429` can still reissue any method unless you disable retries. Disable retries for an operation when replay would be unsafe or when another layer owns retry behavior.
+## Keep write retries explicit
 
-Enable a retry for a write only when your application can safely repeat it. Provide an idempotency key when the endpoint supports one, and keep the key stable for the logical operation.
+Do not opt a write into retries unless your application can safely repeat the logical operation. Use an idempotency key where the endpoint supports one, keep it stable for that operation, and ensure no outer retry layer will create a second replay.
 
 ```ts
 const client = new SecApiClient({
   apiKey: process.env.SECAPI_API_KEY,
   retry: false,
-});
+})
 
 await client.callMcpTool(
   "entities.resolve",
   { ticker: "AAPL" },
   { retry: { enabled: true } },
-);
+)
 ```
 
-MCP tool calls use `POST`. Opt in to retries only for a read-only tool or an operation that your application has made idempotent.
+MCP tool calls use `POST`. Opt in only for a read-only tool or an operation your application has made idempotent. For a `429`, inspect the response's retry guidance before deciding whether to replay a call.
 
-## Configure retry ownership
+## Set retry ownership and deadlines
 
-Disable SDK retries when another layer already owns retries and backoff. This avoids multiplying attempts during an outage.
+Disable SDK retries when another layer already owns backoff. Keep an application deadline around the whole user or worker operation; a retry budget controls the SDK attempt sequence, not the rest of your work.
 
 <CodeGroup>
 ```ts TypeScript
@@ -64,15 +63,19 @@ client = SecApiClient(
     timeout=10,
 )
 ```
-
 </CodeGroup>
 
-The Python SDK uses a `30s` per-request socket timeout by default. Set a shorter timeout for latency-sensitive work, or leave it unset only when your transport layer enforces a deadline. The JavaScript SDK applies its retry budget to the request attempt sequence.
+The Python SDK uses a `30s` per-request socket timeout by default. Choose a shorter timeout for latency-sensitive work, or ensure an outer transport layer provides the deadline you need. The JavaScript SDK applies its retry budget to the request attempt sequence.
 
-## Inspect a failure
+## Diagnose an SDK failure
 
-Both SDKs surface the HTTP status, API error code, request ID, and response payload on API failures. Log the request ID with the operation that failed. When the client circuit is open, wait for its cooldown rather than creating parallel client instances to bypass it.
+API failures expose HTTP status, API error code, request ID, and response payload. Log the request ID with the operation that failed, then classify the response before retrying:
 
-The JavaScript SDK emits a `client_retry_attempt` event only when a telemetry capture token is configured. The Python SDK emits retry telemetry by default; set `telemetry=False` or `telemetry={"enabled": False}` to disable it.
+- Correct `400` responses from the route or tool schema.
+- Repair the key or account context for `401`, `402`, and `403` responses.
+- On a retryable `429` or temporary service failure, follow the returned retry timing and keep concurrency bounded.
+- When the client circuit is open, wait for its cooldown instead of creating parallel client instances to bypass it.
 
-Read [Troubleshooting](/troubleshooting) for API error handling and [MCP workflows](/mcp-workflows) before retrying MCP calls.
+The JavaScript SDK emits `client_retry_attempt` only when a telemetry capture token is configured. The Python SDK emits retry telemetry by default; set `telemetry=False` or `telemetry={"enabled": False}` to disable it.
+
+Read [Troubleshooting](/troubleshooting) for HTTP recovery decisions and [MCP workflows](/mcp-workflows) before enabling retries for an MCP call.
