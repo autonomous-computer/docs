@@ -1,9 +1,15 @@
 ---
 title: "Investment manager prompt library"
-description: "Quant research, factor decomposition, 13F-vs-insider divergence, and earnings-context workflows for portfolio managers and analysts."
+description: "Investment-research prompts for filings, ownership reports, factor context, and portfolio scenarios."
 ---
 
-Use these prompts to prepare an investment-committee input, not an investment recommendation. Specify the evaluation date: SEC filings, 13F reports, and factor data have different reporting and update schedules.
+Use these prompts to prepare an investment-committee input with a clear as-of date and a source trail. SEC filings, 13F reports, Form 4s, market data, and factor outputs update on different schedules; the prompts keep those clocks visible. They support research, not an investment recommendation.
+
+## Working rules
+
+- `filings.search` and `sections.search` do not apply an MCP date window. Retrieve candidates, then filter their returned `filingDate` before using them.
+- A manager CIK identifies a 13F filer. It is not the same thing as the issuer ticker or issuer CIK.
+- Separate reported filing facts, delayed ownership disclosures, and model outputs in the final table or memo.
 
 ### 1. Portfolio factor and filing brief
 
@@ -50,7 +56,7 @@ For [TICKER] before [EVENT DATE], retrieve the last four reported quarters of in
 **Prompt id:** `investment-manager-multi-period-fundamental-trend`
 
 ```text
-For [TICKER] across [FY FROM]-[FY TO], retrieve annual income, balance-sheet, cash-flow, and ratio data. Create a period-aligned table of reported revenue, margins, cash flow, debt, and documented inflections, with fiscal-year labels. Do not compare non-comparable periods or attribute a change without a cited filing discussion. Use entities.resolve, companies.income_statements, companies.balance_sheets, companies.cash_flow_statements, and companies.ratios. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
+For [TICKER] across [FY FROM]-[FY TO], retrieve annual income, balance-sheet, cash-flow, and ratio data. Create a period-aligned table of reported revenue, margins, cash flow, debt, and documented inflections, with fiscal-year labels. Do not compare non-comparable periods or attribute a change without a cited filing discussion. Use entities.resolve, companies.income_statements, companies.balance_sheets, companies.cash_flow_statements, and companies.ratios.
 ```
 
 ### 7. Filing-grounded issuer brief
@@ -98,9 +104,9 @@ For [TICKER] across [FY FROM]-[FY TO], retrieve segment footnotes, annual income
 **Prompt id:** `investment-manager-macro-tilt-recommendation`
 
 ```text
-Compare countries [COUNTRY LIST] using macro regimes, high-signal packs, and factor dashboards for [LOOKBACK]. Produce dated scenarios for a portfolio [HOLDINGS], stating source freshness and what would falsify each scenario. Do not recommend allocation changes or present modeled relationships as forecasts. Use macro.regimes, macro.high_signal_pack, macro.country_report, factors.dashboard, and portfolio.analyze. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
+Compare countries [COUNTRY LIST] using macro regimes, high-signal packs, and factor dashboards for [LOOKBACK]. Produce dated scenarios for a portfolio [HOLDINGS], stating source freshness and what would falsify each scenario. Do not recommend allocation changes or present modeled relationships as forecasts. Use macro.regimes, macro.high_signal_pack, macro.country_report, factors.dashboard, and portfolio.analyze.
 ```
 
 ## Evidence standard
 
-Keep reported filing facts, delayed ownership reports, and model outputs separate. Neither a 13F filing nor Form 4 activity establishes conviction or intent.
+Decision-relevant statements should name their source period and retrieval date. A 13F filing or Form 4 records a reported transaction or holding; neither establishes conviction, intent, value, or a trade instruction.

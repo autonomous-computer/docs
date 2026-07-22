@@ -1,16 +1,22 @@
 ---
 title: "Sophisticated investor prompt library"
-description: "Forensic accounting and insider surveillance for activist, short-thesis, and prosumer analyst workflows."
+description: "Filing-led prompts for forensic accounting, ownership review, and thesis stress-testing."
 ---
 
-These prompts help pressure-test a thesis against filings and reported market context. They do not establish fraud, manipulation, or an investment conclusion.
+Use these prompts to pressure-test a thesis against filings, XBRL facts, reported ownership, and dated market context. They expose assumptions and source gaps; they do not establish fraud, manipulation, mispricing, or an investment conclusion.
+
+## Working rules
+
+- `filings.search` and `sections.search` do not apply an MCP date window. Filter candidate records using their returned `filingDate` before drawing a time-bounded result.
+- State researcher-created calculations, their inputs, period alignment, and what the source does not disclose.
+- Treat a search result, factor output, or ownership report as a lead or context until the underlying source supports the claim.
 
 ### 1. Equity-compensation dilution review
 
 **Prompt id:** `sophisticated-investor-equity-comp-burn-rate`
 
 ```text
-Test the equity-compensation dilution hypothesis for [TICKER] across fiscal years [FY FROM]-[FY TO]. Retrieve cash-flow statements, income statements, the latest proxy compensation disclosures, and XBRL facts for share-based compensation and weighted-average shares when available. Show the reported values by period, define every calculation, and distinguish expense, grants, and share count. Cite form, fiscal period, accession, and fact tag. Do not invent a burn-rate denominator when the facts are not comparable or treat accounting expense as cash dilution. Use companies.cash_flow_statements, companies.income_statements, comp.list, facts.get, and sections.get. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
+Test the equity-compensation dilution hypothesis for [TICKER] across fiscal years [FY FROM]-[FY TO]. Retrieve cash-flow statements, income statements, the latest proxy compensation disclosures, and XBRL facts for share-based compensation and weighted-average shares when available. Show the reported values by period, define every calculation, and distinguish expense, grants, and share count. Cite form, fiscal period, accession, and fact tag. Do not invent a burn-rate denominator when the facts are not comparable or treat accounting expense as cash dilution. Use companies.cash_flow_statements, companies.income_statements, comp.list, facts.get, and sections.get.
 ```
 
 ### 2. Covenant and liquidity reading
@@ -26,7 +32,7 @@ For [TICKER] and its latest [10-K OR 10-Q], retrieve debt-covenant footnotes, th
 **Prompt id:** `sophisticated-investor-tax-position-stress`
 
 ```text
-Review [TICKER]'s tax disclosures for fiscal years [FY FROM]-[FY TO]. Retrieve the tax footnote, relevant deferred-tax XBRL facts, income statements, and MD&A. List the reported uncertain-tax-position and valuation-allowance disclosures separately. Model [25/50/100]% changes only as an explicitly hypothetical sensitivity, using the reported base amount and showing the arithmetic. Do not present a scenario as a forecast or assume a tax asset is collectible. Cite form, period, accession, footnote topic, and fact tag. Use intelligence.footnotes, facts.get, companies.income_statements, and sections.get. For a date window, MCP `filings.search` and `sections.search` do not filter by date: fetch candidate records, then post-filter the returned `filingDate` locally before selecting sections or reporting results.
+Review [TICKER]'s tax disclosures for fiscal years [FY FROM]-[FY TO]. Retrieve the tax footnote, relevant deferred-tax XBRL facts, income statements, and MD&A. List the reported uncertain-tax-position and valuation-allowance disclosures separately. Model [25/50/100]% changes only as an explicitly hypothetical sensitivity, using the reported base amount and showing the arithmetic. Do not present a scenario as a forecast or assume a tax asset is collectible. Cite form, period, accession, footnote topic, and fact tag. Use intelligence.footnotes, facts.get, companies.income_statements, and sections.get.
 ```
 
 ### 4. Revenue-quality cross-check
@@ -71,4 +77,4 @@ For [TICKER], retrieve the latest segment footnote, income statement, and financ
 
 ## Evidence standard
 
-Use the source filing as the record. Preserve fiscal period, filing date, accession, section, and any stated assumptions beside calculated views.
+For thesis-critical findings, preserve the source filing, fiscal period, accession number, section or fact tag, and calculation inputs. A missing record, an anomalous output, or a reported holder change is a research question, not proof or a trading instruction.
