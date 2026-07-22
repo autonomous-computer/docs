@@ -1,63 +1,64 @@
 ---
 title: "Benchmark workflows"
-description: "First-party benchmarks that measure how fast SEC API helps you finish real investor work while keeping the source trail intact."
+description: "How to interpret SEC API's dated first-party workflow benchmarks and test them against your own workload"
 ---
 
-<Info>
-Benchmarks are here to answer one simple question: does SEC API help you finish real investor work faster without hiding the source trail?
-</Info>
+<Warning>
+These are first-party, dated measurements. They describe the named requests, runner, and capture conditions; they are not an independent study, service-level objective, or general claim about every investor workflow.
+</Warning>
 
-## What the benchmark set measures
+## What is measured
 
 <Steps>
-  <Step title="Repeated investor workflows">
-    The benchmark set prioritizes the paths investors and agents repeat all day: entity resolution, filing search, section extraction, statements, and insider or ownership reads.
+  <Step title="Named operations">
+    The suite covers named operations such as entity resolution, filing search, section extraction, structured statements, and metrics. The exact operation and request shape determine what a result means.
   </Step>
-  <Step title="Payload usefulness, not just raw milliseconds">
-    Faster matters. Faster with smaller payloads and clear provenance matters more.
+  <Step title="Latency and response size">
+    The artifacts record elapsed time and response-size estimates for the tested requests. They do not measure the usefulness or correctness of every possible response.
   </Step>
-  <Step title="One-call investor intelligence">
-    The gold corpus now includes allocator-style prompts that join company, macro, factor, ownership, and filing context into one compact response.
+  <Step title="Bounded evaluation prompts">
+    The repository also contains a separate investor-intelligence corpus and FinanceBench evaluation. Those are bounded test sets, not evidence that a single request answers every research question.
   </Step>
-  <Step title="Documented methodology">
-    Competitive claims stay sourced, dated, and paired with enough context to show what the benchmark measured and what it did not.
+  <Step title="Reproducible context">
+    Interpret a result with its capture date, comparand, operation, runner configuration, and methodology. Those details are part of the claim.
   </Step>
 </Steps>
 
-## Current snapshot
+## Reported comparisons
 
 <CardGroup cols={2}>
-  <Card title="Against sec-api.io" icon="timer">
-    On the `2026-03-18` dated suite, SEC API is ahead on the scoped entity, filing, section, and structured-facts workflows that investor agents repeat all day.
+  <Card title="Hosted API comparisons" icon="timer" href="/benchmark-results">
+    The comparison data was captured on `2026-03-18`, and its scorecard was last regenerated on `2026-06-10`. It reports p50 ranges for selected sec-api.io and financialdatasets.ai operations. Read the operation table and method before using a number externally.
   </Card>
-  <Card title="Against financialdatasets.ai" icon="table-properties">
-    On the same suite, SEC API is ahead on the scoped statements, metrics, filings, and insider-trade workflows, with the current published scorecard at `18 wins`, `0 losses`, and `2 ties`.
+  <Card title="edgartools comparison" icon="table-properties" href="/benchmark-results">
+    The `2026-04-23` edgartools comparison is preliminary. Its timings include direct SEC retrieval and client-side parsing, so it is not interchangeable with a hosted API measurement.
   </Card>
-  <Card title="Investor-intelligence corpus" icon="bot">
-    The named gold corpus proves one-call agent workloads such as return decomposition, factor neutralization, country reports, stress tests, and footnote investigation with compact outputs and dated latency artifacts.
+  <Card title="FinanceBench evaluation" icon="bot" href="/financebench-evaluation">
+    FinanceBench is a separate, bounded QA evaluation with its own question set, harness, and reported limitations.
   </Card>
-  <Card title="FinanceBench 18/25 (72%)" icon="check-circle" href="/financebench-evaluation">
-    Agent-mode score on the PatronusAI FinanceBench canary-25 subset (captured 2026-04-25, best stable harness configuration) — numeric extraction, filing section evidence, and multi-hop financial reasoning.
+  <Card title="Source and freshness" icon="check-circle" href="/freshness-and-trust">
+    Benchmark speed does not establish that a result is complete, current, or suitable for a decision. Inspect route-specific source and freshness fields separately.
   </Card>
 </CardGroup>
 
-## What the current claim actually is
+## Reproduce a comparable workflow
 
-- safe claim:
-  SEC API beats `sec-api.io` and `financialdatasets.ai` on the current dated investor-agent benchmark suite
-- unsafe claim:
-  SEC API wins every speed, payload, and extraction metric universally
+1. Choose one named operation and fix the issuer, filing or period, response view, filters, and expected evidence fields.
+2. Run each implementation from the same runner configuration, region, authentication posture, and capture window. Record versions, cache treatment, concurrency, retries, and failures.
+3. Keep the raw timing and response-size observations with the summary. State whether payload size is wire bytes, serialized body bytes, or another defined measure.
+4. Review response equivalence before comparing elapsed time. A smaller or faster response that omits required evidence is a different workload.
+5. Publish the capture date, sample count, summary statistic, and limitations next to any result. Re-run after material changes instead of carrying a dated result forward as live telemetry.
 
-This distinction matters. The benchmark is strong because it is specific, consistent, and workload-shaped, not because it tries to say everything.
+Do not treat an unsuccessful request as a zero-latency observation or discard it without reporting the exclusion rule. Rate limits, source availability, client parsing, and cache state can be relevant outcomes of the workflow being compared.
+
+## A responsible comparison
+
+State the capture date, the named comparison, and the operation. For example: “In SEC API's first-party 2026-03-18 benchmark, the reported p50 for the named operation was lower than the reported comparand p50.” Do not turn a dated, scoped measurement into a universal speed, payload, coverage, or extraction claim.
 
 ## Freshness and MCP comparisons
 
-The dated benchmark artifacts are evidence, not live guarantees. When citing them, include the capture date, methodology, and source artifact rather than treating the numbers as evergreen production telemetry.
+The benchmark artifacts are evidence, not live telemetry. When citing them, retain the capture date, methodology, and source artifact rather than presenting the numbers as current production behavior.
 
 For hosted MCP, check the live install metadata at `GET /mcp` before benchmarking or debugging an agent setup. The metadata exposes the deployed API's current streamable HTTP transport, auth expectations, client install hints, and capability summary; use it as the install contract when local notes or cached docs disagree.
 
-When comparing MCP and REST, compare the same workflow on the same day with the same auth, region, issuer, filing, and output mode. Keep `requestId` and `traceparent` with the result so support can separate tool latency, transport behavior, quota/circuit state, and source-data freshness.
-
-<Note>
-The public site will use proof tables and methodology links instead of charts. Keep the structured benchmark dataset authoritative and let the rendering stay simple.
-</Note>
+When comparing MCP and REST, compare the same workflow on the same day with the same auth, region, issuer, filing, and output mode. Keep `requestId` and `traceparent` with the result so support can separate tool latency, transport behavior, quota or circuit state, and source-data freshness. Describe client-side orchestration separately from API or tool time; an end-to-end agent turn is not interchangeable with a single REST request.

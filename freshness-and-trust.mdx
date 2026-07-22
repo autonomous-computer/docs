@@ -12,7 +12,7 @@ curl -sS -H "x-api-key: $SECAPI_API_KEY" \
 
 ## Record the result, not an assumption
 
-For a material workflow, retain the endpoint, parameters, retrieval time in UTC, response view, source identifiers, period, units, and any provenance, capability, warning, freshness, or degradation fields returned. Keep `Request-Id`, `traceparent` when present, and a pinned API version when your integration uses one.
+For a material workflow, retain the endpoint, parameters, retrieval time in UTC, response view, source identifiers, period, units, and any provenance, capability, warning, freshness, or degradation fields returned. Keep `Request-Id`, `traceparent` when present, and a pinned API version when your integration uses one. Store the response or a stable extract of those fields when your retention policy permits, so the decision can be reviewed without reconstructing it from memory.
 
 Field names and availability vary by route and response mode. Do not manufacture absent fields or infer a platform-wide clock from a status on another route.
 
@@ -30,12 +30,12 @@ An endpoint may expose only a subset of these states. A healthy HTTP response is
 
 ## Apply an evidence policy
 
-1. Define the source event, period, and maximum acceptable lag for the decision.
-2. Retrieve the filing, section, fact, or derived output that answers that question.
-3. Compare returned source dates, periods, units, and route-specific state with the policy.
-4. Store those identifiers with the downstream decision, report, or model output.
-5. Escalate missing, stale, degraded, or unknown evidence rather than presenting it as current.
+1. Define the source event, period, and maximum acceptable lag before retrieval. For example, distinguish a decision that needs the latest filed quarterly result from one that needs a particular historical filing.
+2. Retrieve the filing, section, fact, or derived output that answers that question; avoid using an adjacent route as a proxy for the requested representation.
+3. Compare returned source dates, periods, units, and route-specific state with the policy. Record both the source date and retrieval time because they answer different questions.
+4. Store the request and resulting identifiers with the downstream decision, report, or model output.
+5. Escalate missing, stale, degraded, or unknown evidence rather than presenting it as current. A retry can resolve a transport failure, but it does not convert an unavailable source or incomplete representation into evidence.
 
-Normalized facts and statements still reflect issuer disclosures. Compare reporting period, units, `periodBasis`, and provenance when supplied. A filing manifest alone does not prove that its sections, statements, search results, or traces are available.
+Normalized facts and statements still reflect issuer disclosures. Compare reporting period, units, `periodBasis`, and provenance when supplied; do not combine values until their time bases and units are compatible. A filing manifest alone does not prove that its sections, statements, search results, or traces are available.
 
 Read [Coverage and historical depth](/coverage-and-depth), [Methodology registry](/methodology-registry), and [SEC API status](/status) for the adjacent boundaries.

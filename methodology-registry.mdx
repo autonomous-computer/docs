@@ -1,16 +1,16 @@
 ---
 title: "Methodology registry"
-description: "Read SEC API calculations, classifications, and normalized views within their source and calculation boundaries"
+description: "Interpret normalized and derived SEC API results within their source, calculation, and availability boundaries"
 ---
 
-Use this registry when a response is more than a source document. It distinguishes what a derived result describes from what it cannot establish. The route reference defines fields and parameters; this page is an interpretation guide, not a replacement contract.
+Use this page when a response is more than a source document. It explains how to read a normalized, classified, or calculated result without extending it beyond the evidence returned. The route reference remains the contract for fields and parameters.
 
 ```bash
 curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/market/calendar?market=XNYS"
 ```
 
-For consequential output, retain the route, parameters, period, source fields, methodology version when supplied, and every returned capability, warning, degradation, or `statusNote` field.
+For a consequential result, retain the route, parameters, period, source fields, methodology version when supplied, and every returned capability, warning, degradation, or `statusNote` field. Save the retrieval time and a stable result extract when policy permits. This makes it possible to distinguish a changed source, changed method, and changed request when a result later differs.
 
 ## Shared terms
 
@@ -19,22 +19,32 @@ For consequential output, retain the route, parameters, period, source fields, m
 | Source-backed | Tied to a disclosed filing, an official public source, or both. |
 | Derived | Normalized, classified, compared, or calculated from source material. |
 | `capability` | A route-specific availability state, not a platform-wide quality grade. |
-| `statusNote` | A nullable explanation for a limited, partial, or unavailable result. |
+| `statusNote` | A nullable explanation of a limited, partial, or unavailable result. |
 
 ## Market schedules
 
-For `GET /v1/market/calendar`, read `coverage`, `confidence`, `statusNote`, and `sessionStatus` together. `configured_holidays` means the requested market has configured holiday coverage. `weekend_only` does not establish local-holiday coverage. `tentative` means the route cannot confirm the day from configured coverage. `XNYS` and `XNAS` have configured holiday coverage. See [market calendar](/api-reference/market/get-v1-market-calendar).
+For `GET /v1/market/calendar`, read `coverage`, `confidence`, `statusNote`, and `sessionStatus` together. `configured_holidays` means the requested market has configured holiday coverage. `weekend_only` does not establish local-holiday coverage. `tentative` means the route cannot confirm the day from configured coverage. `XNYS` and `XNAS` are configured-holidays markets. See [market calendar](/api-reference/market/get-v1-market-calendar).
 
 ## Filing-backed and derived results
 
 | Surface | Treat it as | Do not treat it as |
 | --- | --- | --- |
 | Facts and statements | normalized issuer disclosures with period and unit context | a universal cross-issuer taxonomy |
-| M&A events | filing-derived event records | a complete deal database or live closing feed |
-| Risk categories | deterministic coverage for the documented section | a complete issuer risk assessment |
-| Volatility score | a disclosure-derived signal with methodology and limitations | a forecast or investment recommendation |
-| Enforcement actions | official SEC release records | a replacement for the linked source in a legal conclusion |
+| M&A events | filing-derived event records | a complete deal database or a live closing feed |
+| Risk categories | a deterministic classification of the documented section | a complete issuer risk assessment |
+| Volatility score | a disclosure-derived signal with route-specific methodology and limits | a forecast or investment recommendation |
+| Enforcement actions | official SEC release records | a substitute for the linked source in a legal conclusion |
 
-Anchor filing-backed results to an accession number and filing URL. A page-level trace is page-level evidence; it does not prove an exact resolved source span. Segment labels and hierarchies retain the issuer's disclosure context.
+Anchor filing-backed results to an accession number and filing URL. A page-level trace supports the page, not an exact resolved source span. Segment labels and hierarchies retain the issuer's disclosure context.
 
-Show unknown, partial, degraded, and unavailable states in your application. Pair this page with [Freshness and source evidence](/freshness-and-trust) and [Coverage and historical depth](/coverage-and-depth) before treating a calculation as decision-ready.
+## Review before reuse
+
+1. Identify whether the result is source-backed, derived, or a combination, then open the linked source where the decision needs primary evidence.
+2. Match the issuer, period, units, methodology version, and any route-specific input choices before comparing two results or reusing one in a model.
+3. Preserve the returned status fields with the value. Null, unknown, partial, degraded, and unavailable are states to explain, not values to coerce to zero.
+4. For a calculation, retain the inputs and the result together. Recalculate only when the route documents the necessary inputs and method; otherwise label the result as supplied by the route.
+5. When a route returns limited coverage or a changed methodology, re-evaluate the decision rather than silently joining it to earlier outputs.
+
+Similar labels can represent different periods, source selections, or calculations. This registry describes interpretation boundaries; it does not create comparability where the returned evidence does not support it.
+
+Show unknown, partial, degraded, and unavailable states in your application. Read this alongside [Freshness and source evidence](/freshness-and-trust) and [Coverage and historical depth](/coverage-and-depth) before relying on a calculation.

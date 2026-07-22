@@ -1,20 +1,20 @@
 ---
 title: "Coverage and historical depth"
-description: "Establish route-specific SEC API coverage from the result and its source evidence"
+description: "Assess the coverage of a specific SEC API result, including its source, period, and availability limits"
 ---
 
-Coverage belongs to a request, not to the API in the abstract. Begin with the filing and representation you need, then check whether the response supports the use you intend.
+Coverage is specific to the issuer, filing, period, and representation you request. A filing can be available while a section, normalized fact, or derived result is not. Before using a result in research, a model, or an operational workflow, write down the exact evidence you need and test that request rather than treating a successful lookup as a coverage claim.
 
 ```bash
 curl -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=25"
 ```
 
-## Documented historical boundary
+## Historical boundary
 
-Filing and section workflows document a nine-year searchable floor. Completeness checks cover required filing forms for the two most recently completed years. The current year has an availability floor, not a completed-year completeness guarantee.
+Filing and section workflows document a nine-year searchable floor. Completeness checks apply to required filing forms for the two most recently completed years. The current year is available as filings arrive; it is not covered by the completed-year completeness check.
 
-Older filings can be returned, but issuer, form, document format, and materialization path determine whether a section, normalized fact, or derived result is present. Treat inventory targets or a successful query for one issuer as planning evidence, not a general coverage promise.
+Older filings can be returned. Their usefulness still depends on the issuer, form, document format, and the route's materialization path. A successful query for one issuer or year is not a platform-wide coverage guarantee.
 
 ## Confirm the representation you need
 
@@ -25,12 +25,22 @@ Older filings can be returned, but issuer, form, document format, and materializ
 | Normalized value | facts or statements route | period, units, provenance, and disclosed fields |
 | Event or ownership result | relevant event or ownership route | date range, form family, and returned limitation fields |
 
-A source document is not a guarantee that every fact is normalized or comparable across issuers. A response for one year does not prove availability for another. A fast success does not establish timing fitness.
+A source document does not mean every disclosed value is normalized or comparable across issuers. Likewise, a result for one year does not establish availability for another, and a fast response does not establish that the data is current enough for a particular use.
 
-## Make unavailable evidence visible
+## Test the slice you will use
 
-Store the filing accession number and URL with results. Preserve returned periods, provenance, capabilities, warnings, and degradation fields. Do not silently substitute a different issuer, filing, period, or data type when the requested evidence is unavailable.
+1. Name the issuer, form family, reporting period, and representation required by the workflow.
+2. Run that bounded request for a small, representative set of issuers and periods, including a known difficult case where appropriate.
+3. For each result, record the request, retrieval time, accession number or other source identifier, returned period, units, and availability or limitation fields.
+4. Inspect missing, partial, and degraded results individually. Do not count an empty response as a zero value or a conclusive negative finding.
+5. Keep the capture with the downstream output so another reviewer can repeat the lookup against the same source selection.
 
-Market-calendar results have an independent scope. Read returned `coverage`, `confidence`, and `statusNote`: `configured_holidays` indicates configured holiday coverage, while `weekend_only` and `tentative` do not establish a complete local-holiday calendar.
+This is a suitability check, not a platform census. It demonstrates what the named requests returned at the time of capture; it does not prove coverage of untested issuers, forms, periods, or representations.
+
+## Preserve the availability boundary
+
+Store the filing accession number and URL with a filing-backed result. Preserve returned periods, provenance, capabilities, warnings, and degradation fields. When the requested evidence is unavailable, surface that state or obtain approval for a documented alternative; do not quietly replace it with a different issuer, filing, period, or data type.
+
+Market-calendar results have their own scope. Read `coverage`, `confidence`, and `statusNote` together. `configured_holidays` identifies configured holiday coverage; `weekend_only` and `tentative` do not establish a complete local-holiday calendar.
 
 SEC API does not claim equal data density across EDGAR, a universal real-time lag, or normalization for every exhibit and filing family. See [EDGAR coverage and statistics](/edgar-statistics), [Freshness and source evidence](/freshness-and-trust), and [SEC filing types and exhibits](/filing-types-and-exhibits).

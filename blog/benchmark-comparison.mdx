@@ -1,16 +1,16 @@
 ---
-title: "SEC API vs sec-api.io: Speed, Token Efficiency, and Pricing Compared"
-description: "First-party head-to-head benchmark (competitor data captured 2026-03-18) showing SEC API is 3.9x-6.4x faster than sec-api.io with 34-38% fewer tokens per response"
+title: "SEC API vs sec-api.io: First-Party Benchmark Notes"
+description: "Methodology and dated results from a first-party SEC API benchmark comparing selected SEC data operations against sec-api.io, with competitor data captured 2026-03-18."
 ---
 
-We ran head-to-head benchmarks comparing SEC API against sec-api.io across the core SEC data operations that matter most to developers and AI agents. The results: **SEC API is 3.9x to 6.4x faster with 34-38% smaller response payloads.**
+We ran a first-party benchmark comparing selected SEC API operations against comparable sec-api.io operations. In this March 18, 2026 run, SEC API returned lower p50 latency and smaller response payloads for the measured entity-resolution, filing-search, section-extraction, and XBRL-conversion tasks.
 
 ## Methodology
 
-This is a first-party head-to-head benchmark run by our own canonical harness — not a third-party study. Both APIs were measured under identical conditions so the comparison is apples-to-apples.
+This is a first-party head-to-head benchmark run by our own canonical harness, not a third-party study. Our production workflow uses GitHub Actions `ubuntu-latest`. Within each workflow run, comparands execute sequentially on the same runner, which GitHub assigns from a variable pool.
 
 - Competitor measurements captured 2026-03-18; re-run before citing as current
-- Both APIs tested from the same machine, same network location
+- Hosted APIs tested from the same GitHub Actions runner within a workflow run
 - Each operation run 5+ times with p50, p95, p99 latency reported
 - Payload size measured as response body bytes
 - Token estimate = ceil(payload_bytes / 4)
@@ -39,21 +39,14 @@ This is a first-party head-to-head benchmark run by our own canonical harness �
 | Section extract | 450 | 720 | **38% fewer** |
 | XBRL parsing | 310 | 485 | **36% fewer** |
 
-### Why Token Efficiency Matters
+### How To Interpret Token Efficiency
 
 When AI agents query SEC data, every byte of the API response consumes tokens. Smaller responses mean:
 - **Lower cost** — fewer tokens = lower API bills
 - **Faster reasoning** — less context for the model to process
 - **More room** — more data fits in the context window
 
-A typical "company briefing" workflow demonstrates this dramatically:
-
-| Approach | API calls | Tokens consumed |
-|---|---|---|
-| sec-api.io (assemble manually) | 8-12 calls | ~3,000 tokens |
-| SEC API intelligence bundle | 1 call | ~800 tokens |
-
-**Result: 75% fewer tokens, 87% fewer API calls.**
+Do not extrapolate these response-size measurements to other agent workflows. A company-briefing, filing-monitor, or RAG pipeline may have different call counts, retrieval steps, prompts, and output shapes. Re-run the benchmark or instrument your own workload before making cost or latency claims for a production workflow.
 
 ## Pricing Comparison
 
@@ -83,12 +76,12 @@ For light agent usage (200 queries/month):
 ## Try It
 
 ```bash
-# Use an existing API key, or create an account at secapi.ai/signup
-export SECAPI_API_KEY="<your-api-key>"
+# Create an account at secapi.ai/signup to get an API key
+# Use an existing API key or create an account at secapi.ai/signup
 
 # Your first query
 curl "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL" \
-  -H "x-api-key: $SECAPI_API_KEY"
+  -H "x-api-key: YOUR_API_KEY"
 ```
 
 Create an account at secapi.ai/signup to get an API key.

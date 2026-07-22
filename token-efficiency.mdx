@@ -24,7 +24,9 @@ AGENT=$(curl -sS --fail-with-body \
 printf 'default=%s bytes\nagent=%s bytes\n' "$DEFAULT" "$AGENT"
 ```
 
-The expected result is two byte counts, not a fixed number. Values change with the issuer, API response, and endpoint implementation.
+The expected result is two byte counts, not a fixed number. Values change with the issuer, API response, and endpoint implementation. Capture the full request URL apart from credentials, retrieval time, HTTP status, response view, and byte count for both runs; without that record, another developer cannot tell what was compared.
+
+Repeat the comparison for the issuer and filters that resemble the production workload. If pagination, `include` values, or retries are part of that workflow, measure them as separate rows and report the total as well as the individual request sizes.
 
 ## Choose the response view deliberately
 
@@ -35,7 +37,7 @@ The expected result is two byte counts, not a fixed number. Values change with t
 | Optional enrichment | Use only the endpoint's documented `include` values; they can add material response size. |
 | Token telemetry | Request `SECAPI-Compute-Headers: token-count` when you need header-based token information for a measured request. |
 
-`view=agent` and `view=compact` are not universal schemas. They can omit provenance, freshness, materialization, pagination, or other envelope fields that a default response carries. Read the operation reference before using a smaller view for a user-facing citation or compliance record.
+`view=agent` and `view=compact` are not universal schemas. They can omit provenance, freshness, materialization, pagination, or other envelope fields that a default response carries. Before selecting a smaller view, compare the fields your consumer needs in both responses and confirm that the retained shape still supports citations, error handling, and pagination. Read the operation reference before using a smaller view for a user-facing citation or compliance record.
 
 ## Handle errors and limits
 
@@ -47,5 +49,6 @@ An unsupported parameter or response view is a validation problem, not a reason 
 - Store response-size and token telemetry separately from raw payloads when payload retention is sensitive.
 - Set budgets around the whole workflow, including pagination and retries, rather than optimizing one request in isolation.
 - Keep source identifiers and any provenance fields required by the result before reducing a response shape.
+- Treat `payload_bytes / 4` as a rough comparison aid when used; it is not a model-specific token bill. Record the tokenizer and model separately when the deployment needs a billable-token estimate.
 
 Next: [API conventions](/api-conventions), [freshness and trust](/freshness-and-trust), or [SDK reliability](/sdk-reliability).

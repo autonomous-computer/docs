@@ -1,30 +1,32 @@
 ---
 title: "Competitive benchmarks"
-description: "Read SEC API's first-party performance comparisons as reproducible, point-in-time measurements rather than product guarantees"
+description: "Read SEC API's dated first-party comparisons as workload measurements, not product guarantees"
 ---
 
 <Warning>
 These are first-party measurements, not an independent study. They describe the named operations, comparands, runner configuration, and dates below. They are not service-level objectives or a guarantee of latency, payload size, cost, or agent quality.
 </Warning>
 
-SEC API benchmarks selected SEC-data operations against sec-api.io, financialdatasets.ai, and edgartools. The hosted comparisons were last updated on 2026-03-18. The edgartools comparison is preliminary as of 2026-04-23 and remains subject to final verification.
+SEC API benchmarked selected SEC-data operations against sec-api.io, financialdatasets.ai, and edgartools. The hosted comparison data was captured on 2026-03-18, and its scorecard was last regenerated on 2026-06-10. The edgartools comparison was captured on 2026-04-23 and is marked preliminary pending final verification.
 
 ## Reported comparisons
 
 | Comparison | Operations | Reported p50 range |
 | --- | --- | --- |
-| sec-api.io | entity resolution, filing search, section extraction, XBRL-to-JSON | SEC API 34-38ms; comparand 231-401ms |
-| financialdatasets.ai | income statement, balance sheet, cash flow, metrics | SEC API 55-60ms; comparand 234-375ms |
-| edgartools (preliminary) | entity resolution, filing search, section extraction, XBRL-to-JSON | SEC API 34-38ms; comparand 471-3,081ms |
+| sec-api.io | entity resolution, filing search, section extraction, XBRL-to-JSON | SEC API 34-38 ms; comparand 231-401 ms |
+| financialdatasets.ai | income statement, balance sheet, cash flow, metrics | SEC API 55-60 ms; comparand 234-375 ms |
+| edgartools (preliminary) | entity resolution, filing search, section extraction, XBRL-to-JSON | SEC API 34-38 ms; comparand 471-3,081 ms |
 
-Token estimates use `ceil(payload_bytes / 4)`. They are an approximation for comparing response size, not a model-specific token bill. The edgartools wire-byte measurements include its direct SEC retrieval; that library's zero-key, client-side approach is a valid architectural choice rather than a defect.
+Token estimates use `payload_bytes / 4`, so the estimate may be fractional. This is a response-size approximation, not a model-specific token bill. The edgartools wire-byte measurement includes direct SEC retrieval; its zero-key, client-side architecture is a different design choice, not a defect.
 
 ## Method
 
-The benchmark uses authenticated production endpoints for hosted APIs and direct SEC EDGAR access for edgartools. It measures wall-clock time from request start to result, including client-side parsing for edgartools. Each operation is run at least five times; p50, p95, and p99 use Hyndman-Fan Type 7 interpolation. The same runner region and machine are used, with concurrent execution.
+The benchmark uses authenticated production endpoints for hosted APIs and direct SEC EDGAR access for edgartools. It records wall-clock time from request start to result, including client-side parsing for edgartools. Each operation runs at least five times; p50, p95, and p99 use Hyndman-Fan Type 7 interpolation. The production workflow runs on GitHub Actions `ubuntu-latest`; within a workflow run the comparands execute from the same runner, but GitHub assigns runners from a variable pool and the comparand steps run sequentially.
 
 For edgartools, the persistent cache is cleared between iterations to measure cold fetches. Payload measurement is raw hosted response bytes or the sum of direct SEC HTTP bytes for edgartools. Network conditions, API versions, cache state, rate limits, source availability, request shape, and client behavior all affect a real integration.
 
+To reproduce a row, use the named operation and comparand, preserve the capture conditions, retain the raw observations and failures, then recompute the stated percentile from that set. Check response equivalence before comparing elapsed time: a result that lacks required fields, provenance, or the requested representation should be reported as a different outcome, not treated as a like-for-like win. A rerun is a new dated measurement, even when its setup matches this one.
+
 ## Use and limits
 
-Compare the operations that match your own workload, then run an evaluation with your request mix, region, authentication, payload needs, and acceptable evidence policy. A latency result does not establish filing coverage, analytical accuracy, or source freshness. See [FinanceBench evaluation](/financebench-evaluation) for the separate bounded QA evaluation and [Freshness and source evidence](/freshness-and-trust) for result-level evidence.
+Compare only operations that resemble your workload, then test with your request mix, region, authentication, payload needs, and evidence policy. Record exclusions, failures, cache treatment, and response-equivalence criteria with that local test. A latency result does not establish filing coverage, analytical accuracy, or source freshness. See [FinanceBench evaluation](/financebench-evaluation) for a separate bounded QA evaluation and [Freshness and source evidence](/freshness-and-trust) for result-level evidence.
