@@ -1,59 +1,91 @@
 ---
-title: "Advanced Quickstarts"
-description: "Choose a supported SEC API workflow after your first authenticated request."
+title: "Advanced quickstarts"
+description: "Run a bounded filing, ownership, search, or monitoring request and retain the SEC source record."
 ---
 
-Set `SECAPI_API_KEY` before running an example. Each quickstart answers one
-question and preserves the source trail needed to review the result.
+Each quickstart starts with one authenticated request and ends with a record a
+reviewer can reopen. Set the API key in your shell; do not put it in source
+code or browser JavaScript.
 
-## Compare a manager's latest 13F reports
+```bash
+export SECAPI_API_KEY="your_api_key"
+```
+
+## Compare two reported 13F periods
+
+Use a manager CIK, not an issuer ticker. This request compares reported 13F
+positions; it does not describe a manager's current portfolio.
 
 ```bash
 curl --fail-with-body -X POST "https://api.secapi.ai/v1/owners/13f/compare" \
-  -H "x-api-key: $SECAPI_API_KEY" -H "content-type: application/json" \
-  -d '{"cik":"0001067983","limit":25}'
+  -H "x-api-key: $SECAPI_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"cik":"0001067983","limit":25}' \
+  | jq .
 ```
 
-The response compares the two reports selected by the service. Retain report
-dates, position identifiers, and `requestId`. A 13F is historical disclosure,
-not a complete or current portfolio.
+Expected output: a comparison response for the manager's reported periods.
+For each position you use, retain the manager CIK, both report dates, position
+identifier, filing provenance, and `requestId`. A missing position can reflect
+the chosen periods, filing amendments, or disclosure rules; it is not proof of
+a trade.
 
-## Retrieve a filing section
+## Retrieve the latest Risk Factors section
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K"
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&view=agent" \
+  | jq '{ticker, key, snippet, accessionNumber, accession, section_key, source_url, requestId}'
 ```
 
-The result includes extracted text and filing provenance. An unavailable or
-empty section is a review state, not evidence that the issuer has no risks.
+Expected output: the latest AAPL Form 10-K Item 1A section in the agent
+response shape. Save its accession number, filing URL, section key, and
+`requestId` with any extracted passage. `404` means this issuer/form/section
+combination did not resolve; an empty or unavailable section is not evidence
+that the issuer has no risks.
 
-## Find filing passages by topic
+## Find passages before reading the source section
 
 ```bash
 curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   --data-urlencode "q=supply chain disruption" \
-  --data-urlencode "ticker=AAPL" --data-urlencode "form=10-K" \
-  "https://api.secapi.ai/v1/search/semantic"
+  --data-urlencode "ticker=AAPL" \
+  --data-urlencode "form=10-K" \
+  --data-urlencode "mode=hybrid" \
+  --data-urlencode "view=agent" \
+  --data-urlencode "limit=10" \
+  "https://api.secapi.ai/v1/search/semantic" \
+  | jq '{query, mode, sections: [.sections.data[]? | {accession, source_url, section_key, char_start, char_end, highlighted_snippet}], requestId, traceparent}'
 ```
 
-Search rows are candidates with citations. Ranking is not a materiality finding;
-inspect the cited filing before using a passage in a decision.
+Expected output: up to ten cited passages. Keep every citation field and open
+the cited filing section before quoting or interpreting it. `400` means a
+query parameter is invalid; an empty result can reflect the selected issuer,
+form, or indexed text rather than the absence of a disclosure.
 
-## Create a monitor delivery path
+## Configure monitor delivery, then reconcile it
 
-In the signed-in [Delivery dashboard](https://secapi.ai/app/webhooks), create a
-public-HTTPS webhook endpoint, subscribe it to `monitor.match`, and create a
-narrow saved monitor for the required query, forms, and tickers. These are
-human-authenticated organization control-plane actions; do not use an API key
-or an autonomous agent to create or change them.
+Monitor and webhook changes are organization control-plane actions. In the
+signed-in [Delivery dashboard](https://secapi.ai/app/webhooks), create a public
+HTTPS endpoint subscribed to `monitor.match`, then create a narrow monitor for
+the tickers, forms, and query you need. Store the one-time signing secret in a
+secret manager and make the receiver idempotent by event ID.
 
-Store the dashboard-issued signing secret securely, verify raw-body signatures,
-and make the consumer idempotent. Monitor delivery is scheduled; reconcile
-matches and delivery history with machine-read API requests.
+Use the monitor ID to inspect the current saved-search window:
+
+```bash
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10" \
+  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
+```
+
+This inspection read does not advance the monitor cursor and does not prove a
+future delivery. Reconcile it with recorded attempts at
+`GET /v1/webhook_endpoints/WEBHOOK_ID/deliveries`; a `2xx` delivery attempt is
+not proof that the receiving application accepted the event.
 
 ## Next steps
 
 - [13F ownership reference](/api-reference/owners)
 - [Filing retrieval](/api-reference/filings)
-- [Build a Filing Monitor](/tutorials/build-filing-monitor)
+- [Build a filing monitor](/tutorials/build-filing-monitor)

@@ -1,51 +1,78 @@
 ---
 title: "Build a Filing Monitor"
-description: "Save a filing search, deliver signed monitor matches, and reconcile result history."
+description: "Configure a bounded saved search, receive signed monitor matches, and reconcile the source records."
 ---
 
-Use a monitor for scheduled filing-search matches. It is not a real-time EDGAR
-feed, so retain a reconciliation path through match and delivery history.
+Use this tutorial when a signed-in organization needs scheduled saved-search
+matches delivered to its own HTTPS receiver. A monitor is not a real-time EDGAR
+feed, and a received event is a prompt to inspect a filing, not a materiality
+decision.
 
 ## Prerequisites
 
-- A signed-in SEC API organization with a configured monitor and delivery endpoint.
-- `SECAPI_API_KEY`, `curl`, and `jq` to reconcile saved-search matches.
+- An SEC API organization administrator who can use the signed-in dashboard.
+- A public HTTPS endpoint that can retain the exact raw request body.
+- `SECAPI_API_KEY`, `curl`, and `jq` for the read-only reconciliation requests.
 
-## 1. Configure delivery in the dashboard
+```bash
+export SECAPI_API_KEY="your_api_key"
+```
 
-An organization administrator uses the signed-in
-[Delivery dashboard](https://secapi.ai/app/webhooks) to create a public-HTTPS
-endpoint, subscribe it to `monitor.match`, and create a narrowly scoped monitor
-with a query, form filter, and ticker list. These are human-authenticated
-control-plane actions; an API key cannot create or change them.
+## 1. Configure the control plane
 
-Save the dashboard-issued endpoint ID, monitor ID, and signing secret in the
-receiver's secret store.
+In the signed-in [Delivery dashboard](https://secapi.ai/app/webhooks), create
+an endpoint subscribed to `monitor.match`. Create a monitor with a specific
+query, ticker list, and form filter, then save these values in your receiver's
+secret store:
 
-## 2. Preview the saved search
+- monitor ID
+- webhook endpoint ID
+- signing secret, which is only shown on creation or rotation
+
+The receiver must verify `x-secapi-signature` and
+`x-secapi-signature-timestamp` against the unparsed raw body before parsing
+JSON. Use `x-secapi-event-id` as an idempotency key. The event body and headers
+are the delivery record; do not replace their filing identifiers with a summary.
+
+## 2. Inspect the monitor's current match window
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10"
+  "https://api.secapi.ai/v1/monitors/MONITOR_ID/matches?limit=10" \
+  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
 ```
 
-The expected result is a page of current saved-search matches with pagination
-and request metadata. It does not prove immediate future delivery.
+Expected output: up to ten matches for the saved query plus pagination and
+request metadata. For every result retained by your application, record the
+monitor ID, accession number, filing URL or provenance, form, filing date, and
+`requestId`. This inspection does not advance `lastCheckedAt`, so it is not a
+delivery receipt and does not prove that a later scheduled check will match.
 
-## 3. Verify and recover
+## 3. Reconcile delivery attempts
 
-Verify signatures against the raw body before parsing JSON, reject stale
-timestamps, and make writes idempotent by event ID or filing accession number.
-Use the dashboard to send a test event. It proves receiver handling, not that
-the saved search will produce a filing.
+```bash
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/webhook_endpoints/WEBHOOK_ID/deliveries?limit=20" \
+  | jq '{data: [.data[] | {id, eventId, eventType, status, ok, error, latencyMs, replayedFromDeliveryId}], hasMore, nextCursor, requestId, traceparent}'
+```
 
-- Inspect `GET /v1/webhook_endpoints/{webhook_id}/deliveries`.
-- Replay only when duplicate intake is safe.
-- Reconcile `GET /v1/monitors/{monitor_id}/matches` after delivery failures.
+Expected output: recorded HTTP delivery attempts. Join an attempt to the
+receiver's idempotency log by `eventId`; a successful HTTP status only records
+the sender's observed response, not application-level acceptance. Replay only
+after the receiver can safely handle the duplicate.
 
-A match identifies a disclosure for review; it does not determine materiality.
+## Failure modes
 
-## Next steps
+- `401` or `403` on reconciliation means the API key lacks access to that
+  organization resource.
+- `404 monitor_not_found` or `404` for a webhook endpoint can mean the ID is
+  wrong or belongs to a different organization.
+- An empty match page is scoped to the saved query and current boundary; it is
+  not evidence that no relevant filing exists.
+- A failed delivery attempt requires receiver and delivery-log review. Preserve
+  `eventId`, status, error, request ID, and the original filing source record.
 
-- [Webhook endpoint reference](/api-reference/webhooks)
-- [Filing search](/products/filing-search)
+## Next step
+
+Use [Filing search](/api-reference/filings/get-v1-filings) to reopen an
+accession before assigning a reviewer or making a downstream interpretation.

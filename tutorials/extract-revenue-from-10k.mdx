@@ -1,72 +1,103 @@
 ---
 title: "Extract Revenue from a 10-K"
-description: "Retrieve annual SEC revenue facts with the selected concept, period, unit, and filing provenance intact."
+description: "Retrieve annual revenue facts with concept, period, unit, and filing provenance intact."
 ---
 
-Use this journey when you need annual reported revenue for a model, diligence
-memo, or data pipeline. The returned number is only useful when its unit,
-reporting period, selected XBRL concept, and filing provenance travel with it.
-The finished output is a reproducible observation record, not a display-formatted
-headline number.
+Use this journey to create a reproducible annual-revenue observation for a
+model or research record. A number without its concept, unit, reporting period,
+and source filing is not the finished result.
 
 ## Prerequisites
 
-- `SECAPI_API_KEY`, `curl`, and `jq`, or Node.js 18+.
-- A stable issuer identifier. This example uses `AAPL`.
+- `SECAPI_API_KEY`, `curl`, and `jq`; Node.js 18+ for the record script.
+- One issuer identifier. This example uses `AAPL`.
 
 ```bash
 export SECAPI_API_KEY="your_api_key"
 ```
 
-## 1. Identify the annual filing
+## 1. Identify the source 10-K
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K" \
-  | jq '{accessionNumber, filingDate, form, companyName, filingUrl, requestId, provenance}'
+  "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent" \
+  | jq '{ticker, form, accessionNumber, filingDate, title, filingUrl, requestId}'
 ```
 
-Save the accession number, filing URL, filing date, and request ID. This is the source document you will use to investigate a surprising number.
+Expected output: one latest AAPL Form 10-K identity record. Save
+`accessionNumber`, `filingDate`, `filingUrl`, and `requestId`; they identify the
+document to inspect when a later fact is surprising. `404 filing_not_found`
+means the selected issuer/form did not resolve, not that the issuer has never
+filed.
 
-## 2. Retrieve annual revenue facts
+## 2. Retrieve annual revenue observations
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4" \
-  | jq '{requestedTag, resolvedTag, aliasStrategy, data: [.data[] | {value, unit, periodEnd, fy, fp, form, filedAt, provenance}], requestId, traceparent}'
+  "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&period=annual&limit=4" \
+  | jq '{requestedTag, resolvedTag, aliasStrategy, completeness, data: [.data[]? | {taxonomy, tag, label, value, unit, periodStart, periodEnd, fy, fp, form, filedAt, provenance}], requestId, traceparent}'
 ```
 
-The expected result is up to four annual fact observations. `resolvedTag`
-records the concept selected by the service; values are raw units, not
-display-formatted dollars.
+Expected output: up to four annual fact observations. `resolvedTag` records the
+concept selected by the service. Values remain in the returned unit, so do not
+format them as dollars or compare them to another observation until units and
+periods match.
 
-## 3. Write a provenance-preserving result
+## 3. Write the source-linked observation record
+
+Create `revenue-record.mjs`:
 
 ```js
-const response = await fetch("https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4", {
-  headers: { "x-api-key": process.env.SECAPI_API_KEY ?? "" },
-});
+const apiKey = process.env.SECAPI_API_KEY;
+if (!apiKey) throw new Error("SECAPI_API_KEY is required");
+
+const url = "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&period=annual&limit=4";
+const response = await fetch(url, { headers: { "x-api-key": apiKey } });
 if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
 const payload = await response.json();
-console.log(JSON.stringify({ requestedTag: payload.requestedTag, resolvedTag: payload.resolvedTag,
-  observations: (payload.data ?? []).map((fact) => ({ value: fact.value, unit: fact.unit,
-    periodEnd: fact.periodEnd, fiscalYear: fact.fy, fiscalPeriod: fact.fp, form: fact.form,
-    filedAt: fact.filedAt, accessionNumber: fact.provenance?.accessionNumber ?? null,
-    filingUrl: fact.provenance?.filingUrl ?? null })), requestId: payload.requestId,
-  traceparent: payload.traceparent }, null, 2));
+console.log(JSON.stringify({
+  requestedTag: payload.requestedTag,
+  resolvedTag: payload.resolvedTag,
+  aliasStrategy: payload.aliasStrategy,
+  completeness: payload.completeness,
+  observations: (payload.data ?? []).map((fact) => ({
+    taxonomy: fact.taxonomy,
+    tag: fact.tag,
+    value: fact.value,
+    unit: fact.unit,
+    periodStart: fact.periodStart,
+    periodEnd: fact.periodEnd,
+    fiscalYear: fact.fy,
+    fiscalPeriod: fact.fp,
+    form: fact.form,
+    filedAt: fact.filedAt,
+    accessionNumber: fact.provenance?.accessionNumber ?? null,
+    filingUrl: fact.provenance?.filingUrl ?? null,
+  })),
+  requestId: payload.requestId,
+  traceparent: payload.traceparent,
+}, null, 2));
 ```
 
-## Common errors and false positives
+```bash
+node revenue-record.mjs
+```
 
-- `401` or `403`: the job did not receive a valid entitled key.
-- Empty data: confirm the identifier and inspect `resolvedTag`; issuers can report equivalent concepts under different taxonomy tags.
-- Period confusion: do not compare a quarterly fact with an annual fact without retaining `fp`, `periodEnd`, and `filedAt`.
-- Restatements: filing accession and date are part of the metric identity. Decide explicitly whether your model uses the latest restated value or originally reported value.
+Expected output: a JSON record that carries each raw observation and source
+link. Reopen the cited filing statement and notes before attributing a revenue
+change to the business.
 
-## Production considerations
+## Failure modes
 
-Store raw values as decimals or integers in the returned unit, cache historical requests, and attach request/trace metadata to support records. Never expose the key in browser code, and label derived analysis as analysis rather than an SEC statement.
+- `401` or `403` means the process did not send a valid entitled key.
+- Empty `data` can mean the issuer, filters, or resolved concept did not match;
+  inspect `resolvedTag` and `completeness` before substituting a value.
+- Do not compare quarterly and annual values, or different units, as though
+  they are equivalent. Retain `periodStart`, `periodEnd`, `fp`, and `filedAt`.
+- A restatement changes the observation's filing context. Decide explicitly
+  whether the model uses the latest restated fact or an originally reported one.
 
-## Next links
+## Next step
 
-Use [facts](/api-reference/facts/get-v1-facts) for the full fact contract, [statements](/api-reference/statements) for an annual statement bundle, or add `fy` when a report must reproduce a fixed fiscal year.
+Read the [facts reference](/api-reference/facts/get-v1-facts) for the complete
+concept-resolution and period-filter contract.

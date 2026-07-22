@@ -1,68 +1,100 @@
 ---
 title: "Analyze Insider Transactions"
-description: "Build a source-linked Form 3, 4, and 5 review queue without turning transaction codes into investment signals."
+description: "Create a source-linked Form 4 review queue without treating transaction codes as investment signals."
 ---
 
-This workflow creates a source-linked queue of disclosed insider transactions for an investor-relations, compliance, or research analyst. It is not a buy/sell signal: an option exercise, tax withholding, gift, or planned sale can look like a directional transaction until the underlying filing is reviewed.
+This tutorial builds a queue of reported insider transactions for review. Form
+4 codes record the filing's transaction classification; they do not establish
+motive, plan status, legality, current ownership, or an investment outcome.
 
 ## Prerequisites
 
-- `SECAPI_API_KEY`, `curl`, and `jq`, or Node.js 18+.
+- `SECAPI_API_KEY`, `curl`, and `jq`; Node.js 18+ for the queue script.
 - An issuer ticker or CIK. This example uses `JPM`.
 
 ```bash
 export SECAPI_API_KEY="your_api_key"
 ```
 
-## 1. List recent Form 4 disclosures
+## 1. List recent Form 4 records
 
 ```bash
 curl --get --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  --data-urlencode "ticker=JPM" --data-urlencode "forms=4" --data-urlencode "limit=50" \
+  --data-urlencode "ticker=JPM" \
+  --data-urlencode "forms=4" \
+  --data-urlencode "limit=50" \
   "https://api.secapi.ai/v1/insiders" \
-  | jq '{data, hasMore, nextCursor, requestId, traceparent}'
+  | jq '{data: [.data[]? | {ownerName, ownerTitle, filingDate, transactionDate, transactionCode, securityTitle, transactionShares, transactionPrice, transactionValue, accessionNumber, provenance}], hasMore, nextCursor, requestId}'
 ```
 
-The expected result is a paginated list of normalized Form 4 records. Preserve
-the returned owner fields, transaction code and date, security title, quantities,
-accession, filing URL or provenance, and request metadata.
+Expected output: a paginated list of normalized Form 4 records. Retain the
+owner fields, transaction fields, accession number, provenance, and request
+metadata. `date_from` and `date_to` filter filing date, not transaction date.
 
-## 2. Build a purchase-review queue
+## 2. Write a code-P review queue
 
-`transaction_code=P` filters by the returned SEC transaction code; it is not an
-inferred investment label. The script writes review records and keeps pagination
-visible for the next run.
+`transaction_code=P` selects records whose reported transaction code is `P`.
+It does not label a record as a discretionary purchase or a bullish signal.
+
+Create `insider-queue.mjs`:
 
 ```js
-const query = new URLSearchParams({ ticker: "JPM", forms: "4", transaction_code: "P",
-  date_from: "2025-01-01", limit: "50", view: "agent" });
+const apiKey = process.env.SECAPI_API_KEY;
+if (!apiKey) throw new Error("SECAPI_API_KEY is required");
+
+const query = new URLSearchParams({
+  ticker: "JPM",
+  forms: "4",
+  transaction_code: "P",
+  date_from: "2025-01-01",
+  limit: "50",
+  view: "agent",
+});
 const response = await fetch(`https://api.secapi.ai/v1/insiders?${query}`, {
-  headers: { "x-api-key": process.env.SECAPI_API_KEY ?? "" },
+  headers: { "x-api-key": apiKey },
 });
 if (!response.ok) throw new Error(`SEC API ${response.status}: ${await response.text()}`);
 const payload = await response.json();
-console.log(JSON.stringify({ requestId: payload.requestId, traceparent: payload.traceparent,
-  hasMore: payload.hasMore, nextCursor: payload.nextCursor,
-  reviewQueue: (payload.data ?? []).map((trade) => ({ owner: trade.ownerName,
-    ownerTitle: trade.ownerTitle, transactionCode: trade.transactionCode,
-    transactionDate: trade.transactionDate, securityTitle: trade.securityTitle,
-    shares: trade.transactionShares, price: trade.transactionPrice, value: trade.transactionValue,
-    accessionNumber: trade.accessionNumber, filingUrl: trade.filingUrl ?? null })) }, null, 2));
+console.log(JSON.stringify({
+  hasMore: payload.hasMore,
+  nextCursor: payload.nextCursor,
+  reviewQueue: (payload.data ?? []).map((trade) => ({
+    ownerName: trade.ownerName,
+    ownerTitle: trade.ownerTitle,
+    filingDate: trade.filingDate,
+    transactionDate: trade.transactionDate,
+    transactionCode: trade.transactionCode,
+    securityTitle: trade.securityTitle,
+    shares: trade.transactionShares,
+    price: trade.transactionPrice,
+    value: trade.transactionValue,
+    accessionNumber: trade.accessionNumber,
+    filingUrl: trade.filingUrl ?? null,
+  })),
+  requestId: payload.requestId,
+}, null, 2));
 ```
 
-Run `node insider-queue.mjs`. The expected result is a JSON queue containing only returned Form 4 fields plus pagination and request metadata; it does not label a purchase as bullish. Before interpreting a record, retrieve and review its Form 4 using the accession and filing URL.
+```bash
+node insider-queue.mjs
+```
 
-## Common errors and false positives
+Expected output: a source-linked review queue and pagination state. Follow the
+returned `nextCursor` while `hasMore` is true; a single page is not a complete
+history. Open the cited Form 4 and read security title, ownership type, and
+footnotes before characterizing a transaction.
 
-- No records only describes the requested ticker, date range, and page; it is not proof of no insider activity.
-- Use the returned `nextCursor` while `hasMore` is true. A single page is not a complete history.
-- Deduplicate by accession plus transaction identity, not owner name alone.
-- Code `P` does not establish discretionary conviction. Inspect ownership type, security title, footnotes, and the original filing.
+## Failure modes
 
-## Production considerations
+- An empty result only describes the selected issuer, date range, code, and
+  page. It is not proof of no insider activity.
+- Deduplicate by accession number plus transaction identity, not owner name.
+- Corrections can arrive after an initial filing. Use an overlap window and
+  durable ingestion state for scheduled jobs.
+- Preserve the Form 4 source record and route the queue to a reviewer; do not
+  trigger trading or compliance conclusions from the normalized feed alone.
 
-Use a durable ingestion key, overlapping backfill window, and scheduled retry because corrections can arrive later. Keep alerts descriptive and source-linked, route them to a reviewer, and prohibit automatic trading or compliance conclusions from the normalized feed.
+## Next step
 
-## Next links
-
-Compare the issuer's delayed institutional disclosure with [13F holdings](/tutorials/monitor-13f-holdings), making the different source dates explicit. See the [insiders reference](/api-reference/insiders/get-v1-insiders) for available filters.
+See the [insiders reference](/api-reference/insiders/get-v1-insiders) for
+available filters and the returned source fields.

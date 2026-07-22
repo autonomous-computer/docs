@@ -1,20 +1,24 @@
 ---
 title: "Build an SEC Filing Monitor"
-description: "Poll supported filing search endpoints, send idempotent alerts, and retain provenance."
+description: "Poll bounded 8-K searches, deduplicate by accession number, and write source-linked review records."
 ---
 
-This Node.js job polls three issuers for new 8-K filings and writes a
-source-linked alert list. Run it in cron, a container scheduler, or a serverless
-job; the local JSON state is only suitable for one worker.
+This Node.js example polls three issuers for Form 8-K and 8-K/A records. Its
+output is a review queue, not a statement about the importance of a filing.
+The local state file makes it runnable on one machine; use durable shared state
+before running more than one worker.
 
 ## Prerequisites
 
-- Node.js 18+ and `SECAPI_API_KEY`.
-- Issuer tickers to poll. The example uses `AAPL`, `MSFT`, and `NVDA`.
+- Node.js 18+.
+- `SECAPI_API_KEY` with access to filing search.
+- A writable directory for `state.json`.
 
 ```bash
 export SECAPI_API_KEY="your_api_key"
 ```
+
+## 1. Create the polling job
 
 Create `monitor-filings.mjs`:
 
@@ -25,53 +29,84 @@ const statePath = new URL("./state.json", import.meta.url);
 const apiKey = process.env.SECAPI_API_KEY;
 if (!apiKey) throw new Error("SECAPI_API_KEY is required");
 
-let state;
+let state = { seen: [] };
 try {
   state = JSON.parse(await readFile(statePath, "utf8"));
 } catch (error) {
   if (error?.code !== "ENOENT") throw error;
-  state = { seen: [] };
 }
+
 const seen = new Set(state.seen ?? []);
-const alerts = [];
+const retainedAccessions = [];
+const retained = new Set();
+const reviewQueue = [];
 for (const ticker of ["AAPL", "MSFT", "NVDA"]) {
-  const query = new URLSearchParams({ ticker, forms: "8-K,8-K/A", limit: "50" });
-  const response = await fetch(`https://api.secapi.ai/v1/filings?${query}`, {
-    headers: { "x-api-key": apiKey },
-  });
-  if (!response.ok) throw new Error(`${ticker}: ${response.status}`);
-  const payload = await response.json();
-  for (const filing of payload.data ?? []) {
-    const accession = filing.accessionNumber ?? filing.accession_number;
-    if (accession && !seen.has(accession)) {
-      alerts.push({
-        accession,
+  let cursor;
+  do {
+    const query = new URLSearchParams({ ticker, forms: "8-K,8-K/A", limit: "50" });
+    if (cursor) query.set("cursor", cursor);
+    const response = await fetch(`https://api.secapi.ai/v1/filings?${query}`, {
+      headers: { "x-api-key": apiKey },
+    });
+    if (!response.ok) throw new Error(`${ticker}: ${response.status} ${await response.text()}`);
+    const payload = await response.json();
+    for (const filing of payload.data ?? []) {
+      const accessionNumber = filing.accessionNumber;
+      if (!accessionNumber) continue;
+      if (!retained.has(accessionNumber)) {
+        retainedAccessions.push(accessionNumber);
+        retained.add(accessionNumber);
+      }
+      if (seen.has(accessionNumber)) continue;
+      reviewQueue.push({
+        ticker: filing.ticker,
+        form: filing.form,
+        filingDate: filing.filingDate,
+        accessionNumber,
         filingUrl: filing.filingUrl ?? filing.provenance?.filingUrl ?? null,
         requestId: payload.requestId,
       });
-      seen.add(accession);
+      seen.add(accessionNumber);
     }
+    cursor = payload.hasMore ? payload.nextCursor : null;
+  } while (cursor);
+}
+
+for (const accessionNumber of state.seen ?? []) {
+  if (retainedAccessions.length >= 5000) break;
+  if (!retained.has(accessionNumber)) {
+    retainedAccessions.push(accessionNumber);
+    retained.add(accessionNumber);
   }
 }
-await writeFile(statePath, JSON.stringify({ seen: [...seen].slice(-5000) }, null, 2));
-console.log({ newFilings: alerts.length, alerts });
+
+await writeFile(statePath, JSON.stringify({ seen: retainedAccessions }, null, 2));
+console.log(JSON.stringify({ newFilings: reviewQueue.length, reviewQueue }, null, 2));
 ```
 
-Run `node monitor-filings.mjs`. The first run may list existing filings because
-the state is empty. A successful result prints `newFilings` and source-linked
-records with the accession, filing URL when returned, and request ID.
+## 2. Run it and inspect the record
 
-## Common errors and production use
+```bash
+node monitor-filings.mjs
+```
 
-- `401` or `403` means the runtime did not send a valid entitled API key.
-- An empty page is not proof that an issuer made no filing; continue through
-  `nextCursor` while `hasMore` is true when the chosen window can exceed a page.
-- Use a transactional idempotency key based on accession number, overlap polling
-  windows, and retain query filters, response metadata, and alert status.
+The first run can emit already-filed records because it starts with no saved
+accessions. Each queue entry should contain ticker, form, filing date,
+accession number, filing URL when returned, and request ID. Use the filing URL
+and accession to read the original disclosure before routing it to a person or
+another system.
 
-Alerting identifies disclosures for review. It does not determine materiality.
+## Failure modes and deployment notes
 
-## Next steps
+- `401` or `403` means the process did not send a valid entitled API key.
+- `502 filing_search_failed` is a search-path failure, not an empty result; use
+  bounded retry and retain the request ID.
+- Continue while `hasMore` is true using the returned `nextCursor`; a page is
+  not complete history.
+- Deduplicate on accession number in durable storage, overlap polling windows,
+  and record delivery status separately from discovery.
 
-- [Filing retrieval](/api-reference/filings)
-- [Build a Filing Monitor](/tutorials/build-filing-monitor)
+## Next step
+
+Use [Build a Filing Monitor](/tutorials/build-filing-monitor) when the signed-in
+organization should deliver `monitor.match` events to a webhook receiver.
