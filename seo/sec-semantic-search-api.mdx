@@ -1,46 +1,58 @@
 ---
-title: "SEC Semantic Search API for Cited Disclosure Discovery"
-description: "Retrieve conceptually related filing passages, constrain the filing universe, and verify every candidate against its section and filing citation."
+title: "SEC Semantic Search API"
+description: "Find conceptually related filing passages, constrain the corpus, and verify each candidate against its source section."
 ---
 
-## Find language that literal search may miss
+Use semantic search when the language in a filing may not repeat the terms in a user’s question. It returns candidate normalized sections with citation-oriented fields. It does not determine materiality, completeness, or the correct interpretation of a disclosure.
 
-Use semantic search when the disclosure language may not repeat the words in your question. It returns passages to inspect, not findings about a company, risk, or accounting treatment.
+## Reader job: discover related disclosure language without losing provenance
 
-## Search a constrained disclosure question
+Start with a specific question and a constrained issuer or filing universe. Preserve the candidate’s source identity, then retrieve its section when the application needs to quote, summarize, or compare it. That makes semantic search a route to evidence rather than an opaque answer generator.
+
+## Search a constrained question
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/search/semantic?q=artificial%20intelligence%20regulatory%20risk&ticker=GOOGL&form=10-K&filing_year=2025&mode=hybrid&limit=5"
 ```
 
-`q` is required. Scope the candidate set with `ticker`, `symbol`, or `cik`, plus `form` and `filing_year` when possible. `mode` accepts `keyword`, `semantic`, or `hybrid` and defaults to `hybrid`; `limit` bounds the single response.
+`q` is required. Narrow the candidate set with `ticker`, `symbol`, or `cik`, then add `form` and `filing_year` when the research warrants it. `mode` accepts `keyword`, `semantic`, or `hybrid`; `hybrid` is the default. `limit` bounds one response.
 
-Expect a search object with query and mode plus a section list. A result can include its accession, section key, source URL, ticker, highlighted snippet, and markdown `char_start`/`char_end` offsets; default responses can also carry retrieval detail and a degraded-state signal. Preserve these fields with any citation or downstream prompt.
+A result can include accession, section key, source URL, ticker, highlighted snippet, and `char_start`/`char_end` offsets into normalized section markdown. Default responses can include score, retrieval mode, and a degraded-state signal. Retain these fields with the query filters, `requestId`, and any provenance or freshness metadata.
 
-## Verify before drawing a conclusion
+## Verify the candidate section
 
-1. Keep the result’s accession, section key, source URL, and offsets.
-2. Retrieve the section by accession when the full context matters.
-3. Treat offsets as positions in normalized section markdown, not raw SEC HTML.
-4. When offsets are missing or the response reports degradation, open the source filing rather than slicing a passage programmatically.
+```bash
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?mode=full"
+```
 
-Use `GET /v1/search/fulltext` for literal language, `GET /v1/sections/search` for cursor-paginated normalized-section search, and `GET /v1/filings` when the question is which filing exists rather than what it says.
+Use the result’s accession and section key for the request. Offsets describe normalized markdown rather than raw SEC HTML. If an offset, snippet, or citation span is unavailable, or `_citation_degraded` is returned, open the source filing instead of constructing a quote from a partial excerpt.
 
-## Implementation path
+## Capability choices
 
-Use `client.semanticSearch({ q, ticker, form, filing_year, mode, limit })` from `@secapi/sdk-js`, or call `GET /v1/search/semantic` directly. The current hosted MCP tool list has `sections.search` for normalized section search, but no equivalent semantic-search tool; use REST or an SDK for semantic retrieval and hand the returned citation into the agent context.
+| Need                                       | SEC API route or tool                                                             |
+| ------------------------------------------ | --------------------------------------------------------------------------------- |
+| Related concepts in normalized sections    | `GET /v1/search/semantic`                                                         |
+| Exact language                             | `GET /v1/search/fulltext`                                                         |
+| Cursor-paginated normalized-section search | `GET /v1/sections/search` or MCP `sections.search`                                |
+| Filing manifest selection                  | `GET /v1/filings` or MCP `filings.search`                                         |
+| Read the selected source                   | `GET /v1/filings/{accession_number}/sections/{section_key}` or MCP `sections.get` |
+
+The JavaScript SDK provides `client.semanticSearch({ q, ticker, form, filing_year, mode, limit })`. Hosted MCP offers normalized `sections.search`, but not an equivalent semantic-search tool; use REST or an SDK for semantic retrieval, then hand source identity into the agent context.
 
 ## Retrieval limits
 
-- Similarity or hybrid ranking is not a materiality score, a completeness guarantee, or a recommendation.
-- A result list reflects indexed, normalized section content and its availability; it is not a claim that all EDGAR prose is searchable or that every related passage was returned.
-- `view=agent` retains citation fields but omits `score` and `retrievalMode`. Use the default response to evaluate retrieval behavior.
-- Treat a `503` or disclosed degraded state as an unavailable retrieval surface, not as a negative search result.
+- Similarity and hybrid scores are not materiality scores, completeness measures, or recommendations.
+- Results reflect indexed, normalized section content and current route availability, not a promise of EDGAR-wide prose coverage or coverage for related passages.
+- `view=agent` keeps citation fields but omits `score` and `retrievalMode`; use the default response when evaluating retrieval behavior.
+- A `503` or reported degraded state is an unavailable or partial retrieval surface, not a negative result.
 
-## Next step
+## Next action
 
-- [Create an API key and run a constrained question against one 10-K](https://secapi.ai/signup)
+Run a constrained question against one filing, fetch the candidates you intend to use, and keep source identity next to the resulting model or reviewer interpretation.
+
+- [Create an API key](https://secapi.ai/signup)
 - [Full-text search API](/seo/sec-full-text-search-api)
 - [Semantic search reference](/api-reference/search/get-v1-search-semantic)
 - [Semantic risk-factor tutorial](/tutorials/semantic-search-risk-factors)

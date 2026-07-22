@@ -1,34 +1,47 @@
 ---
 title: "SEC Full-Text Search API"
-description: "Search filing manifests and extracted section text with issuer, form, accession, and historical filters."
+description: "Find exact terms across filing manifests and extracted sections, then retrieve the underlying source before making a claim."
 ---
 
-`GET /v1/search/fulltext` runs the same query against filing manifests and extracted filing sections. Use it to locate evidence for an exact term or query, then retrieve or open the returned filing before making a claim. It is not semantic search and an empty response is not proof that an issuer never used a concept.
+Use full-text search when a reviewer needs to locate literal wording such as “material weakness,” a product name, or a defined accounting phrase. The route searches filing manifests and extracted sections. It is not semantic search, and an empty response does not establish that the issuer did not discuss the concept.
 
-## Run a scoped search
+## Reader job: find exact language and preserve its source
+
+Scope an exact-term query to an issuer and filing family where possible. Treat returned filing and section hits as a research queue, then retrieve the selected filing or section before displaying a quotation or conclusion.
+
+## Run a scoped literal search
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/search/fulltext?q=material%20weakness&ticker=AAPL&form=10-K&limit=10"
 ```
 
-`q` is required. Scope it with `ticker` (or `symbol`), `cik`, `form`, `accession_number`, `filing_year`, issuer fiscal year `fy`/`year`, or `date_from`/`date_to`. `limit` is 1 through 100 and is split between the filing and section search legs, so the result is not a single globally paginated list.
+`q` is required. Narrow with `ticker` or `symbol`, `cik`, `form`, `accession_number`, `filing_year`, issuer fiscal year `fy` or `year`, and `date_from` or `date_to`. `limit` ranges from 1 through 100 and is a combined search budget split between the filing and section legs; it is not a single globally paginated result list.
 
-The response has `object: "fulltext_search"`, the echoed `query`, `filings`, `sections`, `requestId`, and `traceparent`. Each leg has `data` and `count`; section results can report `degradedState` when section-search capability is partially unavailable.
+The response includes `object: "fulltext_search"`, the echoed query, `filings`, `sections`, `requestId`, and `traceparent`. Each leg has `data` and `count`. A section result can include `degradedState` when section-search capability is partially unavailable.
 
-## Turn a hit into citable evidence
+## Turn a result into evidence
 
-Prefer a section hit for a content claim. Retain its filing identity, section key, source URL/provenance, and request ID, then use the accession-specific section route or open the source filing. A filing-manifest hit can be useful for discovery but is not itself the passage that supports a statement.
+For a content claim, prefer a section hit. Retain its filing identity, section key, source URL or provenance, query filters, and `requestId`, then fetch the section by accession:
 
-Use [semantic search](/seo/sec-semantic-search-api) when the question is about related language rather than exact wording. Use [filing search](/seo/sec-filing-search-api) when the task is selecting filings rather than searching their content.
+```bash
+curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?mode=full"
+```
 
-## Common errors
+A filing-manifest hit is useful for discovery but does not itself supply the passage supporting a statement. Open the SEC filing when tables, definitions, or surrounding qualifications affect the interpretation.
 
-- Supplying different `ticker` and `symbol` values; they must agree.
-- Treating a fiscal-year filter as a calendar filing-year filter. With an issuer identifier, `fy` maps to that issuer's fiscal filing window; `filing_year` is a calendar filing-year selector.
-- Ignoring `degradedState` or a non-2xx response when a search backend is unavailable.
-- Quoting a snippet without reading the source filing, table, definitions, and surrounding qualification.
+## Choose a different search path when needed
+
+Use [semantic search](/seo/sec-semantic-search-api) for related language that may not repeat your literal terms. Use [filing search](/seo/sec-filing-search-api) to select documents by metadata rather than text. Use [section extraction](/seo/sec-10k-section-extraction-api) when you already know the accession and item.
+
+## Production caveats
+
+- `ticker` and `symbol` must agree when both are supplied.
+- A fiscal-year filter is not the same as a calendar filing-year filter: with an issuer, `fy` maps to that issuer’s fiscal filing window; `filing_year` selects a calendar filing year.
+- A non-2xx response or `degradedState` is an unavailable or partial retrieval condition, not a negative search result.
+- A snippet cannot substitute for reading the source filing, its tables, and its qualifiers.
 
 ## Next action
 
-Start with a narrow issuer/form/date query, retain the hit's source fields, then retrieve the exact section or filing needed for a source-backed research note.
+Test one literal phrase against one issuer and form, retain both result legs and request metadata, then retrieve the chosen source section before adding the workflow to a research or alerting product.

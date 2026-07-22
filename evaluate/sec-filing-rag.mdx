@@ -1,57 +1,64 @@
 ---
 title: "Evaluate SEC Filing RAG"
-description: "Test cited filing retrieval before permitting generated answers."
+description: "Test whether a filing-answer workflow can retrieve, verify, and retain the SEC source behind each answer."
 ---
 
-Use this guide for an application that must answer a filing question with inspectable source sections. The evaluation is about retrieval and attribution first. It does not establish that ranked results are complete, material, or sufficient for a legal, accounting, or investment conclusion.
+Use this page when you are evaluating a filing Q&A, research assistant, or internal agent. SEC API can find candidate filing sections and return source identity. Your application remains responsible for answer generation, citation display, review policy, and deciding whether the retrieved evidence supports an answer.
 
-## The buyer job
+## Reader job: prove one answer can be checked
 
-For one real question, retrieve candidate sections, open the section selected for an answer, and keep retrieval evidence separate from the application's interpretation. Use direct EDGAR when a reviewer must browse the original filing without a retrieval layer.
+Choose one issuer, one question, and one 10-K. Retrieve candidate passages, fetch the selected section by accession number, and compare the exact-language and conceptual search paths. A good proof does not ask whether the model sounds convincing; it asks whether a reviewer can find the same filing and read the surrounding disclosure.
 
-## Smallest proof of concept
+## Run the evidence path
 
-Run semantic retrieval for a conceptual question. Replace the placeholders in the section request with returned values, then repeat the test with full-text search for an exact phrase. The two methods are not expected to rank the same way.
+Use semantic search for a question whose wording may differ from the filing. Use full-text search separately for language you expect to appear literally. Neither result is the source text you should quote.
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/search/semantic?q=regulatory%20risk&ticker=TSLA&form=10-K&mode=hybrid&limit=5"
 
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?ticker=TSLA&form=10-K"
+  "https://api.secapi.ai/v1/search/fulltext?q=regulatory%20risk&ticker=TSLA&form=10-K&limit=5"
 
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/search/fulltext?q=regulatory%20risk&ticker=TSLA&form=10-K&limit=5"
+  "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?ticker=TSLA&form=10-K&mode=full"
 ```
 
-## What a passing result contains
+Replace `ACCESSION` and `SECTION_KEY` with values returned by search. The last request is the verification step: it returns the named extracted section and filing provenance. Open the returned SEC filing URL when layout, tables, definitions, or surrounding context matter.
 
-For each generated assertion, retain the retrieved language, accession number, section key, filing URL, form, filing date, available character range, `requestId`, and returned provenance/freshness. If the response supplies `_citation_degraded`, preserve it with the result. A user must be able to distinguish a source quotation from your application's interpretation.
+## What SEC API supplies, and what it does not
 
-## Source and production limits
+| SEC API capability                                          | Use it for                                                              | Do not treat it as                                            |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `GET /v1/search/semantic`                                   | Conceptually related normalized sections, with citation-oriented fields | Corpus-wide coverage or a materiality ranking                 |
+| `GET /v1/search/fulltext`                                   | Literal terms across filing and section search legs                     | A single globally ranked, paginated evidence list             |
+| `GET /v1/filings/{accession_number}/sections/{section_key}` | The selected section text and filing identity                           | A guarantee of coverage for tables, exhibits, or topics       |
 
-- Search narrows a corpus; it does not prove completeness, absence, or relevance to a decision.
-- A snippet without a fetched source section is not enough to quote or substantiate a claim.
-- A semantic or full-text dependency can be unavailable independently. Surface that condition as failed retrieval, not as an absence of disclosure.
-- Citation spans and snippets can be unavailable or degraded; require a retrieval fallback in the answer policy.
-- Bound the corpus, result count, and retries, then quote the planned loop through [Pricing and limits](/evaluate/pricing-and-limits).
+Retain the query and filters, accession number, section key, form, filing date, source URL, `requestId`, and returned `provenance` or `freshness` fields. Preserve `char_start`, `char_end`, and `_citation_degraded` when semantic search supplies them. Those offsets refer to normalized section markdown, not raw SEC HTML.
 
-## Next decision
+## Evaluation failure cases
 
-Permit answer generation only when every material filing assertion has a fetched section and stable source identity. Keep uncited retrieval results in a research queue rather than presenting them as answers.
+- An empty result means this request found no match. It does not establish that the issuer made no disclosure.
+- A `503` or a returned degraded-state signal means a search dependency was unavailable or partial. Show failed retrieval rather than generating a negative answer.
+- A snippet is a navigation aid. Fetch the section before quoting it, and use the SEC source to inspect tables and qualifications.
+- The latest filing can change between runs. Store the resolved accession whenever a workflow intentionally uses a latest route.
+
+## Decide whether to expand
+
+Move from a one-question test to an agent loop only when your product can attach a fetched source section to the filing assertions it presents as material and can expose retrieval failure to a reviewer. Price the bounded request sequence before widening issuers, forms, or cadence.
 
 <CardGroup cols={3}>
-  <Card title="Filing search evaluation" icon="search" href="/evaluate/sec-filing-search-api">Compare the lexical retrieval path.</Card>
-  <Card title="Search API reference" icon="book-open" href="/api-reference/search/get-v1-search-semantic">Inspect semantic search fields.</Card>
-  <Card title="Price the loop" icon="calculator" href="/evaluate/pricing-and-limits">Estimate bounded retrieval usage.</Card>
+  <Card title="Filing search evaluation" icon="search" href="/evaluate/sec-filing-search-api">Test the manifest-to-section workflow.</Card>
+  <Card title="Semantic search reference" icon="book-open" href="/api-reference/search/get-v1-search-semantic">Inspect citation and retrieval fields.</Card>
+  <Card title="Pricing and limits" icon="calculator" href="/evaluate/pricing-and-limits">Estimate a bounded retrieval loop.</Card>
 </CardGroup>
 
 <CardGroup cols={3}>
-  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Start a bounded retrieval test.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect source retrieval responses.</Card>
-  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review semantic-search usage.</Card>
+  <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Start with one issuer and question.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect response fields before integrating.</Card>
+  <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review search and retrieval usage.</Card>
 </CardGroup>
 
-<Steps><Step title="Retrieve candidates">Use a real question and constrained result set.</Step><Step title="Fetch the source">Open the selected section before generation.</Step><Step title="Gate answers">Require source identity for every material assertion.</Step></Steps>
+<Steps><Step title="Search candidates">Run one conceptual and one literal query against a bounded filing universe.</Step><Step title="Fetch the section">Use the returned accession and section key to retrieve the source text.</Step><Step title="Gate answers">Require source identity and surface degraded retrieval before publishing an answer.</Step></Steps>
 
-<Prompt>For one issuer and research question, run semantic retrieval, fetch the selected filing section, and repeat with full-text search for an exact phrase. Return accession, section key, SEC URL, request ID, provenance, freshness, and any citation-degraded signal. Keep retrieved language separate from interpretation and mark unavailable retrieval as a failure.</Prompt>
+<Prompt>For one issuer and filing question, run both semantic and full-text search with a bounded form and result limit. Select a candidate, fetch its section by accession and section key, and return the query, filters, accession, section key, filing URL, request ID, provenance, freshness, and any degraded citation signal. Keep quotations and application interpretation separate. Do not infer that an empty or unavailable search proves there is no disclosure.</Prompt>

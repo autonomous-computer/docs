@@ -1,51 +1,32 @@
 ---
 title: "SEC Filing Diff API"
-description: "Compare two same-form SEC filings by automatic prior-period pairing or explicit selectors, then review the cited filings behind each section-level change."
+description: "GET /v1/filings/diff is currently unavailable. Use supported filing retrieval and search endpoints to compare source disclosures."
 ---
 
-Filing diff is a triage tool for textual change. It helps a researcher decide where to read, but it does not determine materiality, a restatement, legal significance, or an issuer’s motive.
+`GET /v1/filings/diff` is currently unavailable and returns `404 filings_intelligence_not_available`. Do not use it as an active comparison dependency. The route is inactive in the deployed service; its availability is not a public-product guarantee.
 
-## Compare a company’s 10-K risk and MD&A sections
+When it becomes available, it will compare a selected issuer filing with a prior-period or explicitly selected counterpart and return section-level change information. Any result will be a review aid based on rendered filing text, not a determination of materiality, a restatement, legal significance, an accounting error, or an issuer's motive.
 
-```bash
-curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K&sections=item_1a_risk_factors,item_7_mdna"
-```
+## Compare filings with supported endpoints
 
-`ticker` and `form` are required. When `from` and `to` are omitted, the API selects the latest filing and its prior same-form filing. Use explicit accession numbers or ISO dates when the comparison pair must be controlled:
+Use the supported filing endpoints to build a controlled review record today:
 
-```bash
-curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/diff?ticker=AAPL&form=10-K&from=2023-10-01&to=2024-10-01&include_hunks=false"
-```
+1. Identify the current filing for an issuer and form with [Filing search API](/seo/sec-filing-search-api) or [GET /v1/filings/latest](/api-reference/filings/get-v1-filings-latest). Retain the accession number, filing date, and source URL.
+2. Retrieve the relevant disclosure from each selected filing with [10-K section extraction](/seo/sec-10k-section-extraction-api), then compare the source text in context.
+3. Use [full-text search](/seo/sec-full-text-search-api) for exact language or [semantic search](/seo/sec-semantic-search-api) for related passages when you need to locate candidate disclosures before reading them.
 
-Use `sections` to keep the comparison targeted. `include_hunks=false` requests section-level change information without word-level redline hunks. The report identifies its paired filings and changes; retain both accession numbers, forms, and source URLs with any review output.
+The supported workflow requires you to choose and retain both filing identities. A missing search or retrieval result does not establish that two filings are identical.
 
-## What to inspect in the response
+## When filing diff is available
 
-| Field or output | How to use it |
-| --- | --- |
-| paired filing identifiers | confirm the API compared the intended documents |
-| section change type or badge | prioritize reading, not a conclusion |
-| word-level hunks | locate wording to verify in both source filings |
-| request and source metadata | reproduce and audit the comparison |
+When the endpoint is enabled and documented as available, provide a ticker and form, preserve the selected filing citations, and treat its rendered-text comparison as a starting point for review. Confirm important changes in the underlying filings before publishing a summary.
 
-Follow each accession with `GET /v1/filings/{accessionNumber}` or a named-section request before publishing a summary. A word change can be boilerplate, a filing-format artifact, an amendment, or a substantive disclosure; the diff cannot resolve that distinction alone.
+Boilerplate edits, parsing differences, amendments, and substantive disclosure changes may appear as textual differences. Keep the request metadata and both source records with any comparison note so another reviewer can reproduce the work.
 
-## REST and SDK implementation
+## Reference and alternatives
 
-Call `GET /v1/filings/diff` directly or use `client.filingDiff({ ticker, form, from, to, sections, include_hunks })` in `@secapi/sdk-js`. The hosted MCP tool list currently covers filing search and section retrieval, not this filing-diff report; use REST or the SDK, then provide the selected source sections to an agent for bounded analysis.
-
-## Limits that should stay visible
-
-- Comparisons are between two filings of one form; they do not discover every amendment or produce a complete amendment chain.
-- The route does not accept retired `accession_a` and `accession_b` parameters. Use `ticker`, `form`, `from`, and `to`.
-- Differences in parsed text are not proof of materiality, accounting error, or legal conclusion.
-- A response can be unavailable for a pair or section; do not treat that as evidence that the filings are identical.
-
-## Continue
-
-- [Create an API key and compare a filing pair](https://secapi.ai/signup)
-- [Filing search API](/seo/sec-filing-search-api)
-- [Filing intelligence](/products/filing-intelligence)
 - [Filing diff reference](/api-reference/filings/get-v1-filings-diff)
+- [Filing search API](/seo/sec-filing-search-api)
+- [10-K section extraction API](/seo/sec-10k-section-extraction-api)
+- [SEC full-text search API](/seo/sec-full-text-search-api)
+- [SEC semantic search API](/seo/sec-semantic-search-api)

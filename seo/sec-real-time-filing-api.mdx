@@ -1,31 +1,31 @@
 ---
-title: "SEC Real-Time Filing API: Monitors, Webhooks, and Streams"
-description: "Deliver matching SEC filing events to a signed webhook, poll with durable cursors, or connect a ticketed WebSocket stream while retaining the filing source for review."
+title: "SEC Filing Delivery API: Monitors, Webhooks, and Streams"
+description: "Receive matching filing events through signed webhooks, durable cursor polling, or ticketed WebSockets, then retrieve the filing source for review."
 ---
 
-Real-time filing delivery tells a worker that new matching filing work is available. It does not itself validate the filing, guarantee an investor conclusion, or replace retrieving the cited filing record.
+Filing delivery tells your system that matching work is available. It does not validate a filing, guarantee universal SEC freshness, or replace retrieving the filing and section a user will review. Build consumers so a delivery becomes a durable, source-linked work item.
 
-## Pick a delivery model
+## Reader job: choose a delivery contract your system can operate
 
-| Need | Mechanism | Operational responsibility |
-| --- | --- | --- |
-| Push a matching saved-monitor event to a public service | dashboard-configured webhook | verify signature, deduplicate, queue work |
-| Process events with explicit checkpoints | stream-subscription polling | commit cursor only after durable processing |
-| Maintain a live connection without exposing an API key in a URL | subscription-backed, ticketed WebSocket | mint short-lived ticket and reconnect deliberately |
-| Simple periodic check | `GET /v1/filings/latest` | choose form and own polling cadence |
+| Need                                                         | Mechanism                              | Your responsibility                             |
+| ------------------------------------------------------------ | -------------------------------------- | ----------------------------------------------- |
+| Push matching saved-monitor events to a service              | Dashboard-configured webhook           | Verify signature, deduplicate, queue work       |
+| Process ordered events with checkpoints                      | Stream-subscription polling            | Commit the cursor only after durable processing |
+| Hold a live connection without placing an API key in the URL | Subscription-backed ticketed WebSocket | Mint tickets, reconnect, and handle duplicates  |
+| Check periodically                                           | `GET /v1/filings/latest`               | Own polling cadence and form scope              |
 
-Create saved monitors, webhook endpoints, subscription changes, secret rotation, tests, and replay policy in the signed-in [dashboard](https://secapi.ai/app/webhooks). Those organization changes are human-authenticated; an API key is not the setup credential.
+Saved monitors, webhook endpoints, subscription changes, secret rotation, tests, and replay policy are configured in the signed-in [dashboard](https://secapi.ai/app/webhooks). An API key is not the human-authenticated setup credential for those organization changes.
 
-## Poll safely with a cursor
+## Poll an event subscription safely
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/stream_subscriptions/str_123/events?limit=25"
 ```
 
-The expected response is an ordered `data` batch with `nextCursor`, `replayCursor`, `requestId`, and `traceparent`. Store each event id in the same durable transaction that creates downstream work. Advance the checkpoint only after that write succeeds. Cursor order is recorded event order, not an SEC filing timestamp.
+Expect an ordered `data` batch with `nextCursor`, `replayCursor`, `requestId`, and `traceparent`. Record the event ID in the same durable transaction that creates downstream work, then advance the checkpoint. Cursor order is recorded event order, not an SEC filing timestamp. Do not manufacture a checkpoint from array position, wall-clock time, or accession number.
 
-## Use a ticketed WebSocket
+## Connect through a ticketed WebSocket
 
 ```bash
 curl --fail-with-body -X POST \
@@ -36,22 +36,24 @@ curl --fail-with-body -X POST \
 npx wscat -c "wss://api.secapi.ai/v1/stream/ws?stream_id=$SECAPI_STREAM_ID&ticket=$SECAPI_STREAM_TICKET"
 ```
 
-The `stream_id` must identify an active WebSocket stream subscription. Mint a short-lived ticket before connecting so a long-lived API key does not enter a browser-visible WebSocket URL. The JavaScript SDK exposes a filing-stream WebSocket helper that requires this subscription-backed stream ID; use the REST ticket contract when you need to control token handoff yourself.
+`stream_id` identifies an active WebSocket stream subscription. Mint a short-lived ticket before connecting so a long-lived API key does not appear in a browser-visible WebSocket URL. Use the REST ticket contract when your application needs to control credential handoff; the JavaScript SDK exposes a subscription-backed filing-stream WebSocket helper.
 
-## Process a monitor webhook as evidence delivery
+## Treat webhook events as a retrieval trigger
 
-For `monitor.match`, verify `x-secapi-signature` against the exact raw body before parsing JSON; reject stale timestamps, deduplicate delivery/event IDs, queue work, and return a quick `2xx`. Retain the monitor ID, event ID, request ID, accession number, and filing URL. Then retrieve the filing or named section before summarizing it.
+For `monitor.match`, verify `x-secapi-signature` against the exact raw body before parsing JSON. Reject stale timestamps, deduplicate delivery and event IDs, enqueue the work, and return a quick `2xx`. Keep monitor ID, event ID, request ID, accession number, and filing URL. Then request the filing or named section before summarizing, classifying, or alerting a user.
 
-## Timing and failure boundaries
+## Boundaries that belong in production code
 
-- Delivery is not a universal SEC freshness guarantee. Inspect returned filing identifiers and source timestamps for the event you received.
-- Webhooks can be retried and event batches can be replayed. Consumers must be idempotent.
-- Do not advance a cursor after a partial failure or derive a checkpoint from an array position, wall-clock time, or accession number.
-- A latest-filings poll without `form` means the latest filing of any type; pin a form family for a 10-K, 8-K, or other focused workflow.
+- Webhooks can retry and event batches can replay; consumers must be idempotent.
+- Delivery does not promise broad SEC filing coverage or current source data for a downstream surface. Inspect the identifiers and timestamps returned with the event.
+- A latest-filings poll without `form` can return any filing type. Pin a form family for a focused 10-K, 10-Q, or 8-K workflow.
+- Do not advance a cursor after partial failure. Preserve `requestId` and `traceparent` when diagnosing delivery or retrieval errors.
 
-## Continue
+## Next action
 
-- [Create an API key and test a filing delivery workflow](https://secapi.ai/signup)
+Configure one monitor or subscription, prove a full event-to-filing retrieval path, and test duplicate delivery plus a partial-processing failure before enabling user-facing alerts.
+
+- [Create an API key and test delivery retrieval](https://secapi.ai/signup)
 - [Webhook and stream workflows](/webhook-stream-workflows)
 - [Stream polling](/stream-polling)
 - [Stream API reference](/api-reference/stream)

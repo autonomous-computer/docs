@@ -1,36 +1,40 @@
 ---
 title: "10-K Section Extraction API"
-description: "Extract a named section from a known SEC filing or the latest matching 10-K while retaining the filing evidence."
+description: "Retrieve a named 10-K section with filing identity and source provenance for a reviewable research workflow."
 ---
 
-Use section extraction when the research question maps to a disclosed filing item, such as `item_1a` for Risk Factors or `item_7` for MD&A. The accession route is the reproducible path; the latest route is appropriate only when a monitor intentionally follows the current annual filing.
+Use section extraction when the question maps to a known filing item, such as `item_1a` for Risk Factors or `item_7` for MD&A. It is for reading and citing a selected filing section, not for proving that a topic is absent, extracting the filing's exhibits, or interpreting the disclosure for the reader.
 
-## Pin the filing for a repeatable result
+## Reader job: retrieve the section from the intended filing
+
+Pin an accession number whenever the result must be reproducible. Use the latest-section route only when a monitor intentionally follows the newest matching filing, then store the accession it resolves to on each run.
+
+## Retrieve a known 10-K section
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/0000320193-25-000079/sections/item_1a?ticker=AAPL&form=10-K&mode=full"
 ```
 
-The route is `GET /v1/filings/{accession_number}/sections/{section_key}`. `ticker`, `cik`, and `form` are optional resolution hints; avoid conflicting hints. A successful default/full response includes extracted `contentMd` and filing provenance, including the accession and source URL. Save them with the passage and `requestId`.
+`GET /v1/filings/{accession_number}/sections/{section_key}` returns the named extracted section. `ticker`, `cik`, and `form` are optional resolution hints; do not send hints that conflict with the accession. A full response supplies `contentMd` and filing context, including the resolved accession and source URL. Keep those fields and `requestId` with downstream quotations.
 
-`mode=compact` shortens the body for triage. `view=agent` is a narrow identity-and-citation projection: it returns section identity such as `key`, `accessionNumber`, and `source_url`, not the section body. Use `mode=full` when the text itself is needed.
+Use `mode=compact` for triage. `view=agent` is an identity-and-citation projection: it keeps fields such as `key`, `accessionNumber`, and `source_url` but does not include the section body. Request `mode=full` when an application needs the text.
 
-## Follow the newest annual filing intentionally
+## Follow the current annual filing deliberately
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=compact"
 ```
 
-`GET /v1/filings/latest/sections/{section_key}` defaults to `form=10-K`; set it explicitly in a production workflow. Unlike `GET /v1/filings/latest`, the route is section-oriented, but "latest" remains time-dependent. Persist the resolved accession each time the monitor runs.
+`GET /v1/filings/latest/sections/{section_key}` defaults to `form=10-K`; specify the form in production so the workflow documents its intent. “Latest” is time-dependent, not a permanent document identifier.
 
-## Evidence and extraction limits
+## Source handling and limits
 
-Section text can omit layout-dependent tables, exhibits, cross-references, or surrounding definitions. A `404` can reflect an unresolved accession, an unavailable section key, or a nonextractable section; it is not evidence that the topic is absent from the filing. Do not assume every form implements every item key.
+The extracted markdown is an application-friendly representation of a filing section. It can omit layout-dependent tables, exhibits, cross-references, or definitions outside the selected section. A `404` can mean that the accession or section key was not resolved or extracted; it is not evidence that the topic is absent from the filing.
 
-For a material claim, cite the returned accession, filing URL, form, filing date, and section key, then open the SEC source to check context. Use [filing search](/seo/sec-filing-search-api) to choose the correct historical filing before extraction.
+For a material statement, retain the accession number, form, filing date, section key, filing URL, `requestId`, and available provenance or freshness. Open the SEC source to assess table content, qualifiers, and surrounding context. Use [filing search](/seo/sec-filing-search-api) when you must select the correct historical filing first.
 
 ## Next action
 
-Find and store the intended accession, extract the named item in full mode, and keep the source URL alongside every downstream quote or model assertion.
+Search or identify the filing, persist its accession, retrieve the named item in full mode, and attach the source URL to the quote or review record. For related-language discovery, start with [semantic search](/seo/sec-semantic-search-api); for exact terms, use [full-text search](/seo/sec-full-text-search-api).

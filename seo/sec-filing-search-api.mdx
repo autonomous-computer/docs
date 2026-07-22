@@ -1,11 +1,13 @@
 ---
-title: "SEC Filing Search API for Reviewable Filing Universes"
-description: "Find SEC filing manifests by issuer, form, date, fiscal period, text, or accession number before retrieving the source disclosure."
+title: "SEC Filing Search API"
+description: "Build a constrained SEC filing manifest by issuer, form, date, fiscal period, text, or accession before retrieving source content."
 ---
 
-## Narrow the filing universe before you read it
+Filing search answers “which filing?” before another route answers “what did it say?” Use it to build a reviewable document universe for diligence, research, or alerts. A manifest establishes that a filing matched the request; it does not establish a disclosure conclusion or EDGAR-wide coverage.
 
-Filing search answers “which filing?” before another endpoint answers “what did it say?” Use it to make a bounded document list for diligence, portfolio research, or alerts, then carry the selected accession number into filing or section retrieval. A manifest is document metadata, not a conclusion about a disclosure.
+## Reader job: select a filing with a reproducible query
+
+Start with an issuer, a form family, and a date or fiscal boundary. Store the request and the selected filing identity, then retrieve the source section that supports a finding. This separation keeps document selection distinct from disclosure interpretation.
 
 ## Search a bounded filing universe
 
@@ -14,41 +16,39 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=NVDA&forms=10-K,10-Q&date_from=2024-01-01&date_to=2025-12-31&limit=25&sort=filing_date_desc"
 ```
 
-Inputs include `ticker` or `cik`; `form` or `forms`; `date_from` and `date_to` in `YYYY-MM-DD`; `filing_year` or `fy`; `fp`; optional text `q`; `accession_number`; `limit`; and `cursor`. The list response contains records plus `hasMore` and `nextCursor`. Persist the manifest’s `accessionNumber`, `filingDate`, form, filer identity, and filing URL before selecting an item.
+`GET /v1/filings` accepts `ticker` or `cik`; `form` or `forms`; `date_from` and `date_to`; `filing_year` or `fy`; `fp`; text `q`; `accession_number`; `limit`; and `cursor`. The response includes records, `hasMore`, and `nextCursor`. Persist the returned `accessionNumber`, filing date, form, filer identity, and filing URL before choosing content.
 
-Use the accession route when the document is already known:
+When a document is already known, fetch its manifest directly:
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/0001045810-24-000029"
 ```
 
-## Follow search with the right retrieval
+## Use the right route after discovery
 
-| Need after discovery | Route |
-| --- | --- |
-| Latest filing for one issuer and form | `GET /v1/filings/latest` |
-| Named content such as Item 1A | `GET /v1/filings/{accessionNumber}/sections/{sectionKey}` |
-| Exact word search in content | `GET /v1/search/fulltext` |
-| Related concepts in normalized sections | `GET /v1/search/semantic` |
-| Textual changes across two same-form filings | `GET /v1/filings/diff` |
+| Question                                        | Route                                                     | Returned role                             |
+| ----------------------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
+| Which documents meet the filters?               | `GET /v1/filings`                                         | Filing manifest                           |
+| What is the current filing for this form?       | `GET /v1/filings/latest`                                  | Latest filing identity                    |
+| What does a named item say?                     | `GET /v1/filings/{accessionNumber}/sections/{sectionKey}` | Extracted section text and source context |
+| Where does an exact phrase appear?              | `GET /v1/search/fulltext`                                 | Candidate filing and section hits         |
+| Which normalized sections use related language? | `GET /v1/search/semantic`                                 | Citation-oriented candidate passages      |
 
-The manifest is metadata about a document, not an answer to a disclosure question. Search content or retrieve the cited section when the research question is about language, risk, or accounting policy.
+The JavaScript SDK provides `client.searchFilings(params)`, `client.paginateFilings(params)`, `client.latestFiling(params)`, and `client.filingByAccession(accessionNumber, params)`. Hosted MCP offers `filings.search` for a constrained manifest query and `sections.get` for source retrieval. Use REST or an SDK when you need the full filter or cursor surface.
 
-## SDK and MCP implementation
+## Caveats for production workflows
 
-The JavaScript SDK offers `client.searchFilings(params)`, `client.paginateFilings(params)`, `client.latestFiling(params)`, and `client.filingByAccession(accessionNumber, params)`. In hosted MCP, use `filings.search` for the bounded manifest query and `sections.get` for the follow-up content. `filings.search` accepts issuer, form, text query, and limit; use REST or an SDK when you need the full filter or cursor surface.
+- Keep a cursor with its original filters; do not apply it to a changed issuer, form, or date range.
+- A form-only latest query can follow a current daily-index path and be terminal with `hasMore: false`.
+- `filingDate` is SEC receipt date, not necessarily a report period, market event time, or derived-data availability time.
+- An empty list does not establish that an issuer has no SEC filings. Recheck identifiers, form family, date bounds, and the [coverage boundary](/coverage-and-depth).
+- Save the request filters, accession, filing URL, and `requestId` with a selected document so another reviewer can reproduce it.
 
-## Practical limits
+## Next action
 
-- A form-only latest search can use a current daily-index path and may be terminal (`hasMore: false`); do not invent a page two.
-- `filingDate` is when the SEC received the filing. It is not necessarily the report period, fiscal year, market event time, or availability time for every derived surface.
-- A no-result list is not evidence that the issuer never filed; check identifier, form family, date bounds, and the [coverage boundary](/coverage-and-depth).
-- Keep returned `requestId`, source URL, and accession number with a search result so a later reviewer can reproduce the selection.
+Use one issuer and form family to prove the manifest-to-source handoff, then choose [full-text search](/seo/sec-full-text-search-api), [semantic search](/seo/sec-semantic-search-api), or [section extraction](/seo/sec-10k-section-extraction-api) based on the question.
 
-## Next step
-
-- [Create an API key and search one issuer, form family, and date range](https://secapi.ai/signup)
-- [SEC EDGAR API](/seo/sec-edgar-api)
-- [Filing types and exhibits](/filing-types-and-exhibits)
+- [Create an API key](https://secapi.ai/signup)
 - [Filing API reference](/api-reference/filings)
+- [SEC EDGAR API](/seo/sec-edgar-api)
