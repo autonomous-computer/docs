@@ -1,100 +1,65 @@
 ---
 title: "Plans, usage, and commercial rights"
-description: "Understand SEC API starter usage, pay-as-you-go billing, committed plans, and when redistribution or embedding needs commercial terms."
+description: "Choose an SEC API plan for evaluation or internal use, then identify when a customer-facing product needs commercial terms"
 ---
 
-## Start with the work you need to do
+Choose a plan based on who uses the output and how predictably you expect to call the API. The [public pricing page](https://secapi.ai/pricing) is the buyer-facing comparison; authenticated billing and limits responses describe the account that will actually run your workload.
 
-- Every new organization starts with `150` included calls. The grant does not renew automatically.
-- Pay As You Go is the paid path for uneven or early usage.
-- Personal and Team are committed plans for sustained in-house work.
-- Commercial is required when the product, data, or output is being redistributed, embedded, white-labeled, or resold.
+## Start with the intended use
 
-For the buyer-facing pricing page and signup path, see [secapi.ai/pricing](https://secapi.ai/pricing).
+- New organizations receive `150` included calls. This starter grant does not renew automatically.
+- Pay As You Go supports uneven or early internal usage without a fixed monthly fee.
+- Personal and Team suit sustained in-house use.
+- Commercial terms are required before you redistribute, embed, white-label, or resell SEC API-derived output.
 
 <CardGroup cols={3}>
-  <Card title="Evaluate pricing and limits" icon="clipboard-check" href="/evaluate/pricing-and-limits">
-    Run the buyer and agent checklist before broad usage.
-  </Card>
-  <Card title="Public pricing page" icon="globe" href="https://secapi.ai/pricing">
-    Compare plans on the marketing site.
-  </Card>
   <Card title="Create an account" icon="key-round" href="https://secapi.ai/signup">
-    Get the starter grant and first API key.
+    Get an organization and create the API key for a first request.
+  </Card>
+  <Card title="Price a real workload" icon="calculator" href="/evaluate/pricing-and-limits">
+    Quote the paths and units you plan to run.
+  </Card>
+  <Card title="Read billing answers" icon="circle-help" href="/billing-faq">
+    Check common account, budget, and quota boundaries.
   </Card>
 </CardGroup>
 
-## Choose a plan by operating model
+## Choose the operating model
 
-<CardGroup cols={2}>
-  <Card title="Pay As You Go" icon="gauge">
-    No fixed monthly fee. Highest per-call pricing. Best for low-friction onboarding and real-world evaluation after the starter grant.
-  </Card>
-  <Card title="Personal" icon="user">
-    `$55/mo`. Lower unit pricing for a single analyst or developer who has repeated usage.
-  </Card>
-  <Card title="Team" icon="users">
-    `$239/mo`. Shared-org plan for up to five seats with higher throughput and more keys.
-  </Card>
-  <Card title="Commercial" icon="building-2">
-    From `$18,000/yr`. Redistribution rights, Bulk Factor Export, contract handling, invoicing, and deeper onboarding.
-  </Card>
-</CardGroup>
+| Plan | Use it for | Billing posture |
+| --- | --- | --- |
+| Starter grant | A bounded evaluation before paid usage. | One-time included usage; not a recurring allowance. |
+| Pay As You Go | Early, uneven, or low-volume internal use. | Metered usage with prepaid credits. |
+| Personal | Sustained work by one analyst or developer. | Subscription plan with budget gates. |
+| Team | Sustained shared internal work. | Subscription plan with budget gates. |
+| Commercial | Customer-facing products, redistribution, or negotiated requirements. | Contract terms determine scope, rights, and billing. |
 
-## How metering works
+## How usage is metered
 
-- `light_reads`: `$0.01` — entity resolution and lightweight metadata
-- `standard_reads`: `$0.02` — filings, facts, statements, ownership, compensation, fund-letter reads and full-text search
-- `heavy_extracts`: `$0.05` — section extraction, comparison workflows, and fund-letter document retrieval
-- `artifact_jobs`: `$0.10` — artifact generation and export jobs
-- `delivery_events`: `$0.001` — webhook and stream delivery
-- `email_notifications`: `$0.005` — one billable recipient submitted for customer-configured monitor email notifications
-- `intelligence_queries`: `$0.08` — semantic intelligence, country reports, portfolio analysis, strategy queries
-- `market_data_reads`: `$0.03` — factor returns, macro indicators, market snapshots
-- `semantic_search`: `$0.04` — vector-based semantic search across filing and fund-letter content
+Requests are classified by meter family. The current account-readable catalog at [billing rates](/api-reference/platform/get-v1-billing-rates) is the source of truth for rates; the response can identify the class for an individual request with `SECAPI-Meter-Class`.
 
-Fund-letter routes bill on the families above (`standard_reads` for list, detail, thesis, and search reads; `heavy_extracts` for document retrieval; `semantic_search` for semantic queries) and additionally carry per-plan daily quotas. The quotas are sized for research and agent workflows and act as guardrails against bulk export; the dataset is licensed for use inside your applications, not for redistribution.
-
-Email notifications are priced separately from webhook and stream delivery because the unit includes provider cost, retry infrastructure, unsubscribe handling, signed provider-feedback processing, support overhead, and margin. Personal receives a 20% meter discount (`$0.004`), Team receives 35% (`$0.00325`), and Commercial pricing must not go below `$0.0025` per submitted recipient without committed-volume approval.
-
-## Monthly AI-query allowance
-
-The `ai_queries` quota covers semantic intelligence + AI-graded routes (`/v1/intelligence/*` and `GET /v1/signals/dilution/enhanced`). Resets on the first day of each UTC calendar month.
-
-| Plan | Monthly AI queries |
+| Meter family | Typical work |
 | --- | --- |
-| Sandbox grant | 10 (trial) |
-| Pay As You Go | Uncapped — metered per call |
-| Personal | Uncapped — governed by budget gates |
-| Team | Uncapped — governed by budget gates |
-| Commercial | Uncapped — governed by budget gates |
+| `light_reads` | Entity resolution and lightweight metadata |
+| `standard_reads` | Filings, facts, statements, ownership, compensation, and full-text search |
+| `heavy_extracts` | Section extraction, comparisons, and document retrieval |
+| `artifact_jobs` | Artifact generation and export jobs |
+| `delivery_events` | Webhook and stream delivery |
+| `email_notifications` | Customer-configured monitor email recipients |
+| `intelligence_queries` | Intelligence and analysis routes |
+| `market_data_reads` | Factor returns, macro indicators, and market snapshots |
+| `semantic_search` | Vector-based search across supported content |
 
-Paid tiers are uncapped on `ai_queries`. Intelligence routes are LLM-free at request
-time, so paid usage is bounded by your billing budget (a default soft alert at ~2× the
-base fee and an abuse-protection hard cap at ~50× the base fee, both overridable via
-`PUT /v1/billing/budget`) rather than a fixed query count. Only the sandbox grant
-keeps a hard monthly trial cap.
+The meter class, route limits, and billing decision can vary by request. Before a batch, quote each actual path rather than applying a rate from a related endpoint.
 
-Every quota-counted response carries `SECAPI-AI-Quota-Limit`, `SECAPI-AI-Quota-Used`, `SECAPI-AI-Quota-Remaining`, and `SECAPI-AI-Quota-Reset` headers. `GET /v1/billing` returns the same numbers under `monthlyQuotas.ai_queries`.
+## AI-query allowance and budget controls
+
+The `ai_queries` quota covers documented intelligence routes and enhanced dilution routes. The sandbox grant has a monthly trial allowance of 10. Paid tiers are metered and governed by billing and budget controls rather than a fixed monthly AI-query cap.
+
+Quota-counted responses include `SECAPI-AI-Quota-Limit`, `SECAPI-AI-Quota-Used`, `SECAPI-AI-Quota-Remaining`, and `SECAPI-AI-Quota-Reset`. `GET /v1/billing` also returns the current values under `monthlyQuotas.ai_queries`. A budget, billing, or quota response is a stop condition: resolve the stated account condition before retrying.
 
 ## Rights boundary
 
-- evaluation: starter grant
-- in-house use: PAYG, Personal, Team
-- redistribution, embedding, white-label, resale, and Bulk Factor Export: Commercial
+Self-serve plans cover evaluation and internal use. Commercial terms are required for redistribution, embedding, white-labeling, resale, and Bulk Factor Export. A successful API request does not grant those rights.
 
-## Read next
-
-<CardGroup cols={3}>
-  <Card title="Auth and pricing" icon="key-round" href="/auth-and-pricing">
-    Review the overall launch auth, billing, and first-utility posture.
-  </Card>
-  <Card title="Pay As You Go" icon="credit-card" href="/pay-as-you-go">
-    See the PAYG activation flow and post-grant billing transition.
-  </Card>
-  <Card title="Agent billing" icon="bot" href="/agent-billing">
-    Learn how agents should reason about billing before expensive loops.
-  </Card>
-</CardGroup>
-
-For public plan comparison and account creation, use [secapi.ai/pricing](https://secapi.ai/pricing).
+For an external-facing product or a negotiated requirement, use the [public pricing page](https://secapi.ai/pricing) before launch. For an internal recurring workload, continue with [Pay As You Go](/pay-as-you-go) or [billing-aware agent runs](/agent-billing).

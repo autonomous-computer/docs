@@ -1,76 +1,52 @@
 ---
 title: "Billing FAQ"
-description: "Answers to common SEC API billing questions about starter usage, plans, account controls, and agent workflows"
+description: "Understand starter usage, paid billing paths, budget controls, AI-query allowances, and commercial-use boundaries"
 ---
+
+Use this page to resolve an account or workload question before you increase traffic. For a specific organization, read `GET /v1/billing`, `GET /v1/limits`, and, for a repeated operation, `POST /v1/billing/quote` with the key that will run it.
 
 ## Do new organizations receive included usage?
 
-Every new organization receives `150` included calls. This starter grant is not a recurring monthly allowance. Check `GET /v1/billing` for the authenticated organization's remaining included usage and current billing state.
+Yes. Every new organization receives `150` included calls. The starter grant does not renew automatically. `GET /v1/billing` shows the authenticated organization's remaining included usage and current billing state.
 
-## What happens after the included calls run out?
+## What happens after included usage runs out?
 
-Billable requests require an active paid billing path. You can activate Pay As You Go or choose a paid plan in the signed-in dashboard. A request that cannot proceed returns a billing or entitlement error with the condition to resolve.
-
-## Can an agent bootstrap itself?
-
-Not anonymously. A signed-in administrator creates a short-lived sponsor token through `POST /v1/agent/bootstrap_tokens`; the agent exchanges it once through `POST /v1/agent/bootstrap`. Read [agent billing](/agent-billing) before using this flow in an automated environment.
+Billable requests need an active paid billing path. Enable Pay As You Go or choose a paid plan in the signed-in dashboard. When a request cannot proceed, the API returns a billing or entitlement condition; resolve that condition before retrying.
 
 ## Do I need a subscription to use the API?
 
-No. Pay As You Go is the default paid path. Personal and Team plans suit sustained internal usage, while Commercial covers external-facing use and negotiated terms.
+No. Pay As You Go is the paid path for metered use. Personal and Team are for sustained internal use. Commercial covers external-facing use and negotiated terms. Read [plans and pricing](/plans-and-pricing) before choosing a path.
 
-## Which plans include redistribution rights?
+## Which plans permit customer-facing output?
 
-Commercial. Use a commercial agreement before redistributing, embedding, white-labeling, or reselling SEC API-derived output. See [plans and pricing](/plans-and-pricing) for the rights boundary.
+Commercial. Use a commercial agreement before redistributing, embedding, white-labeling, or reselling SEC API-derived output. A successful evaluation or self-serve request does not grant those rights.
 
-## Where do I view invoices and payment methods?
+## Where do I manage payment methods, invoices, and budgets?
 
-Use the Billing area of the signed-in dashboard. Payment methods, invoices, checkout, and billing-portal actions require a browser session with billing access; API keys cannot perform them.
+Use the Billing area of the signed-in [dashboard](https://secapi.ai/app). Payment methods, invoices, checkout, billing portal actions, and budget changes require an authorized browser session. API keys are machine credentials and cannot perform those actions.
 
-## How do I keep an agent from spending too much?
+## How should an agent limit spend?
 
-Use `POST /v1/billing/quote` before an expensive loop. A billing administrator can set organization-level budget controls in the dashboard; your application should handle the billing condition returned when a control blocks a request.
+Before a loop, read billing and limits, then call `POST /v1/billing/quote` for the actual path and units. A quote is an estimate, not a reservation. Set a maximum work-unit count in your application, retain the quote context with the run record, and stop when the API returns a billing, budget, entitlement, or quota condition. [Billing-aware agent runs](/agent-billing) has the preflight pattern.
 
 ## What counts as an AI query?
 
-The `ai_queries` quota applies to documented intelligence and enhanced dilution routes. The current response is the source of truth for whether a request counted and how much quota remains. The quota-counted routes include:
+The `ai_queries` quota applies to documented `/v1/intelligence/*` routes and `GET /v1/signals/dilution/enhanced`, including the corresponding MCP tools. Filing reads, factor lookups, and market-data reads use their own meter classes and do not consume this allowance.
 
-- Every `/v1/intelligence/*` request (security, company, country report, footnotes query, portfolio, watchlist, query/poll)
-- `GET /v1/signals/dilution/enhanced` (and any sub-paths)
-- MCP `tools/call` requests for `intelligence.query` and `signals.dilution.enhanced.get`
+## What are the AI-query limits?
 
-Other meter classes, such as filing reads, factor lookups, and market data, do not consume this quota.
+The sandbox grant has 10 AI queries per UTC calendar month. Pay As You Go, Personal, Team, and Commercial are not subject to a fixed monthly AI-query cap; they are metered and governed by their current billing and budget controls.
 
-## What are the per-tier ai_queries limits?
+Quota-counted responses include `SECAPI-AI-Quota-*` headers, and `GET /v1/billing` returns `monthlyQuotas.ai_queries` with `limit`, `used`, `remaining`, and `resetAt`.
 
-| Plan | Monthly AI queries |
-| --- | --- |
-| Sandbox grant | 10 |
-| Pay As You Go | Uncapped; metered per call |
-| Personal | Uncapped; governed by budget controls |
-| Team | Uncapped; governed by budget controls |
-| Commercial | Uncapped; governed by budget controls |
+## What happens when AI-query allowance is exhausted?
 
-Paid plans do not have a fixed monthly `ai_queries` cap. Their usage is governed by billing and budget controls instead. The sandbox grant retains its 10-query monthly allocation.
+For the sandbox grant, quota-counted REST routes return `429 Too Many Requests` with `code: "ai_query_quota_exceeded"`; MCP returns an HTTP `429` JSON-RPC error with the same code. The response headers provide usage and reset information. For paid usage, resolve the returned billing or budget condition rather than waiting for a sandbox-style quota reset.
 
-## When does my AI query quota reset?
+## Can an agent bootstrap itself?
 
-Calendar-month reset, in UTC. The `SECAPI-AI-Quota-Reset` response header carries the exact ISO timestamp (the first day of the next UTC month at `00:00:00Z`).
+Not anonymously. A signed-in administrator creates a short-lived sponsor token through `POST /v1/agent/bootstrap_tokens`; the agent exchanges it once through `POST /v1/agent/bootstrap`. Read [agent billing](/agent-billing) before automating this flow.
 
-## What happens when I exhaust my ai_queries quota?
+## Can an API key create more keys or manage billing?
 
-Only the sandbox grant has a fixed `ai_queries` cap. When it is exhausted, quota-counted REST routes return `429 Too Many Requests` with `code: "ai_query_quota_exceeded"`. MCP returns an HTTP `429` JSON-RPC error with the same machine-readable code. Inspect `SECAPI-AI-Quota-*` headers on quota-counted responses for current usage and reset information.
-
-For paid plans, resolve the billing budget condition returned by the API rather than expecting the quota-exhaustion response.
-
-## Can I see my current ai_queries usage?
-
-`GET /v1/billing` includes `monthlyQuotas.ai_queries` with `limit`, `used`, `remaining`, and `resetAt`. Quota-counted responses also include `SECAPI-AI-Quota-*` headers.
-
-## Is public account creation available?
-
-Create an account at [secapi.ai/signup](https://secapi.ai/signup), then create API keys in the signed-in dashboard. The signup flow presents the current account and terms requirements.
-
-## Can an API key manage billing or create more keys?
-
-No. API keys are machine credentials for data access. Creating or revoking keys, changing budgets, managing billing, updating dashboard settings, and requesting account deletion require a signed-in browser session with the necessary permissions.
+No. Create or revoke keys, change budgets, manage billing, update dashboard settings, and request account deletion through a signed-in browser session with the necessary permissions. For key placement and rotation, read [API keys, usage, and billing](/auth-and-pricing).

@@ -1,11 +1,11 @@
 ---
 title: "API keys, usage, and billing"
-description: "Authenticate machine requests with x-api-key, inspect account-specific limits, and keep dashboard actions separate"
+description: "Authenticate machine requests with x-api-key, inspect the account that will run them, and keep billing controls in the dashboard"
 ---
 
-Use an API key for machine access to REST, SDK, CLI, and server-to-server MCP requests. Create, reveal, rotate, and revoke keys in the signed-in [SEC API dashboard](https://secapi.ai/app).
+Use an API key for REST, SDK, CLI, and server-to-server MCP requests. Use the signed-in [SEC API dashboard](https://secapi.ai/app) for people-driven actions such as creating keys and changing billing settings.
 
-## Send the credential correctly
+## Make the first authenticated check
 
 ```bash
 export SECAPI_API_KEY="secapi_..."
@@ -15,9 +15,9 @@ curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/limits"
 ```
 
-The key belongs in `x-api-key`. Do not send it as `Authorization: Bearer`, add it to a URL or request body, put it in browser-delivered code, or commit it to source control. A browser session is for signed-in dashboard actions, not a substitute for an API key on a data request.
+Send the key in `x-api-key`. Do not send it as `Authorization: Bearer`, place it in a URL or request body, expose it in browser-delivered code, or commit it to source control.
 
-## Use the credential that matches the job
+## Use the right credential for each action
 
 | Job | Credential and location |
 | --- | --- |
@@ -25,29 +25,38 @@ The key belongs in `x-api-key`. Do not send it as `Authorization: Bearer`, add i
 | Create, reveal, rotate, or revoke an API key | Signed-in dashboard session |
 | Change billing, payment methods, or budgets | Signed-in dashboard session with the required access |
 
-## Inspect the account that will run the workload
+A dashboard session is not a substitute for an API key on a data request. An API key cannot manage dashboard billing or create another key.
 
-After the first request succeeds, inspect the authenticated organization's current state with the same API key:
+## Inspect the account before repeated work
+
+Use the same key that will run the workload to check that account's billing state and limits:
 
 ```bash
 curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/billing"
 
 curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
+```
+
+Read `GET /v1/billing/rates` as the public current rate catalog; it is not account-specific billing state:
+
+```bash
+curl --fail-with-body -sS \
   "https://api.secapi.ai/v1/billing/rates"
 ```
 
-Expect organization-specific usage, plan, billing, or rate context where the endpoint exposes it. Limits, rates, and entitlements depend on the authenticated organization and endpoint. Use the response and [plans and pricing](/plans-and-pricing), rather than a copied example, to plan sustained traffic.
+`GET /v1/billing` and `GET /v1/limits` describe the authenticated account context, so recheck them when changing keys or expanding a workload. For a repeated or expensive path, use `POST /v1/billing/quote` with that key: it estimates the requested path against the current account and budget gate. It is not a reservation or a promise for a later request.
 
-## Keep the response context that matters
+## Read metering and retry signals
 
-For requests your users depend on, record `Request-Id` and `traceparent` when present. Also retain `SECAPI-Meter-Class`, `SECAPI-Estimated-Cost`, `SECAPI-Token-Count`, and `Retry-After` when supplied. They describe one response; they do not replace checking the account's current billing and limits.
+For production requests, retain `Request-Id` and `traceparent` when present. Also retain `SECAPI-Meter-Class`, `SECAPI-Estimated-Cost`, `SECAPI-Token-Count`, and `Retry-After` when supplied. They describe that response only; check billing and limits again before expanding a workload.
 
-## Rotate without interrupting callers
+## Rotate a key without interrupting callers
 
 1. Create a replacement key in the dashboard.
 2. Update the server-side secret where the application runs.
 3. Verify the replacement with `GET /v1/limits`.
-4. Revoke the old key after callers are using the replacement.
+4. Revoke the old key after callers use the replacement.
 
-For a suspected leak, revoke the exposed key before creating and deploying its replacement. Continue with [API conventions](/api-conventions) for response behavior or [request diagnostics](/request-diagnostics) for a failed request.
+For a suspected leak, revoke the exposed key before creating and deploying its replacement. Continue with [API conventions](/api-conventions) for response behavior, [billing-aware agent runs](/agent-billing) for automated workloads, or [plans and pricing](/plans-and-pricing) for rights and plan boundaries.

@@ -1,15 +1,15 @@
 ---
 title: "Try SEC API"
-description: "Run authenticated SEC API requests for entity resolution, filings, statements, SDKs, CLI, and MCP"
+description: "Resolve an issuer with a small authenticated request, verify its identity, and choose the next source-backed workflow"
 ---
 
-Use this page to make a small live request before you build a larger workflow. Resolve a company first, then use the returned identity to choose the filing, statement, or search request you need.
+Use this page to make one small production request before you build a larger workflow. Resolve a company first, confirm the returned identity, then use that identity to retrieve a filing, statement, or search result.
 
 <Warning>
-These examples call the production API and count against your usage quota. Start with the shown low limits while you validate response shapes.
+These examples call the production API and can count against the authenticated organization's usage. Keep the shown limits while you validate response shapes, then inspect billing and limits before a repeated workload.
 </Warning>
 
-## Set your API key
+## Set an API key
 
 Create an account at [secapi.ai/signup](https://secapi.ai/signup), create an API key in the signed-in [dashboard](https://secapi.ai/app), and expose it only to the process making the request.
 
@@ -17,7 +17,7 @@ Create an account at [secapi.ai/signup](https://secapi.ai/signup), create an API
 export SECAPI_API_KEY="secapi_..."
 ```
 
-Send the key in `x-api-key`. Do not put it in browser code, a checked-in file, or an `Authorization: Bearer` header.
+Send the key in `x-api-key`. Do not put it in browser code, a checked-in file, or an `Authorization: Bearer` header. [API keys, usage, and billing](/auth-and-pricing) explains the boundary between machine credentials and dashboard actions.
 
 ## Resolve a company
 
@@ -25,7 +25,7 @@ This request resolves Apple and returns its canonical CIK and identity metadata.
 
 <CodeGroup>
 ```bash cURL
-curl -sS \
+curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL&view=agent"
 ```
@@ -61,40 +61,30 @@ secapi entities resolve --ticker AAPL
 ```
 </CodeGroup>
 
-On success, confirm that the result includes `ticker`, `cik`, `name`, and `requestId`. For the complete set of accepted identifiers and response fields, read the [entity resolution reference](/api-reference/entities/get-v1-entities-resolve).
+Confirm that the response includes `ticker`, `cik`, `name`, and `requestId`. The [entity resolution reference](/api-reference/entities/get-v1-entities-resolve) documents accepted identifiers and response fields.
 
-## Retrieve the latest 10-K
+## Retrieve a filing after identity is confirmed
 
 ```bash
-curl -sS \
+curl --fail-with-body -sS \
   -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/latest?ticker=AAPL&form=10-K&view=agent"
 ```
 
-Keep `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` with any result derived from the filing. The [latest filing reference](/api-reference/filings/get-v1-filings-latest) documents the available filters and response shape.
+Keep `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` with anything derived from the filing. The [latest filing reference](/api-reference/filings/get-v1-filings-latest) documents filters and response fields.
 
-## Request annual statements
-
-```bash
-curl -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
-```
-
-This returns one normalized annual bundle containing a balance sheet, income statement, and cash flow statement. Set `period=quarterly` for quarterly results. The route accepts `limit` from 1 through 40.
-
-## Explore further
+## Choose the next request
 
 <CardGroup cols={3}>
-  <Card title="First request flows" icon="route" href="/first-request-flows">
-    Add a filing section and compare REST, SDK, CLI, and MCP paths.
+  <Card title="Read a filing section" icon="file-text" href="/first-request-flows">
+    Add a source-backed filing section to the issuer workflow.
   </Card>
-  <Card title="API playground" icon="square-terminal" href="/api-playground">
-    Browse additional, copyable workflow examples.
+  <Card title="Retrieve statements" icon="table-properties" href="/api-reference/statements">
+    Check annual and quarterly statement routes and constraints.
   </Card>
-  <Card title="API reference" icon="book-open" href="/api-reference">
-    Check exact route requirements before changing an example.
+  <Card title="Price a repeated job" icon="calculator" href="/evaluate/pricing-and-limits">
+    Inspect limits and quote the real paths before scaling.
   </Card>
 </CardGroup>
 
-Read [API conventions](/api-conventions) before adding pagination, version pinning, or retry logic. Read [Troubleshooting](/troubleshooting) when a request returns an error.
+Read [API conventions](/api-conventions) before adding pagination, version pinning, or retry logic. Read [troubleshooting](/troubleshooting) when a request returns an error.

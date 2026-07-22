@@ -1,48 +1,48 @@
 ---
 title: "Billing-aware agent runs"
-description: "Check the account that will pay for a run, quote repeated work, and stop at a real billing or quota boundary"
+description: "Preflight the API key that will fund a repeated SEC API job and stop cleanly at billing, budget, or quota boundaries"
 ---
 
-An agent that can make one request is not necessarily safe to fan out across a watchlist. Before a repeated or expensive job, inspect the organization attached to its API key and record the result alongside the job.
+Before a watchlist, backfill, or scheduled agent run, check the organization attached to the same API key that will execute it. One successful request does not prove that a larger run fits the account's limits, budget, or rights boundary.
 
-## Check the run's account
+## Preflight the production credential
 
 ```bash
 curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
-  https://api.secapi.ai/v1/billing
+  "https://api.secapi.ai/v1/billing"
 
 curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
-  https://api.secapi.ai/v1/limits
+  "https://api.secapi.ai/v1/limits"
 ```
 
-These calls describe the authenticated organization, not a general price list. `GET /v1/billing/rates` is useful for the public catalog, but it cannot tell an agent whether this organization can perform the next request.
+These responses describe the authenticated organization, not a general price list. `GET /v1/billing/rates` lists the current catalog, but it does not determine whether the key can run a later request.
 
 ## Quote the repeated operation
 
-Quote the route or meter class before starting a loop. The response reflects the current plan and budget gate; it is not a reservation and does not guarantee a later request will have the same result.
+Quote each route and intended unit count before starting a loop:
 
 ```bash
 curl --fail-with-body -sS -X POST \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "content-type: application/json" \
   -d '{"path":"/v1/filings/latest","method":"GET","units":1}' \
-  https://api.secapi.ai/v1/billing/quote
+  "https://api.secapi.ai/v1/billing/quote"
 ```
 
-Save `requestId`, `planKey`, `meterClass`, `units`, `budget`, and `budgetGate` with the run record. Quote one representative unit, then make the fan-out size an explicit operator decision.
+Save `requestId`, `planKey`, `meterClass`, `units`, `budget`, and `budgetGate` with the run record. A quote is an estimate, not a reservation. Set a maximum work-unit count before the job begins, and quote each route in the workload rather than extrapolating from one call.
 
 ## Use a stop rule
 
-Do not retry a refusal until something has changed. Stop, retain the response context, and hand the case back for authorization, billing, budget-gate, hard-cap, or quota errors. For `429`, honor `Retry-After` when it is present and reduce concurrency rather than starting parallel retries.
+Do not retry a refusal until its cause changes. Stop and retain the response context for authorization, billing, budget-gate, hard-cap, or quota errors. For `429`, honor `Retry-After` when present and reduce concurrency rather than creating parallel retries.
 
-API keys can read billing state, limits, and quotes. Budget changes use a signed-in organization session. An unattended agent should not receive a human bearer token to raise its own cap.
+API keys can read billing state, limits, and quotes. Budget changes use a signed-in organization session. Do not give an unattended process a human browser token to raise its own cap.
 
 ## Bootstrap a machine without sharing a long-lived key
 
-A human organization member can issue a short-lived, single-use sponsor token through [agent bootstrap tokens](/api-reference/agent/post-v1-agent-bootstrap-tokens). The machine exchanges it at [agent bootstrap](/api-reference/agent/post-v1-agent-bootstrap), which returns an org-scoped API key together with billing, limits, and MCP install metadata.
+A human organization member can issue a short-lived, single-use sponsor token through [agent bootstrap tokens](/api-reference/agent/post-v1-agent-bootstrap-tokens). The machine exchanges it at [agent bootstrap](/api-reference/agent/post-v1-agent-bootstrap), which returns an organization-scoped API key with billing, limits, and MCP installation metadata.
 
 The sponsor-token secret and issued API-key secret are each sensitive and returned once. Do not put either in logs, task output, source control, or a prompt transcript. Expired, used, invalid, scope-limited, and API-key-limit responses are stop conditions, not reasons to mint credentials in a loop.
 
 ## Next action
 
-Add a preflight record and a maximum work-unit count to the next scheduled SEC API job, then send a single quote through the same credential path it will use in production.
+Add the preflight responses, a maximum work-unit count, and one quote per request path to the next scheduled job. For plan and rights selection, read [plans and pricing](/plans-and-pricing).

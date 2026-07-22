@@ -1,34 +1,41 @@
 ---
 title: "Pay as you go"
-description: "Start calling the SEC API with no monthly fee, add a card only after your starter grant runs out, and pay clear per-call rates"
+description: "Enable metered internal SEC API usage after a bounded evaluation, then monitor the account and wallet that fund requests"
 ---
 
-## Why PAYG is the default
+Pay As You Go is the paid path for uneven or early internal usage. Use it after you have tested a representative request and want metered access without a fixed monthly fee.
 
-PAYG keeps the path from signup to first utility short:
+## Confirm the account before enabling PAYG
 
-- no fixed monthly fee
-- card attachment only when the starter grant is exhausted
-- public per-call pricing that maps cleanly to API usage
-- Delivery usage is priced separately by unit: webhook/stream delivery uses `delivery_events` at `$0.001`, while customer-configured monitor email uses `email_notifications` at `$0.005` per submitted recipient.
+Use the API key tied to the organization to read its current billing state and limits. The rate catalog is public and describes current rates rather than that account's billing state:
 
-## Activation flow
+```bash
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/billing"
 
-1. create an org and explicitly create an org-scoped API key
-2. use the starter grant
-3. call `POST /v1/billing/payg/enable`
-4. save a card, make the initial credit top-up, and optionally configure auto top-up
-5. continue in `payg_active`
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/limits"
 
-## Relevant endpoints
+curl --fail-with-body -sS \
+  "https://api.secapi.ai/v1/billing/rates"
+```
 
-- `GET /v1/billing`
-- `GET /v1/billing/rates`
-- `POST /v1/billing/payg/enable`
-- `POST /v1/billing/portal`
+The starter grant provides `150` included calls and does not renew automatically. The response, not a copied example, shows the account's current billing state and available context.
 
-## Failure posture
+## Enable the paid path
 
-If the starter grant is exhausted and no card is attached, billable routes return `402 billing_required` with the current plan, billing state, and quota details.
+In the signed-in dashboard, choose Pay As You Go, save a card, make the initial credit top-up, and optionally configure auto top-up. The API endpoint for this control-plane action is `POST /v1/billing/payg/enable`; it requires the authorized signed-in session rather than an API key.
 
-Delivery creation and background fanout also respect billing state. If the account is budget-paused or lacks an active card/prepaid balance, paid webhook, stream, and customer email work is blocked instead of silently retried. Auth, lifecycle, billing, and account emails are operational messages and do not count against the `email_notifications` meter.
+Once payment is confirmed, the organization moves to `payg_active`. Until then, a billable request can return `402 billing_required` with the account condition that needs attention.
+
+## Meter and monitor real usage
+
+PAYG uses prepaid credits. Read [billing rates](/api-reference/platform/get-v1-billing-rates) for the current catalog, and retain `SECAPI-Meter-Class` and `SECAPI-Estimated-Cost` when a response supplies them. For a repeated path, use [a billing quote](/api-reference/platform/post-v1-billing-quote) before the loop; it estimates the current request but does not reserve credits.
+
+Delivery work has its own meter families. Webhook and stream delivery use `delivery_events`; customer-configured monitor email recipients use `email_notifications`. If the account is budget-paused or lacks an active card or prepaid balance, paid delivery work is blocked rather than silently retried. Operational account emails do not use the monitor-email meter.
+
+## Know the boundary
+
+PAYG is for evaluation and internal use. It does not authorize redistribution, embedding, white-labeling, resale, or Bulk Factor Export. Read [plans and pricing](/plans-and-pricing) before shipping customer-facing output.
+
+Next, [price a representative workload](/payg-calculator) or set the preflight and stop rule in [billing-aware agent runs](/agent-billing).

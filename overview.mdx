@@ -1,54 +1,54 @@
 ---
 title: "SEC API overview"
-description: "Get one source-backed SEC result first, then choose the integration surface that fits your application"
+description: "Start with one traceable SEC result, then select the documented interface and operating limits for your application"
 ---
 
-Start with one issuer, one request, and one result you can trace back to a filing. You do not need to learn the whole API to ship a useful workflow.
+Build one useful result before designing a larger integration. Resolve an issuer, retrieve a current filing or statement, and keep the identifiers that let an analyst or reviewer trace the output back to its source.
 
-## Get to a real result
-
-The fastest path is:
+## Make one traceable request
 
 1. [Create an API key and resolve an issuer](/getting-started).
-2. Retrieve that issuer's [latest matching filing](/api-reference/filings/get-v1-filings-latest).
-3. Keep the filing identity with anything you derive from it.
+2. Retrieve the issuer's [latest matching filing](/api-reference/filings/get-v1-filings-latest).
+3. Save the returned filing identity and request context with any derived output.
 
-For example, a latest 10-K response can give you the filing's accession number, date, URL, and request ID. The latest filing changes as new filings arrive, so read those returned values instead of expecting a fixed accession number.
+For a latest 10-K, the response can include an accession number, filing date, filing URL, and `requestId`. New filings change what "latest" means, so read those values from the response each time.
 
 <CardGroup cols={2}>
-  <Card title="Make a first request" icon="terminal" href="/getting-started">
-    Send an authenticated issuer-resolution request and see what success looks like.
+  <Card title="Try a live request" icon="terminal" href="/try-it">
+    Resolve an issuer with a small authenticated request.
   </Card>
   <Card title="Build the filing flow" icon="route" href="/first-request-flows">
-    Resolve an issuer, retrieve a filing, and add a filing section.
+    Resolve an issuer, retrieve a filing, and read a specific section.
   </Card>
 </CardGroup>
 
-## Choose your interface after the request works
+## Select an integration surface
 
-REST is the public HTTPS contract. The SDKs, CLI, and hosted MCP give you other ways to reach documented API capabilities.
+REST is the public HTTPS contract. SDKs, the CLI, and hosted MCP offer other ways to use documented API capabilities.
 
 | Interface | Start here when | Next action |
 | --- | --- | --- |
-| REST | You control HTTP and need the exact request and response contract. | [First request flows](/first-request-flows) |
-| SDK | You are writing JavaScript, Python, Go, or Rust. | [Libraries and SDKs](/libraries-and-sdks) |
-| CLI | You want a terminal check or shell automation. | [CLI](/cli) |
-| MCP | Your MCP client should discover SEC API tools. | [Install MCP](/mcp-install) |
+| REST | You need the exact request and response shape. | [First request flows](/first-request-flows) |
+| SDK | You are shipping an application in a supported language. | [Libraries and SDKs](/libraries-and-sdks) |
+| CLI | You need a quick terminal check or shell automation. | [CLI](/cli) |
+| MCP | Your client should discover SEC API tools. | [Install MCP](/mcp-install) |
 
-## Keep enough context to explain the result
+## Carry the context needed for review
 
-For filing-backed output, retain the returned accession number, form, filing date, filing URL, and `requestId` when they are present. Those fields connect your result to a specific filing and API request. Some routes and response views also return provenance, freshness, materialization, warning, or trace fields. Treat them as route-specific context, not fields guaranteed on every response.
+For filing-backed output, retain the accession number, form, filing date, filing URL, and `requestId` when returned. Some routes also return provenance, freshness, materialization, warning, or trace fields. Those are route-specific: use the reference page for the fields a particular route guarantees.
 
-## Continue with a bounded workflow
+## Set the operating boundary
+
+A working request is not evidence that a repeated workflow fits the account, budget, or commercial rights boundary. Before a repeated job, read `GET /v1/billing` and `GET /v1/limits` with the same API key, then use `POST /v1/billing/quote` for the paths and units you expect to run. Quotes do not reserve usage.
 
 <CardGroup cols={3}>
-  <Card title="Read filing sections" icon="file-text" href="/first-request-flows">
-    Retrieve a current filing and a specific section for a narrow question.
+  <Card title="Pricing and limits" icon="credit-card" href="/evaluate/pricing-and-limits">
+    Price a bounded proof using current account context.
   </Card>
-  <Card title="Search filings" icon="search" href="/products/filing-search">
-    Find filings before you extract or compare them.
+  <Card title="Agent billing" icon="bot" href="/agent-billing">
+    Add a preflight and stop rule before an automated run.
   </Card>
-  <Card title="Understand trust metadata" icon="shield-check" href="/freshness-and-trust">
-    Interpret provenance and freshness where the response provides them.
+  <Card title="API conventions" icon="book-open" href="/api-conventions">
+    Handle response metadata, retries, and errors correctly.
   </Card>
 </CardGroup>
