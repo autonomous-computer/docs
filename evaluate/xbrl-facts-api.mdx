@@ -3,15 +3,13 @@ title: "Evaluate XBRL Facts API"
 description: "Run a source-aware financial-model refresh proof using normalized statements and SEC XBRL facts."
 ---
 
-Use this guide when a model or research table needs normalized statements, tag-level facts, and the filing context needed to reconcile them. It is not a replacement for issuer-specific accounting judgment, taxonomy review, or a restatement policy.
+Use this guide when a model or research table needs normalized statements, tag-level facts, and filing context for reconciliation. SEC API supplies statement bundles and facts with response metadata. It does not replace issuer-specific accounting judgment, taxonomy review, or a restatement policy.
 
-## The buyer job
+## Test one model input end to end
 
-Refresh one issuer's annual financial inputs while retaining enough evidence for a model reviewer to reconcile a statement line to its fact series. Choose raw SEC XBRL if your team needs to own taxonomy parsing and normalization. Choose this path when a reusable normalized layer plus provenance is the practical requirement.
+Refresh one issuer's annual inputs and reconcile a statement line to a fact series. Start with a period your reviewer already understands. If your team needs to own taxonomy parsing and normalization, raw SEC XBRL may be the better fit.
 
-## Smallest proof of concept
-
-Retrieve one annual statement bundle and a small annual fact series, then compare only aligned periods and units.
+## Retrieve the statement and fact record
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
@@ -21,36 +19,39 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/facts?ticker=MSFT&tag=Revenues&form=10-K&limit=4"
 ```
 
-For the selected revenue row, compare `form`, fiscal labels, `periodEnd`, `filedAt`, unit, and the fact response's requested and resolved tag before treating values as reconcilable.
+For a selected row, compare form, fiscal labels, `periodEnd`, `filedAt`, unit, and the requested and resolved tag before treating values as reconcilable. Values are raw units; any display conversion belongs in an explicit model layer.
 
-## What a passing result contains
+## Preserve the reconciliation record
 
-For every model input, preserve requested tag, `resolvedTag`, value, unit, form, fiscal period, period end, filing date, and provenance with its source or filing URL. Preserve `accessionNumber` when it is present; it can be null for a valid response. Also retain enclosing `requestId`, `traceparent`, and freshness where supplied. Values are raw units; display conversion belongs in an explicit model layer.
+For every model input, store the requested tag, `resolvedTag`, value, unit, form, fiscal period, period end, filing date, and available provenance or filing URL. Store `accessionNumber` when present, plus enclosing `requestId`, `traceparent`, and freshness fields when supplied. An absent accession can be valid; do not create an identifier your response did not return.
 
-## Source and production limits
+## When to use this layer
 
-- Normalization does not remove issuer extensions, taxonomy variation, amendments, restatements, or period-basis choices.
-- A missing tag is not proof that an issuer did not disclose the metric; inspect the resolved concept and the issuer's reporting context.
-- Annual and quarterly values are not interchangeable.
-- Reconciliation failures should first be checked for units, form, period, filing selection, and restatement policy.
-- Cache historical observations, bound refresh concurrency, and quote the actual issuer cadence through [Pricing and limits](/evaluate/pricing-and-limits).
+Use SEC API when a reusable normalized layer and an evidence record are the practical need. Use a direct SEC-data pipeline when you need complete control of taxonomy handling or issuer-specific transformations. In either model, do not assume a missing tag proves that a company did not disclose the metric, or that annual and quarterly values are interchangeable.
 
-## Next decision
+## Test the exceptions before rollout
 
-Adopt this layer for a model only after a reviewer can reconcile one chosen statement line to the relevant fact series and document the exception policy for the issuer types you cover.
+- Reconcile units, form, period basis, filing choice, and restatement treatment before diagnosing a mismatch.
+- Inspect issuer extensions and the resolved concept rather than assuming common tags mean the same thing across issuers.
+- Keep amendments and restatements in an explicit selection policy.
+- Cache historical observations and bound refresh concurrency for the issuer cadence you actually operate.
+
+## Next step
+
+Adopt the layer for a model only after a reviewer can reconcile one displayed value to its fact series and document the exception policy for covered issuers.
 
 <CardGroup cols={3}>
   <Card title="Facts API reference" icon="book-open" href="/api-reference/facts/get-v1-facts">Inspect fact fields and response metadata.</Card>
-  <Card title="Revenue tutorial" icon="graduation-cap" href="/tutorials/extract-revenue-from-10k">Build a provenance-preserving implementation.</Card>
-  <Card title="Price the refresh" icon="calculator" href="/evaluate/pricing-and-limits">Estimate the actual issuer universe.</Card>
+  <Card title="Revenue tutorial" icon="graduation-cap" href="/tutorials/extract-revenue-from-10k">Build a provenance-preserving workflow.</Card>
+  <Card title="Pricing and limits" icon="calculator" href="/evaluate/pricing-and-limits">Estimate the refresh workload.</Card>
 </CardGroup>
 
 <CardGroup cols={3}>
   <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Start a one-issuer reconciliation.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect facts and statement bundles.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect facts and statements.</Card>
   <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review model-refresh options.</Card>
 </CardGroup>
 
-<Steps><Step title="Retrieve one annual bundle">Start from a period the team can reconcile.</Step><Step title="Inspect the fact series">Align tag, unit, form, and period.</Step><Step title="Test an exception">Exercise a taxonomy or restatement case before rollout.</Step></Steps>
+<Steps><Step title="Retrieve one annual bundle">Start from a period the team can reconcile.</Step><Step title="Inspect the fact series">Align tag, unit, form, and period.</Step><Step title="Test an exception">Exercise a taxonomy or restatement case.</Step></Steps>
 
-<Prompt>For one issuer, retrieve an annual statement bundle and revenue fact series. Return the requested and resolved tags, units, fiscal periods, provenance and source URL, `accessionNumber` when non-null, freshness, and request metadata. Identify any taxonomy, unit, period, amendment, or restatement judgment before the values enter a model.</Prompt>
+<Prompt>For one issuer, retrieve an annual statement bundle and a revenue fact series. Return the requested and resolved tags, units, fiscal periods, provenance and source URL, accessionNumber when present, freshness, and request metadata. Identify any taxonomy, unit, period, amendment, or restatement judgment before the values enter a model.</Prompt>

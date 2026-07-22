@@ -1,60 +1,52 @@
 ---
 title: "Migrate from financialdatasets.ai"
-description: "Dual-run one financial-statement read against SEC API and verify periods, units, and filing provenance before cutover."
+description: "Dual-run one financial-data workflow against SEC API and verify periods, units, and filing evidence before cutover."
 ---
 
-Use this guide to move one normalized-statement read without losing the filing identity behind each value. Start with the screen, job, or downstream calculation affected by a changed period, unit, or source filing.
+Use this guide when a financialdatasets.ai workflow needs a source-aware SEC API replacement. SEC API provides `GET /v1/statements/all`, `GET /v1/facts`, and `GET /v1/filings` for normalized statement bundles, reported facts, and filing identity. The prior provider may remain the better choice for data families, historical coverage, or non-SEC sources that you have not qualified on SEC API.
 
-## Map the consuming contract
+## Map the consumer, not just the number
 
-| Current job | SEC API route | What must match |
+Choose one screen, calculation, or export. Write down the period basis, units, null behavior, and evidence fields its consumer needs.
+
+| Consumer job | SEC API path to evaluate | Compare before moving |
 | --- | --- | --- |
-| Income statement | `GET /v1/statements/income_statement` | Period, units, rows, and source filing context. |
-| Balance sheet | `GET /v1/statements/balance_sheet` | Point-in-time date, units, and source filing context. |
-| Cash-flow statement | `GET /v1/statements/cash_flow_statement` | Duration, period basis, units, and source filing context. |
-| Reported concept | `GET /v1/facts` | Tag, unit, fiscal period, form, and accession number. |
-| Filing inventory | `GET /v1/filings` | Form, filing date, accession number, URL, and pagination. |
+| Refresh a statement bundle | `GET /v1/statements/all` | Periods, units, rows used, and filing context. |
+| Read a reported concept | `GET /v1/facts` | Requested and resolved tag, unit, form, period, and source record. |
+| Identify a source filing | `GET /v1/filings` | Form, filing date, accession number, URL, and pagination. |
 
-Matching a headline number is not sufficient. A normalized value remains a reported disclosure, so compare the period, unit, presentation, and returned source fields your application uses.
+Verify the current provider's route and response shape in its own documentation before creating a mapping. Matching a headline number is not enough: a reported value also has a period, unit, presentation, and source context.
 
-## Dual-run one annual statement read
+## Dual-run one annual statement case
 
 ```bash
-curl --fail-with-body -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/statements/income_statement?ticker=AAPL&period=annual&limit=4"
-```
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/statements/all?ticker=AAPL&period=annual&limit=1"
 
-Persist the request parameters, retrieval time, `requestId`, period, units, source filing identifiers, and each field that your application displays. Compare nulls as carefully as populated values.
-
-## Test a named disclosure separately
-
-When your consumer needs a reported concept rather than a statement presentation, qualify the tag directly:
-
-```bash
-curl --fail-with-body -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/facts?ticker=AAPL&tag=Revenues&form=10-K&limit=4"
 ```
 
-Do not coerce absent observations to zero or assume the same tag is comparable across issuers. Keep the selected tag, unit, fiscal period, and filing identity with the value.
+Persist the request parameters, retrieval time, `requestId`, period, units, source identifiers, and every field your application displays. Compare nulls as carefully as populated values. Do not coerce an absent observation to zero or assume the same tag is comparable across issuers.
 
-## Implement a reversible cutover
+## Decide where SEC API fits
 
-1. Dual-run one issuer and annual statement.
-2. Compare the fields, periods, units, and nulls your application consumes.
-3. Store SEC API source identifiers and diagnostics alongside the result.
-4. Put one read path behind a reversible release control.
-5. Add facts or additional statement families only after the acceptance test passes.
+Use SEC API when a reusable SEC statement and fact layer with filing context fits the consuming contract. Keep the prior provider when it has the required source type, presentation, or historical scope that your evaluation has not demonstrated here. Use direct SEC data when your team needs to own taxonomy parsing and normalization.
 
-A filing existing in EDGAR does not guarantee that every normalized representation is ready or comparable. Preserve partial or unavailable conditions rather than turning them into a silent fallback.
+## Make the release reversible
 
-## Next action
+1. Dual-run one issuer and one annual case.
+2. Compare fields, periods, units, source identity, and null behavior.
+3. Store the SEC API evidence record beside the result.
+4. Release one read behind a reversible control.
+5. Add another statement family only after the first acceptance test passes.
 
-Select one annual statement read, capture its current output and evidence record, then use the comparison to decide whether that read can move behind a reversible control.
+## Next step
+
+Select the lowest-risk statement read, save the current output and its evidence record, then decide whether that one consumer can move.
 
 <CardGroup cols={3}>
-  <Card title="Statements reference" icon="table-properties" href="/api-reference/statements">Inspect route parameters and response shapes.</Card>
-  <Card title="Freshness and trust" icon="badge-info" href="/freshness-and-trust">Set the evidence standard for displayed values.</Card>
-  <Card title="Request diagnostics" icon="stethoscope" href="/request-diagnostics">Capture the details needed to investigate a mismatch.</Card>
+  <Card title="Statements API reference" icon="table-properties" href="/api-reference/statements">Inspect the documented statement surface.</Card>
+  <Card title="Facts API reference" icon="book-open" href="/api-reference/facts/get-v1-facts">Review tags and response metadata.</Card>
+  <Card title="XBRL evaluation" icon="badge-info" href="/evaluate/xbrl-facts-api">Run a reconciliation proof.</Card>
 </CardGroup>

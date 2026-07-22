@@ -1,60 +1,59 @@
 ---
 title: "Migrate from sec-api.io to SEC API"
-description: "Dual-run one sec-api.io workflow against SEC API and cut over only when filing identity, response behavior, and evidence pass your acceptance test."
+description: "Dual-run one sec-api.io workflow against SEC API and cut over only when identity, response behavior, and evidence meet your acceptance test."
 ---
 
-Use this guide to replace one sec-api.io production read without treating similarly named endpoints as equivalent contracts. Start with a workflow that has a clear pass/fail result: issuer resolution, filing search, a latest filing, or one section.
+Use this guide to move one production read from sec-api.io to SEC API. SEC API provides issuer resolution, filing retrieval, sections, and reported facts through its documented REST API. Do not assume similarly named endpoints have identical contracts.
 
-## Define the first acceptance test
+## Pick one user job
 
-| Existing need | SEC API route | Acceptance record |
+Start with a low-risk workflow that has a clear pass or fail result.
+
+| Current job | SEC API path to evaluate | Evidence to compare |
 | --- | --- | --- |
-| Resolve ticker or CIK | `GET /v1/entities/resolve` | Company name, ticker, CIK, and the persisted identifier. |
-| Search filings | `GET /v1/filings` | Form, filing date, accession number, filing URL, and pagination behavior. |
-| Get a latest filing | `GET /v1/filings/latest` | Returned filing identity and retrieval time. |
-| Read a latest section | `GET /v1/filings/latest/sections/{section_key}` | Filing identity, section key, text availability, and warnings. |
-| Read a reported fact | `GET /v1/facts` | Tag, unit, fiscal period, and source filing evidence. |
+| Resolve an issuer | `GET /v1/entities/resolve` | Company identity, ticker, CIK, and stored identifier. |
+| Search filings | `GET /v1/filings` | Form, filing date, accession number, filing URL, nulls, and pagination. |
+| Read the latest filing | `GET /v1/filings/latest` | Resolved filing identity and retrieval time. |
+| Read a section | `GET /v1/filings/latest/sections/{section_key}` | Filing identity, section key, text availability, and returned warnings. |
+| Read a reported fact | `GET /v1/facts` | Tag, unit, fiscal period, and filing context. |
 
-The API reference, not a successful sample response, defines route parameters and fields. Do not infer broad historical or exhibit availability from one issuer or filing family.
+The public API reference defines supported parameters and fields. A successful response for one issuer or form is evidence for that bounded case, not a coverage claim.
 
-## Verify identity before extraction
+## Verify identity before downstream output
 
 ```bash
-curl --fail-with-body -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/entities/resolve?ticker=AAPL"
 
-curl --fail-with-body -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings?ticker=AAPL&form=10-K&limit=10"
 ```
 
-For each matched filing, compare ticker, CIK, form, filing date, accession number, and source URL. Retain `requestId` and returned provenance, freshness, materialization, or warning fields when the route provides them.
+For each matched filing, compare ticker, CIK, form, filing date, accession number, and source URL before comparing extracted text or values. Store the request parameters, retrieval time, `requestId`, and available provenance, freshness, materialization, or warning fields.
 
-## Test a bounded extraction
+## Dual-run the exact retrieval you need
 
 ```bash
-curl --fail-with-body -sS \
-  -H "x-api-key: $SECAPI_API_KEY" \
-  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K"
+curl --fail-with-body -sS -H "x-api-key: $SECAPI_API_KEY" \
+  "https://api.secapi.ai/v1/filings/latest/sections/item_1a?ticker=AAPL&form=10-K&mode=full"
 ```
 
-The section is evidence for a specific question, not a substitute for a complete filing. If the current integration uses an arbitrary filing URL, an exhibit, or a specific rendered document, test that exact requirement and keep the old path until it passes.
+Test your actual filing families, exhibits, historical window, and rendering needs. SEC API may be a good fit for a documented filing-and-section workflow. Keep your existing provider or direct EDGAR path where it better serves an unqualified requirement.
 
-## Release one reversible change
+## Cut over one reversible read
 
-- Pin `secapi-version` when your client requires a dated version.
-- Use `x-api-key` for machine credentials; never put it in a URL or browser bundle.
-- Compare nullability, pagination, and source identifiers as well as business fields.
-- Honor `Retry-After` for `429` and avoid retrying failures whose condition has not changed.
-- Keep a fallback for every unqualified route or filing family.
+1. Use `x-api-key` for machine credentials and keep it out of URLs and browser bundles.
+2. Dual-run a defined issuer and form set.
+3. Compare source identity, pagination, nullability, and units as well as business fields.
+4. Honor `Retry-After` for `429`; do not retry a failure until its condition changes.
+5. Release one path behind a reversible control and retain a secret-free request record.
 
-## Next action
+## Next step
 
-Run the selected read against both services for a defined issuer and form set, then promote only that path when the recorded acceptance test passes.
+Promote only the read that passes your recorded acceptance test. Then repeat the process for the next workflow rather than treating a single cutover as platform-wide parity.
 
 <CardGroup cols={3}>
-  <Card title="Filing types and exhibits" icon="files" href="/filing-types-and-exhibits">Check whether generic retrieval fits the required filing workflow.</Card>
-  <Card title="API conventions" icon="braces" href="/api-conventions">Apply authentication, pagination, versioning, and retry rules.</Card>
-  <Card title="Error catalog" icon="circle-alert" href="/error-code-catalog">Diagnose a dual-run failure.</Card>
+  <Card title="Filing API reference" icon="book-open" href="/api-reference/filings">Review routes and response fields.</Card>
+  <Card title="API conventions" icon="braces" href="/api-conventions">Apply authentication, pagination, and retry rules.</Card>
+  <Card title="Error catalog" icon="circle-alert" href="/error-code-catalog">Interpret a failed dual run.</Card>
 </CardGroup>

@@ -1,17 +1,15 @@
 ---
 title: "Evaluate SEC Filing RAG"
-description: "Test whether a filing-answer workflow can retrieve, verify, and retain the SEC source behind each answer."
+description: "Test whether a filing-answer workflow can retrieve and retain the SEC source behind each answer."
 ---
 
-Use this page when you are evaluating a filing Q&A, research assistant, or internal agent. SEC API can find candidate filing sections and return source identity. Your application remains responsible for answer generation, citation display, review policy, and deciding whether the retrieved evidence supports an answer.
+Use this guide when you are evaluating a filing Q&A product, research assistant, or internal agent. SEC API can retrieve candidate sections and source identity. Your application is responsible for answer generation, citation display, review rules, and deciding whether the source supports the answer.
 
-## Reader job: prove one answer can be checked
+## Test one answer a reviewer can check
 
-Choose one issuer, one question, and one 10-K. Retrieve candidate passages, fetch the selected section by accession number, and compare the exact-language and conceptual search paths. A good proof does not ask whether the model sounds convincing; it asks whether a reviewer can find the same filing and read the surrounding disclosure.
+Pick one issuer, one question, and one form. Search for candidates, fetch the selected section, and compare a literal query with a conceptual one. The test passes when a reviewer can locate the filing and read the relevant disclosure, not when an answer merely sounds plausible.
 
-## Run the evidence path
-
-Use semantic search for a question whose wording may differ from the filing. Use full-text search separately for language you expect to appear literally. Neither result is the source text you should quote.
+## Retrieve candidates, then verify the source
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
@@ -24,33 +22,31 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?ticker=TSLA&form=10-K&mode=full"
 ```
 
-Replace `ACCESSION` and `SECTION_KEY` with values returned by search. The last request is the verification step: it returns the named extracted section and filing provenance. Open the returned SEC filing URL when layout, tables, definitions, or surrounding context matter.
+Use `GET /v1/search/semantic` when the question may not use the filing's wording. Use `GET /v1/search/fulltext` for literal language. Search results are leads, not the text to quote. Fetch the section using the returned accession and section key, and open the SEC filing URL where tables or context matter.
 
-## What SEC API supplies, and what it does not
+## What to store with an answer
 
-| SEC API capability                                          | Use it for                                                              | Do not treat it as                                            |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `GET /v1/search/semantic`                                   | Conceptually related normalized sections, with citation-oriented fields | Corpus-wide coverage or a materiality ranking                 |
-| `GET /v1/search/fulltext`                                   | Literal terms across filing and section search legs                     | A single globally ranked, paginated evidence list             |
-| `GET /v1/filings/{accession_number}/sections/{section_key}` | The selected section text and filing identity                           | A guarantee of coverage for tables, exhibits, or topics       |
+Keep the query, filters, accession number, section key, form, filing date, filing URL, `requestId`, and returned provenance or freshness fields. Preserve `char_start`, `char_end`, and `_citation_degraded` when semantic search provides them. Those offsets refer to normalized section markdown, not raw SEC HTML.
 
-Retain the query and filters, accession number, section key, form, filing date, source URL, `requestId`, and returned `provenance` or `freshness` fields. Preserve `char_start`, `char_end`, and `_citation_degraded` when semantic search supplies them. Those offsets refer to normalized section markdown, not raw SEC HTML.
+## When it fits, and when it does not
 
-## Evaluation failure cases
+This workflow fits an answer product that can attach a fetched source section to material assertions and show failed retrieval to a reviewer. It is not the right fit for a workflow that needs an unsupported guarantee of corpus completeness, a materiality decision, or a substitute for legal, accounting, or investment judgment. Use a filing-first human review when the conclusion depends on tables, definitions, or document layout.
 
-- An empty result means this request found no match. It does not establish that the issuer made no disclosure.
-- A `503` or a returned degraded-state signal means a search dependency was unavailable or partial. Show failed retrieval rather than generating a negative answer.
-- A snippet is a navigation aid. Fetch the section before quoting it, and use the SEC source to inspect tables and qualifications.
-- The latest filing can change between runs. Store the resolved accession whenever a workflow intentionally uses a latest route.
+## Make failures visible
 
-## Decide whether to expand
+- An empty result means this request found no match; it does not establish that an issuer made no disclosure.
+- A `503` or degraded-state signal can indicate unavailable or partial search. Return that state rather than manufacture a negative answer.
+- A snippet is navigation evidence. Fetch the section before quoting it.
+- Store the resolved accession whenever a workflow uses a latest route, because the result can change between runs.
 
-Move from a one-question test to an agent loop only when your product can attach a fetched source section to the filing assertions it presents as material and can expose retrieval failure to a reviewer. Price the bounded request sequence before widening issuers, forms, or cadence.
+## Next step
+
+Expand from one question only after your interface can show the source record and the retrieval state beside the answer. Price the bounded search-and-section sequence before widening the issuer universe or refresh cadence.
 
 <CardGroup cols={3}>
-  <Card title="Filing search evaluation" icon="search" href="/evaluate/sec-filing-search-api">Test the manifest-to-section workflow.</Card>
-  <Card title="Semantic search reference" icon="book-open" href="/api-reference/search/get-v1-search-semantic">Inspect citation and retrieval fields.</Card>
-  <Card title="Pricing and limits" icon="calculator" href="/evaluate/pricing-and-limits">Estimate a bounded retrieval loop.</Card>
+  <Card title="Filing search evaluation" icon="search" href="/evaluate/sec-filing-search-api">Test the manifest-to-section path.</Card>
+  <Card title="Semantic search reference" icon="book-open" href="/api-reference/search/get-v1-search-semantic">Inspect retrieval fields.</Card>
+  <Card title="Pricing and limits" icon="calculator" href="/evaluate/pricing-and-limits">Estimate a bounded answer loop.</Card>
 </CardGroup>
 
 <CardGroup cols={3}>
@@ -59,6 +55,6 @@ Move from a one-question test to an agent loop only when your product can attach
   <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review search and retrieval usage.</Card>
 </CardGroup>
 
-<Steps><Step title="Search candidates">Run one conceptual and one literal query against a bounded filing universe.</Step><Step title="Fetch the section">Use the returned accession and section key to retrieve the source text.</Step><Step title="Gate answers">Require source identity and surface degraded retrieval before publishing an answer.</Step></Steps>
+<Steps><Step title="Search candidates">Run one conceptual and one literal query.</Step><Step title="Fetch the section">Use the returned accession and section key.</Step><Step title="Gate answers">Require source identity and show retrieval state.</Step></Steps>
 
-<Prompt>For one issuer and filing question, run both semantic and full-text search with a bounded form and result limit. Select a candidate, fetch its section by accession and section key, and return the query, filters, accession, section key, filing URL, request ID, provenance, freshness, and any degraded citation signal. Keep quotations and application interpretation separate. Do not infer that an empty or unavailable search proves there is no disclosure.</Prompt>
+<Prompt>For one issuer and filing question, run bounded semantic and full-text searches. Select a candidate, fetch its section by accession and section key, and return the query, filters, filing identity, section key, filing URL, request ID, provenance, freshness, and any degraded citation signal. Keep quotations and interpretation separate. Do not infer that empty or unavailable search proves there is no disclosure.</Prompt>

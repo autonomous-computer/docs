@@ -1,15 +1,15 @@
 ---
 title: "Evaluate SEC Filing Search API"
-description: "Test a reviewable path from issuer filters to a specific SEC filing and source section."
+description: "Test a repeatable path from an issuer question to a specific SEC filing and section."
 ---
 
-Use this evaluation when a developer or research buyer needs to decide whether SEC API can supply the filing-discovery layer for a product. The filing endpoint returns a constrained document manifest. It does not determine what a filing says, whether a disclosure is material, or whether the returned list establishes EDGAR coverage.
+Use this guide when your product needs to find the filing behind a company question. SEC API supplies filtered filing records, filing search, and section retrieval. Your product still decides what the disclosure means and how to present it.
 
-## Reader job: find the right document before reading it
+## Start with one research job
 
-Start with an issuer, form family, and time boundary your users actually need. Select a filing from the manifest, then follow its accession number into section retrieval. This gives a reviewer a repeatable route from an application finding back to a filed document.
+Choose one issuer, form family, date range, and question that a reviewer can check. For example: find AAPL's annual filings, locate a risk-factor phrase, then open the returned section. This is a better evaluation than asking whether a broad filing corpus "works."
 
-## Run a three-request proof
+## Run the filing-to-section path
 
 ```bash
 curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
@@ -22,37 +22,39 @@ curl --fail-with-body -H "x-api-key: $SECAPI_API_KEY" \
   "https://api.secapi.ai/v1/filings/ACCESSION/sections/SECTION_KEY?ticker=AAPL&form=10-K&mode=full"
 ```
 
-The manifest query answers which filings qualify. The full-text query is optional when the question is an exact phrase; use `GET /v1/search/semantic` instead for related language. Replace the final request placeholders only with fields from a returned filing or section result.
+Use `GET /v1/filings` to establish the filing set. Use `GET /v1/search/fulltext` for words you expect in the filing, or `GET /v1/search/semantic` to find related language. Replace `ACCESSION` and `SECTION_KEY` only with values returned by the earlier calls.
 
-## Capability boundary
+## Keep the evidence record
 
-`GET /v1/filings` accepts issuer identifiers, `form` or `forms`, filing date range, filing or fiscal-year selectors, text `q`, accession number, `limit`, and `cursor`. Its response carries filing records plus `hasMore` and `nextCursor`. A cursor belongs to its original filter set; do not reuse it after changing the query.
+For each selected filing, retain the issuer identity, form, filing date, accession number, filing URL, filters, and `requestId`. For a passage, retain the section key, returned text, and available provenance or freshness fields. A manifest record helps identify a filing; it is not, by itself, support for a passage-level claim.
 
-For a selected filing, retain issuer identity, form, filing date, accession number, filing URL, request filters, and `requestId`. For a content finding, also retain the section key, returned source text, and available provenance or freshness fields. The filing manifest alone is not a passage-level citation.
+## When this is the right fit
 
-## What to test before rollout
+Use SEC API when you need a documented route from an issuer filter to a filing and a reviewable section. Use direct EDGAR instead when your team intends to own collection, parsing, and document normalization. Test the exact forms, date ranges, exhibits, and presentation needs in your product; a result for one issuer does not establish availability for every filing type.
 
-- Verify that the identifiers and form family you use resolve to the intended issuer and documents.
-- Test the form-only latest path separately if your product uses it; a current daily-index response can be terminal and report `hasMore: false`.
-- Treat empty results, invalid filters, authorization failures, and unavailable search dependencies as different application states.
-- Use direct EDGAR when your team intends to own collection and document parsing. Use the accession handoff when you want SEC API to supply a documented filing and section workflow.
+## Evaluate the edge cases
 
-## Decision point
+- Keep an empty response separate from a conclusion that no disclosure exists.
+- Treat authorization, validation, quota, and unavailable-search responses as distinct states.
+- Do not reuse a cursor after changing its filters.
+- Open the SEC filing URL when tables, layout, definitions, or surrounding context affect the claim.
 
-Adopt the discovery path when your interface can show which filters selected a filing and can retain that filing’s identity beside downstream claims. Before extending the test to a watchlist or historical corpus, price the actual request volume and cadence.
+## Next step
+
+Move to a watchlist test only after one reviewer can reproduce a filing and section from the stored evidence record. Then estimate the request cadence for the actual issuer set.
 
 <CardGroup cols={3}>
   <Card title="Filing API reference" icon="book-open" href="/api-reference/filings">Review filters and response fields.</Card>
-  <Card title="Search product" icon="search" href="/products/search">Choose literal or conceptual retrieval.</Card>
-  <Card title="Pricing and limits" icon="calculator" href="/evaluate/pricing-and-limits">Estimate a watchlist workload.</Card>
+  <Card title="Search API reference" icon="search" href="/api-reference/search/get-v1-search-semantic">Compare conceptual and literal retrieval.</Card>
+  <Card title="Pricing and limits" icon="calculator" href="/evaluate/pricing-and-limits">Estimate the intended workload.</Card>
 </CardGroup>
 
 <CardGroup cols={3}>
   <Card title="Create an API key" icon="key-round" href="https://secapi.ai/signup">Start an issuer-specific proof.</Card>
-  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect a manifest response.</Card>
+  <Card title="Open the sandbox" icon="terminal-square" href="https://secapi.ai/sandbox">Inspect a filing response.</Card>
   <Card title="Public pricing" icon="credit-card" href="https://secapi.ai/pricing">Review expansion options.</Card>
 </CardGroup>
 
-<Steps><Step title="Bound the universe">Choose one issuer, form family, and date range.</Step><Step title="Select evidence">Carry the returned accession into source or section retrieval.</Step><Step title="Test expansion">Measure the actual watchlist query pattern before rollout.</Step></Steps>
+<Steps><Step title="Bound the universe">Choose one issuer, form family, and date range.</Step><Step title="Select evidence">Carry the returned accession into section retrieval.</Step><Step title="Test expansion">Measure the intended watchlist pattern before rollout.</Step></Steps>
 
-<Prompt>For one issuer, use GET /v1/filings with explicit form and date filters, select a returned accession, and retrieve a named section. Return the request filters, issuer identity, form, filing date, accession number, filing URL, section key, request ID, and available provenance or freshness. Report empty results and unavailable dependencies as retrieval outcomes, without inferring that no disclosure exists.</Prompt>
+<Prompt>For one issuer, use GET /v1/filings with explicit form and date filters. Select a returned accession, retrieve one named section, and return the filters, issuer identity, form, filing date, accession number, filing URL, section key, request ID, and available provenance or freshness. Report empty and unavailable retrieval outcomes without inferring that no disclosure exists.</Prompt>
