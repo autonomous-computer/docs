@@ -1,14 +1,14 @@
 ---
 title: "Write an SEC API research skill"
-description: "Create portable instructions for a narrow SEC research job with explicit evidence, limits, and stop conditions"
+description: "Give an agent one narrow filing-research job, an evidence standard, and clear stop conditions"
 ---
 
-A skill is an instruction file interpreted by an agent environment. SEC API does
-not prescribe a universal skill format, installer, scheduler, or secret store.
-Keep the SEC API part portable: state the job, exact retrieval path, evidence to
-preserve, and the point where the agent must stop.
+A skill tells an agent how to do one job repeatedly. SEC API does not prescribe
+a universal skill format, installer, scheduler, or secret store. Keep the SEC
+API portion portable: name the job, the retrieval path, the evidence to keep,
+and the point where the agent must stop.
 
-## Start with a single filing question
+## Start with one filing question
 
 This plain Markdown example can be adapted to the frontmatter and file location required by the agent product that will run it.
 
@@ -31,7 +31,7 @@ Read `SECAPI_API_KEY` from the runtime secret store. Do not put credentials in t
 
 The intended output is an evidence-linked brief, not a general company assessment. A latest-filing rule can yield a different accession after a new filing arrives, so retain the selected filing identity in every run.
 
-## Choose the contract at execution time
+## Choose REST or MCP at execution time
 
 For a REST skill, verify paths and arguments in the [API reference](/api-reference)
 before publishing it. For an MCP skill, direct the client to use `tools.search`
@@ -44,12 +44,12 @@ store that runs the client.
 
 Name the source fields the result needs, especially `accessionNumber`, `filingDate`, `filingUrl`, and `requestId` for filing work. Use one issuer, a defined filing family, a date rule, and a result limit where the route supports it.
 
-## Include failure posture
+## Tell the agent when to stop
 
 The skill should stop on authentication, authorization, validation, billing, quota, or unsupported-capability responses. It can use a bounded retry policy for transient failures, but it should preserve the request identifier and never retry by multiplying parallel calls. Before repeated work, inspect billing and limits and quote the representative operation when the workflow needs a current cost decision.
 
 An agent environment owns scheduling, state, and secret injection. Do not claim a SEC API skill creates those facilities or grants a key access it does not already have.
 
-## Next action
+## Test the skill with one real issuer
 
 Run the skill once against a public issuer, inspect the raw response and final brief together, then add one test that fails when the expected filing identity or citation fields are absent.

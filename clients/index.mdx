@@ -1,11 +1,12 @@
 ---
-title: "Connect SEC API to your MCP client"
-description: "Choose an SEC API integration for an IDE or agent framework, or review the current ChatGPT compatibility status."
+title: "Connect SEC API to an MCP client"
+description: "Choose a supported IDE or application client, make one cited filing call, and keep the API key in the right place."
 ---
 
-SEC API exposes its tools through a hosted MCP endpoint. Start with one narrow
-read: load the tools, call `filings.latest` for a known issuer, and retain the
-returned filing identity before you give an agent wider instructions.
+SEC API exposes filing and research tools through a hosted MCP endpoint. Pick
+the client that will actually run the work, connect with an API key owned by
+that runtime, then prove one narrow filing lookup before you give an agent a
+larger assignment.
 
 `GET https://api.secapi.ai/mcp` is public discovery metadata. It confirms the
 deployed connection shape, but it does not authorize a tool call. Each client
@@ -50,7 +51,7 @@ agent should read its key from the server-side runtime.
 - [Custom GPT](/clients/custom-gpt) explains why ChatGPT MCP setup is not
   currently published or verified, and directs builders to supported clients.
 
-## Verify the data, not only the connection
+## Prove one filing result
 
 Use this as the first prompt after your client shows SEC API tools:
 
@@ -60,12 +61,13 @@ Use this as the first prompt after your client shows SEC API tools:
 
 The tool schema defines `accessionNumber`, `filingDate`, and `filingUrl` for
 this response; `requestId` and `traceparent` are part of the MCP output
-envelope. Keep those fields with a cached answer, a generated report, or a
-human review record. For extraction or search tools, retain their provenance,
-freshness, and source fields when returned rather than replacing them with an
-uncited model summary.
+envelope. A good first result names the issuer, links its filing, and has an
+identifier another person can reopen. Keep those fields with a cached answer,
+generated report, or review record. For extraction or search tools, retain
+provenance, freshness, and source fields when returned rather than replacing
+them with an uncited model summary.
 
-## Production behavior
+## When you move beyond a test
 
 Tool discovery and tool calls are separate lifecycle steps. Refresh the tool
 list when you deploy or when a tool schema changes; do not hard-code a copied

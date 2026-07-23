@@ -3,13 +3,12 @@ title: "Connect SEC API to Continue"
 description: "Add SEC API as a streamable HTTP MCP server in Continue and verify a filing lookup before using it in an agent workflow."
 ---
 
-Use Continue's remote MCP configuration for a developer-owned IDE workflow.
-Continue connects to SEC API over streamable HTTP, discovers the available
-tools, and makes them available in agent mode. This is not a deployment secret
-boundary: use a development key in a local secret store and keep production
-agent credentials in the server that runs the agent.
+Use Continue when you want SEC API tools inside a developer-owned IDE session.
+Continue connects over streamable HTTP, discovers the available tools, and
+makes them available in agent mode. Keep a development key in Continue's local
+secret store. A deployed application should use a server-side client instead.
 
-## First viable path
+## Connect with a local development key
 
 Create a Continue secret named `SECAPI_API_KEY`, then add this example server to
 `~/.continue/config.yaml` or to a standalone configuration in
@@ -37,19 +36,19 @@ committing a key in the YAML. If your installation centrally manages Continue
 configuration, place the key in that managed secret store rather than embedding
 it in the shared configuration.
 
-## Verify one source-backed result
+## Prove one cited filing lookup
 
 Start an agent-mode chat and ask:
 
 > Call `filings.latest` with `ticker: AAPL` and `form: 10-K`. Return the
 > accession number, filing date, filing URL, `requestId`, and `traceparent`.
 
-Check that the reply names the filing and carries those fields forward. The
-filing URL and accession number identify the source filing; `requestId` and
+The successful result should name the filing and include those fields. The
+filing URL and accession number identify the source; `requestId` and
 `traceparent` make the call diagnosable. Do not accept a generated summary that
 omits the source identity.
 
-## Use it deliberately
+## Keep the first task narrow
 
 Continue discovers the MCP tools at connection time. Refresh or reconnect after
 changing this configuration, and review the exposed tool list before giving an

@@ -3,13 +3,12 @@ title: "Connect SEC API to LangChain"
 description: "Discover SEC API MCP tools in a server-side LangChain application, verify one filing call, and preserve its source record."
 ---
 
-Use LangChain's MCP adapters when the agent runs in your application. The
-adapter loads SEC API's remote tool definitions over streamable HTTP and returns
-LangChain tools. Unlike an IDE configuration, this is the right place to keep a
-production key: in the server runtime's secret manager, never in a browser
-bundle or client-side route.
+Use LangChain's MCP adapters when your application, worker, or backend owns the
+agent. The adapter loads SEC API's remote tool definitions over streamable HTTP
+and returns LangChain tools. Put the API key in that server runtime's secret
+manager; browser bundles and client-side routes should not receive it.
 
-## First viable path
+## Make one direct tool call first
 
 Install the adapter and your chosen model integration:
 
@@ -53,7 +52,7 @@ is the version-specific source for package and transport changes. Load
 application, call this from a server route, worker, or backend service; do not
 return the key or a reusable MCP client configuration to the browser.
 
-## Turn tools into an agent
+## Add tools only after the proof call works
 
 After the direct call succeeds, pass the discovered `tools` to your LangChain
 agent. Keep the tool loading near the agent lifecycle: rebuild or refresh it on
@@ -62,7 +61,7 @@ serializing an old copied schema into your application. Give the agent narrow
 defaults for issuer, form, date range, and list limits before allowing it to
 plan multi-tool work.
 
-## Preserve the evidence
+## Return the source record with the answer
 
 `filings.latest` returns a filing record with `accessionNumber`, `filingDate`,
 and `filingUrl`; the MCP response envelope carries `requestId` and

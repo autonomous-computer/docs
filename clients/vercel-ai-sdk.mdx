@@ -3,13 +3,12 @@ title: "Connect SEC API to Vercel AI SDK"
 description: "Load SEC API MCP tools into a server-side Vercel AI SDK route, close the client cleanly, and verify a source-backed filing result."
 ---
 
-Use `@ai-sdk/mcp` to convert SEC API's remote MCP tools into an AI SDK tool set.
-Create the client only in server-side code: a route handler, server action,
-worker, or backend service. The API key authorizes access to SEC API, so it
-must remain in your hosting provider's environment or secret manager and never
-be sent to a client component.
+Use `@ai-sdk/mcp` when a server-side AI SDK route needs SEC API tools. Create
+the client in a route handler, server action, worker, or backend service. The
+API key authorizes access to SEC API, so keep it in the hosting environment or
+secret manager instead of sending it to a client component.
 
-## First viable path
+## Make one server-side filing call
 
 ```bash
 npm install ai @ai-sdk/mcp
@@ -54,7 +53,7 @@ stream settles; do not create a fresh client for each token.
 The [AI SDK MCP guide](https://ai-sdk.dev/docs/ai-sdk-core/mcp-tools) is the
 source for transport and close behavior when you upgrade `@ai-sdk/mcp`.
 
-## Add it to model generation
+## Add it to a model turn after it works
 
 Once the direct filing call works, pass `await mcp.tools()` to `generateText` or
 `streamText` in the same server-side request lifecycle. Use a small, reviewed
@@ -62,7 +61,7 @@ tool subset where your application does not need the whole catalog. Put issuer,
 form, date range, and list-limit constraints in your application policy before
 the model begins a multi-step plan.
 
-## Preserve the filing trail
+## Keep the filing trail in the response
 
 `filings.latest` provides `accessionNumber`, `filingDate`, and `filingUrl` for
 the source record. The MCP envelope includes `requestId` and `traceparent`.

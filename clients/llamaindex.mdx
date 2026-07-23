@@ -3,13 +3,13 @@ title: "Connect SEC API to LlamaIndex"
 description: "Adapt SEC API MCP tools into LlamaIndex FunctionTool objects, verify a filing call, and keep credentials in the server runtime."
 ---
 
-LlamaIndex's MCP tool package turns a remote MCP client's tool list into
-`FunctionTool` objects. Its `BasicMCPClient` uses streamable HTTP for an `/mcp`
+Use LlamaIndex when you want hosted SEC API tools as `FunctionTool` objects in
+a Python agent or workflow. `BasicMCPClient` uses streamable HTTP for an `/mcp`
 URL and accepts a custom `httpx.AsyncClient`, which makes the SEC API header
-explicit. Run this integration in your backend or worker; do not expose the
-key through a browser-facing LlamaIndex application.
+explicit. Run it in a backend or worker; do not expose the key in a browser
+application.
 
-## First viable path
+## Make one authenticated filing call
 
 ```bash
 pip install llama-index-tools-mcp httpx
@@ -54,7 +54,7 @@ production credential lifecycle.
 `llama-index-tools-mcp`; check its [package release notes](https://github.com/run-llama/llama_index/releases)
 when upgrading because its MCP client API evolves independently of SEC API.
 
-## Add the tools to a workflow
+## Turn the verified tools into a workflow
 
 Pass `tools` to a LlamaIndex `FunctionAgent` or workflow only after the direct
 call returns the expected filing. Build the tool list during application startup
@@ -62,7 +62,7 @@ or another controlled lifecycle boundary; refresh it after an integration
 upgrade instead of relying on a stale local schema. Limit the agent's first
 calls by issuer, filing form, period, and result count.
 
-## Preserve source and provenance
+## Keep filing identity in workflow state
 
 The filing result identifies the underlying record with `accessionNumber`,
 `filingDate`, and `filingUrl`, plus `requestId` and `traceparent` for request
