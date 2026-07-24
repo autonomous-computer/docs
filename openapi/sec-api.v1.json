@@ -19909,7 +19909,7 @@
     },
     "/v1/signals/dilution/enhanced": {
       "get": {
-        "summary": "Return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest placeholder)",
+        "summary": "Return the SEC API Dilution Score with factor-model context for liquidity regime, momentum exposure, and financing-risk interpretation",
         "parameters": [
           {
             "name": "ticker",
@@ -19941,16 +19941,23 @@
                 "agent"
               ]
             },
-            "description": "Response shape. agent drops the factor breakdown for token efficiency."
+            "description": "Response shape. agent returns the compact dilution-score record plus factor-model context."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Successful response. Default and compact return DilutionScoreEnhanced; view=agent returns DilutionScoreAgent with factor-model context.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DilutionScoreEnhanced"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/DilutionScoreEnhanced"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DilutionScoreAgent"
+                    }
+                  ]
                 }
               }
             }
@@ -45951,7 +45958,936 @@
       },
       "DilutionCoverage": {},
       "DilutionScore": {},
-      "DilutionScoreEnhanced": {}
+      "DilutionScoreEnhanced": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "createdAt",
+          "livemode",
+          "signalKey",
+          "methodologyVersion",
+          "entityId",
+          "asOf",
+          "score",
+          "band",
+          "confidence",
+          "summaryMd",
+          "factors",
+          "subRatings",
+          "regsho",
+          "percentile",
+          "degradedReasons",
+          "freshness",
+          "provenance",
+          "factorModelContext",
+          "requestId",
+          "traceparent"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "dilution_signal"
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "signalKey": {
+            "type": "string",
+            "const": "secapi_dilution_score"
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "companyName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "band": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "elevated",
+              "high"
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "factors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "label",
+                "score",
+                "weight",
+                "explanation"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "weight": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "explanation": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "subRatings": {
+            "type": "object",
+            "required": [
+              "overallRisk",
+              "offeringAbilityRisk",
+              "dilutionRisk",
+              "historicalRisk",
+              "cashNeedLevel",
+              "warrantExerciseRating"
+            ],
+            "properties": {
+              "overallRisk": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              },
+              "offeringAbilityRisk": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              },
+              "dilutionRisk": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              },
+              "historicalRisk": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              },
+              "cashNeedLevel": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              },
+              "warrantExerciseRating": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "unknown"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "regsho": {
+            "type": "boolean"
+          },
+          "percentile": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "degradedReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "freshness": {
+            "type": "object",
+            "required": [
+              "status",
+              "updatedAt",
+              "reason"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "fresh",
+                  "stale",
+                  "degraded"
+                ]
+              },
+              "updatedAt": {
+                "type": "string"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "factorModelContext": {
+            "type": "object",
+            "required": [
+              "liquidityRegime",
+              "momentum",
+              "shortInterest"
+            ],
+            "properties": {
+              "liquidityRegime": {
+                "type": "object",
+                "required": [
+                  "macroRegimeKey",
+                  "macroRegimeConfidence",
+                  "liquidityFactorBeta",
+                  "liquidityFactorPercentile"
+                ],
+                "properties": {
+                  "macroRegimeKey": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "higher_for_longer",
+                          "tightening_with_softening_growth",
+                          "resilient_growth",
+                          "disinflation_under_restriction",
+                          "balanced_backdrop"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "macroRegimeConfidence": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "high",
+                          "medium",
+                          "low"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "liquidityFactorBeta": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "liquidityFactorPercentile": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "momentum": {
+                "type": "object",
+                "required": [
+                  "factorBeta",
+                  "factorPercentile",
+                  "rSquared",
+                  "asOf"
+                ],
+                "properties": {
+                  "factorBeta": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "factorPercentile": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "rSquared": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "asOf": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "shortInterest": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "percentOfFloat",
+                      "daysToCover",
+                      "asOf",
+                      "status"
+                    ],
+                    "properties": {
+                      "percentOfFloat": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "daysToCover": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "asOf": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "available",
+                          "unavailable"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DilutionScoreAgent": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "signalKey",
+          "methodologyVersion",
+          "asOf",
+          "score",
+          "band",
+          "confidence",
+          "percentile",
+          "subRatings",
+          "regsho",
+          "factors",
+          "degradedReasons",
+          "freshness",
+          "factorModelContext",
+          "requestId"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "dilution_signal"
+          },
+          "id": {
+            "type": "string"
+          },
+          "signalKey": {
+            "type": "string",
+            "const": "secapi_dilution_score"
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "band": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "moderate",
+                  "elevated",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "percentile": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subRatings": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "overallRisk",
+                  "offeringAbilityRisk",
+                  "dilutionRisk",
+                  "historicalRisk",
+                  "cashNeedLevel",
+                  "warrantExerciseRating"
+                ],
+                "properties": {
+                  "overallRisk": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "unknown"
+                    ]
+                  },
+                  "offeringAbilityRisk": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "unknown"
+                    ]
+                  },
+                  "dilutionRisk": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "unknown"
+                    ]
+                  },
+                  "historicalRisk": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "unknown"
+                    ]
+                  },
+                  "cashNeedLevel": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "unknown"
+                    ]
+                  },
+                  "warrantExerciseRating": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "unknown"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "regsho": {
+            "type": "boolean"
+          },
+          "factors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "score",
+                "weight"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "weight": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "degradedReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "status",
+                  "updatedAt",
+                  "reason"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "fresh",
+                      "stale",
+                      "degraded"
+                    ]
+                  },
+                  "updatedAt": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "factorModelContext": {
+            "type": "object",
+            "required": [
+              "liquidityRegime",
+              "momentum",
+              "shortInterest"
+            ],
+            "properties": {
+              "liquidityRegime": {
+                "type": "object",
+                "required": [
+                  "macroRegimeKey",
+                  "macroRegimeConfidence",
+                  "liquidityFactorBeta",
+                  "liquidityFactorPercentile"
+                ],
+                "properties": {
+                  "macroRegimeKey": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "higher_for_longer",
+                          "tightening_with_softening_growth",
+                          "resilient_growth",
+                          "disinflation_under_restriction",
+                          "balanced_backdrop"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "macroRegimeConfidence": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "high",
+                          "medium",
+                          "low"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "liquidityFactorBeta": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "liquidityFactorPercentile": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "momentum": {
+                "type": "object",
+                "required": [
+                  "factorBeta",
+                  "factorPercentile",
+                  "rSquared",
+                  "asOf"
+                ],
+                "properties": {
+                  "factorBeta": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "factorPercentile": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "rSquared": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "asOf": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "shortInterest": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "percentOfFloat",
+                      "daysToCover",
+                      "asOf",
+                      "status"
+                    ],
+                    "properties": {
+                      "percentOfFloat": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "daysToCover": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "asOf": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "available",
+                          "unavailable"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "securitySchemes": {
       "ApiKeyAuth": {

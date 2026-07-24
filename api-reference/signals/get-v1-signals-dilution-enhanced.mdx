@@ -1,9 +1,9 @@
 ---
 title: "GET /v1/signals/dilution/enhanced"
-description: "Return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest context)"
+description: "Return the SEC API Dilution Score with factor-model context for liquidity regime, momentum exposure, and financing-risk interpretation"
 ---
 
-Return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest context)
+Return the SEC API Dilution Score with factor-model context for liquidity regime, momentum exposure, and financing-risk interpretation
 
 <Info>
 Audience: application and coding agent.
@@ -15,7 +15,12 @@ Audience: application and coding agent.
 - `traceparent`
 - `provenance`
 - `freshness`
-- `materialization`
+- `score`
+- `band`
+- `confidence`
+- `factors`
+- `subRatings`
+- `factorModelContext`
 
 ## Example request
 
@@ -24,7 +29,7 @@ Audience: application and coding agent.
 curl -X GET \
   -H "x-api-key: $SECAPI_API_KEY" \
   -H "secapi-version: 2026-03-19" \
-  "https://api.secapi.ai/v1/signals/dilution/enhanced"
+  "https://api.secapi.ai/v1/signals/dilution/enhanced?ticker=AAPL"
 ```
 </RequestExample>
 
@@ -33,25 +38,79 @@ curl -X GET \
 <ResponseExample>
 ```json
 {
-  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "object": "dilution_signal",
+  "id": "sig_dil_aapl",
+  "createdAt": "2026-03-18T16:00:00.000Z",
+  "livemode": false,
+  "signalKey": "secapi_dilution_score",
+  "methodologyVersion": "2026-03-17.2",
+  "entityId": "ent_aapl",
+  "ticker": "AAPL",
+  "cik": "0000320193",
+  "companyName": "Apple Inc.",
+  "asOf": "2026-03-18T16:00:00.000Z",
+  "score": 22.4,
+  "band": "low",
+  "confidence": "high",
+  "summaryMd": "## SEC API Dilution Score for Apple Inc.\n\nScore: 22.4 (low). The current filing record does not show an active high-risk financing pattern, but the factor context should still be checked before treating the signal as investment-ready.",
+  "factors": [
+    {
+      "key": "recent_offering_activity",
+      "label": "Recent offering activity",
+      "score": 15,
+      "weight": 0.3,
+      "value": 0,
+      "explanation": "No recent registered offering activity was detected in the bounded filing window."
+    }
+  ],
+  "subRatings": {
+    "overallRisk": "low",
+    "offeringAbilityRisk": "low",
+    "dilutionRisk": "low",
+    "historicalRisk": "medium",
+    "cashNeedLevel": "unknown",
+    "warrantExerciseRating": "unknown"
+  },
+  "regsho": false,
+  "percentile": 18.6,
+  "degradedReasons": [
+    "short_interest_unavailable: dilution-enhanced does not yet ingest a short-interest source."
+  ],
+  "freshness": {
+    "status": "fresh",
+    "updatedAt": "2026-03-18T16:00:00.000Z",
+    "reason": null
+  },
+  "factorModelContext": {
+    "liquidityRegime": {
+      "macroRegimeKey": "balanced_backdrop",
+      "macroRegimeConfidence": "medium",
+      "liquidityFactorBeta": 0.12,
+      "liquidityFactorPercentile": 44.8
+    },
+    "momentum": {
+      "factorBeta": 0.31,
+      "factorPercentile": 62.4,
+      "rSquared": 0.18,
+      "asOf": "2026-03-18"
+    },
+    "shortInterest": {
+      "percentOfFloat": null,
+      "daysToCover": null,
+      "asOf": null,
+      "status": "unavailable"
+    }
+  },
   "provenance": {
     "source": "sec",
     "accessionNumber": "0000320193-25-000079",
     "filingUrl": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927_htm.xml",
-    "retrievedAt": "2026-03-17T00:00:00.000Z",
-    "parserVersion": "2026-03-13.5",
+    "retrievedAt": "2026-03-18T16:00:00.000Z",
+    "parserVersion": "2026-03-16.1",
     "rawSourceKey": "0000320193-25-000079"
   },
-  "freshness": {
-    "status": "fresh",
-    "asOf": "2026-03-17T00:00:00.000Z",
-    "sourcePublishedAt": "2025-10-31T00:00:00.000Z",
-    "lagMs": 900000
-  },
-  "materialization": {
-    "parserVersion": "2026-03-13.5",
-    "materializationVersion": "datastream-3.0"
-  }
+  "requestId": "req_2ZK8Q1W9F4M6P7R3",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 }
 ```
 </ResponseExample>
@@ -59,7 +118,7 @@ curl -X GET \
 ## Give this prompt to your agent
 
 <Prompt>
-Use SEC API GET /v1/signals/dilution/enhanced to return the SEC API Dilution Score augmented with factor-model context (macro liquidity regime, momentum exposure, short-interest context). Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `materialization` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
+Use SEC API GET /v1/signals/dilution/enhanced to return the SEC API Dilution Score with factor-model context for liquidity regime, momentum exposure, and financing-risk interpretation. Preserve `requestId`, `traceparent`, `provenance`, `freshness`, `score`, `band`, `confidence`, `factors`, `subRatings`, `factorModelContext` in the output. Return a concise markdown summary plus the exact structured payload fields that a downstream engineer or agent should keep using this result.
 </Prompt>
 
 ## Failure posture
