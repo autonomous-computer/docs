@@ -11177,11 +11177,12 @@
                 "compact",
                 "standard",
                 "verbose",
+                "full",
                 "agent"
               ],
               "default": "standard"
             },
-            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
           },
           {
             "name": "include",
@@ -11201,6 +11202,96 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": true
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "macro.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/macro/status": {
+      "get": {
+        "summary": "Return macro runtime readiness, artifact freshness, source posture, and country support status",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "US"
+            },
+            "description": "ISO country code (e.g. US, JP, CN). Unsupported countries are returned explicitly rather than silently dropped."
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "full"
+              ],
+              "default": "compact"
+            },
+            "description": "Compatibility alias. Use full for verbose artifact and source posture."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose",
+                "full",
+                "agent"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, releases, calendar, forecasts, or source_plan."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroStatus"
                 }
               }
             }
@@ -11297,11 +11388,12 @@
                 "compact",
                 "standard",
                 "verbose",
+                "full",
                 "agent"
               ],
               "default": "standard"
             },
-            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
           },
           {
             "name": "include",
@@ -11404,11 +11496,12 @@
                 "compact",
                 "standard",
                 "verbose",
+                "full",
                 "agent"
               ],
               "default": "standard"
             },
-            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
           },
           {
             "name": "include",
@@ -11500,11 +11593,12 @@
                 "compact",
                 "standard",
                 "verbose",
+                "full",
                 "agent"
               ],
               "default": "compact"
             },
-            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
           },
           {
             "name": "include",
@@ -11577,11 +11671,12 @@
                 "compact",
                 "standard",
                 "verbose",
+                "full",
                 "agent"
               ],
               "default": "compact"
             },
-            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
           },
           {
             "name": "include",
@@ -11718,11 +11813,12 @@
                 "compact",
                 "standard",
                 "verbose",
+                "full",
                 "agent"
               ],
               "default": "standard"
             },
-            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
           },
           {
             "name": "include",
@@ -11824,11 +11920,12 @@
                 "compact",
                 "standard",
                 "verbose",
+                "full",
                 "agent"
               ],
               "default": "standard"
             },
-            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
           },
           {
             "name": "include",
@@ -12207,6 +12304,169 @@
                       ],
                       "requestId": "req_example",
                       "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "factors.member",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
+    "/v1/factors/macro-sensitivity": {
+      "get": {
+        "summary": "Return factor sensitivity to a named macro stress scenario using the current macro-regime overlay",
+        "description": "This is an explainable research scenario, not a point-in-time empirical regression. Use it to inspect how selected factor families are expected to react under supported macro scenarios before applying portfolio judgment.",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "US"
+            },
+            "description": "ISO country code for the macro scenario context."
+          },
+          {
+            "name": "scenario_key",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "us_recession",
+                "higher_for_longer",
+                "china_growth_scare"
+              ]
+            },
+            "description": "Supported macro stress scenario key."
+          },
+          {
+            "name": "scenarioKey",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "us_recession",
+                "higher_for_longer",
+                "china_growth_scare"
+              ]
+            },
+            "description": "camelCase alias for scenario_key."
+          },
+          {
+            "name": "factors",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated factor keys or aliases."
+          },
+          {
+            "name": "keys",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for factors."
+          },
+          {
+            "name": "indicators",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated macro indicator keys used to focus the sensitivity explanation."
+          },
+          {
+            "name": "indicator_keys",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Alias for indicators."
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "6m"
+            },
+            "description": "History lookback used by the factor and macro overlay."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum factor sensitivity rows to return."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorMacroSensitivity"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "factor_macro_sensitivity",
+                      "responseMode": "compact",
+                      "requestId": "req_example"
                     }
                   }
                 }
@@ -18047,6 +18307,91 @@
         "x-secapi-smoke": "local"
       }
     },
+    "/v1/portfolio/stress-test/scenarios": {
+      "get": {
+        "summary": "Return the supported portfolio stress-test scenario catalog with macro and factor shock definitions",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "US"
+            },
+            "description": "ISO country code used to localize supported macro scenario context."
+          },
+          {
+            "name": "response_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "standard",
+                "verbose"
+              ],
+              "default": "compact"
+            },
+            "description": "Response projection. compact is token-efficient for agents; standard returns the full operational shape; verbose preserves full trust metadata and drill-down context."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated compact-mode expansions such as trust, metadata, series, diagnostics, exposures, position_views, position_exposures, optimizer_candidates, or drilldown. Use trust when an agent or report needs provenance, freshness, source-rights, methodology, revision, and degraded-state metadata; use diagnostics for regression details such as rSquared and tStat where supported."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioStressScenarioCatalog"
+                },
+                "examples": {
+                  "compact": {
+                    "summary": "Token-efficient compact response",
+                    "value": {
+                      "object": "portfolio_stress_scenario_catalog",
+                      "responseMode": "compact",
+                      "requestId": "req_example"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Contract-aware error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-secapi-route-id": "portfolio.stress_scenarios",
+        "x-secapi-access": "authenticated",
+        "x-secapi-kind": "api",
+        "x-secapi-docs": "public",
+        "x-secapi-smoke": "local"
+      }
+    },
     "/v1/portfolio/hedge": {
       "post": {
         "summary": "Return bounded benchmark-instrument factor hedge candidates for a portfolio with compact residual exposure and trust metadata",
@@ -19608,11 +19953,12 @@
                 "compact",
                 "standard",
                 "verbose",
+                "full",
                 "agent"
               ],
               "default": "standard"
             },
-            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose is reserved for full trust/drill-down expansions. agent aliases compact."
+            "description": "Response projection. compact is token-efficient for agents; standard preserves the full launched shape; verbose keeps trust/drill-down expansions; full aliases verbose; agent aliases compact."
           },
           {
             "name": "include",
@@ -21944,10 +22290,10 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 50,
+              "maximum": 1000,
               "default": 50
             },
-            "description": "Maximum disclosed holding rows to return from the selected report (1-50). A smaller result does not establish that the manager held no additional positions."
+            "description": "Maximum disclosed holding rows to return from the selected report (1-1000). Defaults to 50, which truncates most managers: compare the returned row count against `holdingCount` to detect truncation, and raise `limit` to retrieve the full report. A smaller result does not establish that the manager held no additional positions. Note that `view=agent` caps holdings at 50 regardless of `limit`, to keep the agent payload context-sized; use the default view to retrieve more."
           },
           {
             "name": "view",
@@ -21960,7 +22306,7 @@
                 "agent"
               ]
             },
-            "description": "Response shape. Use `agent` for the compact, citation-preserving payload; omit it or use `default` for the fuller response."
+            "description": "Response shape. Use `agent` for the compact, citation-preserving payload; omit it or use `default` for the fuller response. `agent` returns at most 50 holdings regardless of `limit` and reports `holdingCount`, `holdingsReturned`, and `holdingsTruncated` so truncation is always detectable — request the default view when you need the complete holdings list."
           }
         ],
         "responses": {
@@ -43690,6 +44036,350 @@
         "additionalProperties": false
       },
       "WatchlistIntelligenceBundle": {},
+      "PortfolioStressScenarioCatalog": {
+        "type": "object",
+        "required": [
+          "object",
+          "asOf",
+          "scenarios",
+          "summaryMd"
+        ],
+        "properties": {
+          "dataAsOf": {
+            "type": "string"
+          },
+          "freshnessStatus": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "degraded",
+              "unknown"
+            ]
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "materializationVersion": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "const": "portfolio_stress_scenario_catalog"
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "scenarioKey",
+                "label",
+                "macroShocks",
+                "factorShocks",
+                "supportedCountries",
+                "methodology",
+                "confidence",
+                "limitations",
+                "sourceVersion"
+              ],
+              "properties": {
+                "scenarioKey": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "macroShocks": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                },
+                "factorShocks": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                },
+                "supportedCountries": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "methodology": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "string",
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "limitations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "sourceVersion": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FactorMacroSensitivity": {
+        "type": "object",
+        "required": [
+          "object",
+          "id",
+          "asOf",
+          "country",
+          "rows",
+          "topTailwinds",
+          "topHeadwinds",
+          "limitations",
+          "summaryMd"
+        ],
+        "properties": {
+          "dataAsOf": {
+            "type": "string"
+          },
+          "freshnessStatus": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "degraded",
+              "unknown"
+            ]
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "materializationVersion": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "const": "factor_macro_sensitivity"
+          },
+          "responseMode": {
+            "type": "string",
+            "enum": [
+              "compact",
+              "standard",
+              "verbose"
+            ],
+            "description": "Projection used for this resource. compact is token-efficient for agents; standard and verbose retain fuller operational context."
+          },
+          "id": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "scenarioKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "factorKey",
+                "sensitivity",
+                "direction",
+                "confidence",
+                "rationale",
+                "methodology"
+              ],
+              "properties": {
+                "factorKey": {
+                  "type": "string"
+                },
+                "indicatorKey": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "macroShockKey": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sensitivity": {
+                  "type": "number"
+                },
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "headwind",
+                    "tailwind",
+                    "neutral"
+                  ]
+                },
+                "confidence": {
+                  "type": "string",
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "rationale": {
+                  "type": "string"
+                },
+                "observationCount": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "methodology": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "topTailwinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "topHeadwinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "summaryMd": {
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessMetadata"
+          },
+          "materialization": {
+            "$ref": "#/components/schemas/MaterializationMetadata"
+          },
+          "sourceRights": {
+            "$ref": "#/components/schemas/SourceRightsMetadata"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/MethodologyMetadata"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMetadata"
+          },
+          "degradedState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DegradedState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "traceparent": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "CountryReport": {
         "type": "object",
         "required": [
@@ -44025,6 +44715,239 @@
           },
           "traceparent": {
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MacroStatus": {
+        "type": "object",
+        "required": [
+          "object",
+          "status",
+          "generatedAt",
+          "countries",
+          "sources",
+          "alerts",
+          "methodology",
+          "sourceRights"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "macro_status"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "degraded",
+              "stale",
+              "unsupported"
+            ]
+          },
+          "generatedAt": {
+            "type": "string"
+          },
+          "artifactGeneratedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "computedAt": {
+            "type": "string"
+          },
+          "statusSource": {
+            "type": "string",
+            "enum": [
+              "validation_artifacts",
+              "runtime_registry_fallback"
+            ]
+          },
+          "countries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "country",
+                "status",
+                "seriesCount",
+                "freshCount",
+                "staleCount",
+                "sourceErrorCount",
+                "fallbackCount",
+                "latestMaterializedAt",
+                "oldestFreshnessAgeHours",
+                "topAlerts"
+              ],
+              "properties": {
+                "country": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ready",
+                    "degraded",
+                    "stale",
+                    "unsupported"
+                  ]
+                },
+                "seriesCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "freshCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "staleCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sourceErrorCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "fallbackCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "latestMaterializedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "oldestFreshnessAgeHours": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "topAlerts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "sourceKey",
+                "status",
+                "indicatorCount",
+                "unexpectedFallbackCount",
+                "sourceErrorCount"
+              ],
+              "properties": {
+                "sourceKey": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ready",
+                    "degraded",
+                    "stale",
+                    "unsupported"
+                  ]
+                },
+                "indicatorCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "unexpectedFallbackCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sourceErrorCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "artifactStatus": {
+                  "type": "string",
+                  "enum": [
+                    "available",
+                    "unavailable"
+                  ]
+                },
+                "topAlerts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "methodology": {
+            "type": "object",
+            "required": [
+              "id",
+              "version",
+              "summary"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "sourceRights": {
+            "type": "object",
+            "required": [
+              "posture",
+              "summary"
+            ],
+            "properties": {
+              "posture": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "indicators": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
           }
         },
         "additionalProperties": false
