@@ -22296,6 +22296,18 @@
             "description": "Maximum disclosed holding rows to return from the selected report (1-1000). Defaults to 50, which truncates most managers: compare the returned row count against `holdingCount` to detect truncation, and raise `limit` to retrieve the full report. A smaller result does not establish that the manager held no additional positions. Note that `view=agent` caps holdings at 50 regardless of `limit`, to keep the agent payload context-sized; use the default view to retrieve more."
           },
           {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "default": 0
+            },
+            "description": "Non-negative offset into the selected report's full disclosed holdings array, for paging past a single `limit`-sized page (some managers disclose more than 1000 positions — e.g. large index managers). Advance by accumulating rows returned so far (`offset += holdings.length`) and stop once you have `holdingCount` rows or a page returns empty."
+          },
+          {
             "name": "view",
             "in": "query",
             "required": false,
